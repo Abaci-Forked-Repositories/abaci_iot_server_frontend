@@ -7,6 +7,9 @@ interface TemplateCardTileProps {
 	thumbSize?: number;
 	onOpen: (template: Template) => void;
 	onDelete: (template: Template) => void;
+	onToggleFavourite: (template: Template) => void;
+	isSelected?: boolean;
+	onToggleSelect: (template: Template) => void;
 }
 
 const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
@@ -14,6 +17,9 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 	thumbSize = 138,
 	onOpen,
 	onDelete,
+	onToggleFavourite,
+	isSelected = false,
+	onToggleSelect,
 }) => {
 	const [hovered, setHovered] = useState(false);
 
@@ -28,7 +34,7 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 		<div
 			role='button'
 			tabIndex={0}
-			className='gp-card canvas-gp-card tpl-card'
+			className={`gp-card canvas-gp-card tpl-card${isSelected ? ' tpl-card--selected' : ''}`}
 			style={{ width: outerSize, height: outerSize, flex: `0 0 ${outerSize}px` }}
 			onClick={() => onOpen(template)}
 			onKeyDown={(e) => {
@@ -39,6 +45,16 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 			}}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}>
+			<button
+				type='button'
+				className={`tpl-select-control${isSelected ? ' is-selected' : ''}`}
+				title={isSelected ? 'Deselect template' : 'Select template'}
+				onClick={(e) => {
+					e.stopPropagation();
+					onToggleSelect(template);
+				}}>
+				<Icon icon='Check' className='tpl-select-check' />
+			</button>
 
 			{template.thumbnail ? (
 				<img
@@ -61,6 +77,19 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 
 			{hovered && (
 				<div className='tpl-top-actions'>
+					<button
+						type='button'
+						className='tpl-icon-btn tpl-icon-btn--favourite'
+						title={template.is_favourite ? 'Remove favourite' : 'Add favourite'}
+						onClick={(e) => {
+							e.stopPropagation();
+							onToggleFavourite(template);
+						}}>
+						<Icon
+							icon={template.is_favourite ? 'Star' : 'StarBorder'}
+							className='tpl-action-icon'
+						/>
+					</button>
 					<button
 						type='button'
 						className='tpl-icon-btn tpl-icon-btn--edit'

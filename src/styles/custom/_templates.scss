@@ -16,6 +16,19 @@
 	width: 220px;
 }
 
+.tpl-selected-chip {
+	display: inline-flex;
+	align-items: center;
+	height: 30px;
+	padding: 0 10px;
+	border-radius: 6px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #92400e;
+	background: rgba(#f59e0b, 0.18);
+	border: 1px solid rgba(#f59e0b, 0.4);
+}
+
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 .tpl-tabs {
@@ -138,6 +151,16 @@
 	}
 }
 
+.gp-card.canvas-gp-card.tpl-card.tpl-card--selected {
+	border-color: rgba($primary, 0.65);
+	box-shadow:
+		0 0 0 1px rgba($primary, 0.55),
+		9px 9px 18px rgba(#94a3b8, 0.22),
+		-8px -8px 16px rgba(#f1f5f9, 0.78),
+		inset 2px 2px 7px rgba(#94a3b8, 0.16),
+		inset -2px -2px 8px rgba(#f8fafc, 0.78);
+}
+
 .gp-card.canvas-gp-card.tpl-card .canvas-gp-img {
 	position: absolute;
 	inset: 0;
@@ -177,6 +200,39 @@
 	@include dark-mode {
 		color: rgba($primary-soft, 0.45);
 	}
+}
+
+.tpl-select-control {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 1px solid rgba(#94a3b8, 0.75);
+	background: rgba(#ffffff, 0.88);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	z-index: 7;
+	cursor: pointer;
+}
+
+.tpl-select-control.is-selected {
+	background: rgba($primary, 0.95);
+	border-color: rgba($primary, 0.95);
+}
+
+.tpl-select-check {
+	width: 11px !important;
+	height: 11px !important;
+	font-size: 11px !important;
+	color: transparent !important;
+}
+
+.tpl-select-control.is-selected .tpl-select-check {
+	color: #ffffff !important;
 }
 
 // ─── Hover name bar ───────────────────────────────────────────────────────────
@@ -228,6 +284,11 @@
 .tpl-icon-btn--edit:hover {
 	background: rgba(#2563eb, 0.85);
 	border-color: rgba(#60a5fa, 0.45);
+}
+
+.tpl-icon-btn--favourite:hover {
+	background: rgba(#f59e0b, 0.9);
+	border-color: rgba(#fbbf24, 0.55);
 }
 
 .tpl-icon-btn--delete:hover {
@@ -600,7 +661,12 @@
 .tdc-picker-overlay {
 	position: fixed;
 	inset: 0;
-	z-index: 9;
+	z-index: 1;
+}
+
+.tdc-picker-panel {
+	position: relative;
+	z-index: 2;
 }
 
 // ─── Layer buttons ────────────────────────────────────────────────────────────
