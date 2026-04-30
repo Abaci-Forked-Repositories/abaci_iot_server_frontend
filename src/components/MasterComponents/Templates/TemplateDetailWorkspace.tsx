@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { nanoid } from 'nanoid';
-import { SketchPicker } from 'react-color';
+import { SketchPicker, type ColorResult } from 'react-color';
 import { templatesApi, type Template } from '../../../services/templatesApi';
 import PreviewTvFrame from '../../StandardTvFrame/PreviewTvFrame';
 import Spinner from '../../bootstrap/Spinner';
@@ -65,6 +65,32 @@ const TemplateDetailWorkspace: React.FC = () => {
 	const [fillColor, setFillColor] = useState('white');
 	const [showFillPicker, setShowFillPicker] = useState(false);
 	const [nameError, setNameError] = useState(false);
+
+	const applyFillColor = useCallback(
+		(nextColor: string) => {
+			setFillColor(nextColor);
+			if (!fabricRef.current) return;
+			const fc = fabricRef.current;
+			const active = fc.getActiveObject?.();
+			const target = active ?? selectedObject;
+			if (!target) return;
+			if (target.type === 'activeSelection' && Array.isArray(target._objects)) {
+				target._objects.forEach((obj: any) => obj.set('fill', nextColor));
+			} else {
+				target.set('fill', nextColor);
+			}
+			setZoneProps((s) => ({ ...s, color: nextColor }));
+			fc.requestRenderAll?.();
+			fc.renderAll();
+		},
+		[selectedObject],
+	);
+
+	const getPickerColorString = (color: ColorResult) => {
+		const rawAlpha = color.rgb.a ?? 1;
+		const alpha = rawAlpha > 1 ? rawAlpha / 100 : rawAlpha;
+		return alpha >= 1 ? color.hex : `rgba(${color.rgb.r},${color.rgb.g},${color.rgb.b},${alpha})`;
+	};
 
 	// ─── Load template ───────────────────────────────────────────────────────
 	// If the list page already passed the template via router state we skip the
@@ -177,6 +203,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 		if (!selectedObject || !fabricRef.current) return;
 		selectedObject.set({ fill: fillColor });
 		setZoneProps((s) => ({ ...s, color: fillColor }));
+		fabricRef.current.requestRenderAll?.();
 		fabricRef.current.renderAll();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [fillColor]);
@@ -241,16 +268,85 @@ const TemplateDetailWorkspace: React.FC = () => {
 		[selectedObject, scalingFactor, zoneProps.radius],
 	);
 
+	const arrangeLayer = useCallback(
+		(action: 'forward' | 'backward' | 'front' | 'back') => {
+			const fc = fabricRef.current;
+			if (!fc) return;
+			const activeObject = fc.getActiveObject?.() ?? selectedObject;
+			if (!activeObject) return;
+
+			const moveByIndex = (nextIndex: number) => {
+				const objects: any[] = fc.getObjects?.() ?? [];
+				const bounded = Math.max(0, Math.min(objects.length - 1, nextIndex));
+				if (typeof fc.moveObjectTo === 'function') {
+					fc.moveObjectTo(activeObject, bounded);
+					return;
+				}
+				if (typeof activeObject.moveTo === 'function') {
+					activeObject.moveTo(bounded);
+				}
+			};
+
+			const objects: any[] = fc.getObjects?.() ?? [];
+			const currentIndex = objects.indexOf(activeObject);
+
+			if (action === 'forward') {
+				if (typeof fc.bringObjectForward === 'function') fc.bringObjectForward(activeObject, true);
+				else if (typeof fc.bringForward === 'function') fc.bringForward(activeObject, true);
+				else if (currentIndex >= 0) moveByIndex(currentIndex + 1);
+			}
+			if (action === 'backward') {
+				if (typeof fc.sendObjectBackwards === 'function') fc.sendObjectBackwards(activeObject, true);
+				else if (typeof fc.sendBackwards === 'function') fc.sendBackwards(activeObject, true);
+				else if (currentIndex >= 0) moveByIndex(currentIndex - 1);
+			}
+			if (action === 'front') {
+				if (typeof fc.bringObjectToFront === 'function') fc.bringObjectToFront(activeObject);
+				else if (typeof fc.bringToFront === 'function') fc.bringToFront(activeObject);
+				else moveByIndex((objects.length || 1) - 1);
+			}
+			if (action === 'back') {
+				if (typeof fc.sendObjectToBack === 'function') fc.sendObjectToBack(activeObject);
+				else if (typeof fc.sendToBack === 'function') fc.sendToBack(activeObject);
+				else moveByIndex(0);
+			}
+
+			fc.requestRenderAll?.();
+			fc.renderAll();
+			setCanvasObjects(fc.getObjects());
+			setSelectedObject(activeObject);
+		},
+		[selectedObject],
+	);
+
+	const handleForwardLayer = (e: React.MouseEvent<HTMLButtonElement>) => {
+		arrangeLayer(e.shiftKey ? 'front' : 'forward');
+	};
+
+	const handleBackwardLayer = (e: React.MouseEvent<HTMLButtonElement>) => {
+		arrangeLayer(e.shiftKey ? 'back' : 'backward');
+	};
+
 	// ─── Add zone ─────────────────────────────────────────────────────────────
 
 	const addZone = useCallback(() => {
-		if (!fabricRef.current) return;
+		if (!fabricRef.current || !templateDetails) return;
 		import('fabric').then(({ Rect }) => {
+			const fc = fabricRef.current;
+			const sf = scalingFactor || 1;
+			const maxLogicalSide = Math.min(templateDetails.resolution_width, templateDetails.resolution_height);
+			const zoneLogicalSize = Math.max(80, Math.min(220, Math.round(maxLogicalSide * 0.25)));
+			const zoneCanvasSize = Math.max(28, zoneLogicalSize * sf);
+			const startLeft = Math.max(0, (fc.width - zoneCanvasSize) / 2);
+			const startTop = Math.max(0, (fc.height - zoneCanvasSize) / 2);
+
 			const rect = new Rect({
 				id: nanoid(),
 				name: '',
-				width: 100,
-				height: 100,
+				width: zoneCanvasSize,
+				height: zoneCanvasSize,
+				left: startLeft,
+				top: startTop,
 				fill: randomHex(),
 				stroke: 'black',
 				strokeUniform: true,
@@ -266,9 +362,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 				setSelectedObject(null);
 				setZoneProps(BLANK_PROPS);
 			});
-			fabricRef.current.add(rect);
+			fc.add(rect);
+			borderGuard(rect, fc);
+			fc.setActiveObject(rect);
+			fc.renderAll();
 		});
-	}, []);
+	}, [templateDetails, scalingFactor]);
 
 	// ─── Save ─────────────────────────────────────────────────────────────────
 
@@ -476,6 +575,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 									<div className='tdc-color-row'>
 										<span className='tdc-color-label'>Fill Color</span>
 										<button
+											type='button'
 											className='tdc-color-toggle'
 											onClick={() => setShowFillPicker((p) => !p)}>
 											<span
@@ -490,12 +590,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 												className='tdc-picker-overlay'
 												onClick={() => setShowFillPicker(false)}
 											/>
-											<SketchPicker
-												color={fillColor}
-												onChange={(c) => {
-													setFillColor(`rgba(${c.rgb.r},${c.rgb.g},${c.rgb.b},${c.rgb.a})`);
-												}}
-											/>
+											<div className='tdc-picker-panel'>
+												<SketchPicker
+													color={fillColor}
+													onChange={(c) => applyFillColor(getPickerColorString(c))}
+													onChangeComplete={(c) => applyFillColor(getPickerColorString(c))}
+												/>
+											</div>
 										</div>
 									)}
 
@@ -516,18 +617,16 @@ const TemplateDetailWorkspace: React.FC = () => {
 										<div className='tdc-layer-btns'>
 											<button
 												className='tdc-layer-btn'
-												onClick={() => {
-													selectedObject.bringForward?.();
-													fabricRef.current?.renderAll();
-												}}>
+												type='button'
+												title='Forward (Shift+Click: To Front)'
+												onClick={handleForwardLayer}>
 												<Icon icon='ArrowUpward' size='sm' /> Forward
 											</button>
 											<button
 												className='tdc-layer-btn'
-												onClick={() => {
-													selectedObject.sendBackwards?.();
-													fabricRef.current?.renderAll();
-												}}>
+												type='button'
+												title='Backward (Shift+Click: To Back)'
+												onClick={handleBackwardLayer}>
 												<Icon icon='ArrowDownward' size='sm' /> Backward
 											</button>
 										</div>
