@@ -46,6 +46,11 @@ const getStoredThumb = () => {
 	return saved >= THUMB_MIN && saved <= THUMB_MAX ? saved : THUMB_DEFAULT;
 };
 
+const mockDeleteTemplatesApi = async (_ids: number[]) =>
+	new Promise<void>((resolve) => {
+		setTimeout(() => resolve(), 450);
+	});
+
 const TemplatesWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const [templates, setTemplates] = useState<Template[]>([]);
@@ -54,6 +59,8 @@ const TemplatesWorkspace: React.FC = () => {
 	const [error, setError] = useState('');
 	const [thumbSize, setThumbSize] = useState(getStoredThumb);
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 
 	const saveThumb = (v: number) => {
 		const clamped = Math.min(THUMB_MAX, Math.max(THUMB_MIN, v));
@@ -80,6 +87,10 @@ const TemplatesWorkspace: React.FC = () => {
 		void loadTemplates();
 	}, [loadTemplates]);
 
+	useEffect(() => {
+		setSelectedIds((prev) => prev.filter((id) => templates.some((tpl) => tpl.id === id)));
+	}, [templates]);
+
 	const handleCreate = async (payload: CreateTemplatePayload) => {
 		const created = await templatesApi.create(payload);
 		setTemplates((prev) => [created, ...prev]);
@@ -100,14 +111,67 @@ const TemplatesWorkspace: React.FC = () => {
 		try {
 			await templatesApi.delete(tpl.id);
 			setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+			setSelectedIds((prev) => prev.filter((id) => id !== tpl.id));
 		} catch {
 			setError('Failed to delete template.');
+		}
+	};
+
+	const handleToggleFavourite = async (tpl: Template) => {
+		const nextFavourite = !tpl.is_favourite;
+		setTemplates((prev) =>
+			prev.map((item) => (item.id === tpl.id ? { ...item, is_favourite: nextFavourite } : item)),
+		);
+		try {
+			const updated = await templatesApi.favourite(tpl.id, nextFavourite);
+			setTemplates((prev) =>
+				prev.map((item) => (item.id === tpl.id ? { ...item, ...updated } : item)),
+			);
+		} catch {
+			setTemplates((prev) =>
+				prev.map((item) =>
+					item.id === tpl.id ? { ...item, is_favourite: tpl.is_favourite } : item,
+				),
+			);
+			setError('Failed to update favourite.');
 		}
 	};
 
 	const displayed = templates.filter((t) =>
 		!search || t.template_name.toLowerCase().includes(search.toLowerCase()),
 	);
+	const selectedCount = selectedIds.length;
+
+	const toggleSelected = (tpl: Template) => {
+		setSelectedIds((prev) =>
+			prev.includes(tpl.id) ? prev.filter((id) => id !== tpl.id) : [...prev, tpl.id],
+		);
+	};
+
+	const handleDeleteSelected = async () => {
+		if (!selectedCount) return;
+		const result = await swalFire({
+			title: 'Delete selected templates?',
+			text: `Delete ${selectedCount} selected template${selectedCount > 1 ? 's' : ''}? This cannot be undone.`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'Delete selected',
+			cancelButtonText: 'Cancel',
+			reverseButtons: true,
+		});
+		if (!result.isConfirmed) return;
+		setBulkDeleting(true);
+		try {
+			const idsToDelete = [...selectedIds];
+			await mockDeleteTemplatesApi(idsToDelete);
+			setTemplates((prev) => prev.filter((tpl) => !idsToDelete.includes(tpl.id)));
+			setSelectedIds([]);
+		} catch {
+			setError('Failed to delete selected templates.');
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
 
 	return (
 		<>
@@ -124,6 +188,25 @@ const TemplatesWorkspace: React.FC = () => {
 					</CardLabel>
 					<CardActions>
 						<div className='d-flex align-items-center gap-2 flex-wrap'>
+							{selectedCount > 0 && (
+								<>
+									<span className='tpl-selected-chip'>{selectedCount} selected</span>
+									<Button
+										color='warning'
+										icon='Delete'
+										isDisable={bulkDeleting}
+										onClick={handleDeleteSelected}>
+										Delete selected
+									</Button>
+									<Button
+										color='light'
+										icon='Close'
+										isDisable={bulkDeleting}
+										onClick={() => setSelectedIds([])}>
+										Cancel
+									</Button>
+								</>
+							)}
 							<ThumbnailSizeControl
 								value={thumbSize}
 								min={THUMB_MIN}
@@ -142,9 +225,11 @@ const TemplatesWorkspace: React.FC = () => {
 							{/* <Button color='light' icon='Refresh' isDisable={loading} onClick={loadTemplates}>
 								Refresh
 							</Button> */}
-							<Button color='primary' icon='Add' onClick={() => setShowCreateModal(true)}>
-								New Template
-							</Button>
+							{selectedCount === 0 && (
+								<Button color='primary' icon='Add' onClick={() => setShowCreateModal(true)}>
+									New Template
+								</Button>
+							)}
 						</div>
 					</CardActions>
 				</CardHeader>
@@ -175,6 +260,9 @@ const TemplatesWorkspace: React.FC = () => {
 										thumbSize={thumbSize}
 										onOpen={(t) => navigate(`/templates/${t.id}`, { state: t })}
 										onDelete={handleDelete}
+										onToggleFavourite={handleToggleFavourite}
+										isSelected={selectedIds.includes(tpl.id)}
+										onToggleSelect={toggleSelected}
 									/>
 								))}
 							</div>
