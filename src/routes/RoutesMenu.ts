@@ -34,6 +34,13 @@ export const allRoutesObject = {
 		path: '/serving-points',
 		subMenu: null,
 	},
+	servingpointdetails: {
+		id: 'servingpointdetails',
+		text: 'Serving Point Detail',
+		icon: 'Monitor',
+		path: '/serving-points/:servingPointId',
+		subMenu: null,
+	},
 	screens: {
 		id: 'screens',
 		text: 'Screens',

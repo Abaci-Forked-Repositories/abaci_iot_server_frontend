@@ -14,6 +14,8 @@ export interface TokenCreateFormProps {
 	fixedScheduleId?: number;
 	/** Serving points on the queue — shown as a reference list when creating a token. */
 	servingPoints?: ServingPoint[];
+	showServingPoints?: boolean;
+	onCancel?: () => void;
 	onSubmit: (e: FormEvent<HTMLFormElement>) => void;
 	isSubmitting: boolean;
 }
@@ -27,6 +29,8 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 	onQueueChange,
 	fixedScheduleId,
 	servingPoints,
+	showServingPoints = true,
+	onCancel,
 	onSubmit,
 	isSubmitting,
 }) => {
@@ -107,7 +111,7 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 					onChange={(e) => setTokenForm((p) => ({ ...p, phone: e.target.value }))}
 				/>
 			</div>
-			<div className='col-md-3'>
+			<div className='col-md-6'>
 				<label className='form-label'>Age</label>
 				<input
 					className='form-control'
@@ -122,38 +126,13 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 					}
 				/>
 			</div>
-			<div className='col-md-9'>
+			<div className='col-md-6'>
 				<label className='form-label'>Place</label>
 				<input
 					className='form-control'
 					value={tokenForm.place ?? ''}
 					onChange={(e) => setTokenForm((p) => ({ ...p, place: e.target.value }))}
 				/>
-			</div>
-			<div className='col-md-6'>
-				<label className='form-label'>Priority</label>
-				<input
-					className='form-control'
-					type='number'
-					value={tokenForm.priority ?? 0}
-					onChange={(e) =>
-						setTokenForm((p) => ({ ...p, priority: Number(e.target.value) || 0 }))
-					}
-				/>
-			</div>
-			<div className='col-md-6 d-flex align-items-end'>
-				<div className='form-check form-switch mb-2'>
-					<input
-						className='form-check-input'
-						type='checkbox'
-						id='token-vip'
-						checked={Boolean(tokenForm.is_vip)}
-						onChange={(e) => setTokenForm((p) => ({ ...p, is_vip: e.target.checked }))}
-					/>
-					<label className='form-check-label fw-semibold' htmlFor='token-vip'>
-						VIP
-					</label>
-				</div>
 			</div>
 			<div className='col-12'>
 				<label className='form-label'>Remarks</label>
@@ -164,7 +143,7 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 					onChange={(e) => setTokenForm((p) => ({ ...p, remarks: e.target.value }))}
 				/>
 			</div>
-			{servingPoints && servingPoints.length > 0 && (
+			{showServingPoints && servingPoints && servingPoints.length > 0 && (
 				<div className='col-12'>
 					<label className='form-label text-muted small'>Serving points on this queue</label>
 					<ul className='list-group list-group-flush border rounded small mb-0'>
@@ -182,7 +161,12 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 					</div>
 				</div>
 			)}
-			<div className='col-12 d-flex justify-content-end align-items-center'>
+			<div className='col-12 d-flex justify-content-end align-items-center gap-2'>
+				{onCancel && (
+					<Button color='light' isLight type='button' onClick={onCancel}>
+						Cancel
+					</Button>
+				)}
 				<Button color='primary' type='submit' isDisable={isSubmitting}>
 					Create Token
 				</Button>

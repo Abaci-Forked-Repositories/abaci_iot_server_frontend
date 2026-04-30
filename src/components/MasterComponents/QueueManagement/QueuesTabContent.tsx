@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Queue, QueueGroup } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
-import Spinner from '../../bootstrap/Spinner';
 import { Col, Row } from 'reactstrap';
+import QueueManagementSkeleton from '../../CustomComponent/Skeleton/QueueManagementSkeleton';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import QueueCardTile from './QueueCardTile';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import QueueGroupTabContent from './QueueGroupTabContent';
@@ -41,6 +42,13 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	const [isLoadingMoreGroups, setIsLoadingMoreGroups] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [error, setError] = useState('');
+	const { showErrorNotification } = useToasterNotification();
+
+	useEffect(() => {
+		if (!error) return;
+		showErrorNotification(error);
+		setError('');
+	}, [error, showErrorNotification]);
 
 	const loadGroups = useCallback(
 		async (reset = true) => {
@@ -161,11 +169,9 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 
 	return (
 		<div>
-			{error && <div className='alert alert-danger mb-3'>{error}</div>}
 			{initialLoading ? (
-				<div className='text-center text-muted py-5'>Loading queues...</div>
-			) : null}
-			{displayMode === 'groups' ? (
+				<QueueManagementSkeleton count={8} />
+			) : displayMode === 'groups' ? (
 				<div>
 					<div className='queue-cards-scroll' onScroll={handleGroupScroll}>
 						<QueueGroupTabContent
@@ -175,8 +181,8 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 							onGroupSelect={onQueueGroupCardSelect}
 						/>
 						{isLoadingMoreGroups && (
-							<div className='d-flex justify-content-center py-3'>
-								<Spinner isSmall />
+							<div className='py-3'>
+								<QueueManagementSkeleton count={4} />
 							</div>
 						)}
 					</div>
@@ -184,31 +190,31 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 			) : (
 				<div>
 					<div className='queue-cards-scroll' onScroll={handleScroll}>
-				<Row className='g-3 mx-0'>
-					{queues.map((queue) => (
-						<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
-							<QueueCardTile
-								queue={queue}
-								groupName={groups.find((group) => group.id === queue.group)?.name || queue.group || '-'}
-								selected={false}
-								onSelect={(id) => navigate(`/queue-management/${id}`)}
-								onToggleQueue={onToggleQueue}
-								isActionLoading={isQueueActionLoading(queue.id)}
-							/>
-						</Col>
-					))}
-					{!queues.length && (
-						<Col xs={12} className='text-center text-muted py-4'>
-							No queues found for this filter.
-						</Col>
-					)}
-				</Row>
-				{isLoadingMoreQueues && (
-					<div className='d-flex justify-content-center py-3'>
-						<Spinner isSmall />
+						<Row className='g-3 mx-0'>
+							{queues.map((queue) => (
+								<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
+									<QueueCardTile
+										queue={queue}
+										groupName={groups.find((group) => group.id === queue.group)?.name || queue.group || '-'}
+										selected={false}
+										onSelect={(id) => navigate(`/queue-management/${id}`)}
+										onToggleQueue={onToggleQueue}
+										isActionLoading={isQueueActionLoading(queue.id)}
+									/>
+								</Col>
+							))}
+							{!queues.length && (
+								<Col xs={12} className='text-center text-muted py-4'>
+									No queues found for this filter.
+								</Col>
+							)}
+						</Row>
+						{isLoadingMoreQueues && (
+							<div className='py-3'>
+								<QueueManagementSkeleton count={4} />
+							</div>
+						)}
 					</div>
-				)}
-			</div>
 				</div>
 			)}
 		</div>

@@ -55,7 +55,8 @@ interface CreateScheduleForm {
 	description: string;
 	start: string;
 	end: string;
-	token_limit: string;
+	token_from: string;
+	token_to: string;
 }
 
 export function mapQueueScheduleToCalendarEvent(s: QueueSchedule): QueueScheduleEvent {
@@ -145,7 +146,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 		description: '',
 		start: toDateTimeLocalValue(new Date()),
 		end: toDateTimeLocalValue(dayjs().add(1, 'hour').toDate()),
-		token_limit: '100',
+		token_from: '1',
+		token_to: '100',
 	});
 
 	const events = useMemo(
@@ -229,7 +231,28 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			return;
 		}
 
-		const limitNum = scheduleForm.token_limit ? Number(scheduleForm.token_limit) : 100;
+		const tokenFromNum = scheduleForm.token_from ? Number(scheduleForm.token_from) : undefined;
+		const tokenToNum = scheduleForm.token_to ? Number(scheduleForm.token_to) : undefined;
+		if (tokenFromNum != null && Number.isNaN(tokenFromNum)) {
+			setCreateError('Token from must be a valid number.');
+			return;
+		}
+		if (tokenToNum != null && Number.isNaN(tokenToNum)) {
+			setCreateError('Token to must be a valid number.');
+			return;
+		}
+		if (tokenFromNum != null && tokenFromNum < 1) {
+			setCreateError('Token from must be 1 or greater.');
+			return;
+		}
+		if (tokenToNum != null && tokenToNum < 1) {
+			setCreateError('Token to must be 1 or greater.');
+			return;
+		}
+		if (tokenFromNum != null && tokenToNum != null && tokenFromNum > tokenToNum) {
+			setCreateError('Token from must be less than or equal to token to.');
+			return;
+		}
 
 		if (!queueId) return;
 
@@ -240,7 +263,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				from_datetime: startDate.toISOString(),
 				to_datetime: endDate.toISOString(),
 				description: scheduleForm.description.trim() || undefined,
-				limit: limitNum,
+				token_from: tokenFromNum,
+				token_to: tokenToNum,
 			});
 			setShowCreateModal(false);
 			await onScheduleCreated?.();
@@ -519,18 +543,33 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 									required
 								/>
 							</div>
-							<div className='col-md-12'>
-								<label className='form-label fw-semibold' htmlFor='schedule-token-limit'>
-									Token limit
+							<div className='col-md-6'>
+								<label className='form-label fw-semibold' htmlFor='schedule-token-from'>
+									Token from
 								</label>
 								<input
-									id='schedule-token-limit'
+									id='schedule-token-from'
 									type='number'
 									min={1}
 									className='form-control'
-									value={scheduleForm.token_limit}
+									value={scheduleForm.token_from}
 									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, token_limit: e.target.value }))
+										setScheduleForm((prev) => ({ ...prev, token_from: e.target.value }))
+									}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className='form-label fw-semibold' htmlFor='schedule-token-to'>
+									Token to
+								</label>
+								<input
+									id='schedule-token-to'
+									type='number'
+									min={1}
+									className='form-control'
+									value={scheduleForm.token_to}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_to: e.target.value }))
 									}
 								/>
 							</div>

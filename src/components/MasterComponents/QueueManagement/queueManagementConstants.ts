@@ -1,7 +1,5 @@
 import type { CreateTokenPayload, TokenStatus } from '../../../services/queueManagementApi';
 
-export type QueueManagementTab = 'queues' | 'tokens' | 'customers';
-
 /** Queues list filter: all queues, only those without a group, or a specific group id. */
 export type QueueGroupFilterValue = 'all' | 'ungrouped' | number;
 

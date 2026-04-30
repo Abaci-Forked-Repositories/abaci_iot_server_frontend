@@ -5,24 +5,27 @@ import { ThemeProvider } from '@mui/material/styles';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
-import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Icon from '../../icon/Icon';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
 import TokenCreateForm from '../../PageComponents/QueueManagement/TokenCreateForm';
+import Spinner from '../../bootstrap/Spinner';
 import useTablestyle from '../../../hooks/useTablestyles';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type CreateTokenPayload,
 	type Queue,
 	type QueueSchedule,
+	type ScheduleServingPoint,
 	type QueueStatus,
-	type ServingPoint,
 	type Token,
 	queuesApi,
+	scheduleServingPointsApi,
 	schedulesApi,
 	tokensApi,
 } from '../../../services/queueManagementApi';
 import { initialTokenForm } from '../QueueManagement/queueManagementConstants';
-import { formatDate, getErrorMessage, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
+import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
 
 const scheduleStatusBadgeColor = (status?: string) => {
 	const normalized = (status || '').toLowerCase();
@@ -32,6 +35,24 @@ const scheduleStatusBadgeColor = (status?: string) => {
 	if (normalized === 'completed') return 'info';
 	if (normalized === 'canceled' || normalized === 'cancelled') return 'danger';
 	return 'secondary';
+};
+
+const normalizeScheduleStatus = (status?: string) => (status || '').toLowerCase().trim();
+
+const getNextAllowedStatuses = (status?: string) => {
+	const normalized = normalizeScheduleStatus(status);
+	if (normalized === 'scheduled') return ['running', 'cancelled'];
+	if (normalized === 'running') return ['on_hold', 'completed', 'cancelled'];
+	if (normalized === 'on_hold' || normalized === 'onhold') return ['running', 'completed', 'cancelled'];
+	return [];
+};
+
+const toLocalDateTimeInputValue = (iso?: string) => {
+	if (!iso) return '';
+	const parsed = new Date(iso);
+	if (Number.isNaN(parsed.getTime())) return '';
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
 };
 
 const ScheduleDetailWorkspace: React.FC = () => {
@@ -44,14 +65,21 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	const [loading, setLoading] = useState(true);
 	const [tokenSaving, setTokenSaving] = useState(false);
+	const [statusSaving, setStatusSaving] = useState(false);
 	const [showCreateTokenModal, setShowCreateTokenModal] = useState(false);
-	const [error, setError] = useState('');
-	const [success, setSuccess] = useState('');
+	const [showStatusModal, setShowStatusModal] = useState(false);
+	const [showServingPointEditModal, setShowServingPointEditModal] = useState(false);
 	const [queues, setQueues] = useState<Queue[]>([]);
 	const [scheduleRecord, setScheduleRecord] = useState<QueueSchedule | null>(null);
+	const [statusFormValue, setStatusFormValue] = useState('scheduled');
+	const [fromDateTimeFormValue, setFromDateTimeFormValue] = useState('');
+	const [toDateTimeFormValue, setToDateTimeFormValue] = useState('');
+	const [servingPointStatusFormValue, setServingPointStatusFormValue] = useState('scheduled');
+	const [servingPointFromDateTimeFormValue, setServingPointFromDateTimeFormValue] = useState('');
+	const [servingPointToDateTimeFormValue, setServingPointToDateTimeFormValue] = useState('');
+	const [editingServingPointWindow, setEditingServingPointWindow] = useState<ScheduleServingPoint | null>(null);
 	const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
 	const [tokens, setTokens] = useState<Token[]>([]);
-	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
 	const [tokenForm, setTokenForm] = useState<CreateTokenPayload>(initialTokenForm);
 	const [tokenStatusFilter, setTokenStatusFilter] = useState<{ label: string; value: string }>({
 		label: 'All',
@@ -60,11 +88,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	const queueId = scheduleRecord?.queue ?? queueIdFromState ?? 0;
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
-
-	const clearMessages = () => {
-		setError('');
-		setSuccess('');
-	};
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	const load = useCallback(async () => {
 		if (!sid || Number.isNaN(sid)) {
@@ -73,39 +97,49 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		}
 
 		setLoading(true);
-		clearMessages();
 		try {
 			const sch = await schedulesApi.get(sid);
 			setScheduleRecord(sch);
 			const qid = sch.queue;
 
-			const [queuesRes, pointsRes, tokensRes, statusRes] = await Promise.all([
+			const [queuesRes, tokensRes, statusRes] = await Promise.all([
 				queuesApi.list({ ordering: 'name', page_size: 200 }),
-				queuesApi.servingPoints({ queue: qid, ordering: 'name', page_size: 100 }),
 				tokensApi.list({ queue: qid, ordering: '-created_at', page_size: 200 }),
 				tokensApi.queueStatus(qid),
 			]);
 			setQueues(queuesRes.results || []);
-			setServingPoints((pointsRes.results || []).filter((point) => point.queue === qid));
 			const allTok = tokensRes.results || [];
 			setTokens(allTok.filter((t) => (t.schedule ?? null) === sid));
 			setQueueStatus(statusRes);
 			setTokenForm((prev) => ({ ...prev, schedule_id: sid }));
 		} catch (err) {
-			setError(getErrorMessage(err));
+			showErrorNotification(err);
 		} finally {
 			setLoading(false);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [sid]);
 
 	useEffect(() => {
 		void load();
 	}, [load]);
 
+	useEffect(() => {
+		if (!showStatusModal) return;
+		const nextStatuses = getNextAllowedStatuses(scheduleRecord?.status);
+		setStatusFormValue(nextStatuses[0] || '');
+	}, [scheduleRecord?.status, showStatusModal]);
+
+	useEffect(() => {
+		if (!showServingPointEditModal || !editingServingPointWindow) return;
+		setServingPointStatusFormValue(editingServingPointWindow.status || 'scheduled');
+		setServingPointFromDateTimeFormValue(toLocalDateTimeInputValue(editingServingPointWindow.from_datetime));
+		setServingPointToDateTimeFormValue(toLocalDateTimeInputValue(editingServingPointWindow.to_datetime));
+	}, [editingServingPointWindow, showServingPointEditModal]);
+
 	const handleCreateToken = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setTokenSaving(true);
-		clearMessages();
 		try {
 			await tokensApi.create({
 				schedule_id: sid,
@@ -118,10 +152,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 						: undefined,
 				place: tokenForm.place?.trim() || undefined,
 				remarks: tokenForm.remarks?.trim() || undefined,
-				priority: tokenForm.priority,
-				is_vip: tokenForm.is_vip,
 			});
-			setSuccess('Token created successfully.');
+			showSuccessNotification('Token created successfully.');
 			setShowCreateTokenModal(false);
 			setTokenForm((prev) => ({
 				...initialTokenForm,
@@ -129,9 +161,62 @@ const ScheduleDetailWorkspace: React.FC = () => {
 			}));
 			await load();
 		} catch (err) {
-			setError(getErrorMessage(err));
+			showErrorNotification(err);
 		} finally {
 			setTokenSaving(false);
+		}
+	};
+
+	const handleUpdateScheduleStatus = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!scheduleRecord?.id) return;
+		const allowedStatuses = getNextAllowedStatuses(scheduleRecord.status);
+		const currentStatus = scheduleRecord.status || '';
+		if (!statusFormValue || !allowedStatuses.includes(statusFormValue)) {
+			showErrorNotification('Selected status transition is not allowed.');
+			return;
+		}
+		setStatusSaving(true);
+		try {
+			await schedulesApi.patch(scheduleRecord.id, { status: statusFormValue });
+			showSuccessNotification('Schedule status updated successfully.');
+			setShowStatusModal(false);
+			await load();
+		} catch (err) {
+			showErrorNotification(err);
+		} finally {
+			setStatusSaving(false);
+		}
+	};
+
+	const handleUpdateServingPointWindow = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!editingServingPointWindow?.id) return;
+		if (!servingPointFromDateTimeFormValue || !servingPointToDateTimeFormValue) {
+			showErrorNotification('From and End date/time are required.');
+			return;
+		}
+		const fromIso = new Date(servingPointFromDateTimeFormValue).toISOString();
+		const toIso = new Date(servingPointToDateTimeFormValue).toISOString();
+		if (new Date(fromIso).getTime() >= new Date(toIso).getTime()) {
+			showErrorNotification('End date/time must be after Start date/time.');
+			return;
+		}
+		setStatusSaving(true);
+		try {
+			await scheduleServingPointsApi.patch(editingServingPointWindow.id, {
+				from_datetime: fromIso,
+				to_datetime: toIso,
+				status: servingPointStatusFormValue || undefined,
+			});
+			showSuccessNotification('Serving point window updated successfully.');
+			setShowServingPointEditModal(false);
+			setEditingServingPointWindow(null);
+			await load();
+		} catch (err) {
+			showErrorNotification(err);
+		} finally {
+			setStatusSaving(false);
 		}
 	};
 
@@ -145,20 +230,44 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		() => [
 			{
 				title: 'Name',
-				field: 'name',
+				field: 'serving_point_name',
+				render: (rowData: ScheduleServingPoint) =>
+					rowData.serving_point_name || `Serving Point #${rowData.serving_point}`,
 			},
 			{
-				title: 'Description',
-				field: 'description',
-				render: (rowData: ServingPoint) => rowData.description || '—',
+				title: 'From',
+				field: 'from_datetime',
+				render: (rowData: ScheduleServingPoint) => formatDate(rowData.from_datetime),
+			},
+			{
+				title: 'End',
+				field: 'to_datetime',
+				render: (rowData: ScheduleServingPoint) => formatDate(rowData.to_datetime),
 			},
 			{
 				title: 'Status',
-				field: 'is_available',
-				render: (rowData: ServingPoint) => (
-					<Badge color={rowData.is_available ? 'success' : 'secondary'} isLight>
-						{rowData.is_available ? 'Available' : 'Busy'}
+				field: 'status',
+				render: (rowData: ScheduleServingPoint) => (
+					<Badge color={scheduleStatusBadgeColor(rowData.status)} isLight>
+						{rowData.status || '—'}
 					</Badge>
+				),
+			},
+			{
+				title: 'Actions',
+				field: 'actions',
+				render: (rowData: ScheduleServingPoint) => (
+					<Button
+						color='primary'
+						isLight
+						size='sm'
+						icon='Edit'
+						onClick={() => {
+							setEditingServingPointWindow(rowData);
+							setShowServingPointEditModal(true);
+						}}>
+						Edit
+					</Button>
 				),
 			},
 		],
@@ -205,6 +314,30 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		[],
 	);
 
+	const scheduleStatusOptions = useMemo(
+		() => [
+			{ label: 'Scheduled', value: 'scheduled' },
+			{ label: 'Running', value: 'running' },
+			{ label: 'On Hold', value: 'on_hold' },
+			{ label: 'Completed', value: 'completed' },
+			{ label: 'Cancelled', value: 'cancelled' },
+		],
+		[],
+	);
+
+	const nextScheduleStatusOptions = useMemo(() => {
+		const allowed = getNextAllowedStatuses(scheduleRecord?.status);
+		const current = scheduleRecord?.status || '';
+		return scheduleStatusOptions.filter(
+			(option) => option.value === current || allowed.includes(option.value),
+		);
+	}, [scheduleRecord?.status, scheduleStatusOptions]);
+
+	const canEditScheduleStatus = useMemo(() => {
+		const normalized = normalizeScheduleStatus(scheduleRecord?.status);
+		return normalized !== 'completed' && normalized !== 'cancelled' && normalized !== 'canceled';
+	}, [scheduleRecord?.status]);
+
 	const filteredTokens = useMemo(() => {
 		if (tokenStatusFilter.value === 'all') {
 			return tokens;
@@ -231,9 +364,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	return (
 		<>
-			{error && <div className='alert alert-danger mb-3'>{error}</div>}
-			{success && <div className='alert alert-success mb-3'>{success}</div>}
-
 			<Card className='mb-4'>
 				<CardBody className='p-0'>
 					<div className='d-flex flex-column flex-xl-row'>
@@ -247,9 +377,23 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 									<div className='h4 mb-0 fw-bold'>Schedule Details</div>
 								</div>
-								<Badge color={scheduleStatusBadgeColor(scheduleRecord?.status)} isLight>
-									{scheduleRecord?.status || 'unknown'}
-								</Badge>
+								<div className='d-flex align-items-center gap-2'>
+									<Badge
+										color={scheduleStatusBadgeColor(scheduleRecord?.status)}
+										className='px-3 py-2 fs-6 text-capitalize'>
+										{scheduleRecord?.status || 'unknown'}
+									</Badge>
+									{canEditScheduleStatus && (
+										<Button
+											color='primary'
+											isLight
+											size='sm'
+											icon='Edit'
+											onClick={() => setShowStatusModal(true)}>
+											Update Status
+										</Button>
+									)}
+								</div>
 							</div>
 
 							<div className='row g-3'>
@@ -387,7 +531,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 					<Card stretch>
 						<CardHeader>
 							<CardLabel icon='Monitor'>
-								<CardTitle tag='h5'>Serving Points ({servingPoints.length})</CardTitle>
+								<CardTitle tag='h5'>
+									Serving Points ({scheduleRecord?.serving_point_windows?.length || 0})
+								</CardTitle>
 							</CardLabel>
 						</CardHeader>
 						<CardBody>
@@ -401,7 +547,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 												title=' '
 												// @ts-ignore
 												columns={servingPointColumns}
-												data={servingPoints}
+												data={scheduleRecord?.serving_point_windows || []}
 												options={{
 													headerStyle: headerStyles(),
 													rowStyle: rowStyles(),
@@ -472,7 +618,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				</div>
 			</div>
 
-			<Modal isOpen={showCreateTokenModal} setIsOpen={setShowCreateTokenModal} isCentered size='xl' isAnimation={false}>
+			<Modal isOpen={showCreateTokenModal} setIsOpen={setShowCreateTokenModal} isCentered size='lg' isAnimation={false}>
 				<ModalHeader setIsOpen={setShowCreateTokenModal}>
 					<ModalTitle id='create-token-modal'>Create Token for Schedule</ModalTitle>
 				</ModalHeader>
@@ -485,11 +631,146 @@ const ScheduleDetailWorkspace: React.FC = () => {
 						selectedQueueId={queueId}
 						onQueueChange={() => {}}
 						fixedScheduleId={sid}
-						servingPoints={servingPoints}
+						servingPoints={[]}
+						showServingPoints={false}
+						onCancel={() => setShowCreateTokenModal(false)}
 						onSubmit={handleCreateToken}
 						isSubmitting={tokenSaving}
 					/>
 				</ModalBody>
+			</Modal>
+
+			<Modal isOpen={showStatusModal} setIsOpen={setShowStatusModal} isCentered size='sm' isAnimation={false}>
+				<ModalHeader setIsOpen={setShowStatusModal}>
+					<ModalTitle id='update-schedule-status-modal'>Update Schedule Status</ModalTitle>
+				</ModalHeader>
+				<form onSubmit={handleUpdateScheduleStatus}>
+					<ModalBody>
+						<div className='text-muted small mb-2'>
+							Current status:{' '}
+							<span className='fw-semibold text-capitalize'>{scheduleRecord?.status || 'unknown'}</span>
+						</div>
+						<label className='form-label fw-semibold' htmlFor='schedule-status'>
+							Change to
+						</label>
+						<select
+							id='schedule-status'
+							className='form-select'
+							value={statusFormValue}
+							disabled={statusSaving || nextScheduleStatusOptions.length === 0}
+							onChange={(e) => setStatusFormValue(e.target.value)}>
+							{nextScheduleStatusOptions.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+						{nextScheduleStatusOptions.length === 0 && (
+							<div className='text-muted small mt-2'>No status transitions available.</div>
+						)}
+					</ModalBody>
+					<ModalFooter>
+						<Button color='light' isLight onClick={() => setShowStatusModal(false)}>
+							Cancel
+						</Button>
+						<Button color='primary' type='submit' isDisable={statusSaving || nextScheduleStatusOptions.length === 0}>
+							{statusSaving ? (
+								<>
+									<Spinner isSmall inButton />
+									Updating...
+								</>
+							) : (
+								'Update Status'
+							)}
+						</Button>
+					</ModalFooter>
+				</form>
+			</Modal>
+
+			<Modal
+				isOpen={showServingPointEditModal}
+				setIsOpen={setShowServingPointEditModal}
+				isCentered
+				size='sm'
+				isAnimation={false}>
+				<ModalHeader setIsOpen={setShowServingPointEditModal}>
+					<ModalTitle id='update-serving-point-window-modal'>Edit Serving Point Window</ModalTitle>
+				</ModalHeader>
+				<form onSubmit={handleUpdateServingPointWindow}>
+					<ModalBody>
+						<div className='text-muted small mb-2'>
+							Serving Point:{' '}
+							<span className='fw-semibold'>
+								{editingServingPointWindow?.serving_point_name ||
+									(editingServingPointWindow?.serving_point
+										? `#${editingServingPointWindow.serving_point}`
+										: '—')}
+							</span>
+						</div>
+						<div className='mb-3'>
+							<label className='form-label fw-semibold' htmlFor='sp-window-from-datetime'>
+								From
+							</label>
+							<input
+								id='sp-window-from-datetime'
+								type='datetime-local'
+								className='form-control'
+								value={servingPointFromDateTimeFormValue}
+								onChange={(e) => setServingPointFromDateTimeFormValue(e.target.value)}
+								disabled={statusSaving}
+							/>
+						</div>
+						<div className='mb-3'>
+							<label className='form-label fw-semibold' htmlFor='sp-window-to-datetime'>
+								End
+							</label>
+							<input
+								id='sp-window-to-datetime'
+								type='datetime-local'
+								className='form-control'
+								value={servingPointToDateTimeFormValue}
+								onChange={(e) => setServingPointToDateTimeFormValue(e.target.value)}
+								disabled={statusSaving}
+							/>
+						</div>
+						<label className='form-label fw-semibold' htmlFor='sp-window-status'>
+							Status
+						</label>
+						<select
+							id='sp-window-status'
+							className='form-select'
+							value={servingPointStatusFormValue}
+							disabled={statusSaving}
+							onChange={(e) => setServingPointStatusFormValue(e.target.value)}>
+							{scheduleStatusOptions.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</ModalBody>
+					<ModalFooter>
+						<Button
+							color='light'
+							isLight
+							onClick={() => {
+								setShowServingPointEditModal(false);
+								setEditingServingPointWindow(null);
+							}}>
+							Cancel
+						</Button>
+						<Button color='primary' type='submit' isDisable={statusSaving}>
+							{statusSaving ? (
+								<>
+									<Spinner isSmall inButton />
+									Updating...
+								</>
+							) : (
+								'Update'
+							)}
+						</Button>
+					</ModalFooter>
+				</form>
 			</Modal>
 		</>
 	);

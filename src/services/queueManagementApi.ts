@@ -60,6 +60,7 @@ export interface Queue {
 	limit?: number;
 	grace_period_minutes?: number;
 	allow_postpone?: boolean;
+	is_reporting_enabled?: boolean;
 	is_active?: boolean;
 	serving_points?: Array<Pick<ServingPoint, 'id' | 'name'>>;
 	created_at?: string;
@@ -160,6 +161,16 @@ export interface CreateQueuePayload {
 	description?: string;
 	limit?: number;
 	allow_postpone?: boolean;
+	is_reporting_enabled?: boolean;
+	serving_points?: number[];
+}
+
+export interface UpdateQueuePayload {
+	name?: string;
+	description?: string;
+	limit?: number;
+	allow_postpone?: boolean;
+	is_reporting_enabled?: boolean;
 	serving_points?: number[];
 }
 
@@ -203,6 +214,8 @@ export interface QueueSchedule {
 	token_from?: number;
 	token_to?: number;
 	available_serving_points?: number[];
+	allow_postpone?: boolean;
+	serving_point_windows?: ScheduleServingPoint[];
 	created_at?: string;
 	updated_at?: string;
 }
@@ -236,6 +249,10 @@ export interface ScheduleServingPoint {
 	serving_point_name?: string;
 	from_datetime: string;
 	to_datetime: string;
+	status?: string;
+	current_token?: number | null;
+	current_token_number?: string | null;
+	current_token_status?: string | null;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -247,11 +264,18 @@ export interface CreateScheduleServingPointPayload {
 	to_datetime: string;
 }
 
+export interface PatchScheduleServingPointPayload {
+	from_datetime?: string;
+	to_datetime?: string;
+	status?: string;
+}
+
 export interface SetScheduleServingPointsPayload {
 	serving_point_ids: number[];
 }
 
 export interface QueryParams {
+	[key: string]: string | number | boolean | undefined;
 	search?: string;
 	ordering?: string;
 	page?: number;
@@ -282,6 +306,8 @@ export const queuesApi = {
 		unwrap<PaginatedResponse<Queue>>(authAxios.get('api/queues/', { params })),
 	get: (id: number) => unwrap<Queue>(authAxios.get(`api/queues/${id}/`)),
 	create: (payload: CreateQueuePayload) => unwrap<Queue>(authAxios.post('api/queues/', payload)),
+	update: (id: number, payload: UpdateQueuePayload) =>
+		unwrap<Queue>(authAxios.patch(`api/queues/${id}/`, payload)),
 	statistics: (id: number) =>
 		unwrap<QueueStatistics>(authAxios.get(`api/queues/${id}/statistics/`)),
 	activate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/activate/`)),
@@ -290,6 +316,8 @@ export const queuesApi = {
 		unwrap<PaginatedResponse<QueueGroup>>(authAxios.get('api/queues/groups/', { params })),
 	servingPoints: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<ServingPoint>>(authAxios.get('api/queues/serving-points/', { params })),
+	getServingPoint: (id: number) =>
+		unwrap<ServingPoint>(authAxios.get(`api/queues/serving-points/${id}/`)),
 	createServingPoint: (payload: CreateServingPointPayload) =>
 		unwrap<ServingPoint>(authAxios.post('api/queues/serving-points/', payload)),
 	updateServingPoint: (id: number, payload: UpdateServingPointPayload) =>
@@ -323,8 +351,20 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(authAxios.post('api/queues/schedule-serving-points/', payload)),
 	update: (id: number, payload: CreateScheduleServingPointPayload) =>
 		unwrap<ScheduleServingPoint>(authAxios.put(`api/queues/schedule-serving-points/${id}/`, payload)),
-	patch: (id: number, payload: Partial<CreateScheduleServingPointPayload>) =>
+	patch: (id: number, payload: PatchScheduleServingPointPayload) =>
 		unwrap<ScheduleServingPoint>(authAxios.patch(`api/queues/schedule-serving-points/${id}/`, payload)),
+	startServing: (id: number) =>
+		unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/start-serving/`),
+		),
+	complete: (id: number) =>
+		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/complete/`)),
+	cancel: (id: number) =>
+		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/cancel/`)),
+	noShow: (id: number) =>
+		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`)),
+	postpone: (id: number) =>
+		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`)),
 	delete: (id: number) => unwrap<void>(authAxios.delete(`api/queues/schedule-serving-points/${id}/`)),
 };
 

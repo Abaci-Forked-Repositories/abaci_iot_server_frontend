@@ -8,6 +8,7 @@ import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstra
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
 import Icon from '../../icon/Icon';
+import QueueDetailSkeleton from '../../CustomComponent/Skeleton/QueueDetailSkeleton';
 import useTablestyle from '../../../hooks/useTablestyles';
 import type { Queue, QueueSchedule, QueueStatistics, QueueStatus, ServingPoint, Token } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi, tokensApi } from '../../../services/queueManagementApi';
@@ -232,7 +233,7 @@ const QueueDetailView: React.FC = () => {
 	}
 
 	if (loading && !queue) {
-		return <div className='text-center text-muted py-5'>Loading queue…</div>;
+		return <QueueDetailSkeleton />;
 	}
 
 	if (error && !queue) {
@@ -257,6 +258,14 @@ const QueueDetailView: React.FC = () => {
 			value: (
 				<Badge color={queueData.allow_postpone ? 'success' : 'secondary'} isLight>
 					{queueData.allow_postpone ? 'Yes' : 'No'}
+				</Badge>
+			),
+		},
+		{
+			label: 'Reporting enabled',
+			value: (
+				<Badge color={queueData.is_reporting_enabled ? 'success' : 'secondary'} isLight>
+					{queueData.is_reporting_enabled ? 'Yes' : 'No'}
 				</Badge>
 			),
 		},
