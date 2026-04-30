@@ -1,0 +1,354 @@
+import { authAxios } from '../axiosInstance';
+
+export interface PaginatedResponse<T> {
+	count: number;
+	next?: string | null;
+	previous?: string | null;
+	results: T[];
+}
+
+export interface User {
+	id: number;
+	username: string;
+	email: string;
+	first_name?: string;
+	last_name?: string;
+	is_staff?: boolean;
+	is_superuser?: boolean;
+	date_joined?: string;
+	last_login?: string | null;
+}
+
+export interface UserRole {
+	id: number;
+	name: string;
+	description?: string;
+}
+
+export interface QueueUser {
+	id: number;
+	user: number;
+	role: number;
+	is_active: boolean;
+	created_at?: string;
+}
+
+export interface QueueGroup {
+	id: number;
+	name: string;
+	description?: string;
+	is_active?: boolean;
+	created_at?: string;
+}
+
+export interface ServingPoint {
+	id: number;
+	name: string;
+	queue: number;
+	description?: string;
+	is_available?: boolean;
+	is_active?: boolean;
+	created_at?: string;
+}
+
+export interface Queue {
+	id: number;
+	name: string;
+	description?: string;
+	group?: number;
+	group_name?: string;
+	limit?: number;
+	grace_period_minutes?: number;
+	allow_postpone?: boolean;
+	is_active?: boolean;
+	serving_points?: Array<Pick<ServingPoint, 'id' | 'name'>>;
+	created_at?: string;
+	updated_at?: string;
+}
+
+/** GET /api/queues/{id}/statistics/ */
+export interface QueueStatistics {
+	queue_id: number;
+	queue_name: string;
+	total_tokens: number;
+	today_tokens?: number;
+	completed: number;
+	cancelled: number;
+	/** Tokens that have checked in (replaces legacy `waiting`). */
+	reported: number;
+	serving: number;
+	current_count?: number;
+	/** Optional legacy or extended stats */
+	no_show?: number;
+	avg_wait_time?: string;
+	avg_service_time?: string;
+	current_serving?: Array<{
+		token_number: string;
+		customer_name: string;
+		wait_time?: string;
+	}>;
+}
+
+export type TokenStatus =
+	| 'registred'
+	| 'reported'
+	| 'serving'
+	| 'completed'
+	| 'cancelled'
+	| 'postponed'
+	| 'no_show';
+
+export interface TokenUser {
+	id?: number;
+	name: string;
+	email?: string;
+	phone?: string;
+	age?: number | string;
+	place?: string;
+	created_at?: string;
+}
+
+export interface TokenQueueRef {
+	id: number;
+	name: string;
+}
+
+export interface Token {
+	id: number;
+	token_number: string;
+	token_user?: TokenUser;
+	queue: number | TokenQueueRef;
+	/** Schedule id this token belongs to */
+	schedule?: number | null;
+	queue_name?: string;
+	status: TokenStatus;
+	priority?: number;
+	is_vip?: boolean;
+	created_at?: string;
+	started_serving_at?: string | null;
+	completed_at?: string | null;
+	cancelled_at?: string | null;
+	notes?: string;
+	wait_time?: string;
+	service_time?: string | null;
+}
+
+export interface QueueStatus {
+	queue_id: number | string;
+	/** Checked-in tokens (replaces legacy `waiting`). */
+	reported: number;
+	serving: number;
+	completed_today: number;
+	total: number;
+}
+
+/** POST /api/tokens/create-token/ — flat body per backend */
+export interface CreateTokenPayload {
+	schedule_id: number;
+	name: string;
+	email?: string;
+	phone?: string;
+	age?: number;
+	place?: string;
+	remarks?: string;
+	priority?: number;
+	is_vip?: boolean;
+}
+
+export interface CreateQueuePayload {
+	name: string;
+	description?: string;
+	limit?: number;
+	allow_postpone?: boolean;
+	serving_points?: number[];
+}
+
+export interface CreateServingPointPayload {
+	name: string;
+	queue: number;
+	description?: string;
+	is_active?: boolean;
+	assigned_users?: number[];
+}
+
+export interface UpdateServingPointPayload {
+	name?: string;
+	queue?: number;
+	description?: string;
+	is_available?: boolean;
+	is_active?: boolean;
+}
+
+export interface CreateUserPayload {
+	username: string;
+	email: string;
+	password: string;
+	first_name?: string;
+	last_name?: string;
+}
+
+export type ScheduleApiStatus = string;
+
+export interface QueueSchedule {
+	id: number;
+	queue: number;
+	queue_name?: string;
+	from_datetime: string;
+	to_datetime: string;
+	description?: string;
+	current_token?: number | null;
+	current_token_number?: string | null;
+	status: ScheduleApiStatus;
+	limit?: number;
+	token_from?: number;
+	token_to?: number;
+	available_serving_points?: number[];
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface CreateSchedulePayload {
+	queue: number;
+	from_datetime: string;
+	to_datetime: string;
+	description?: string;
+	status?: string;
+	limit?: number;
+	token_from?: number;
+	token_to?: number;
+}
+
+export interface PatchSchedulePayload {
+	from_datetime?: string;
+	to_datetime?: string;
+	description?: string;
+	status?: string;
+	limit?: number;
+	token_from?: number;
+	token_to?: number;
+}
+
+export interface ScheduleServingPoint {
+	id: number;
+	queue_schedule: number;
+	queue_schedule_queue_id?: number;
+	serving_point: number;
+	serving_point_name?: string;
+	from_datetime: string;
+	to_datetime: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface CreateScheduleServingPointPayload {
+	queue_schedule: number;
+	serving_point: number;
+	from_datetime: string;
+	to_datetime: string;
+}
+
+export interface SetScheduleServingPointsPayload {
+	serving_point_ids: number[];
+}
+
+export interface QueryParams {
+	search?: string;
+	ordering?: string;
+	page?: number;
+	page_size?: number;
+	queue?: number | string;
+	queue_id?: number | string;
+	schedule?: number | string;
+	status?: TokenStatus | string;
+	group?: number | string;
+	is_available?: boolean | string;
+}
+
+const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
+
+export const usersApi = {
+	list: (params?: QueryParams) => unwrap<PaginatedResponse<User>>(authAxios.get('api/users/', { params })),
+	get: (id: number) => unwrap<User>(authAxios.get(`api/users/${id}/`)),
+	me: () => unwrap<User>(authAxios.get('api/users/me/')),
+	create: (payload: CreateUserPayload) => unwrap<User>(authAxios.post('api/users/', payload)),
+	setPassword: (id: number, payload: { old_password: string; password: string }) =>
+		unwrap<{ detail: string }>(authAxios.post(`api/users/${id}/set-password/`, payload)),
+	roles: () => unwrap<PaginatedResponse<UserRole>>(authAxios.get('api/users/roles/')),
+	queueUsers: () => unwrap<PaginatedResponse<QueueUser>>(authAxios.get('api/users/queue-users/')),
+};
+
+export const queuesApi = {
+	list: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<Queue>>(authAxios.get('api/queues/', { params })),
+	get: (id: number) => unwrap<Queue>(authAxios.get(`api/queues/${id}/`)),
+	create: (payload: CreateQueuePayload) => unwrap<Queue>(authAxios.post('api/queues/', payload)),
+	statistics: (id: number) =>
+		unwrap<QueueStatistics>(authAxios.get(`api/queues/${id}/statistics/`)),
+	activate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/activate/`)),
+	deactivate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/deactivate/`)),
+	groups: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<QueueGroup>>(authAxios.get('api/queues/groups/', { params })),
+	servingPoints: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<ServingPoint>>(authAxios.get('api/queues/serving-points/', { params })),
+	createServingPoint: (payload: CreateServingPointPayload) =>
+		unwrap<ServingPoint>(authAxios.post('api/queues/serving-points/', payload)),
+	updateServingPoint: (id: number, payload: UpdateServingPointPayload) =>
+		unwrap<ServingPoint>(authAxios.patch(`api/queues/serving-points/${id}/`, payload)),
+};
+
+export const schedulesApi = {
+	list: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<QueueSchedule>>(authAxios.get('api/queues/schedules/', { params })),
+	get: (id: number) => unwrap<QueueSchedule>(authAxios.get(`api/queues/schedules/${id}/`)),
+	create: (payload: CreateSchedulePayload) =>
+		unwrap<QueueSchedule>(authAxios.post('api/queues/schedules/', payload)),
+	update: (id: number, payload: CreateSchedulePayload) =>
+		unwrap<QueueSchedule>(authAxios.put(`api/queues/schedules/${id}/`, payload)),
+	patch: (id: number, payload: PatchSchedulePayload) =>
+		unwrap<QueueSchedule>(authAxios.patch(`api/queues/schedules/${id}/`, payload)),
+	delete: (id: number) => unwrap<void>(authAxios.delete(`api/queues/schedules/${id}/`)),
+	refreshCurrentToken: (id: number) =>
+		unwrap<QueueSchedule>(authAxios.post(`api/queues/schedules/${id}/refresh-current-token/`)),
+	setAvailableServingPoints: (id: number, payload: SetScheduleServingPointsPayload) =>
+		unwrap<unknown>(authAxios.post(`api/queues/schedules/${id}/set-available-serving-points/`, payload)),
+};
+
+export const scheduleServingPointsApi = {
+	list: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<ScheduleServingPoint>>(
+			authAxios.get('api/queues/schedule-serving-points/', { params }),
+		),
+	get: (id: number) => unwrap<ScheduleServingPoint>(authAxios.get(`api/queues/schedule-serving-points/${id}/`)),
+	create: (payload: CreateScheduleServingPointPayload) =>
+		unwrap<ScheduleServingPoint>(authAxios.post('api/queues/schedule-serving-points/', payload)),
+	update: (id: number, payload: CreateScheduleServingPointPayload) =>
+		unwrap<ScheduleServingPoint>(authAxios.put(`api/queues/schedule-serving-points/${id}/`, payload)),
+	patch: (id: number, payload: Partial<CreateScheduleServingPointPayload>) =>
+		unwrap<ScheduleServingPoint>(authAxios.patch(`api/queues/schedule-serving-points/${id}/`, payload)),
+	delete: (id: number) => unwrap<void>(authAxios.delete(`api/queues/schedule-serving-points/${id}/`)),
+};
+
+export const tokensApi = {
+	list: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<Token>>(authAxios.get('api/tokens/', { params })),
+	create: (payload: CreateTokenPayload) =>
+		unwrap<Token>(authAxios.post('api/tokens/create-token/', payload)),
+	queueStatus: (queueId: number) =>
+		unwrap<QueueStatus>(authAxios.get('api/tokens/queue-status/', { params: { queue_id: queueId } })),
+	recent: (limit = 10) =>
+		unwrap<Token[]>(authAxios.get('api/tokens/recent/', { params: { limit } })),
+	today: () => unwrap<Token[]>(authAxios.get('api/tokens/today/')),
+	markArrived: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/mark-arrived/`)),
+	startServing: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/start-serving/`)),
+	completeServing: (id: number) =>
+		unwrap<Token>(authAxios.post(`api/tokens/${id}/complete-serving/`)),
+	cancel: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/cancel/`)),
+	postpone: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/postpone/`)),
+	markNoShow: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/mark-no-show/`)),
+	users: (params?: QueryParams) =>
+		unwrap<PaginatedResponse<TokenUser>>(authAxios.get('api/tokens/users/', { params })),
+	usersByPhone: (phone: string) =>
+		unwrap<TokenUser[]>(authAxios.get('api/tokens/users/by-phone/', { params: { phone } })),
+	usersByEmail: (email: string) =>
+		unwrap<TokenUser[]>(authAxios.get('api/tokens/users/by-email/', { params: { email } })),
+};
