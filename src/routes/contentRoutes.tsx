@@ -7,6 +7,7 @@ const MAINROUTE = {
 	QueueManagement: lazy(() => import('../pages/QueueManagement/index')),
 	QueueManagementDetail: lazy(() => import('../pages/QueueManagement/Detail')),
 	QueueManagementServingPoints: lazy(() => import('../pages/ServingPoints/index')),
+	QueueManagementServingWindowDetail: lazy(() => import('../pages/ServingPoints/ServingWindowDetail')),
 	QueueManagementServingPointDetail: lazy(() => import('../pages/ServingPoints/Detail')),
 	ScheduleDetail: lazy(() => import('../pages/Schedules/Detail')),
 	Screens: lazy(() => import('../pages/Screens/index')),
@@ -46,6 +47,11 @@ const RouteConfig: CustomRouteConfig[] = [
 	{
 		path: allRoutesObject.servingpoints.path,
 		element: <MAINROUTE.QueueManagementServingPoints />,
+		allowedTo: ['ADMIN'],
+	},
+	{
+		path: allRoutesObject.servingwindowdetails.path,
+		element: <MAINROUTE.QueueManagementServingWindowDetail />,
 		allowedTo: ['ADMIN'],
 	},
 	{

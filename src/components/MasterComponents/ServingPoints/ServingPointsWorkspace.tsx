@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
+import Card, { CardActions, CardBody, CardHeader } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
+import Icon from '../../icon/Icon';
 import Badge from '../../bootstrap/Badge';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -18,7 +19,12 @@ import {
 	queuesApi,
 	usersApi,
 } from '../../../services/queueManagementApi';
-import { formatDate } from '../QueueManagement/queueManagementUtils';
+import {
+	formatDate,
+	servingPointAssignedUserIds,
+	servingPointQueueIds,
+} from '../QueueManagement/queueManagementUtils';
+import Tooltip from '@mui/material/Tooltip';
 
 const ServingPointsWorkspace: React.FC = () => {
 	const [searchParams] = useSearchParams();
@@ -36,7 +42,7 @@ const ServingPointsWorkspace: React.FC = () => {
 	const [users, setUsers] = useState<User[]>([]);
 	const [form, setForm] = useState<ServingPointFormValues>({
 		name: '',
-		queue: '',
+		queue_ids: [],
 		description: '',
 		is_active: true,
 		assigned_users: [],
@@ -52,7 +58,8 @@ const ServingPointsWorkspace: React.FC = () => {
 	const resetForm = useCallback(() => {
 		setForm({
 			name: '',
-			queue: Number.isNaN(queueIdFromQuery) || !queueIdFromQuery ? '' : String(queueIdFromQuery),
+			queue_ids:
+				Number.isNaN(queueIdFromQuery) || !queueIdFromQuery ? [] : [queueIdFromQuery],
 			description: '',
 			is_active: true,
 			assigned_users: [],
@@ -100,7 +107,13 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Queue',
 				field: 'queue',
-				render: (rowData: ServingPoint) => queueNameMap.get(rowData.queue) || `Queue ${rowData.queue}`,
+				render: (rowData: ServingPoint) => {
+					const ids = servingPointQueueIds(rowData);
+					if (ids.length === 0) return '—';
+					return ids
+						.map((qid) => queueNameMap.get(qid) || `Queue ${qid}`)
+						.join(', ');
+				},
 			},
 			{
 				title: 'Description',
@@ -132,6 +145,7 @@ const ServingPointsWorkspace: React.FC = () => {
 					const isActive = rowData.is_active ?? rowData.is_available ?? false;
 					return (
 						<div className='d-flex align-items-center gap-2'>
+							<Tooltip title='Edit Serving Point'>
 							<Button
 								color='primary'
 								isLight
@@ -144,15 +158,16 @@ const ServingPointsWorkspace: React.FC = () => {
 									setEditingServingPointId(rowData.id);
 									setForm({
 										name: rowData.name || '',
-										queue: String(rowData.queue || ''),
+										queue_ids: servingPointQueueIds(rowData),
 										description: rowData.description || '',
 										is_active: Boolean(rowData.is_active ?? true),
-										assigned_users: [],
+										assigned_users: servingPointAssignedUserIds(rowData),
 									});
 									setShowModal(true);
 								}}>
-								Edit
 							</Button>
+							</Tooltip>
+							<Tooltip title={isActive ? 'Disable Serving Point' : 'Enable Serving Point'}>
 							<Button
 								color={isActive ? 'danger' : 'success'}
 								isLight
@@ -179,8 +194,8 @@ const ServingPointsWorkspace: React.FC = () => {
 										setStatusUpdatingId(null);
 									}
 								}}>
-								{isActive ? 'Disable' : 'Enable'}
-							</Button>
+								</Button>
+							</Tooltip>
 						</div>
 					);
 				},
@@ -194,8 +209,8 @@ const ServingPointsWorkspace: React.FC = () => {
 			showNotification('Error', 'Serving point name is required.', 'danger');
 			return;
 		}
-		if (!form.queue) {
-			showNotification('Error', 'Queue is required.', 'danger');
+		if (form.queue_ids.length === 0) {
+			showNotification('Error', 'Select at least one queue.', 'danger');
 			return;
 		}
 
@@ -204,7 +219,7 @@ const ServingPointsWorkspace: React.FC = () => {
 			if (modalMode === 'add') {
 				const payload: CreateServingPointPayload = {
 					name: form.name.trim(),
-					queue: Number(form.queue),
+					queue: form.queue_ids,
 					description: form.description.trim() || undefined,
 					is_active: form.is_active,
 					assigned_users: form.assigned_users,
@@ -216,9 +231,10 @@ const ServingPointsWorkspace: React.FC = () => {
 			} else if (editingServingPointId) {
 				const updated = await queuesApi.updateServingPoint(editingServingPointId, {
 					name: form.name.trim(),
-					queue: Number(form.queue),
+					queue: form.queue_ids,
 					description: form.description.trim() || undefined,
 					is_active: form.is_active,
+					assigned_users: form.assigned_users,
 				});
 				setServingPoints((prev) =>
 					prev.map((item) => (item.id === editingServingPointId ? updated : item)),
@@ -248,24 +264,43 @@ const ServingPointsWorkspace: React.FC = () => {
 		[form.assigned_users, userOptions],
 	);
 
+	const queueOptions = useMemo(
+		() =>
+			queues.map((queue) => ({
+				value: queue.id,
+				label: queue.name,
+			})),
+		[queues],
+	);
+
+	const selectedQueueOptions = useMemo(
+		() => queueOptions.filter((option) => form.queue_ids.includes(option.value)),
+		[form.queue_ids, queueOptions],
+	);
+
 	return (
 		<>
 			<Card stretch>
 				<CardHeader>
-					<CardLabel icon='Monitor'>
-						<CardTitle tag='h5'>Serving Points ({servingPoints.length})</CardTitle>
-					</CardLabel>
-					<Button
-						color='primary'
-						icon='Add'
-						onClick={() => {
-							setModalMode('add');
-							setEditingServingPointId(null);
-							resetForm();
-							setShowModal(true);
-						}}>
-						Add Serving Point
-					</Button>
+					<div className='d-flex align-items-center gap-3'>
+						<div className='media-files-title-text d-flex align-items-center gap-2'>
+							<Icon icon='Monitor' color='primary' size='2x' />
+							<span>Serving Points ({servingPoints.length})</span>
+						</div>
+					</div>
+					<CardActions>
+						<Button
+							color='primary'
+							icon='Add'
+							onClick={() => {
+								setModalMode('add');
+								setEditingServingPointId(null);
+								resetForm();
+								setShowModal(true);
+							}}>
+							Add Serving Point
+						</Button>
+					</CardActions>
 				</CardHeader>
 				<CardBody>
 					{loading ? (
@@ -311,7 +346,8 @@ const ServingPointsWorkspace: React.FC = () => {
 				mode={modalMode}
 				form={form}
 				setForm={setForm}
-				queues={queues}
+				queueOptions={queueOptions}
+				selectedQueueOptions={selectedQueueOptions}
 				userOptions={userOptions}
 				selectedUserOptions={selectedUserOptions}
 				isSubmitting={modalSaving}

@@ -3,11 +3,10 @@ import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bo
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
-import type { Queue } from '../../../services/queueManagementApi';
 
 export interface ServingPointFormValues {
 	name: string;
-	queue: string;
+	queue_ids: number[];
 	description: string;
 	is_active: boolean;
 	assigned_users: number[];
@@ -19,7 +18,8 @@ interface ServingPointModalProps {
 	mode?: 'add' | 'edit';
 	form: ServingPointFormValues;
 	setForm: React.Dispatch<React.SetStateAction<ServingPointFormValues>>;
-	queues: Queue[];
+	queueOptions: Array<{ value: number; label: string }>;
+	selectedQueueOptions: Array<{ value: number; label: string }>;
 	userOptions: Array<{ value: number; label: string }>;
 	selectedUserOptions: Array<{ value: number; label: string }>;
 	isSubmitting?: boolean;
@@ -33,7 +33,8 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 	mode = 'add',
 	form,
 	setForm,
-	queues,
+	queueOptions,
+	selectedQueueOptions,
 	userOptions,
 	selectedUserOptions,
 	isSubmitting = false,
@@ -70,22 +71,19 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 							/>
 						</div>
 						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='sp-queue'>
-								Queue
-							</label>
-							<select
-								id='sp-queue'
-								className='form-select'
-								value={form.queue}
-								onChange={(e) => setForm((prev) => ({ ...prev, queue: e.target.value }))}
-								required>
-								<option value=''>Select queue</option>
-								{queues.map((queue) => (
-									<option value={queue.id} key={queue.id}>
-										{queue.name}
-									</option>
-								))}
-							</select>
+							<label className='form-label fw-semibold'>Queues</label>
+							<ReactSelectWithState
+								options={queueOptions}
+								value={selectedQueueOptions}
+								setValue={(selected: Array<{ value: number; label: string }> | null) =>
+									setForm((prev) => ({
+										...prev,
+										queue_ids: (selected || []).map((option) => option.value),
+									}))
+								}
+								isMulti
+								placeholder='Select one or more queues'
+							/>
 						</div>
 						<div className='col-md-6 d-flex align-items-end'>
 							<div className='form-check form-switch mb-2'>
@@ -101,23 +99,21 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 								</label>
 							</div>
 						</div>
-						{!isEdit && (
-							<div className='col-12'>
-								<label className='form-label fw-semibold'>Assigned Users</label>
-								<ReactSelectWithState
-									options={userOptions}
-									value={selectedUserOptions}
-									setValue={(selected: Array<{ value: number; label: string }> | null) =>
-										setForm((prev) => ({
-											...prev,
-											assigned_users: (selected || []).map((option) => option.value),
-										}))
-									}
-									isMulti
-									placeholder='Select users'
-								/>
-							</div>
-						)}
+						<div className='col-12'>
+							<label className='form-label fw-semibold'>Assigned Users</label>
+							<ReactSelectWithState
+								options={userOptions}
+								value={selectedUserOptions}
+								setValue={(selected: Array<{ value: number; label: string }> | null) =>
+									setForm((prev) => ({
+										...prev,
+										assigned_users: (selected || []).map((option) => option.value),
+									}))
+								}
+								isMulti
+								placeholder='Select users'
+							/>
+						</div>
 						<div className='col-12'>
 							<label className='form-label fw-semibold' htmlFor='sp-description'>
 								Description

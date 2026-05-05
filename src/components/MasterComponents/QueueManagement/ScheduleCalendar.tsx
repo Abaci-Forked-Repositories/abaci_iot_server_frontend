@@ -57,6 +57,8 @@ interface CreateScheduleForm {
 	end: string;
 	token_from: string;
 	token_to: string;
+	/** Maps to API `limit` (max tokens for this schedule). */
+	token_limit: string;
 }
 
 export function mapQueueScheduleToCalendarEvent(s: QueueSchedule): QueueScheduleEvent {
@@ -148,6 +150,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 		end: toDateTimeLocalValue(dayjs().add(1, 'hour').toDate()),
 		token_from: '1',
 		token_to: '100',
+		token_limit: '100',
 	});
 
 	const events = useMemo(
@@ -254,6 +257,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			return;
 		}
 
+		const tokenLimitRaw = scheduleForm.token_limit.trim();
+		const tokenLimitNum = tokenLimitRaw ? Number(tokenLimitRaw) : undefined;
+		if (tokenLimitRaw && Number.isNaN(tokenLimitNum!)) {
+			setCreateError('Token limit must be a valid number.');
+			return;
+		}
+		if (tokenLimitNum != null && (!Number.isInteger(tokenLimitNum) || tokenLimitNum < 1)) {
+			setCreateError('Token limit must be a whole number of 1 or greater.');
+			return;
+		}
+
 		if (!queueId) return;
 
 		setSavingSchedule(true);
@@ -265,6 +279,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				description: scheduleForm.description.trim() || undefined,
 				token_from: tokenFromNum,
 				token_to: tokenToNum,
+				...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
 			});
 			setShowCreateModal(false);
 			await onScheduleCreated?.();
@@ -571,6 +586,23 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 									onChange={(e) =>
 										setScheduleForm((prev) => ({ ...prev, token_to: e.target.value }))
 									}
+								/>
+							</div>
+							<div className='col-12 col-md-6'>
+								<label className='form-label fw-semibold' htmlFor='schedule-token-limit'>
+									Token limit
+								</label>
+								<input
+									id='schedule-token-limit'
+									type='number'
+									min={1}
+									step={1}
+									className='form-control'
+									value={scheduleForm.token_limit}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_limit: e.target.value }))
+									}
+									placeholder='Optional — maps to schedule limit'
 								/>
 							</div>
 							<div className='col-12'>

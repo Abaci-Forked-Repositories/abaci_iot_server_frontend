@@ -1,4 +1,20 @@
-import type { Queue, Token } from '../../../services/queueManagementApi';
+import type { Queue, ServingPoint, Token } from '../../../services/queueManagementApi';
+
+/** Normalizes `ServingPoint.queue` whether the API returns a single id or a list. */
+export const servingPointQueueIds = (point: ServingPoint): number[] => {
+	const q = point.queue;
+	if (Array.isArray(q)) return q.filter((id): id is number => typeof id === 'number');
+	return typeof q === 'number' ? [q] : [];
+};
+
+/** Normalizes `ServingPoint.assigned_users` whether the API returns ids or nested objects. */
+export const servingPointAssignedUserIds = (point: ServingPoint): number[] => {
+	const u = point.assigned_users;
+	if (!u || !Array.isArray(u)) return [];
+	return u
+		.map((item) => (typeof item === 'number' ? item : item.id))
+		.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
+};
 
 export const getErrorMessage = (error: unknown) => {
 	const typedError = error as {

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
@@ -12,8 +13,10 @@ import QueueDetailSkeleton from '../../CustomComponent/Skeleton/QueueDetailSkele
 import useTablestyle from '../../../hooks/useTablestyles';
 import type { Queue, QueueSchedule, QueueStatistics, QueueStatus, ServingPoint, Token } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi, tokensApi } from '../../../services/queueManagementApi';
+import { buttonColor } from '../../../helpers/constants';
+import swalFire from '../../../helpers/swalHelper';
 import type { TColor } from '../../../type/color-type';
-import { formatDate, getErrorMessage } from './queueManagementUtils';
+import { formatDate, getErrorMessage, servingPointQueueIds } from './queueManagementUtils';
 import ScheduleCalendar, { type QueueScheduleEvent } from './ScheduleCalendar';
 
 const STAT_RANGE_OPTIONS = ['Today', 'This week', 'This month'] as const;
@@ -61,6 +64,7 @@ const QueueDetailView: React.FC = () => {
 	const [assignServingPointSearch, setAssignServingPointSearch] = useState('');
 	const [selectedServingPointIds, setSelectedServingPointIds] = useState<number[]>([]);
 	const [assigningServingPoints, setAssigningServingPoints] = useState(false);
+	const [removingServingPointId, setRemovingServingPointId] = useState<number | null>(null);
 	const [statRange, setStatRange] = useState<(typeof STAT_RANGE_OPTIONS)[number]>('Today');
 	const { theme, headerStyles, rowStyles } = useTablestyle();
 
@@ -84,7 +88,7 @@ const QueueDetailView: React.FC = () => {
 			setQueue(qRes);
 			setStats(stRes);
 			setQueueStatus(qsRes);
-			setServingPoints((spRes.results || []).filter((p) => p.queue === id));
+			setServingPoints((spRes.results || []).filter((p) => servingPointQueueIds(p).includes(id)));
 			setAllServingPoints(allSpRes.results || []);
 			setServingTokens(tokRes.results || []);
 			setScheduleRecords(schRes.results || []);
@@ -140,6 +144,23 @@ const QueueDetailView: React.FC = () => {
 		});
 	}, [allServingPoints, assignServingPointSearch, servingPoints]);
 
+	const handleRemoveServingPointFromQueue = useCallback(
+		async (point: ServingPoint) => {
+			const nextQueues = servingPointQueueIds(point).filter((qid) => qid !== id);
+			setRemovingServingPointId(point.id);
+			setError('');
+			try {
+				await queuesApi.updateServingPoint(point.id, { queue: nextQueues });
+				await load();
+			} catch (err) {
+				setError(getErrorMessage(err));
+			} finally {
+				setRemovingServingPointId(null);
+			}
+		},
+		[id, load],
+	);
+
 	const servingPointColumns = useMemo(
 		() => [
 			{
@@ -163,8 +184,46 @@ const QueueDetailView: React.FC = () => {
 					</span>
 				),
 			},
+			{
+				title: 'Actions',
+				field: 'actions',
+				sorting: false,
+				filtering: false,
+				render: (rowData: ServingPoint) => (
+					<Tooltip title='Remove from this queue (serving point is not deleted)'>
+						<span className='d-inline-flex'>
+							<Button
+								color='danger'
+								isLight
+								size='sm'
+								icon='LinkOff'
+								isDisable={removingServingPointId === rowData.id}
+								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+									e.preventDefault();
+									e.stopPropagation();
+									void swalFire({
+										title: 'Remove from this queue?',
+										text: `"${rowData.name}" will stay in the system. Only the link to this queue will be removed.`,
+										icon: 'warning',
+										showCancelButton: true,
+										confirmButtonText: 'Remove',
+										cancelButtonText: 'Cancel',
+										iconColor: buttonColor[0],
+										confirmButtonColor: buttonColor[0],
+										cancelButtonColor: buttonColor[1],
+									}).then((result) => {
+										if (result.isConfirmed) {
+											void handleRemoveServingPointFromQueue(rowData);
+										}
+									});
+								}}
+							/>
+						</span>
+					</Tooltip>
+				),
+			},
 		],
-		[],
+		[handleRemoveServingPointFromQueue, removingServingPointId],
 	);
 
 	const currentServingColumns = useMemo(
@@ -214,7 +273,7 @@ const QueueDetailView: React.FC = () => {
 		try {
 			await Promise.all(
 				selectedServingPointIds.map((servingPointId) =>
-					queuesApi.updateServingPoint(servingPointId, { queue: id }),
+					queuesApi.updateServingPoint(servingPointId, { queue: [id] }),
 				),
 			);
 			setShowAssignServingPointModal(false);
@@ -507,7 +566,8 @@ const QueueDetailView: React.FC = () => {
 				isOpen={showAssignServingPointModal}
 				setIsOpen={setShowAssignServingPointModal}
 				size='lg'
-				isCentered>
+				isCentered
+				isAnimation={false}>
 				<ModalHeader setIsOpen={setShowAssignServingPointModal}>
 					<ModalTitle id='assign-serving-points-title'>Assign Serving Points</ModalTitle>
 				</ModalHeader>

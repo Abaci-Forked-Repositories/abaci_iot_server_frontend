@@ -20,6 +20,7 @@ interface QueueFormState {
 	name: string;
 	description: string;
 	limit: string;
+	grace_period_minutes: string;
 	allow_postpone: boolean;
 	is_reporting_enabled: boolean;
 	serving_point_ids: number[];
@@ -39,6 +40,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 		name: '',
 		description: '',
 		limit: '50',
+		grace_period_minutes: '15',
 		allow_postpone: true,
 		is_reporting_enabled: false,
 		serving_point_ids: [],
@@ -51,6 +53,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			name: initialQueue?.name || '',
 			description: initialQueue?.description || '',
 			limit: String(initialQueue?.limit ?? 50),
+			grace_period_minutes: String(initialQueue?.grace_period_minutes ?? 15),
 			allow_postpone: initialQueue?.allow_postpone ?? true,
 			is_reporting_enabled: initialQueue?.is_reporting_enabled ?? false,
 			serving_point_ids: (initialQueue?.serving_points || []).map((point) => point.id),
@@ -78,10 +81,22 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			return;
 		}
 
+		const graceRaw = form.grace_period_minutes.trim();
+		if (graceRaw === '') {
+			showNotification('Error', 'Grace period (minutes) is required.', 'danger');
+			return;
+		}
+		const graceMinutes = Number(graceRaw);
+		if (!Number.isInteger(graceMinutes) || graceMinutes < 0) {
+			showNotification('Error', 'Grace period must be a whole number of 0 or greater.', 'danger');
+			return;
+		}
+
 		const payload: CreateQueuePayload = {
 			name: form.name.trim(),
 			description: form.description.trim() || undefined,
 			limit: Number(form.limit || 0) || 0,
+			grace_period_minutes: graceMinutes,
 			allow_postpone: form.allow_postpone,
 			is_reporting_enabled: form.is_reporting_enabled,
 			serving_points: form.serving_point_ids,
@@ -150,6 +165,23 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 								className='form-control'
 								value={form.limit}
 								onChange={(e) => setForm((prev) => ({ ...prev, limit: e.target.value }))}
+							/>
+						</div>
+						<div className='col-md-6'>
+							<label className='form-label fw-semibold' htmlFor='queue-grace-period-minutes'>
+								Grace period (minutes)
+							</label>
+							<input
+								id='queue-grace-period-minutes'
+								type='number'
+								min={0}
+								step={1}
+								className='form-control'
+								value={form.grace_period_minutes}
+								onChange={(e) =>
+									setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
+								}
+								placeholder='e.g. 15'
 							/>
 						</div>
 						<div className='col-md-6 d-flex align-items-end'>

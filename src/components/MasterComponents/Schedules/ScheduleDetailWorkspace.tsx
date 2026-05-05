@@ -1,5 +1,5 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import MaterialTable, { MTableToolbar } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
@@ -11,6 +11,7 @@ import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
 import TokenCreateForm from '../../PageComponents/QueueManagement/TokenCreateForm';
 import Spinner from '../../bootstrap/Spinner';
 import useTablestyle from '../../../hooks/useTablestyles';
+import Tooltip from '@mui/material/Tooltip';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type CreateTokenPayload,
@@ -58,6 +59,7 @@ const toLocalDateTimeInputValue = (iso?: string) => {
 const ScheduleDetailWorkspace: React.FC = () => {
 	const { scheduleId } = useParams<{ scheduleId: string }>();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const queueIdFromState = (location.state as { queueId?: number; queueName?: string } | null)?.queueId;
 	const queueNameFromState = (location.state as { queueName?: string } | null)?.queueName;
 
@@ -88,7 +90,31 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	const queueId = scheduleRecord?.queue ?? queueIdFromState ?? 0;
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
-	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
+
+	const scheduleTimeBounds = useMemo(() => {
+		if (!scheduleRecord?.from_datetime || !scheduleRecord?.to_datetime) return null;
+		return {
+			minLocal: toLocalDateTimeInputValue(scheduleRecord.from_datetime),
+			maxLocal: toLocalDateTimeInputValue(scheduleRecord.to_datetime),
+			startMs: new Date(scheduleRecord.from_datetime).getTime(),
+			endMs: new Date(scheduleRecord.to_datetime).getTime(),
+		};
+	}, [scheduleRecord?.from_datetime, scheduleRecord?.to_datetime]);
+
+	const servingPointFromMaxLocal = useMemo(() => {
+		if (!scheduleTimeBounds) return undefined;
+		const cap = scheduleTimeBounds.maxLocal;
+		if (!servingPointToDateTimeFormValue) return cap || undefined;
+		return servingPointToDateTimeFormValue < cap ? servingPointToDateTimeFormValue : cap;
+	}, [scheduleTimeBounds, servingPointToDateTimeFormValue]);
+
+	const servingPointToMinLocal = useMemo(() => {
+		if (!scheduleTimeBounds) return undefined;
+		const floor = scheduleTimeBounds.minLocal;
+		if (!servingPointFromDateTimeFormValue) return floor || undefined;
+		return servingPointFromDateTimeFormValue > floor ? servingPointFromDateTimeFormValue : floor;
+	}, [scheduleTimeBounds, servingPointFromDateTimeFormValue]);
 
 	const load = useCallback(async () => {
 		if (!sid || Number.isNaN(sid)) {
@@ -189,6 +215,31 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		}
 	};
 
+	const warnIfServingWindowOutsideSchedule = (
+		fromVal: string,
+		toVal: string,
+		source: 'blur' | 'submit' = 'blur',
+	) => {
+		if (!scheduleRecord?.from_datetime || !scheduleRecord?.to_datetime) return false;
+		if (!fromVal || !toVal) return false;
+		const schedStart = new Date(scheduleRecord.from_datetime).getTime();
+		const schedEnd = new Date(scheduleRecord.to_datetime).getTime();
+		const wf = new Date(fromVal).getTime();
+		const wt = new Date(toVal).getTime();
+		if (Number.isNaN(wf) || Number.isNaN(wt)) return false;
+		const outside = wf < schedStart || wt > schedEnd;
+		if (outside) {
+			const msg = `Start and end must fall entirely within this schedule (${formatDate(scheduleRecord.from_datetime)} – ${formatDate(scheduleRecord.to_datetime)}).`;
+			if (source === 'submit') {
+				showNotification('Invalid window', msg, 'warning');
+			} else {
+				showNotification('Outside schedule', msg, 'warning');
+			}
+			return true;
+		}
+		return false;
+	};
+
 	const handleUpdateServingPointWindow = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (!editingServingPointWindow?.id) return;
@@ -200,6 +251,15 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		const toIso = new Date(servingPointToDateTimeFormValue).toISOString();
 		if (new Date(fromIso).getTime() >= new Date(toIso).getTime()) {
 			showErrorNotification('End date/time must be after Start date/time.');
+			return;
+		}
+		if (
+			warnIfServingWindowOutsideSchedule(
+				servingPointFromDateTimeFormValue,
+				servingPointToDateTimeFormValue,
+				'submit',
+			)
+		) {
 			return;
 		}
 		setStatusSaving(true);
@@ -257,17 +317,21 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				title: 'Actions',
 				field: 'actions',
 				render: (rowData: ScheduleServingPoint) => (
-					<Button
-						color='primary'
-						isLight
-						size='sm'
-						icon='Edit'
-						onClick={() => {
-							setEditingServingPointWindow(rowData);
-							setShowServingPointEditModal(true);
-						}}>
-						Edit
-					</Button>
+					<Tooltip title='Edit Serving Point Window'>
+						<span className='d-inline-flex'>
+							<Button
+								color='primary'
+								isLight
+								size='sm'
+								icon='Edit'
+								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+									e.stopPropagation();
+									setEditingServingPointWindow(rowData);
+									setShowServingPointEditModal(true);
+								}}>
+							</Button>
+						</span>
+					</Tooltip>
 				),
 			},
 		],
@@ -347,6 +411,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	const tokenToolbar = (props: any) => (
 		<div className='d-flex align-items-center justify-content-end gap-2 pe-2'>
+			<div style={{ display: 'inline-flex', width: 'auto', flex: '0 0 auto', minWidth: 0 }}>
+				<MTableToolbar {...props} />
+			</div>
 			<DropDownFilter
 				options={tokenStatusFilterOptions}
 				onChange={setTokenStatusFilter}
@@ -356,9 +423,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				direction='down'
 				buttonClassName='text-nowrap'
 			/>
-			<div style={{ display: 'inline-flex', width: 'auto', flex: '0 0 auto', minWidth: 0 }}>
-				<MTableToolbar {...props} />
-			</div>
 		</div>
 	);
 
@@ -563,6 +627,21 @@ const ScheduleDetailWorkspace: React.FC = () => {
 														labelRowsPerPage: '',
 													},
 												}}
+												onRowClick={(_, rowData) => {
+													const row = rowData as ScheduleServingPoint | undefined;
+													if (!row?.id || row.serving_point == null) return;
+													navigate(
+														`/serving-points/${row.serving_point}/windows/${row.id}`,
+														{
+															state: {
+																queueId,
+																queueName,
+																scheduleId: sid,
+																schedulePath: location.pathname + location.search,
+															},
+														},
+													);
+												}}
 											/>
 										</ThemeProvider>
 									</div>
@@ -691,7 +770,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				isOpen={showServingPointEditModal}
 				setIsOpen={setShowServingPointEditModal}
 				isCentered
-				size='sm'
+				size='lg'
 				isAnimation={false}>
 				<ModalHeader setIsOpen={setShowServingPointEditModal}>
 					<ModalTitle id='update-serving-point-window-modal'>Edit Serving Point Window</ModalTitle>
@@ -707,6 +786,20 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										: '—')}
 							</span>
 						</div>
+						{scheduleTimeBounds && scheduleRecord && (
+							<p className='text-muted small mb-3 lh-base' style={{ maxWidth: '100%' }}>
+								<span className='fw-semibold text-body-secondary'>Note.</span>{' '}
+								Start and end must stay within this schedule:{' '}
+								<span className='fw-medium text-body'>
+									{formatDate(scheduleRecord.from_datetime)}
+								</span>
+								{' — '}
+								<span className='fw-medium text-body'>
+									{formatDate(scheduleRecord.to_datetime)}
+								</span>
+								.
+							</p>
+						)}
 						<div className='mb-3'>
 							<label className='form-label fw-semibold' htmlFor='sp-window-from-datetime'>
 								From
@@ -716,7 +809,20 @@ const ScheduleDetailWorkspace: React.FC = () => {
 								type='datetime-local'
 								className='form-control'
 								value={servingPointFromDateTimeFormValue}
+								min={scheduleTimeBounds?.minLocal || undefined}
+								max={servingPointFromMaxLocal}
 								onChange={(e) => setServingPointFromDateTimeFormValue(e.target.value)}
+								onBlur={(e) => {
+									const fromVal = e.currentTarget.value;
+									const toEl = document.getElementById(
+										'sp-window-to-datetime',
+									) as HTMLInputElement | null;
+									warnIfServingWindowOutsideSchedule(
+										fromVal,
+										toEl?.value ?? servingPointToDateTimeFormValue,
+										'blur',
+									);
+								}}
 								disabled={statusSaving}
 							/>
 						</div>
@@ -729,7 +835,20 @@ const ScheduleDetailWorkspace: React.FC = () => {
 								type='datetime-local'
 								className='form-control'
 								value={servingPointToDateTimeFormValue}
+								min={servingPointToMinLocal}
+								max={scheduleTimeBounds?.maxLocal || undefined}
 								onChange={(e) => setServingPointToDateTimeFormValue(e.target.value)}
+								onBlur={(e) => {
+									const fromEl = document.getElementById(
+										'sp-window-from-datetime',
+									) as HTMLInputElement | null;
+									const toVal = e.currentTarget.value;
+									warnIfServingWindowOutsideSchedule(
+										fromEl?.value ?? servingPointFromDateTimeFormValue,
+										toVal,
+										'blur',
+									);
+								}}
 								disabled={statusSaving}
 							/>
 						</div>

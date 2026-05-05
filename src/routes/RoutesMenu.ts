@@ -34,6 +34,13 @@ export const allRoutesObject = {
 		path: '/serving-points',
 		subMenu: null,
 	},
+	servingwindowdetails: {
+		id: 'servingwindowdetails',
+		text: 'Serving Window Detail',
+		icon: 'Monitor',
+		path: '/serving-points/:servingPointId/windows/:windowId',
+		subMenu: null,
+	},
 	servingpointdetails: {
 		id: 'servingpointdetails',
 		text: 'Serving Point Detail',

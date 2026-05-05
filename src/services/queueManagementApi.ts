@@ -44,11 +44,14 @@ export interface QueueGroup {
 export interface ServingPoint {
 	id: number;
 	name: string;
-	queue: number;
+	/** Single id from older responses, or list when the API links a point to multiple queues. */
+	queue: number | number[];
 	description?: string;
 	is_available?: boolean;
 	is_active?: boolean;
 	created_at?: string;
+	/** Present when the API includes staff assignments (ids or nested user refs). */
+	assigned_users?: number[] | Array<{ id: number }>;
 }
 
 export interface Queue {
@@ -160,6 +163,7 @@ export interface CreateQueuePayload {
 	name: string;
 	description?: string;
 	limit?: number;
+	grace_period_minutes?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	serving_points?: number[];
@@ -169,6 +173,7 @@ export interface UpdateQueuePayload {
 	name?: string;
 	description?: string;
 	limit?: number;
+	grace_period_minutes?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	serving_points?: number[];
@@ -176,7 +181,7 @@ export interface UpdateQueuePayload {
 
 export interface CreateServingPointPayload {
 	name: string;
-	queue: number;
+	queue: number[];
 	description?: string;
 	is_active?: boolean;
 	assigned_users?: number[];
@@ -184,10 +189,11 @@ export interface CreateServingPointPayload {
 
 export interface UpdateServingPointPayload {
 	name?: string;
-	queue?: number;
+	queue?: number[];
 	description?: string;
 	is_available?: boolean;
 	is_active?: boolean;
+	assigned_users?: number[];
 }
 
 export interface CreateUserPayload {
