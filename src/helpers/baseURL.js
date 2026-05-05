@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://relationships-identity-assembled-hostels.trycloudflare.com';
+		return 'https://slide-peas-composite-zoloft.trycloudflare.com';
 	}
 	return url;
 };
