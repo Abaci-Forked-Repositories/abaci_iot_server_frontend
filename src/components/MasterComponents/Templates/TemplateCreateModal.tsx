@@ -83,7 +83,7 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 		setLoading(true);
 		try {
 			await onSubmit({
-				template_name: name.trim(),
+				name: name.trim(),
 				orientation: isLandscape ? 'Landscape' : 'Portrait',
 				resolution_width: Number(width),
 				resolution_height: Number(height),

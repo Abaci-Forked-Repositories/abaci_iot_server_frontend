@@ -25,10 +25,10 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 
 	const outerSize = thumbSize + 10;
 
-	const orientationLabel =
-		template.orientation === 'Landscape'
-			? `${template.resolution_width}×${template.resolution_height}`
-			: `${template.resolution_width}×${template.resolution_height}`;
+	const orientation = template.orientation ?? 'Landscape';
+	const orientationKey = orientation.toLowerCase() as 'landscape' | 'portrait';
+
+	const orientationLabel = `${template.resolution_width ?? '—'}×${template.resolution_height ?? '—'}`;
 
 	return (
 		<div
@@ -56,11 +56,11 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 				<Icon icon='Check' className='tpl-select-check' />
 			</button>
 
-			{template.thumbnail ? (
+			{template?.thumbnail ? (
 				<img
 					className='canvas-gp-img'
-					src={template.thumbnail}
-					alt={template.template_name}
+					src={template?.thumbnail}
+					alt={template?.template_name}
 					draggable={false}
 				/>
 			) : (
@@ -69,9 +69,9 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 				</div>
 			)}
 
-			{hovered && template.template_name && (
+			{hovered && template?.template_name && (
 				<div className='tpl-hover-name' title={template.template_name}>
-					{template.template_name}
+					{template?.template_name}
 				</div>
 			)}
 
@@ -114,9 +114,9 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 			)}
 
 			<div className='tpl-orientation-badge'>
-				<span className={`tpl-orient-dot tpl-orient-dot--${template.orientation.toLowerCase()}`} />
+				<span className={`tpl-orient-dot tpl-orient-dot--${orientationKey}`} />
 				<span className='tpl-orient-label'>
-					{template.orientation} · {orientationLabel}
+					{orientation} · {orientationLabel}
 				</span>
 			</div>
 		</div>
