@@ -7,6 +7,7 @@ import { templatesApi, type CreateTemplatePayload, type Template } from '../../.
 import { swalFire } from '../../../helpers/swalHelper';
 import TemplateCardTile from './TemplateCardTile';
 import TemplateCreateModal from './TemplateCreateModal';
+import { authAxios } from '../../../axiosInstance';
 
 const THUMB_KEY = 'templateThumbSize';
 const THUMB_DEFAULT = 138;
@@ -72,9 +73,9 @@ const TemplatesWorkspace: React.FC = () => {
 		setLoading(true);
 		setError('');
 		try {
-			const res = await templatesApi.list({ search: search || undefined, limit: 60 });
-			const fetched = res.results || [];
-			setTemplates(fetched.length ? fetched : DUMMY_TEMPLATES);
+			const res = await authAxios.get('administration/templates/');
+			// const fetched = res.results || [];
+			// setTemplates(fetched.length ? fetched : DUMMY_TEMPLATES);
 		} catch {
 			setTemplates(DUMMY_TEMPLATES);
 			setError('No API templates found. Showing dummy templates.');
