@@ -33,7 +33,7 @@ export interface Template {
 }
 
 export interface CreateTemplatePayload {
-	template_name: string;
+	name: string;
 	orientation: 'Landscape' | 'Portrait';
 	resolution_width: number;
 	resolution_height: number;
@@ -66,21 +66,21 @@ export const templatesApi = {
 		limit?: number;
 		offset?: number;
 		ordering?: string;
-	}) =>
-		unwrap<PaginatedResponse<AdminTemplateResponse>>(authAxios.get('admin/templates/', { params })).then(
-			(res) => ({
-				...res,
-				results: (res.results ?? []).map(mapAdminTemplateToTemplate),
-			}),
-		),
+	}	) =>
+		unwrap<PaginatedResponse<AdminTemplateResponse>>(
+			authAxios.get('api/administration/templates/', { params }),
+		).then((res) => ({
+			...res,
+			results: (res.results ?? []).map(mapAdminTemplateToTemplate),
+		})),
 
-	get: (id: number) => unwrap<Template>(authAxios.get(`api/signage/templates/${id}`)),
+	get: (id: number) => unwrap<Template>(authAxios.get(`api/administration/templates/${id}`)),
 
 	create: (payload: CreateTemplatePayload) =>
-		unwrap<Template>(authAxios.post('api/signage/templates', { file_type: 'template', ...payload })),
+		unwrap<Template>(authAxios.post('api/administration/templates/', { file_type: 'template', ...payload })),
 
-	delete: (id: number) => authAxios.delete(`api/signage/templates/${id}`),
+	delete: (id: number) => authAxios.delete(`api/administration/templates/${id}`),
 
 	favourite: (id: number, is_favourite: boolean) =>
-		unwrap<Template>(authAxios.patch(`api/signage/templates/${id}`, { is_favourite })),
+		unwrap<Template>(authAxios.patch(`api/administration/templates/${id}`, { is_favourite })),
 };
