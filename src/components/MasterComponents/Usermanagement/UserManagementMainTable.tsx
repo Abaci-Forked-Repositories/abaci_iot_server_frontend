@@ -67,11 +67,18 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 				return rowData?.staff_id || '----';
 			},
 		},
+		// {
+		// 	title: 'Status',
+		// 	field: 'status',
+		// 	render: (rowData) => (
+		// 		<StatusBadge status={rowData.status} />
+		// 	),
+		// },
 		{
 			title: 'Status',
 			field: 'status',
 			render: (rowData) => (
-				<StatusBadge status={rowData.status} />
+				<StatusBadge status={rowData.is_active ? 'Active' : 'Inactive'} />
 			),
 		},
 	];

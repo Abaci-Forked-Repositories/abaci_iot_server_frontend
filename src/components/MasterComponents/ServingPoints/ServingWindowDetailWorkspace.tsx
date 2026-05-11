@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
+import Spinner from '../../bootstrap/Spinner';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type QueueSchedule,
@@ -16,6 +18,25 @@ import { formatDate, servingPointQueueIds } from '../QueueManagement/queueManage
 
 const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
 
+const normalizeWindowStatus = (status?: string) => (status || '').toLowerCase().trim();
+
+const getNextAllowedWindowStatuses = (status?: string) => {
+	const normalized = normalizeWindowStatus(status);
+	if (normalized === 'scheduled') return ['running', 'cancelled'];
+	if (normalized === 'running') return ['on_hold', 'completed', 'cancelled'];
+	if (normalized === 'on_hold' || normalized === 'onhold')
+		return ['running', 'completed', 'cancelled'];
+	return [];
+};
+
+const WINDOW_STATUS_OPTIONS: Array<{ label: string; value: string }> = [
+	{ label: 'Scheduled', value: 'scheduled' },
+	{ label: 'Running', value: 'running' },
+	{ label: 'On Hold', value: 'on_hold' },
+	{ label: 'Completed', value: 'completed' },
+	{ label: 'Cancelled', value: 'cancelled' },
+];
+
 const ServingWindowDetailWorkspace: React.FC = () => {
 	const { servingPointId, windowId } = useParams<{ servingPointId: string; windowId: string }>();
 	const navigate = useNavigate();
@@ -27,6 +48,9 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const [windowRow, setWindowRow] = useState<ScheduleServingPoint | null>(null);
 	const [servingPoint, setServingPoint] = useState<ServingPoint | null>(null);
 	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
+	const [showStatusModal, setShowStatusModal] = useState(false);
+	const [statusFormValue, setStatusFormValue] = useState('scheduled');
+	const [statusSaving, setStatusSaving] = useState(false);
 
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -66,6 +90,51 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	const nextWindowStatusOptions = useMemo(() => {
+		const allowed = getNextAllowedWindowStatuses(windowRow?.status);
+		const current = normalizeWindowStatus(windowRow?.status);
+		return WINDOW_STATUS_OPTIONS.filter(
+			(option) => option.value === current || allowed.includes(option.value),
+		);
+	}, [windowRow?.status]);
+
+	const canEditWindowStatus = useMemo(() => {
+		const normalized = normalizeWindowStatus(windowRow?.status);
+		return (
+			normalized !== '' &&
+			normalized !== 'completed' &&
+			normalized !== 'cancelled' &&
+			normalized !== 'canceled'
+		);
+	}, [windowRow?.status]);
+
+	useEffect(() => {
+		if (!showStatusModal) return;
+		const allowed = getNextAllowedWindowStatuses(windowRow?.status);
+		setStatusFormValue(allowed[0] || normalizeWindowStatus(windowRow?.status) || '');
+	}, [showStatusModal, windowRow?.status]);
+
+	const handleUpdateWindowStatus = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!windowRow?.id) return;
+		const allowed = getNextAllowedWindowStatuses(windowRow.status);
+		if (!statusFormValue || !allowed.includes(statusFormValue)) {
+			showErrorNotification('Selected status transition is not allowed.');
+			return;
+		}
+		setStatusSaving(true);
+		try {
+			await scheduleServingPointsApi.setStatus(windowRow.id, { status: statusFormValue });
+			showSuccessNotification('Window status updated successfully.');
+			setShowStatusModal(false);
+			await load();
+		} catch (err) {
+			showErrorNotification(err);
+		} finally {
+			setStatusSaving(false);
+		}
+	};
 
 	const getAllowedActions = (row: ScheduleServingPoint) => {
 		const tokenStatus = normalizeTokenStatus(row.current_token_status);
@@ -168,16 +237,28 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 											: windowRow.queue_schedule_queue_id != null
 												? `Queue #${windowRow.queue_schedule_queue_id}`
 												: (() => {
-														const ids = servingPoint ? servingPointQueueIds(servingPoint) : [];
-														return ids.length ? ids.map((qid) => `Queue #${qid}`).join(', ') : '—';
-													})())}
+													const ids = servingPoint ? servingPointQueueIds(servingPoint) : [];
+													return ids.length ? ids.map((qid) => `Queue #${qid}`).join(', ') : '—';
+												})())}
 								</div>
 							</div>
 							<div className='col-12 col-md-4'>
 								<div className='small text-muted'>Window status</div>
-								<Badge color='info' isLight>
-									{windowRow.status || '—'}
-								</Badge>
+								<div className='d-flex align-items-center gap-2 flex-wrap mt-1'>
+									<Badge color='info' isLight className='text-capitalize'>
+										{windowRow.status || '—'}
+									</Badge>
+									{canEditWindowStatus && (
+										<Button
+											color='primary'
+											isLight
+											size='sm'
+											icon='Edit'
+											onClick={() => setShowStatusModal(true)}>
+											Update Status
+										</Button>
+									)}
+								</div>
 							</div>
 							<div className='col-12 col-md-4'>
 								<div className='small text-muted'>Created at</div>
@@ -191,6 +272,65 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 					)}
 				</CardBody>
 			</Card>
+
+			<Modal
+				isOpen={showStatusModal}
+				setIsOpen={setShowStatusModal}
+				isCentered
+				size='sm'
+				isAnimation={false}>
+				<ModalHeader setIsOpen={setShowStatusModal}>
+					<ModalTitle id='update-window-status-modal'>Update Window Status</ModalTitle>
+				</ModalHeader>
+				<form onSubmit={handleUpdateWindowStatus}>
+					<ModalBody>
+						<div className='text-muted small mb-2'>
+							Current status:{' '}
+							<span className='fw-semibold text-capitalize'>
+								{windowRow?.status || 'unknown'}
+							</span>
+						</div>
+						<label className='form-label fw-semibold' htmlFor='window-status'>
+							Change to
+						</label>
+						<select
+							id='window-status'
+							className='form-select'
+							value={statusFormValue}
+							disabled={statusSaving || nextWindowStatusOptions.length === 0}
+							onChange={(e) => setStatusFormValue(e.target.value)}>
+							{nextWindowStatusOptions.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+						{nextWindowStatusOptions.length === 0 && (
+							<div className='text-muted small mt-2'>
+								No status transitions available.
+							</div>
+						)}
+					</ModalBody>
+					<ModalFooter>
+						<Button color='light' isLight onClick={() => setShowStatusModal(false)}>
+							Cancel
+						</Button>
+						<Button
+							color='primary'
+							type='submit'
+							isDisable={statusSaving || nextWindowStatusOptions.length === 0}>
+							{statusSaving ? (
+								<>
+									<Spinner isSmall inButton />
+									Updating...
+								</>
+							) : (
+								'Update Status'
+							)}
+						</Button>
+					</ModalFooter>
+				</form>
+			</Modal>
 
 			{!loading && windowRow && (
 				<Card>

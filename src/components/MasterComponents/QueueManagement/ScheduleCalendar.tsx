@@ -123,8 +123,34 @@ function toDateTimeLocalValue(value: Date) {
 	return dayjs(value).format('YYYY-MM-DDTHH:mm');
 }
 
+/** Earliest allowed end value in datetime-local format (strictly after start). */
+function minEndAfterStartLocal(startLocal: string): string | undefined {
+	const trimmed = startLocal?.trim();
+	if (!trimmed) return undefined;
+	const d = new Date(trimmed);
+	if (Number.isNaN(d.getTime())) return undefined;
+	return toDateTimeLocalValue(dayjs(d).add(1, 'minute').toDate());
+}
+
 function getScheduleName(event: QueueScheduleEvent) {
 	return event.title?.trim() || event.description?.trim() || 'Schedule';
+}
+
+/** Schedules that cannot change dates/tokens/description from the calendar edit modal. */
+function isScheduleMetadataEditable(status?: string) {
+	const s = (status || '').toLowerCase();
+	return s !== 'completed' && s !== 'cancelled' && s !== 'canceled';
+}
+
+function queueScheduleRowToForm(rec: QueueSchedule): CreateScheduleForm {
+	return {
+		description: rec.description ?? '',
+		start: toDateTimeLocalValue(new Date(rec.from_datetime)),
+		end: toDateTimeLocalValue(new Date(rec.to_datetime)),
+		token_from: rec.token_from != null ? String(rec.token_from) : '',
+		token_to: rec.token_to != null ? String(rec.token_to) : '',
+		token_limit: rec.limit != null ? String(rec.limit) : '',
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +168,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	const [viewMode, setViewMode] = useState<TView>(Views.MONTH);
 	const [date, setDate] = useState<Date>(() => toLocalDate(new Date()));
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
 	const [createError, setCreateError] = useState('');
 	const [savingSchedule, setSavingSchedule] = useState(false);
 	const [scheduleForm, setScheduleForm] = useState<CreateScheduleForm>({
@@ -166,6 +193,28 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			? events.filter((ev) => isWithinDayRange(ev.start, ev.end, date))
 			: events;
 
+	const isEditMode = editingScheduleId != null;
+
+	const endDateTimeMin = useMemo(
+		() => minEndAfterStartLocal(scheduleForm.start),
+		[scheduleForm.start],
+	);
+
+	const closeScheduleModal = () => {
+		setShowCreateModal(false);
+		setEditingScheduleId(null);
+		setCreateError('');
+	};
+
+	const openEditScheduleModal = (scheduleId: number) => {
+		const rec = scheduleRecords?.find((s) => s.id === scheduleId);
+		if (!rec || !isScheduleMetadataEditable(rec.status)) return;
+		setEditingScheduleId(scheduleId);
+		setScheduleForm(queueScheduleRowToForm(rec));
+		setCreateError('');
+		setShowCreateModal(true);
+	};
+
 	const handleDrillDown = (targetDate: Date) => {
 		setDate(toLocalDate(targetDate));
 		setViewMode(Views.DAY);
@@ -189,6 +238,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			end: toDateTimeLocalValue(selectedEnd),
 		}));
 		setCreateError('');
+		setEditingScheduleId(null);
 		setShowCreateModal(true);
 
 		if (onSlotSelect) {
@@ -208,10 +258,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			end: toDateTimeLocalValue(end),
 		}));
 		setCreateError('');
+		setEditingScheduleId(null);
 		setShowCreateModal(true);
 	};
 
-	const handleCreateSchedule = async (event: FormEvent<HTMLFormElement>) => {
+	const handleScheduleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setCreateError('');
 
@@ -229,7 +280,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			setCreateError('End date and time must be later than start date and time.');
 			return;
 		}
-		if (startDate.getTime() < Date.now()) {
+		if (!isEditMode && startDate.getTime() < Date.now()) {
 			setCreateError('Start date and time cannot be in the past.');
 			return;
 		}
@@ -268,20 +319,31 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			return;
 		}
 
-		if (!queueId) return;
+		if (!isEditMode && !queueId) return;
 
 		setSavingSchedule(true);
 		try {
-			await schedulesApi.create({
-				queue: queueId,
-				from_datetime: startDate.toISOString(),
-				to_datetime: endDate.toISOString(),
-				description: scheduleForm.description.trim() || undefined,
-				token_from: tokenFromNum,
-				token_to: tokenToNum,
-				...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
-			});
-			setShowCreateModal(false);
+			if (isEditMode && editingScheduleId != null) {
+				await schedulesApi.patch(editingScheduleId, {
+					from_datetime: startDate.toISOString(),
+					to_datetime: endDate.toISOString(),
+					description: scheduleForm.description.trim() || undefined,
+					...(tokenFromNum != null ? { token_from: tokenFromNum } : {}),
+					...(tokenToNum != null ? { token_to: tokenToNum } : {}),
+					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
+				});
+			} else if (queueId) {
+				await schedulesApi.create({
+					queue: queueId,
+					from_datetime: startDate.toISOString(),
+					to_datetime: endDate.toISOString(),
+					description: scheduleForm.description.trim() || undefined,
+					token_from: tokenFromNum,
+					token_to: tokenToNum,
+					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
+				});
+			}
+			closeScheduleModal();
 			await onScheduleCreated?.();
 		} catch (err) {
 			setCreateError(getErrorMessage(err));
@@ -293,9 +355,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	const ScheduleEventContent = ({
 		event,
 		title,
+		actions,
 	}: {
 		event: QueueScheduleEvent;
 		title?: string;
+		actions?: React.ReactNode;
 	}) => {
 		const counts = event.token_counts || {};
 		const tooltipCard = (
@@ -315,9 +379,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 		);
 
 		return (
-			<Tooltips title={tooltipCard} className='queue-schedule-tooltip' placement='top'>
-				<span className='queue-schedule-event-title'>{title || getScheduleName(event)}</span>
-			</Tooltips>
+			<div className='d-flex align-items-center justify-content-between gap-1 w-100 min-w-0'>
+				<Tooltips title={tooltipCard} className='queue-schedule-tooltip flex-grow-1 min-w-0' placement='top'>
+					<span className='queue-schedule-event-title text-truncate d-block'>
+						{title || getScheduleName(event)}
+					</span>
+				</Tooltips>
+				{actions}
+			</div>
 		);
 	};
 
@@ -494,12 +563,39 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 						}}
 						tooltipAccessor={() => ''}
 						components={{
-							event: ({ event, title }) => (
-								<ScheduleEventContent
-									event={event as QueueScheduleEvent}
-									title={String(title || '')}
-								/>
-							),
+							event: ({ event, title }) => {
+								const ev = event as QueueScheduleEvent;
+								const sid = Number(ev.id);
+								const rec = scheduleRecords?.find((s) => s.id === sid);
+								const showEdit =
+									rec != null && isScheduleMetadataEditable(rec.status);
+								return (
+									<ScheduleEventContent
+										event={ev}
+										title={String(title || '')}
+										actions={
+											showEdit ? (
+												<button
+													type='button'
+													className='btn btn-link btn-sm p-0 ms-1 flex-shrink-0 text-white shadow-none border-0 lh-1'
+													title='Edit schedule'
+													aria-label='Edit schedule'
+													onMouseDown={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+													}}
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														openEditScheduleModal(sid);
+													}}>
+													<Icon icon='Edit' />
+												</button>
+											) : undefined
+										}
+									/>
+								);
+							},
 						}}
 						onSelectEvent={(event) => onEventClick?.(event as QueueScheduleEvent)}
 						eventPropGetter={(event) => {
@@ -519,11 +615,20 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				</div>
 			</CardBody>
 
-			<Modal isOpen={showCreateModal} setIsOpen={setShowCreateModal} isCentered size='lg' isAnimation={false}>
-				<ModalHeader setIsOpen={setShowCreateModal}>
-					<ModalTitle id='create-schedule-modal'>Create Schedule</ModalTitle>
+			<Modal
+				isOpen={showCreateModal}
+				setIsOpen={(open) => {
+					if (!open) closeScheduleModal();
+				}}
+				isCentered
+				size='lg'
+				isAnimation={false}>
+				<ModalHeader setIsOpen={(open) => !open && closeScheduleModal()}>
+					<ModalTitle id='schedule-form-modal'>
+						{isEditMode ? 'Edit Schedule' : 'Create Schedule'}
+					</ModalTitle>
 				</ModalHeader>
-				<form onSubmit={handleCreateSchedule}>
+				<form onSubmit={handleScheduleFormSubmit}>
 					<ModalBody>
 						{createError && <div className='alert alert-danger mb-3'>{createError}</div>}
 						<div className='row g-3'>
@@ -535,11 +640,26 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 									id='schedule-start'
 									type='datetime-local'
 									className='form-control'
-									min={toDateTimeLocalValue(new Date())}
+									min={isEditMode ? undefined : toDateTimeLocalValue(new Date())}
 									value={scheduleForm.start}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, start: e.target.value }))
-									}
+									onChange={(e) => {
+										const nextStart = e.target.value;
+										setScheduleForm((prev) => {
+											const ns = new Date(nextStart);
+											const ne = new Date(prev.end);
+											let nextEnd = prev.end;
+											if (
+												nextStart &&
+												!Number.isNaN(ns.getTime()) &&
+												prev.end &&
+												!Number.isNaN(ne.getTime()) &&
+												ne <= ns
+											) {
+												nextEnd = toDateTimeLocalValue(dayjs(ns).add(1, 'minute').toDate());
+											}
+											return { ...prev, start: nextStart, end: nextEnd };
+										});
+									}}
 									required
 								/>
 							</div>
@@ -551,6 +671,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 									id='schedule-end'
 									type='datetime-local'
 									className='form-control'
+									min={endDateTimeMin}
 									value={scheduleForm.end}
 									onChange={(e) =>
 										setScheduleForm((prev) => ({ ...prev, end: e.target.value }))
@@ -623,7 +744,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 						</div>
 					</ModalBody>
 					<ModalFooter>
-						<Button color='light' isLight onClick={() => setShowCreateModal(false)}>
+						<Button color='light' isLight type='button' onClick={closeScheduleModal}>
 							Cancel
 						</Button>
 						<Button color='primary' type='submit' isDisable={savingSchedule}>
@@ -632,6 +753,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 									<Spinner isSmall inButton />
 									Saving…
 								</>
+							) : isEditMode ? (
+								'Save changes'
 							) : (
 								'Create Schedule'
 							)}

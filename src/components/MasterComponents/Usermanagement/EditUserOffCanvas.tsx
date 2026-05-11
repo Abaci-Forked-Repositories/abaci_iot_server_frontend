@@ -67,6 +67,7 @@ const EditUser: FC<EditSensorProps> = ({ isOpen, setIsOpen, tableRef, id, title 
 			last_name: data.last_name,
 			mobile_number: data.mobile_number,
 			email: data.email,
+			username: data.username,
 			staff_id: data.staff_id,
 			regenerate_password: regeneratePassword,
 		};

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
@@ -9,25 +9,38 @@ import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 const ServingPointDetailPage: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
+	const initialNameFromState =
+		(location.state as { servingPointName?: string } | null)?.servingPointName?.trim() ||
+		null;
+	const [servingPointName, setServingPointName] = useState<string | null>(initialNameFromState);
 
 	useEffect(() => {
-		dispatch(setHeaderTitle({ name: 'Serving Point Detail', isEditable: false }));
+		setServingPointName(initialNameFromState);
+	}, [initialNameFromState, location.pathname]);
+
+	const detailLabel = useMemo(() => {
+		if (servingPointName?.trim()) return servingPointName.trim();
+		return 'Serving Point Detail';
+	}, [servingPointName]);
+
+	useEffect(() => {
+		dispatch(setHeaderTitle({ name: detailLabel, isEditable: false }));
 		dispatch(
 			setBreadcrumbs([
 				{ label: 'Queue Management', path: '/queue-management' },
 				{ label: 'Serving Points', path: '/serving-points' },
-				{ label: 'Serving Point Detail', path: location.pathname + location.search },
+				{ label: detailLabel, path: location.pathname + location.search },
 			]),
 		);
 		return () => {
 			dispatch(setBreadcrumbs([]));
 		};
-	}, [dispatch, location.pathname, location.search]);
+	}, [detailLabel, dispatch, location.pathname, location.search]);
 
 	return (
-		<PageWrapper title='Serving Point Detail'>
+		<PageWrapper title={detailLabel}>
 			<Page container='fluid'>
-				<ServingPointDetailWorkspace />
+				<ServingPointDetailWorkspace onServingPointNameChange={setServingPointName} />
 			</Page>
 		</PageWrapper>
 	);

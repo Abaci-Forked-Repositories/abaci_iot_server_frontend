@@ -16,20 +16,83 @@ export const servingPointAssignedUserIds = (point: ServingPoint): number[] => {
 		.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
 };
 
-export const getErrorMessage = (error: unknown) => {
+const FIELD_LABELS: Record<string, string> = {
+	non_field_errors: '',
+	__all__: '',
+	from_datetime: 'Start',
+	to_datetime: 'End',
+	token_from: 'Token from',
+	token_to: 'Token to',
+	limit: 'Token limit',
+	description: 'Description',
+	queue: 'Queue',
+	status: 'Status',
+};
+
+const formatFieldErrors = (field: string, messages: string[]): string => {
+	const text = messages.join(' ');
+	const label = FIELD_LABELS[field] ?? field;
+	return label ? `${label}: ${text}` : text;
+};
+
+export const getErrorMessage = (error: unknown): string => {
+	if (typeof error === 'string') return error;
+
 	const typedError = error as {
-		response?: { data?: { detail?: string; errors?: Record<string, string[]> } };
+		message?: string;
+		response?: {
+			data?:
+				| string
+				| {
+						detail?: string;
+						message?: string;
+						non_field_errors?: string[];
+						errors?: Record<string, string[]>;
+						[key: string]: unknown;
+				  };
+		};
 	};
+
 	const data = typedError.response?.data;
 
-	if (data?.detail) {
-		return data.detail;
+	if (typeof data === 'string' && data.trim()) {
+		return data;
 	}
 
-	if (data?.errors) {
-		return Object.entries(data.errors)
-			.map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-			.join(' ');
+	if (data && typeof data === 'object') {
+		if (typeof data.detail === 'string' && data.detail.trim()) {
+			return data.detail;
+		}
+		if (typeof data.message === 'string' && data.message.trim()) {
+			return data.message;
+		}
+		if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+			return data.non_field_errors.join(' ');
+		}
+		if (data.errors && typeof data.errors === 'object') {
+			const parts = Object.entries(data.errors)
+				.filter(([, messages]) => Array.isArray(messages) && messages.length)
+				.map(([field, messages]) => formatFieldErrors(field, messages as string[]));
+			if (parts.length) return parts.join(' ');
+		}
+
+		const fieldEntries = Object.entries(data).filter(
+			([key, value]) =>
+				key !== 'detail' &&
+				key !== 'message' &&
+				key !== 'errors' &&
+				Array.isArray(value) &&
+				(value as unknown[]).every((item) => typeof item === 'string'),
+		);
+		if (fieldEntries.length) {
+			return fieldEntries
+				.map(([field, messages]) => formatFieldErrors(field, messages as string[]))
+				.join(' ');
+		}
+	}
+
+	if (typeof typedError.message === 'string' && typedError.message.trim()) {
+		return typedError.message;
 	}
 
 	return 'Something went wrong while calling the queue management API.';

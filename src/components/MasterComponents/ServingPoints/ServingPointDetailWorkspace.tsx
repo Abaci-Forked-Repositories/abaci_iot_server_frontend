@@ -25,7 +25,13 @@ import {
 
 import { formatDate, servingPointQueueIds } from '../QueueManagement/queueManagementUtils';
 
-const ServingPointDetailWorkspace: React.FC = () => {
+type ServingPointDetailWorkspaceProps = {
+	onServingPointNameChange?: (name: string | null) => void;
+};
+
+const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = ({
+	onServingPointNameChange,
+}) => {
 	const { servingPointId } = useParams<{ servingPointId: string }>();
 
 	const navigate = useNavigate();
@@ -81,6 +87,11 @@ const ServingPointDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	useEffect(() => {
+		if (!onServingPointNameChange) return;
+		onServingPointNameChange(servingPoint?.name ?? null);
+	}, [onServingPointNameChange, servingPoint?.name]);
 
 	const columns = useMemo(
 		() => [
