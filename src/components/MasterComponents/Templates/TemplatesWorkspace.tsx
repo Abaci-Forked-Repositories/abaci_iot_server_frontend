@@ -7,6 +7,8 @@ import { templatesApi, type CreateTemplatePayload, type Template } from '../../.
 import { swalFire } from '../../../helpers/swalHelper';
 import TemplateCardTile from './TemplateCardTile';
 import TemplateCreateModal from './TemplateCreateModal';
+import { Player } from '@lottiefiles/react-lottie-player';
+import pendingLottie from '../../../assets/Lottie/No-Data.json';
 
 const THUMB_KEY = 'templateThumbSize';
 const THUMB_DEFAULT = 138;
@@ -14,32 +16,32 @@ const THUMB_MIN = 115;
 const THUMB_MAX = 250;
 const THUMB_STEP = 12;
 
-const DUMMY_TEMPLATES: Template[] = [
-	{
-		id: 1001,
-		template_name: 'Lobby Welcome Board',
-		orientation: 'Landscape',
-		resolution_width: 1920,
-		resolution_height: 1080,
-		thumbnail: null,
-	},
-	{
-		id: 1002,
-		template_name: 'Queue Counter Display',
-		orientation: 'Landscape',
-		resolution_width: 1280,
-		resolution_height: 720,
-		thumbnail: null,
-	},
-	{
-		id: 1003,
-		template_name: 'Vertical Promo Screen',
-		orientation: 'Portrait',
-		resolution_width: 1080,
-		resolution_height: 1920,
-		thumbnail: null,
-	},
-];
+// const DUMMY_TEMPLATES: Template[] = [
+// 	{
+// 		id: 1001,
+// 		template_name: 'Lobby Welcome Board',
+// 		orientation: 'Landscape',
+// 		resolution_width: 1920,
+// 		resolution_height: 1080,
+// 		thumbnail: null,
+// 	},
+// 	{
+// 		id: 1002,
+// 		template_name: 'Queue Counter Display',
+// 		orientation: 'Landscape',
+// 		resolution_width: 1280,
+// 		resolution_height: 720,
+// 		thumbnail: null,
+// 	},
+// 	{
+// 		id: 1003,
+// 		template_name: 'Vertical Promo Screen',
+// 		orientation: 'Portrait',
+// 		resolution_width: 1080,
+// 		resolution_height: 1920,
+// 		thumbnail: null,
+// 	},
+// ];
 
 const getStoredThumb = () => {
 	const saved = Number(localStorage.getItem(THUMB_KEY));
@@ -74,9 +76,9 @@ const TemplatesWorkspace: React.FC = () => {
 		try {
 			const res = await templatesApi.list({ search: search || undefined, limit: 60 });
 			const fetched = res.results || [];
-			setTemplates(fetched.length ? fetched : DUMMY_TEMPLATES);
+			setTemplates(fetched.length ? fetched : []);
 		} catch {
-			setTemplates(DUMMY_TEMPLATES);
+			setTemplates([]);
 			setError('No API templates found. Showing dummy templates.');
 		} finally {
 			setLoading(false);
@@ -248,6 +250,12 @@ const TemplatesWorkspace: React.FC = () => {
 										<path d='M3 9h18M9 21V9' />
 									</svg>
 								</div>
+								<Player
+									src={pendingLottie}
+									autoplay
+									loop
+									style={{ width: 360, height: 200 }}
+								/>
 								<h6 className='tpl-empty-title'>No templates found</h6>
 								<p className='tpl-empty-sub'>Try a different search term.</p>
 							</div>

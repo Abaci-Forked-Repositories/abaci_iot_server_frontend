@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://oxide-sense-unit-governor.trycloudflare.com/';
+		return 'https://weight-reno-mpeg-preventing.trycloudflare.com/';
 	}
 	return url;
 };

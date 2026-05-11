@@ -27,6 +27,8 @@ import {
 } from '../../../services/queueManagementApi';
 import { initialTokenForm } from '../QueueManagement/queueManagementConstants';
 import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
+import swalFire from '../../../helpers/swalHelper';
+import { buttonColor } from '../../../helpers/constants';
 
 const scheduleStatusBadgeColor = (status?: string) => {
 	const normalized = (status || '').toLowerCase();
@@ -280,6 +282,17 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		}
 	};
 
+	// i want remove serving point
+	const handleRemoveServingPoint = async (servingPointId: number) => {
+		try {
+			await scheduleServingPointsApi.delete(servingPointId);
+			showSuccessNotification('Serving point removed successfully.');
+			await load();
+		} catch (err) {
+			showErrorNotification(err);
+		}
+	};
+
 	const queueName = useMemo(() => {
 		if (scheduleRecord?.queue_name) return scheduleRecord.queue_name;
 		if (queueNameFromState) return queueNameFromState;
@@ -317,25 +330,59 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				title: 'Actions',
 				field: 'actions',
 				render: (rowData: ScheduleServingPoint) => (
-					<Tooltip title='Edit Serving Point Window'>
-						<span className='d-inline-flex'>
-							<Button
-								color='primary'
-								isLight
-								size='sm'
-								icon='Edit'
-								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-									e.stopPropagation();
-									setEditingServingPointWindow(rowData);
-									setShowServingPointEditModal(true);
-								}}>
-							</Button>
-						</span>
-					</Tooltip>
+					<span className='d-inline-flex gap-2'>
+						<Tooltip title='Edit Serving Point Window'>
+							<span className='d-inline-flex'>
+								<Button
+									color='primary'
+									isLight
+									size='sm'
+									icon='Edit'
+									onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+										e.stopPropagation();
+										setEditingServingPointWindow(rowData);
+										setShowServingPointEditModal(true);
+									}}
+								/>
+							</span>
+						</Tooltip>
+						<Tooltip title='Remove from this schedule (serving point is not deleted)'>
+							<span className='d-inline-flex'>
+								<Button
+									color='danger'
+									isLight
+									size='sm'
+									icon='LinkOff'
+									onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+										e.preventDefault();
+										e.stopPropagation();
+										const displayName =
+											rowData.serving_point_name ||
+											`Serving Point #${rowData.serving_point}`;
+										void swalFire({
+											title: 'Remove from this schedule?',
+											text: `"${displayName}" will stay in the system. Only its window in this schedule will be removed.`,
+											icon: 'warning',
+											showCancelButton: true,
+											confirmButtonText: 'Remove',
+											cancelButtonText: 'Cancel',
+											iconColor: buttonColor[0],
+											confirmButtonColor: buttonColor[0],
+											cancelButtonColor: buttonColor[1],
+										}).then((result) => {
+											if (result.isConfirmed) {
+												void handleRemoveServingPoint(rowData.id);
+											}
+										});
+									}}
+								/>
+							</span>
+						</Tooltip>
+					</span>
 				),
 			},
 		],
-		[],
+		[handleRemoveServingPoint],
 	);
 
 	const tokenColumns = useMemo(

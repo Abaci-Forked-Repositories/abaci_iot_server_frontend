@@ -330,7 +330,9 @@ const ServingPointsWorkspace: React.FC = () => {
 										onRowClick={(_, rowData) => {
 											const row = rowData as ServingPoint | undefined;
 											if (!row?.id) return;
-											navigate(`/serving-points/${row.id}`);
+											navigate(`/serving-points/${row.id}`, {
+												state: { servingPointName: row.name || undefined },
+											});
 										}}
 									/>
 								</ThemeProvider>

@@ -276,6 +276,11 @@ export interface PatchScheduleServingPointPayload {
 	status?: string;
 }
 
+/** POST /api/queues/schedule-serving-points/{id}/set_status/ */
+export interface SetScheduleServingPointStatusPayload {
+	status: string;
+}
+
 export interface SetScheduleServingPointsPayload {
 	serving_point_ids: number[];
 }
@@ -371,6 +376,10 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`)),
 	postpone: (id: number) =>
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`)),
+	setStatus: (id: number, payload: SetScheduleServingPointStatusPayload) =>
+		unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/set_status/`, payload),
+		),
 	delete: (id: number) => unwrap<void>(authAxios.delete(`api/queues/schedule-serving-points/${id}/`)),
 };
 

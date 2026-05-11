@@ -131,6 +131,25 @@ const Fields = ({ register, control, getValues, errors, trigger, edit = false }:
 				</FormGroup>
 			</div>
 			<div className='col-12 mb-3'>
+				<FormGroup label='Username *'>
+					<input
+						type='text'
+						autoComplete='username'
+						className={errors?.username ? 'form-control is-invalid' : 'form-control'}
+						{...register('username', {
+							required: 'Username is required',
+							onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+								trigger('username');
+								return e.target.value;
+							},
+						})}
+					/>
+					{errors?.username && (
+						<span style={{ color: 'red' }}>{errors.username.message}</span>
+					)}
+				</FormGroup>
+			</div>
+			<div className='col-12 mb-3'>
 				<FormGroup label='Staff ID *'>
 					<input
 						type='text'
