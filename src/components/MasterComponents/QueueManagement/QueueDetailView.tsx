@@ -82,7 +82,7 @@ const QueueDetailView: React.FC = () => {
 				tokensApi.queueStatus(id),
 				queuesApi.servingPoints({ queue: id }),
 				queuesApi.servingPoints({ ordering: 'name', page_size: 300 }),
-				tokensApi.list({ queue: id, status: 'serving', ordering: '-created_at', page_size: 20 }),
+				tokensApi.list({ queue: id, status: 'serving', ordering: '-created_at', limit: 20, offset: 0 }),
 				schedulesApi.list({ queue: id, page_size: 200, ordering: 'from_datetime' }),
 			]);
 			setQueue(qRes);

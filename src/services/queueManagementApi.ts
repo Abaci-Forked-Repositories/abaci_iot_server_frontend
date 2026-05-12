@@ -291,6 +291,10 @@ export interface QueryParams {
 	ordering?: string;
 	page?: number;
 	page_size?: number;
+	/** DRF LimitOffsetPagination — used by `api/tokens/` */
+	limit?: number;
+	/** DRF LimitOffsetPagination — used by `api/tokens/` */
+	offset?: number;
 	queue?: number | string;
 	queue_id?: number | string;
 	schedule?: number | string;

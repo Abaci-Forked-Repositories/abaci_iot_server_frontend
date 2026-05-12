@@ -132,7 +132,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 			const [queuesRes, tokensRes, statusRes] = await Promise.all([
 				queuesApi.list({ ordering: 'name', page_size: 200 }),
-				tokensApi.list({ queue: qid, ordering: '-created_at', page_size: 200 }),
+				tokensApi.list({ queue: qid, ordering: '-created_at', limit: 200, offset: 0 }),
 				tokensApi.queueStatus(qid),
 			]);
 			setQueues(queuesRes.results || []);
