@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
@@ -9,14 +9,16 @@ import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstra
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
 import Icon from '../../icon/Icon';
+import StatusBadge from '../../CustomComponent/StatusBadge';
 import QueueDetailSkeleton from '../../CustomComponent/Skeleton/QueueDetailSkeleton';
 import useTablestyle from '../../../hooks/useTablestyles';
-import type { Queue, QueueSchedule, QueueStatistics, QueueStatus, ServingPoint, Token } from '../../../services/queueManagementApi';
+import type { Queue, QueueSchedule, QueueStatistics, ServingPoint, Token } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi, tokensApi } from '../../../services/queueManagementApi';
 import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
 import type { TColor } from '../../../type/color-type';
-import { formatDate, getErrorMessage, servingPointQueueIds } from './queueManagementUtils';
+import useToasterNotification from '../../../hooks/useToasterNotification';
+import { formatDate, servingPointQueueIds } from './queueManagementUtils';
 import ScheduleCalendar, { type QueueScheduleEvent } from './ScheduleCalendar';
 
 const STAT_RANGE_OPTIONS = ['Today', 'This week', 'This month'] as const;
@@ -49,15 +51,16 @@ const ICON_BG_BY_COLOR: Record<TColor, string> = {
 const QueueDetailView: React.FC = () => {
 	const { queueId } = useParams<{ queueId: string }>();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const id = Number(queueId);
 
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState('');
 	const [queue, setQueue] = useState<Queue | null>(null);
 	const [stats, setStats] = useState<QueueStatistics | null>(null);
-	const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
 	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
 	const [allServingPoints, setAllServingPoints] = useState<ServingPoint[]>([]);
+	const [loadingAllServingPoints, setLoadingAllServingPoints] = useState(false);
+	const [loadedAllServingPoints, setLoadedAllServingPoints] = useState(false);
 	const [servingTokens, setServingTokens] = useState<Token[]>([]);
 	const [scheduleRecords, setScheduleRecords] = useState<QueueSchedule[]>([]);
 	const [showAssignServingPointModal, setShowAssignServingPointModal] = useState(false);
@@ -67,6 +70,9 @@ const QueueDetailView: React.FC = () => {
 	const [removingServingPointId, setRemovingServingPointId] = useState<number | null>(null);
 	const [statRange, setStatRange] = useState<(typeof STAT_RANGE_OPTIONS)[number]>('Today');
 	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const { showErrorNotification } = useToasterNotification();
+	const showErrorNotificationRef = useRef(showErrorNotification);
+	showErrorNotificationRef.current = showErrorNotification;
 
 	const load = useCallback(async () => {
 		if (!id || Number.isNaN(id)) {
@@ -74,30 +80,53 @@ const QueueDetailView: React.FC = () => {
 			return;
 		}
 		setLoading(true);
-		setError('');
 		try {
-			const [qRes, stRes, qsRes, spRes, allSpRes, tokRes, schRes] = await Promise.all([
+			const [qRes, stRes, tokRes, schRes] = await Promise.all([
 				queuesApi.get(id),
 				queuesApi.statistics(id),
-				tokensApi.queueStatus(id),
-				queuesApi.servingPoints({ queue: id }),
-				queuesApi.servingPoints({ ordering: 'name', page_size: 300 }),
 				tokensApi.list({ queue: id, status: 'serving', ordering: '-created_at', page_size: 20 }),
 				schedulesApi.list({ queue: id, page_size: 200, ordering: 'from_datetime' }),
 			]);
 			setQueue(qRes);
 			setStats(stRes);
-			setQueueStatus(qsRes);
-			setServingPoints((spRes.results || []).filter((p) => servingPointQueueIds(p).includes(id)));
-			setAllServingPoints(allSpRes.results || []);
+			setServingPoints((qRes.serving_points || []).filter((p) => servingPointQueueIds(p).includes(id)));
 			setServingTokens(tokRes.results || []);
 			setScheduleRecords(schRes.results || []);
 		} catch (err) {
-			setError(getErrorMessage(err));
+			showErrorNotificationRef.current(err);
 		} finally {
 			setLoading(false);
 		}
 	}, [id]);
+
+	const loadAllServingPoints = useCallback(async () => {
+		if (loadingAllServingPoints || loadedAllServingPoints) return;
+		setLoadingAllServingPoints(true);
+		try {
+			const pageSize = 300;
+			let page = 1;
+			let hasNext = true;
+			const merged: ServingPoint[] = [];
+
+			while (hasNext) {
+				const res = await queuesApi.servingPoints({
+					ordering: 'name',
+					page_size: pageSize,
+					page,
+				});
+				merged.push(...(res.results || []));
+				hasNext = Boolean(res.next);
+				page += 1;
+			}
+
+			setAllServingPoints(merged);
+			setLoadedAllServingPoints(true);
+		} catch (err) {
+			showErrorNotificationRef.current(err);
+		} finally {
+			setLoadingAllServingPoints(false);
+		}
+	}, [loadedAllServingPoints, loadingAllServingPoints]);
 
 	useEffect(() => {
 		void load();
@@ -148,12 +177,11 @@ const QueueDetailView: React.FC = () => {
 		async (point: ServingPoint) => {
 			const nextQueues = servingPointQueueIds(point).filter((qid) => qid !== id);
 			setRemovingServingPointId(point.id);
-			setError('');
 			try {
 				await queuesApi.updateServingPoint(point.id, { queue: nextQueues });
 				await load();
 			} catch (err) {
-				setError(getErrorMessage(err));
+				showErrorNotificationRef.current(err);
 			} finally {
 				setRemovingServingPointId(null);
 			}
@@ -177,11 +205,7 @@ const QueueDetailView: React.FC = () => {
 				title: 'Status',
 				field: 'is_available',
 				render: (rowData: ServingPoint) => (
-					<span
-						className={`queue-modern-card__status ${rowData.is_available ? 'queue-modern-card__status--active' : 'queue-modern-card__status--inactive'}`}>
-						{rowData.is_available ? 'Available' : 'Busy'}
-						<span className='queue-modern-card__status-dot' />
-					</span>
+					<StatusBadge status={rowData.status} isAvailable={rowData.is_available} />
 				),
 			},
 			{
@@ -254,10 +278,10 @@ const QueueDetailView: React.FC = () => {
 	);
 
 	const statValue = (key: string): number => {
-		if (key === 'total_tokens') return stats?.total_tokens ?? queueStatus?.total ?? 0;
-		if (key === 'reported') return stats?.reported ?? queueStatus?.reported ?? 0;
-		if (key === 'serving') return stats?.serving ?? queueStatus?.serving ?? 0;
-		if (key === 'completed') return stats?.completed ?? queueStatus?.completed_today ?? 0;
+		if (key === 'total_tokens') return stats?.total_tokens ?? 0;
+		if (key === 'reported') return stats?.reported ?? 0;
+		if (key === 'serving') return stats?.serving ?? 0;
+		if (key === 'completed') return stats?.completed ?? 0;
 		if (key === 'no_show') return stats?.no_show ?? 0;
 		if (key === 'cancelled') return stats?.cancelled ?? 0;
 		return 0;
@@ -269,7 +293,6 @@ const QueueDetailView: React.FC = () => {
 			return;
 		}
 		setAssigningServingPoints(true);
-		setError('');
 		try {
 			await Promise.all(
 				selectedServingPointIds.map((servingPointId) =>
@@ -281,7 +304,7 @@ const QueueDetailView: React.FC = () => {
 			setAssignServingPointSearch('');
 			await load();
 		} catch (err) {
-			setError(getErrorMessage(err));
+			showErrorNotificationRef.current(err);
 		} finally {
 			setAssigningServingPoints(false);
 		}
@@ -295,8 +318,14 @@ const QueueDetailView: React.FC = () => {
 		return <QueueDetailSkeleton />;
 	}
 
-	if (error && !queue) {
-		return <div className='alert alert-danger'>{error}</div>;
+	if (!loading && !queue) {
+		return (
+			<div className='d-flex justify-content-center align-items-center py-5'>
+				<Button color='primary' icon='Refresh' onClick={() => void load()}>
+					Try again
+				</Button>
+			</div>
+		);
 	}
 
 	const queueData = queue!;
@@ -352,8 +381,6 @@ const QueueDetailView: React.FC = () => {
 
 	return (
 		<div className='queue-detail-page'>
-			{error && <div className='alert alert-danger mb-3'>{error}</div>}
-
 			<div className='row g-4'>
 				{/* ── Top: single card split info + stats ── */}
 				<div className='col-12'>
@@ -469,6 +496,7 @@ const QueueDetailView: React.FC = () => {
 							state: {
 								queueId: id,
 								queueName: queueData.name,
+								queueDetailPath: location.pathname,
 							},
 						})
 					}
@@ -489,6 +517,7 @@ const QueueDetailView: React.FC = () => {
 									setSelectedServingPointIds([]);
 									setAssignServingPointSearch('');
 									setShowAssignServingPointModal(true);
+									void loadAllServingPoints();
 								}}>
 								Add Serving Point
 							</Button>
@@ -582,9 +611,13 @@ const QueueDetailView: React.FC = () => {
 						/>
 					</div>
 					{availableServingPoints.length === 0 ? (
-						<div className='text-muted small py-3'>
-							No unassigned serving points available for this queue.
-						</div>
+						loadingAllServingPoints ? (
+							<div className='text-muted small py-3'>Loading serving points...</div>
+						) : (
+							<div className='text-muted small py-3'>
+								No unassigned serving points available for this queue.
+							</div>
+						)
 					) : (
 						<div className='border rounded p-2' style={{ maxHeight: 320, overflowY: 'auto' }}>
 							{availableServingPoints.map((point) => (

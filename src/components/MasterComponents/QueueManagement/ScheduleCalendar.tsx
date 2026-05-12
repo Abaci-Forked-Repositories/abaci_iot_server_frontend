@@ -61,7 +61,13 @@ interface CreateScheduleForm {
 	token_limit: string;
 }
 
-export function mapQueueScheduleToCalendarEvent(s: QueueSchedule): QueueScheduleEvent {
+function hasScheduleWindow(s: QueueSchedule): s is QueueSchedule & { from_datetime: string; to_datetime: string } {
+	return Boolean(s.from_datetime && s.to_datetime);
+}
+
+export function mapQueueScheduleToCalendarEvent(
+	s: QueueSchedule & { from_datetime: string; to_datetime: string },
+): QueueScheduleEvent {
 	const statusLower = (s.status || '').toLowerCase();
 	let normalized: QueueScheduleEvent['status'] = 'scheduled';
 	if (statusLower === 'running') normalized = 'running';
@@ -143,10 +149,12 @@ function isScheduleMetadataEditable(status?: string) {
 }
 
 function queueScheduleRowToForm(rec: QueueSchedule): CreateScheduleForm {
+	const start = rec.from_datetime ? new Date(rec.from_datetime) : new Date();
+	const end = rec.to_datetime ? new Date(rec.to_datetime) : dayjs(start).add(1, 'hour').toDate();
 	return {
 		description: rec.description ?? '',
-		start: toDateTimeLocalValue(new Date(rec.from_datetime)),
-		end: toDateTimeLocalValue(new Date(rec.to_datetime)),
+		start: toDateTimeLocalValue(start),
+		end: toDateTimeLocalValue(end),
 		token_from: rec.token_from != null ? String(rec.token_from) : '',
 		token_to: rec.token_to != null ? String(rec.token_to) : '',
 		token_limit: rec.limit != null ? String(rec.limit) : '',
@@ -181,7 +189,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	});
 
 	const events = useMemo(
-		() => (scheduleRecords || []).map(mapQueueScheduleToCalendarEvent),
+		() => (scheduleRecords || []).filter(hasScheduleWindow).map(mapQueueScheduleToCalendarEvent),
 		[scheduleRecords],
 	);
 

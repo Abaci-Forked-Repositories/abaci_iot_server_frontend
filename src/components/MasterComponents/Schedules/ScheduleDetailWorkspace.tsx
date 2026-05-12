@@ -1,5 +1,6 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import MaterialTable, { MTableToolbar } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
@@ -18,13 +19,12 @@ import {
 	type Queue,
 	type QueueSchedule,
 	type ScheduleServingPoint,
-	type QueueStatus,
 	type Token,
-	queuesApi,
 	scheduleServingPointsApi,
 	schedulesApi,
 	tokensApi,
 } from '../../../services/queueManagementApi';
+import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import { initialTokenForm } from '../QueueManagement/queueManagementConstants';
 import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
 import swalFire from '../../../helpers/swalHelper';
@@ -50,6 +50,13 @@ const getNextAllowedStatuses = (status?: string) => {
 	return [];
 };
 
+export type ScheduleDetailNavState = {
+	queueId?: number;
+	queueName?: string;
+	/** Exact path to return to the queue detail page (e.g. `/queue-management/24`). */
+	queueDetailPath?: string;
+};
+
 const toLocalDateTimeInputValue = (iso?: string) => {
 	if (!iso) return '';
 	const parsed = new Date(iso);
@@ -62,8 +69,11 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const { scheduleId } = useParams<{ scheduleId: string }>();
 	const location = useLocation();
 	const navigate = useNavigate();
-	const queueIdFromState = (location.state as { queueId?: number; queueName?: string } | null)?.queueId;
-	const queueNameFromState = (location.state as { queueName?: string } | null)?.queueName;
+	const dispatch = useDispatch();
+	const navState = location.state as ScheduleDetailNavState | null;
+	const queueIdFromState = navState?.queueId;
+	const queueNameFromState = navState?.queueName;
+	const queueDetailPathFromState = navState?.queueDetailPath;
 
 	const sid = Number(scheduleId);
 
@@ -73,7 +83,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [showCreateTokenModal, setShowCreateTokenModal] = useState(false);
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [showServingPointEditModal, setShowServingPointEditModal] = useState(false);
-	const [queues, setQueues] = useState<Queue[]>([]);
 	const [scheduleRecord, setScheduleRecord] = useState<QueueSchedule | null>(null);
 	const [statusFormValue, setStatusFormValue] = useState('scheduled');
 	const [fromDateTimeFormValue, setFromDateTimeFormValue] = useState('');
@@ -82,7 +91,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [servingPointFromDateTimeFormValue, setServingPointFromDateTimeFormValue] = useState('');
 	const [servingPointToDateTimeFormValue, setServingPointToDateTimeFormValue] = useState('');
 	const [editingServingPointWindow, setEditingServingPointWindow] = useState<ScheduleServingPoint | null>(null);
-	const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
 	const [tokens, setTokens] = useState<Token[]>([]);
 	const [tokenForm, setTokenForm] = useState<CreateTokenPayload>(initialTokenForm);
 	const [tokenStatusFilter, setTokenStatusFilter] = useState<{ label: string; value: string }>({
@@ -130,15 +138,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 			setScheduleRecord(sch);
 			const qid = sch.queue;
 
-			const [queuesRes, tokensRes, statusRes] = await Promise.all([
-				queuesApi.list({ ordering: 'name', page_size: 200 }),
-				tokensApi.list({ queue: qid, ordering: '-created_at', page_size: 200 }),
-				tokensApi.queueStatus(qid),
-			]);
-			setQueues(queuesRes.results || []);
+			const tokensRes = await tokensApi.list({ queue: qid, ordering: '-created_at', page_size: 200 });
 			const allTok = tokensRes.results || [];
 			setTokens(allTok.filter((t) => (t.schedule ?? null) === sid));
-			setQueueStatus(statusRes);
 			setTokenForm((prev) => ({ ...prev, schedule_id: sid }));
 		} catch (err) {
 			showErrorNotification(err);
@@ -151,6 +153,45 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	const queueDetailPath = useMemo(() => {
+		if (queueDetailPathFromState) return queueDetailPathFromState;
+		const q = scheduleRecord?.queue;
+		if (q) return `/queue-management/${q}`;
+		return '/queue-management';
+	}, [queueDetailPathFromState, scheduleRecord?.queue]);
+
+	const tokenFormQueues = useMemo((): Queue[] => {
+		if (!scheduleRecord?.queue) return [];
+		const name =
+			scheduleRecord.queue_name ??
+			queueNameFromState ??
+			(scheduleRecord.queue ? `Queue ${scheduleRecord.queue}` : 'Queue');
+		return [{ id: scheduleRecord.queue, name } as Queue];
+	}, [queueNameFromState, scheduleRecord]);
+
+	useEffect(() => {
+		if (!scheduleRecord) return;
+		const qLabel =
+			queueNameFromState ??
+			scheduleRecord.queue_name ??
+			(scheduleRecord.queue ? `Queue ${scheduleRecord.queue}` : 'Queue');
+		dispatch(setHeaderTitle({ name: `Schedule · ${qLabel}`, isEditable: false }));
+		dispatch(
+			setBreadcrumbs([
+				{ label: 'Queue Management', path: '/queue-management' },
+				{ label: qLabel, path: queueDetailPath },
+				{ label: 'Schedule details', path: location.pathname },
+			]),
+		);
+	}, [dispatch, location.pathname, queueDetailPath, queueNameFromState, scheduleRecord]);
+
+	useEffect(
+		() => () => {
+			dispatch(setBreadcrumbs([]));
+		},
+		[dispatch],
+	);
 
 	useEffect(() => {
 		if (!showStatusModal) return;
@@ -296,8 +337,13 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const queueName = useMemo(() => {
 		if (scheduleRecord?.queue_name) return scheduleRecord.queue_name;
 		if (queueNameFromState) return queueNameFromState;
-		return queues.find((queue) => queue.id === queueId)?.name || 'Queue';
-	}, [queues, queueId, queueNameFromState, scheduleRecord?.queue_name]);
+		return queueId ? `Queue ${queueId}` : 'Queue';
+	}, [queueId, queueNameFromState, scheduleRecord?.queue_name]);
+
+	const reportedTokenCount = useMemo(
+		() => tokens.filter((t) => t.status === 'reported').length,
+		[tokens],
+	);
 
 	const servingPointColumns = useMemo(
 		() => [
@@ -486,7 +532,19 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										style={{ width: 48, height: 48, backgroundColor: 'var(--bs-light)' }}>
 										<Icon icon='Event' className='queue-modern-card__icon' color='primary' />
 									</div>
-									<div className='h4 mb-0 fw-bold'>Schedule Details</div>
+									<div>
+										<div className='h4 mb-0 fw-bold'>Schedule Details</div>
+										<div className='text-muted small mt-1'>
+											Queue:{' '}
+											{scheduleRecord?.queue != null ? (
+												<Link to={queueDetailPath} className='fw-semibold text-decoration-none'>
+													{queueName}
+												</Link>
+											) : (
+												<span className='fw-semibold'>{queueName}</span>
+											)}
+										</div>
+									</div>
 								</div>
 								<div className='d-flex align-items-center gap-2'>
 									<Badge
@@ -615,7 +673,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 											</div>
 											<div className='text-muted small'>Reported</div>
 										</div>
-										<div className='fs-5 fw-bold'>{queueStatus?.reported ?? 0}</div>
+										<div className='fs-5 fw-bold'>{reportedTokenCount}</div>
 									</div>
 								</div>
 								<div className='col-6'>
@@ -643,13 +701,13 @@ const ScheduleDetailWorkspace: React.FC = () => {
 						<CardHeader>
 							<CardLabel icon='Monitor'>
 								<CardTitle tag='h5'>
-									Serving Points ({scheduleRecord?.serving_point_windows?.length || 0})
+									Serving points ({scheduleRecord?.serving_point_windows?.length || 0})
 								</CardTitle>
 							</CardLabel>
 						</CardHeader>
 						<CardBody>
 							{loading ? (
-								<div className='text-center text-muted py-4'>Loading serving points...</div>
+								<div className='text-center text-muted py-4'>Loading...</div>
 							) : (
 								<div className='material_tabel_wrapper'>
 									<div style={{ overflow: 'hidden' }}>
@@ -681,8 +739,10 @@ const ScheduleDetailWorkspace: React.FC = () => {
 														`/serving-points/${row.serving_point}/windows/${row.id}`,
 														{
 															state: {
+																from: 'schedule',
 																queueId,
 																queueName,
+																queueDetailPath: queueDetailPath,
 																scheduleId: sid,
 																schedulePath: location.pathname + location.search,
 															},
@@ -752,7 +812,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 					<TokenCreateForm
 						tokenForm={tokenForm}
 						setTokenForm={setTokenForm}
-						queues={queues}
+						queues={tokenFormQueues}
 						schedules={scheduleRecord ? [scheduleRecord] : []}
 						selectedQueueId={queueId}
 						onQueueChange={() => {}}

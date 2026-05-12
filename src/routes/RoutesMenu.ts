@@ -76,6 +76,13 @@ export const allRoutesObject = {
 		path: '/queue-management/schedules/:scheduleId',
 		subMenu: null,
 	},
+	scheduleslist: {
+		id: 'scheduleslist',
+		text: 'Schedules',
+		icon: 'Event',
+		path: '/schedules',
+		subMenu: null,
+	},
 };
 
 export const AdminRoutes = {
@@ -105,6 +112,13 @@ export const AdminRoutes = {
 		text: 'Serving Points',
 		icon: 'Monitor',
 		path: '/serving-points',
+		subMenu: null,
+	},
+	schedules: {
+		id: 'schedules',
+		text: 'Schedules',
+		icon: 'Event',
+		path: '/schedules',
 		subMenu: null,
 	},
 	screens: {

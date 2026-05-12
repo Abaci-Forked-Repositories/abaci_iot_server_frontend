@@ -47,6 +47,7 @@ export interface ServingPoint {
 	/** Single id from older responses, or list when the API links a point to multiple queues. */
 	queue: number | number[];
 	description?: string;
+	status?: string;
 	is_available?: boolean;
 	is_active?: boolean;
 	created_at?: string;
@@ -65,7 +66,7 @@ export interface Queue {
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	is_active?: boolean;
-	serving_points?: Array<Pick<ServingPoint, 'id' | 'name'>>;
+	serving_points?: ServingPoint[];
 	created_at?: string;
 	updated_at?: string;
 }
@@ -210,8 +211,8 @@ export interface QueueSchedule {
 	id: number;
 	queue: number;
 	queue_name?: string;
-	from_datetime: string;
-	to_datetime: string;
+	from_datetime: string | null;
+	to_datetime: string | null;
 	description?: string;
 	current_token?: number | null;
 	current_token_number?: string | null;
@@ -255,8 +256,11 @@ export interface ScheduleServingPoint {
 	serving_point_name?: string;
 	from_datetime: string;
 	to_datetime: string;
+	/** Window status; API may also send `schedule_status` on nested payloads. */
 	status?: string;
-	current_token?: number | null;
+	schedule_status?: string;
+	/** Legacy flat id/number, or nested token object from schedule detail API. */
+	current_token?: number | Token | null;
 	current_token_number?: string | null;
 	current_token_status?: string | null;
 	created_at?: string;

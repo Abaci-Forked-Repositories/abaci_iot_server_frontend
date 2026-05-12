@@ -1,10 +1,13 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
+import Icon from '../../icon/Icon';
+import StatusBadge from '../../CustomComponent/StatusBadge';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type QueueSchedule,
@@ -14,7 +17,47 @@ import {
 	schedulesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
+import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import { formatDate, servingPointQueueIds } from '../QueueManagement/queueManagementUtils';
+
+export type ServingWindowNavState = {
+	from?: 'schedule' | 'serving-point';
+	queueId?: number;
+	queueName?: string;
+	queueDetailPath?: string;
+	scheduleId?: number;
+	schedulePath?: string;
+	servingPointPath?: string;
+	servingPointName?: string;
+};
+
+const getWindowCurrentTokenNumber = (row: ScheduleServingPoint): string | null => {
+	const nested = row.current_token;
+	if (nested && typeof nested === 'object' && nested !== null && 'token_number' in nested) {
+		return (nested as { token_number?: string }).token_number ?? null;
+	}
+	if (row.current_token_number) return row.current_token_number;
+	if (typeof nested === 'number') return String(nested);
+	return null;
+};
+
+const getWindowCurrentTokenCustomerName = (row: ScheduleServingPoint): string | null => {
+	const nested = row.current_token;
+	if (nested && typeof nested === 'object' && nested !== null && 'token_user' in nested) {
+		const u = (nested as { token_user?: { name?: string } }).token_user;
+		return u?.name?.trim() || null;
+	}
+	return null;
+};
+
+const getWindowCurrentTokenStatusRaw = (row: ScheduleServingPoint): string => {
+	if (row.current_token_status) return row.current_token_status;
+	const nested = row.current_token;
+	if (nested && typeof nested === 'object' && nested !== null && 'status' in nested) {
+		return String((nested as { status?: string }).status ?? '');
+	}
+	return '';
+};
 
 const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
 
@@ -40,6 +83,15 @@ const WINDOW_STATUS_OPTIONS: Array<{ label: string; value: string }> = [
 const ServingWindowDetailWorkspace: React.FC = () => {
 	const { servingPointId, windowId } = useParams<{ servingPointId: string; windowId: string }>();
 	const navigate = useNavigate();
+	const location = useLocation();
+	const dispatch = useDispatch();
+	const nav = (location.state as ServingWindowNavState | null) ?? null;
+	const scheduleEntryPath = nav?.schedulePath;
+	const servingPointEntryPath = nav?.servingPointPath;
+	const servingPointEntryName = nav?.servingPointName;
+	const queueNameFromNav = nav?.queueName;
+	const queueDetailPathFromNav = nav?.queueDetailPath;
+	const queueIdFromNav = nav?.queueId;
 	const pointParam = Number(servingPointId);
 	const windowNumericId = Number(windowId);
 
@@ -67,7 +119,10 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		try {
 			const win = await scheduleServingPointsApi.get(windowNumericId);
 			if (Number.isFinite(pointParam) && !Number.isNaN(pointParam) && win.serving_point !== pointParam) {
-				navigate(`/serving-points/${win.serving_point}/windows/${win.id}`, { replace: true });
+				navigate(`/serving-points/${win.serving_point}/windows/${win.id}`, {
+					replace: true,
+					state: location.state,
+				});
 				return;
 			}
 			const [pointRes, scheduleRes] = await Promise.all([
@@ -90,6 +145,82 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	const backTarget = useMemo(() => {
+		if (scheduleEntryPath) {
+			return { path: scheduleEntryPath, label: 'Back to schedule' };
+		}
+		const spId =
+			windowRow?.serving_point ??
+			(Number.isFinite(pointParam) && !Number.isNaN(pointParam) ? pointParam : null);
+		const path =
+			servingPointEntryPath ??
+			(spId != null && !Number.isNaN(spId) ? `/serving-points/${spId}` : '/serving-points');
+		return { path, label: 'Back to serving point' };
+	}, [scheduleEntryPath, servingPointEntryPath, windowRow?.serving_point, pointParam]);
+
+	useEffect(() => {
+		if (!windowRow) return;
+		const currentPath = location.pathname;
+		const spPath =
+			servingPointEntryPath ?? `/serving-points/${windowRow.serving_point}`;
+		const spLabel =
+			servingPointEntryName ??
+			windowRow.serving_point_name ??
+			`Serving point ${windowRow.serving_point}`;
+
+		if (scheduleEntryPath) {
+			const qId = schedule?.queue ?? queueIdFromNav;
+			const qLabel =
+				queueNameFromNav ?? schedule?.queue_name ?? (qId ? `Queue ${qId}` : 'Queue');
+			const queuePath =
+				queueDetailPathFromNav ??
+				(qId != null && qId > 0 ? `/queue-management/${qId}` : '/queue-management');
+			const schedId = schedule?.id ?? nav?.scheduleId ?? windowRow.queue_schedule;
+			const schedLabel =
+				schedule?.description?.trim() ||
+				(typeof schedId === 'number' ? `Schedule #${schedId}` : 'Schedule');
+			dispatch(setHeaderTitle({ name: `${spLabel} · Serving window`, isEditable: false }));
+			dispatch(
+				setBreadcrumbs([
+					{ label: 'Queue Management', path: '/queue-management' },
+					{ label: qLabel, path: queuePath },
+					{ label: schedLabel, path: scheduleEntryPath },
+					{ label: 'Serving window', path: currentPath },
+				]),
+			);
+			return;
+		}
+
+		dispatch(setHeaderTitle({ name: `${spLabel} · Serving window`, isEditable: false }));
+		dispatch(
+			setBreadcrumbs([
+				{ label: 'Queue Management', path: '/queue-management' },
+				{ label: 'Serving points', path: '/serving-points' },
+				{ label: spLabel, path: spPath },
+				{ label: 'Serving window', path: currentPath },
+			]),
+		);
+	}, [
+		dispatch,
+		location.pathname,
+		schedule,
+		scheduleEntryPath,
+		windowRow,
+		queueDetailPathFromNav,
+		queueIdFromNav,
+		queueNameFromNav,
+		nav?.scheduleId,
+		servingPointEntryName,
+		servingPointEntryPath,
+	]);
+
+	useEffect(
+		() => () => {
+			dispatch(setBreadcrumbs([]));
+		},
+		[dispatch],
+	);
 
 	const nextWindowStatusOptions = useMemo(() => {
 		const allowed = getNextAllowedWindowStatuses(windowRow?.status);
@@ -137,7 +268,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	};
 
 	const getAllowedActions = (row: ScheduleServingPoint) => {
-		const tokenStatus = normalizeTokenStatus(row.current_token_status);
+		const tokenStatus = normalizeTokenStatus(getWindowCurrentTokenStatusRaw(row));
 		const canStart = tokenStatus === 'registred' || tokenStatus === 'reported';
 		const canComplete = tokenStatus === 'serving';
 		const canCancel = tokenStatus === 'registred' || tokenStatus === 'reported' || tokenStatus === 'serving';
@@ -166,60 +297,122 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		}
 	};
 
+	const visibleTokenActions = useMemo(() => {
+		if (!windowRow) return [];
+		const allowed = getAllowedActions(windowRow);
+		const rows: Array<{
+			key: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone';
+			label: string;
+			icon: string;
+			color: 'primary' | 'success' | 'danger' | 'warning' | 'secondary';
+			show: boolean;
+			outline?: boolean;
+		}> = [
+			{ key: 'start', label: 'Start serving', icon: 'PlayCircle', color: 'primary', show: allowed.canStart },
+			{
+				key: 'complete',
+				label: 'Complete',
+				icon: 'TaskAlt',
+				color: 'success',
+				show: allowed.canComplete,
+			},
+			{
+				key: 'postpone',
+				label: 'Postpone',
+				icon: 'Update',
+				color: 'secondary',
+				show: allowed.canPostpone,
+			},
+			{
+				key: 'no_show',
+				label: 'No show',
+				icon: 'PersonOff',
+				color: 'warning',
+				show: allowed.canNoShow,
+			},
+			{
+				key: 'cancel',
+				label: 'Cancel token',
+				icon: 'Cancel',
+				color: 'danger',
+				show: allowed.canCancel,
+				outline: true,
+			},
+		];
+		return rows.filter((r) => r.show);
+	}, [windowRow, schedule?.allow_postpone]);
+
 	if (!windowNumericId || Number.isNaN(windowNumericId)) {
 		return <div className='alert alert-warning'>Invalid serving window.</div>;
 	}
 
-	const backPath =
-		Number.isFinite(pointParam) && !Number.isNaN(pointParam)
-			? `/serving-points/${pointParam}`
-			: windowRow
-				? `/serving-points/${windowRow.serving_point}`
-				: '/serving-points';
-
 	return (
 		<div className='d-grid gap-4'>
-			<Card>
-				<CardBody>
-					<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap'>
-						<div>
-							<div className='text-muted small mb-1'>Serving Window</div>
-							<div className='h4 mb-1'>
-								{windowRow?.serving_point_name
-									? `${windowRow.serving_point_name} · Window #${windowRow.id}`
-									: `Window #${windowNumericId}`}
+			<Card className='border-0 shadow-sm overflow-hidden'>
+				<CardBody className='p-0'>
+					<div className='d-flex flex-column flex-lg-row'>
+						<div className='p-4 flex-grow-1'>
+							<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap'>
+								<div className='d-flex align-items-start gap-3'>
+									<div className='queue-modern-card__icon-box flex-shrink-0'>
+										<Icon icon='Schedule' className='queue-modern-card__icon' />
+									</div>
+									<div>
+										<div className='text-muted small mb-1'>Serving window</div>
+										<div className='h4 mb-1 fw-bold'>
+											{windowRow?.serving_point_name
+												? `${windowRow.serving_point_name}`
+												: `Window #${windowNumericId}`}
+										</div>
+										{windowRow?.serving_point_name && windowRow?.id != null && (
+											<div className='text-muted small mb-1'>Window #{windowRow.id}</div>
+										)}
+										<div className='text-muted small'>
+											{windowRow
+												? `${formatDate(windowRow.from_datetime)} – ${formatDate(windowRow.to_datetime)}`
+												: '—'}
+										</div>
+									</div>
+								</div>
+								<div className='d-flex flex-wrap gap-2 align-items-center'>
+									{windowRow?.queue_schedule != null && (
+										<Button
+											color='info'
+											isLight
+											icon='CalendarMonth'
+											onClick={() =>
+												navigate(`/queue-management/schedules/${windowRow.queue_schedule}`, {
+													state: {
+														queueId: schedule?.queue ?? queueIdFromNav,
+														queueName: schedule?.queue_name ?? queueNameFromNav,
+														queueDetailPath:
+															schedule?.queue != null
+																? `/queue-management/${schedule.queue}`
+																: queueDetailPathFromNav,
+													},
+												})
+											}>
+											Open schedule
+										</Button>
+									)}
+									<Button
+										color='dark'
+										isLight
+										icon='ArrowBack'
+										onClick={() => navigate(backTarget.path)}>
+										{backTarget.label}
+									</Button>
+								</div>
 							</div>
-							<div className='text-muted'>
-								Schedule #{windowRow?.queue_schedule ?? '—'} ·{' '}
-								{windowRow
-									? `${formatDate(windowRow.from_datetime)} – ${formatDate(windowRow.to_datetime)}`
-									: '—'}
-							</div>
-						</div>
-						<div className='d-flex flex-wrap gap-2'>
-							{windowRow?.queue_schedule != null && (
-								<Button
-									color='info'
-									isLight
-									icon='CalendarMonth'
-									onClick={() =>
-										navigate(`/queue-management/schedules/${windowRow.queue_schedule}`)
-									}>
-									Open schedule
-								</Button>
-							)}
-							<Button color='light' isLight icon='ArrowBack' onClick={() => navigate(backPath)}>
-								Back
-							</Button>
 						</div>
 					</div>
 
 					{loading ? (
-						<div className='text-muted py-4'>Loading window details...</div>
+						<div className='text-muted px-4 pb-4'>Loading window details...</div>
 					) : !windowRow ? (
-						<div className='alert alert-warning mt-3 mb-0'>Serving window could not be loaded.</div>
+						<div className='alert alert-warning mx-4 mb-4'>Serving window could not be loaded.</div>
 					) : (
-						<div className='row g-3 mt-2'>
+						<div className='row g-3 px-4 pb-4 border-top pt-3 mx-0'>
 							<div className='col-12 col-md-4'>
 								<div className='small text-muted'>Serving point</div>
 								<div className='fw-semibold'>
@@ -332,100 +525,70 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				</form>
 			</Modal>
 
-			{!loading && windowRow && (
-				<Card>
-					<CardHeader>
-						<CardLabel icon='ConfirmationNumber'>
-							<CardTitle tag='h5'>Current token</CardTitle>
-						</CardLabel>
-					</CardHeader>
-					<CardBody>
-						{!windowRow.current_token_number ? (
-							<div className='text-muted py-2'>No token is assigned to this window.</div>
-						) : (
-							<div className='d-flex align-items-center gap-4 flex-wrap'>
-								<div>
-									<div className='text-muted small'>Token number</div>
-									<div className='h3 mb-0'>#{windowRow.current_token_number}</div>
+			{!loading && windowRow && (() => {
+				const tokenNo = getWindowCurrentTokenNumber(windowRow);
+				const customer = getWindowCurrentTokenCustomerName(windowRow);
+				const tokStatus = getWindowCurrentTokenStatusRaw(windowRow);
+				return (
+					<Card className='border-0 shadow-sm overflow-hidden'>
+						<CardBody className='p-0'>
+							{!tokenNo ? (
+								<div className='text-muted p-4 d-flex align-items-center gap-3'>
+									<div className='queue-modern-card__icon-box flex-shrink-0'>
+										<Icon icon='ConfirmationNumber' className='queue-modern-card__icon' />
+									</div>
+									<div>
+										<div className='fw-semibold text-body'>No token at this window</div>
+										<div className='small'>Assign or call a token from the schedule to see it here.</div>
+									</div>
 								</div>
-								<div>
-									<div className='text-muted small'>Token status</div>
-									<Badge color='primary' isLight>
-										{windowRow.current_token_status || '—'}
-									</Badge>
+							) : (
+								<div className='row g-0 bg-body-secondary border border-secondary border-opacity-25 rounded-3 overflow-hidden'>
+									<div className='col-12 col-lg-6 p-4 d-flex flex-column justify-content-center border-bottom border-lg-bottom-0 border-lg-end border-secondary border-opacity-25'>
+										<div className='text-uppercase small text-muted fw-semibold mb-2'>
+											Current token
+										</div>
+										<div className='display-6 fw-bold text-primary mb-1'>#{tokenNo}</div>
+										{customer ? (
+											<div className='fs-5 fw-medium text-body-emphasis mb-2'>{customer}</div>
+										) : null}
+										<div className='d-flex flex-wrap align-items-center gap-2 mt-2'>
+											<span className='text-muted small'>Token status</span>
+											<StatusBadge status={tokStatus || undefined} />
+										</div>
+									</div>
+									<div className='col-12 col-lg-6 p-4 d-flex flex-column'>
+										<div className='d-flex flex-wrap align-items-center gap-2 mb-3'>
+											<span className='text-muted small'>Window status</span>
+											<StatusBadge status={windowRow.status || undefined} emptyFallback='—' />
+										</div>
+										{visibleTokenActions.length > 0 ? (
+											<div className='d-flex flex-wrap gap-2'>
+												{visibleTokenActions.map((a) => (
+													<Button
+														key={a.key}
+														color={a.color}
+														isOutline={Boolean(a.outline)}
+														isLight={!a.outline}
+														icon={a.icon}
+														isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+														onClick={() => void triggerWindowAction(windowRow, a.key)}>
+														{a.label}
+													</Button>
+												))}
+											</div>
+										) : (
+											<p className='text-muted small mb-0'>
+												No actions are available for this token right now.
+											</p>
+										)}
+									</div>
 								</div>
-								<div>
-									<div className='text-muted small'>Window status</div>
-									<Badge color='info' isLight>
-										{windowRow.status || '—'}
-									</Badge>
-								</div>
-								<div className='d-flex flex-wrap gap-2 ms-auto'>
-									{(() => {
-										const allowed = getAllowedActions(windowRow);
-										return (
-											<>
-												<Button
-													size='sm'
-													isLight
-													color='primary'
-													isDisable={
-														!allowed.canStart || actionLoading === `start-${windowRow.id}`
-													}
-													onClick={() => void triggerWindowAction(windowRow, 'start')}>
-													Start
-												</Button>
-												<Button
-													size='sm'
-													isLight
-													color='success'
-													isDisable={
-														!allowed.canComplete ||
-														actionLoading === `complete-${windowRow.id}`
-													}
-													onClick={() => void triggerWindowAction(windowRow, 'complete')}>
-													Complete
-												</Button>
-												<Button
-													size='sm'
-													isLight
-													color='danger'
-													isDisable={
-														!allowed.canCancel || actionLoading === `cancel-${windowRow.id}`
-													}
-													onClick={() => void triggerWindowAction(windowRow, 'cancel')}>
-													Cancel
-												</Button>
-												<Button
-													size='sm'
-													isLight
-													color='warning'
-													isDisable={
-														!allowed.canNoShow || actionLoading === `no_show-${windowRow.id}`
-													}
-													onClick={() => void triggerWindowAction(windowRow, 'no_show')}>
-													No show
-												</Button>
-												<Button
-													size='sm'
-													isLight
-													color='secondary'
-													isDisable={
-														!allowed.canPostpone ||
-														actionLoading === `postpone-${windowRow.id}`
-													}
-													onClick={() => void triggerWindowAction(windowRow, 'postpone')}>
-													Postpone
-												</Button>
-											</>
-										);
-									})()}
-								</div>
-							</div>
-						)}
-					</CardBody>
-				</Card>
-			)}
+							)}
+						</CardBody>
+					</Card>
+				);
+			})()}
 		</div>
 	);
 };

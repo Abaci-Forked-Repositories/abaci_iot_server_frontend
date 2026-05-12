@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://weight-reno-mpeg-preventing.trycloudflare.com/';
+		return 'https://kerry-climb-worship-subjects.trycloudflare.com';
 	}
 	return url;
 };
