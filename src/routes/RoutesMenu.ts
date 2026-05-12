@@ -34,6 +34,20 @@ export const allRoutesObject = {
 		path: '/serving-points',
 		subMenu: null,
 	},
+	tokenusers: {
+		id: 'tokenusers',
+		text: 'Token Users',
+		icon: 'Person',
+		path: '/token-users',
+		subMenu: null,
+	},
+	tokenuserdetails: {
+		id: 'tokenuserdetails',
+		text: 'Token User Detail',
+		icon: 'Person',
+		path: '/token-users/:userId',
+		subMenu: null,
+	},
 	servingwindowdetails: {
 		id: 'servingwindowdetails',
 		text: 'Serving Window Detail',
@@ -112,6 +126,13 @@ export const AdminRoutes = {
 		text: 'Serving Points',
 		icon: 'Monitor',
 		path: '/serving-points',
+		subMenu: null,
+	},
+	tokenusers: {
+		id: 'tokenusers',
+		text: 'Token Users',
+		icon: 'Person',
+		path: '/token-users',
 		subMenu: null,
 	},
 	schedules: {
