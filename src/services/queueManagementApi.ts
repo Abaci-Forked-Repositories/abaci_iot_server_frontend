@@ -148,6 +148,27 @@ export interface TokenQueueRef {
 	name: string;
 }
 
+/** One visit to a serving point on token detail (`GET /api/tokens/{id}/`). */
+export interface TokenServingHistory {
+	id: number;
+	token: number;
+	serving_point: number;
+	serving_point_name?: string | null;
+	entered_at: string;
+	exited_at?: string | null;
+	duration?: string | null;
+	notes?: string | null;
+}
+
+/** Parent chain item on token detail (`GET /api/tokens/{id}/`). */
+export interface TokenParentSummary {
+	id: number;
+	token_number?: string | number;
+	token_display?: string | null;
+	status: TokenStatus | string;
+	created_at?: string;
+}
+
 export interface Token {
 	id: number;
 	token_number: string;
@@ -159,13 +180,20 @@ export interface Token {
 	status: TokenStatus;
 	priority?: number;
 	is_vip?: boolean;
+	/** When true, token is treated as prioritized in the queue (API field name). */
+	is_priority_queued?: boolean;
 	created_at?: string;
 	started_serving_at?: string | null;
 	completed_at?: string | null;
 	cancelled_at?: string | null;
-	notes?: string;
+	/** Parent token id when this token was split or chained from another. */
+	parent_token?: number | null;
+	/** Nested parent token summaries when provided by the API. */
+	parent_tokens?: TokenParentSummary[] | null;
+	notes?: string | null;
 	wait_time?: string;
 	service_time?: string | null;
+	serving_history?: TokenServingHistory[] | null;
 }
 
 export interface QueueStatus {
@@ -492,6 +520,10 @@ export const eventsApi = {
 export const tokensApi = {
 	list: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<Token>>(authAxios.get('api/tokens/', { params })),
+	/** GET /api/tokens/{id}/ — full token detail (DRF retrieve). */
+	get: (id: number) => unwrap<Token>(authAxios.get(`api/tokens/${id}/`)),
+	patch: (id: number, payload: PatchTokenPayload) =>
+		unwrap<Token>(authAxios.patch(`api/tokens/${id}/`, payload)),
 	create: (payload: CreateTokenPayload) =>
 		unwrap<Token>(authAxios.post('api/tokens/create-token/', payload)),
 	patch: (id: number, payload: PatchTokenPayload) =>
@@ -510,6 +542,8 @@ export const tokensApi = {
 	markNoShow: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/mark-no-show/`)),
 	users: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<TokenUser>>(authAxios.get('api/tokens/users/', { params })),
+	patchUser: (id: number, payload: PatchTokenUserPayload) =>
+		unwrap<TokenUser>(authAxios.patch(`api/tokens/users/${id}/`, payload)),
 	usersByPhone: (phone: string) =>
 		unwrap<TokenUser[]>(authAxios.get('api/tokens/users/by-phone/', { params: { phone } })),
 	usersByEmail: (email: string) =>

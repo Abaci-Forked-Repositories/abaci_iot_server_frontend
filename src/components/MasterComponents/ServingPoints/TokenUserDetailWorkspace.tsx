@@ -5,15 +5,20 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
+import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
+import Spinner from '../../bootstrap/Spinner';
 import Icon from '../../icon/Icon';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
+	type PatchTokenUserPayload,
 	type Token,
 	type TokenUser,
 	tokensApi,
 } from '../../../services/queueManagementApi';
 import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
+import TimeLine, { type TimeLineStatusItem } from '../../CustomComponent/TimeLine';
 
 type TokenUserDetailWorkspaceProps = {
 	onTokenUserNameChange?: (name: string | null) => void;
@@ -26,6 +31,82 @@ const tokenQueueName = (token: Token): string => {
 	if (token.queue_name) return token.queue_name;
 	if (typeof token.queue === 'number') return `Queue ${token.queue}`;
 	return '—';
+};
+
+const displayOrDash = (value: unknown): string => {
+	if (value === null || value === undefined || value === '') return '—';
+	return String(value);
+};
+
+const mapServingHistoryToTimeLineItems = (token: Token): TimeLineStatusItem[] => {
+	const raw = token.serving_history;
+	if (!raw?.length) return [];
+	const sorted = [...raw].sort((a, b) => {
+		const ta = a.entered_at ? Date.parse(a.entered_at) : 0;
+		const tb = b.entered_at ? Date.parse(b.entered_at) : 0;
+		return ta - tb;
+	});
+	return sorted.map((h) => {
+		const inProgress = !h.exited_at;
+		const lines: string[] = [];
+		if (h.exited_at) lines.push(`Exited: ${formatDate(h.exited_at)}`);
+		else lines.push('Still at counter');
+		if (h.duration != null && h.duration !== '') lines.push(`Duration: ${h.duration}`);
+		lines.push(
+			`Notes: ${h.notes != null && String(h.notes).trim() !== '' ? String(h.notes) : '—'}`,
+		);
+		return {
+			id: h.id,
+			time: h.entered_at,
+			name: h.serving_point_name?.trim() || `Serving point #${h.serving_point}`,
+			desc: lines.join('\n'),
+			status: inProgress ? 'serving_active' : 'serving_completed',
+			statusLabel: inProgress ? 'In progress' : 'Completed',
+		};
+	});
+};
+
+type StatusRuleKey = 'registred' | 'reported';
+
+const normalizeStatusForRules = (status: string): StatusRuleKey | null => {
+	const s = status.toLowerCase();
+	if (s === 'registred' || s === 'registered') return 'registred';
+	if (s === 'reported') return 'reported';
+	return null;
+};
+
+/** 1: registred → reported, cancelled, postponed. 2: reported → cancelled, postponed. */
+const allowedNextTokenStatuses = (
+	status: string,
+): Array<'reported' | 'cancelled' | 'postponed'> => {
+	const key = normalizeStatusForRules(status);
+	if (key === 'registred') return ['reported', 'cancelled', 'postponed'];
+	if (key === 'reported') return ['cancelled', 'postponed'];
+	return [];
+};
+
+const applyTokenStatusTransition = (
+	tokenId: number,
+	target: 'reported' | 'cancelled' | 'postponed',
+): Promise<Token> => {
+	if (target === 'reported') return tokensApi.markArrived(tokenId);
+	if (target === 'cancelled') return tokensApi.cancel(tokenId);
+	return tokensApi.postpone(tokenId);
+};
+
+const statusTransitionButtonColor = (
+	target: 'reported' | 'cancelled' | 'postponed',
+): 'primary' | 'danger' | 'warning' => {
+	if (target === 'reported') return 'primary';
+	if (target === 'cancelled') return 'danger';
+	return 'warning';
+};
+
+const statusTransitionLabel = (target: 'reported' | 'cancelled' | 'postponed'): string => {
+	if (target === 'reported') return 'Report';
+	if (target === 'cancelled') return 'Cancel';
+	if (target === 'postponed') return 'Postpone';
+	return target;
 };
 
 const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
@@ -41,9 +122,27 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	const [loading, setLoading] = useState(true);
 	const [tokenUser, setTokenUser] = useState<TokenUser | null>(seededTokenUser);
 	const [tokens, setTokens] = useState<Token[]>([]);
+	const [detailViewTokenId, setDetailViewTokenId] = useState<number | null>(null);
+	const [detailToken, setDetailToken] = useState<Token | null>(null);
+	const [detailLoading, setDetailLoading] = useState(false);
+	const [statusTransitionTokenId, setStatusTransitionTokenId] = useState<number | null>(null);
+	const [statusActionsMenuTokenId, setStatusActionsMenuTokenId] = useState<number | null>(null);
+	const [prioritizingTokenId, setPrioritizingTokenId] = useState<number | null>(null);
+	const [editUserOpen, setEditUserOpen] = useState(false);
+	const [savingUser, setSavingUser] = useState(false);
+	const [editDraft, setEditDraft] = useState({
+		name: '',
+		email: '',
+		phone: '',
+		age: '',
+		place: '',
+		remarks: '',
+	});
+	/** Token detail modal: details vs serving history */
+	const [detailModalTab, setDetailModalTab] = useState<'details' | 'serving'>('details');
 
 	const { theme, headerStyles, rowStyles } = useTablestyle();
-	const { showErrorNotification } = useToasterNotification();
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
 	useEffect(() => {
 		errorNotifierRef.current = showErrorNotification;
@@ -98,6 +197,163 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		onTokenUserNameChange(tokenUser?.name ?? null);
 	}, [onTokenUserNameChange, tokenUser?.name]);
 
+	useEffect(() => {
+		if (detailViewTokenId == null) {
+			setDetailToken(null);
+			setDetailLoading(false);
+			return;
+		}
+		let cancelled = false;
+		setDetailLoading(true);
+		setDetailToken(null);
+		void tokensApi
+			.get(detailViewTokenId)
+			.then((t) => {
+				if (!cancelled) {
+					setDetailToken(t);
+					setDetailLoading(false);
+				}
+			})
+			.catch((err) => {
+				if (!cancelled) {
+					errorNotifierRef.current(err);
+					setDetailLoading(false);
+					setDetailViewTokenId(null);
+				}
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [detailViewTokenId]);
+
+	useEffect(() => {
+		setDetailModalTab('details');
+	}, [detailViewTokenId]);
+
+	const closeDetailModal = useCallback(() => {
+		setDetailViewTokenId(null);
+	}, []);
+
+	const openTokenDetail = useCallback((row: Token) => {
+		setDetailViewTokenId(row.id);
+	}, []);
+
+	const handleTokenStatusTransition = useCallback(
+		async (row: Token, target: 'reported' | 'cancelled' | 'postponed') => {
+			const allowed = allowedNextTokenStatuses(row.status);
+			if (!allowed.includes(target)) {
+				showErrorNotification('That status change is not allowed from the current state.');
+				return;
+			}
+			setStatusTransitionTokenId(row.id);
+			try {
+				const updated = await applyTokenStatusTransition(row.id, target);
+				setTokens((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+				setDetailToken((d) => (d?.id === updated.id ? updated : d));
+				showSuccessNotification('Status updated.');
+			} catch (err) {
+				showErrorNotification(err);
+			} finally {
+				setStatusTransitionTokenId(null);
+			}
+		},
+		[showErrorNotification, showSuccessNotification],
+	);
+
+	const openEditUserModal = useCallback(() => {
+		if (!tokenUser) return;
+		setEditDraft({
+			name: tokenUser.name ?? '',
+			email: tokenUser.email ?? '',
+			phone: tokenUser.phone ?? '',
+			age: tokenUser.age != null && tokenUser.age !== '' ? String(tokenUser.age) : '',
+			place: tokenUser.place ?? '',
+			remarks: tokenUser.remarks ?? '',
+		});
+		setEditUserOpen(true);
+	}, [tokenUser]);
+
+	const closeEditUserModal = useCallback(() => {
+		setEditUserOpen(false);
+	}, []);
+
+	const handleSaveTokenUser = useCallback(async () => {
+		const name = editDraft.name.trim();
+		if (!name) {
+			showErrorNotification('Name is required.');
+			return;
+		}
+		const ageStr = editDraft.age.trim();
+		if (ageStr !== '') {
+			const n = Number(ageStr);
+			if (!Number.isFinite(n)) {
+				showErrorNotification('Age must be a valid number.');
+				return;
+			}
+		}
+		const payload: PatchTokenUserPayload = {
+			name,
+			email: editDraft.email.trim() || null,
+			phone: editDraft.phone.trim() || null,
+			place: editDraft.place.trim() || null,
+			remarks: editDraft.remarks.trim() || null,
+		};
+		if (ageStr !== '') {
+			payload.age = Number(ageStr);
+		} else {
+			payload.age = null;
+		}
+		setSavingUser(true);
+		try {
+			const updated = await tokensApi.patchUser(id, payload);
+			setTokenUser(updated);
+			setTokens((prev) =>
+				prev.map((t) =>
+					t.token_user ? { ...t, token_user: { ...t.token_user, ...updated } } : t,
+				),
+			);
+			setDetailToken((d) =>
+				d?.token_user ? { ...d, token_user: { ...d.token_user, ...updated } } : d,
+			);
+			closeEditUserModal();
+			showSuccessNotification('Token user updated.');
+		} catch (err) {
+			showErrorNotification(err);
+		} finally {
+			setSavingUser(false);
+		}
+	}, [
+		closeEditUserModal,
+		editDraft,
+		id,
+		showErrorNotification,
+		showSuccessNotification,
+	]);
+
+	const handleSetPrioritizedQueue = useCallback(
+		async (row: Token, prioritized: boolean) => {
+			if (Boolean(row.is_priority_queued) === prioritized) return;
+			setPrioritizingTokenId(row.id);
+			try {
+				const updated = await tokensApi.patch(row.id, {
+					is_priority_queued: prioritized,
+				});
+				setTokens((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+				setDetailToken((d) => (d?.id === updated.id ? updated : d));
+				showSuccessNotification(
+					prioritized
+						? 'Marked as prioritized for the queue.'
+						: 'Removed prioritization for the queue.',
+				);
+			} catch (err) {
+				showErrorNotification(err);
+			} finally {
+				setPrioritizingTokenId(null);
+			}
+		},
+		[showErrorNotification, showSuccessNotification],
+	);
+
 	const columns = useMemo(
 		() => [
 			{
@@ -115,8 +371,22 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 			{
 				title: 'Schedule',
 				field: 'schedule',
-				render: (rowData: Token) =>
-					rowData.schedule != null ? `#${rowData.schedule}` : '—',
+				render: (rowData: Token) => {
+					if (rowData.schedule == null) return '—';
+					return (
+						<button
+							type='button'
+							className='btn btn-link p-0 align-baseline fw-semibold'
+							aria-label={`Open schedule ${rowData.schedule}`}
+							onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+								e.preventDefault();
+								e.stopPropagation();
+								navigate(`/queue-management/schedules/${rowData.schedule}`);
+							}}>
+							#{rowData.schedule}
+						</button>
+					);
+				},
 			},
 			{
 				title: 'Status',
@@ -142,16 +412,183 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 				field: 'completed_at',
 				render: (rowData: Token) => formatDate(rowData.completed_at),
 			},
+			{
+				title: 'Actions',
+				field: 'actions',
+				sorting: false,
+				filtering: false,
+				cellStyle: { whiteSpace: 'nowrap', verticalAlign: 'middle' },
+				headerStyle: { whiteSpace: 'nowrap' },
+				render: (rowData: Token) => (
+					<div className='d-flex flex-row flex-nowrap align-items-center gap-1'>
+						{rowData.is_priority_queued ? (
+							<Button
+								color='secondary'
+								isLight
+								size='sm'
+								aria-label='Remove prioritization for this token in the queue'
+								isDisable={prioritizingTokenId === rowData.id}
+								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+									e.preventDefault();
+									e.stopPropagation();
+									void handleSetPrioritizedQueue(rowData, false);
+								}}>
+								Unprioritize
+							</Button>
+						) : (
+							<Button
+								color='success'
+								isLight
+								size='sm'
+								aria-label='Mark this token as prioritized for the queue'
+								isDisable={prioritizingTokenId === rowData.id}
+								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+									e.preventDefault();
+									e.stopPropagation();
+									void handleSetPrioritizedQueue(rowData, true);
+								}}>
+								Prioritize
+							</Button>
+						)}
+						{(() => {
+							const allowed = allowedNextTokenStatuses(rowData.status);
+							const busy = statusTransitionTokenId === rowData.id;
+							const reportedTargets = allowed.filter((t) => t === 'reported');
+							const cancelPostponeTargets = allowed.filter(
+								(t): t is 'cancelled' | 'postponed' =>
+									t === 'cancelled' || t === 'postponed',
+							);
+							return (
+								<>
+									{reportedTargets.map((target) => {
+										const label = statusTransitionLabel(target);
+										return (
+											<Button
+												key={target}
+												color={statusTransitionButtonColor(target)}
+												isLight
+												size='sm'
+												aria-label={`Set token status to ${label}`}
+												isDisable={busy}
+												onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+													e.preventDefault();
+													e.stopPropagation();
+													void handleTokenStatusTransition(rowData, target);
+												}}>
+												{label}
+											</Button>
+										);
+									})}
+									{cancelPostponeTargets.length > 0 ? (
+										<div
+											className='d-inline-block'
+											role='presentation'
+											onClick={(e) => e.stopPropagation()}>
+											<Dropdown
+												isOpen={statusActionsMenuTokenId === rowData.id}
+												setIsOpen={(
+													next:
+														| boolean
+														| null
+														| ((prev: boolean) => boolean),
+												) => {
+													if (typeof next === 'function') {
+														setStatusActionsMenuTokenId((openId) => {
+															const wasOpen = openId === rowData.id;
+															const shouldOpen = next(wasOpen);
+															return shouldOpen ? rowData.id : wasOpen ? null : openId;
+														});
+														return;
+													}
+													if (next === false || next === null) {
+														setStatusActionsMenuTokenId((openId) =>
+															openId === rowData.id ? null : openId,
+														);
+														return;
+													}
+													setStatusActionsMenuTokenId(rowData.id);
+												}}>
+												<DropdownToggle hasIcon={false}>
+													<Button
+														type='button'
+														color='secondary'
+														isLight
+														size='sm'
+														icon='KeyboardArrowDown'
+														aria-label='Cancel or postpone token'
+														isDisable={busy}
+													/>
+												</DropdownToggle>
+												<DropdownMenu isAlignmentEnd size='sm'>
+													{cancelPostponeTargets.map((target) => {
+														const label = statusTransitionLabel(target);
+														return (
+															<DropdownItem key={target}>
+																<button
+																	type='button'
+																	className={`text-start w-100 border-0 bg-transparent py-2 px-3 ${
+																		target === 'cancelled'
+																			? 'text-danger'
+																			: 'text-warning'
+																	}`}
+																	disabled={busy}
+																	onClick={(e) => {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		setStatusActionsMenuTokenId(null);
+																		void handleTokenStatusTransition(
+																			rowData,
+																			target,
+																		);
+																	}}>
+																	{label}
+																</button>
+															</DropdownItem>
+														);
+													})}
+												</DropdownMenu>
+											</Dropdown>
+										</div>
+									) : null}
+								</>
+							);
+						})()}
+						
+					</div>
+				),
+			},
 		],
-		[],
+		[
+			navigate,
+			handleTokenStatusTransition,
+			handleSetPrioritizedQueue,
+			prioritizingTokenId,
+			statusTransitionTokenId,
+			statusActionsMenuTokenId,
+		],
 	);
+
+	const detailModalTitle = useMemo(() => {
+		if (detailToken?.token_number != null && detailToken.token_number !== '') {
+			return `Token #${detailToken.token_number}`;
+		}
+		if (detailViewTokenId == null) return 'Token details';
+		const row = tokens.find((t) => t.id === detailViewTokenId);
+		if (row?.token_number) return `Token #${row.token_number}`;
+		return `Token #${detailViewTokenId}`;
+	}, [detailToken, detailViewTokenId, tokens]);
+
+	const servingHistoryTimeLineItems = useMemo(
+		() => (detailToken ? mapServingHistoryToTimeLineItems(detailToken) : []),
+		[detailToken],
+	);
+	const servingHistoryCount = detailToken?.serving_history?.length ?? 0;
 
 	if (!id || Number.isNaN(id)) {
 		return <div className='alert alert-warning'>Invalid token user.</div>;
 	}
 
-	const remarks =
-		(tokenUser as (TokenUser & { remarks?: string | null }) | null)?.remarks || '';
+	const remarks = tokenUser?.remarks?.trim() ? tokenUser.remarks : '';
 
 	return (
 		<div className='d-grid gap-4'>
@@ -168,6 +605,14 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 							</div>
 						</div>
 						<div className='d-flex gap-2'>
+							<Button
+								color='primary'
+								isLight
+								icon='Edit'
+								isDisable={loading || !tokenUser}
+								onClick={openEditUserModal}>
+								Edit
+							</Button>
 							<Button
 								color='light'
 								isLight
@@ -239,11 +684,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								data={tokens}
 								isLoading={loading}
 								onRowClick={(_event, rowData) => {
-									if (rowData?.schedule != null) {
-										navigate(
-											`/queue-management/schedules/${rowData.schedule}`,
-										);
-									}
+									if (rowData) openTokenDetail(rowData);
 								}}
 								options={{
 									headerStyle: headerStyles(),
@@ -269,6 +710,436 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 					Token user details could not be loaded from the API. Showing tokens only.
 				</div>
 			)}
+
+			<Modal
+				isCentered
+				isOpen={detailViewTokenId != null}
+				setIsOpen={(open) => {
+					if (!open) closeDetailModal();
+				}}
+				size='lg'
+				titleId='token-detail-modal-title'>
+				<ModalHeader setIsOpen={closeDetailModal}>
+					<ModalTitle id='token-detail-modal-title'>{detailModalTitle}</ModalTitle>
+				</ModalHeader>
+				<ModalBody
+					className='overflow-auto'
+					style={{ maxHeight: 'min(85vh, calc(100dvh - 10rem))' }}>
+					{detailLoading && (
+						<div className='d-flex flex-column align-items-center justify-content-center gap-2 py-5 text-muted'>
+							<Spinner color='primary' />
+							<span>Loading token…</span>
+						</div>
+					)}
+					{!detailLoading && detailToken && (
+						<div>
+							<ul className='nav nav-tabs nav-fill mb-3' role='tablist'>
+								<li className='nav-item' role='presentation'>
+									<button
+										type='button'
+										className={`nav-link w-100 ${
+											detailModalTab === 'details' ? 'active' : ''
+										}`}
+										id='token-modal-tab-details'
+										role='tab'
+										aria-selected={detailModalTab === 'details'}
+										aria-controls='token-modal-panel-details'
+										onClick={() => setDetailModalTab('details')}>
+										Details & parent
+									</button>
+								</li>
+								<li className='nav-item' role='presentation'>
+									<button
+										type='button'
+										className={`nav-link w-100 d-inline-flex align-items-center justify-content-center gap-2 ${
+											detailModalTab === 'serving' ? 'active' : ''
+										}`}
+										id='token-modal-tab-serving'
+										role='tab'
+										aria-selected={detailModalTab === 'serving'}
+										aria-controls='token-modal-panel-serving'
+										onClick={() => setDetailModalTab('serving')}>
+										<span>Serving history</span>
+										{servingHistoryCount > 0 ? (
+											<span className='badge bg-info bg-opacity-25 text-info rounded-pill'>
+												{servingHistoryCount}
+											</span>
+										) : null}
+									</button>
+								</li>
+							</ul>
+
+							<div
+								id='token-modal-panel-details'
+								role='tabpanel'
+								aria-labelledby='token-modal-tab-details'
+								hidden={detailModalTab !== 'details'}
+								className={
+									detailModalTab === 'details' ? 'd-grid gap-3' : 'd-none'
+								}>
+								<Card shadow='sm' className='mb-0'>
+									<CardHeader>
+										<CardLabel icon='ConfirmationNumber' iconColor='primary'>
+											<CardTitle tag='h6' className='h6 mb-0'>
+												Token details
+											</CardTitle>
+										</CardLabel>
+									</CardHeader>
+									<CardBody>
+										<div className='row g-3'>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Queue</div>
+												<div className='fw-semibold'>{tokenQueueName(detailToken)}</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Schedule</div>
+												<div className='fw-semibold'>
+													{detailToken.schedule != null ? `#${detailToken.schedule}` : '—'}
+												</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Status</div>
+												<div>
+													<Badge color={statusBadgeColor(detailToken.status)} isLight>
+														{detailToken.status}
+													</Badge>
+												</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Created at</div>
+												<div className='fw-semibold'>{formatDate(detailToken.created_at)}</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Started serving</div>
+												<div className='fw-semibold'>
+													{formatDate(detailToken.started_serving_at)}
+												</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Completed</div>
+												<div className='fw-semibold'>{formatDate(detailToken.completed_at)}</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Cancelled</div>
+												<div className='fw-semibold'>{formatDate(detailToken.cancelled_at)}</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Wait time</div>
+												<div className='fw-semibold'>{displayOrDash(detailToken.wait_time)}</div>
+											</div>
+											<div className='col-12 col-md-6'>
+												<div className='small text-muted'>Service time</div>
+												<div className='fw-semibold'>
+													{displayOrDash(detailToken.service_time)}
+												</div>
+											</div>
+											<div className='col-12'>
+												<div className='small text-muted'>Notes</div>
+												<div
+													className='fw-semibold text-break'
+													style={{ whiteSpace: 'pre-wrap' }}>
+													{detailToken.notes != null && detailToken.notes !== ''
+														? detailToken.notes
+														: '—'}
+												</div>
+											</div>
+										</div>
+									</CardBody>
+								</Card>
+
+								{(detailToken.parent_token != null ||
+									(detailToken.parent_tokens && detailToken.parent_tokens.length > 0)) && (
+									<div className='rounded-3 border bg-light bg-opacity-50 p-3'>
+										<div className='text-muted small text-uppercase fw-semibold mb-3'>
+											Parent lineage
+										</div>
+										<div className='row g-2 align-items-end mb-3'>
+											<div className='col-12 col-sm-6 col-md-4'>
+												<div className='small text-muted'>Parent token</div>
+												<div className='fw-semibold fs-6'>
+													{detailToken.parent_token != null
+														? `#${detailToken.parent_token}`
+														: '—'}
+												</div>
+											</div>
+										</div>
+										{detailToken.parent_tokens && detailToken.parent_tokens.length > 0 ? (
+											<>
+												<div className='small text-muted fw-semibold mb-2'>Parent tokens</div>
+												<div className='table-responsive rounded border bg-white'>
+													<table className='table table-sm table-striped mb-0 align-middle'>
+														<thead className='table-light'>
+															<tr>
+																<th scope='col' className='small text-muted fw-semibold'>
+																	Token
+																</th>
+																<th scope='col' className='small text-muted fw-semibold'>
+																	Status
+																</th>
+																<th scope='col' className='small text-muted fw-semibold'>
+																	Created at
+																</th>
+															</tr>
+														</thead>
+														<tbody>
+															{detailToken.parent_tokens.map((p) => {
+																const display =
+																	p.token_display != null &&
+																	String(p.token_display).trim() !== ''
+																		? String(p.token_display)
+																		: p.token_number != null &&
+																			  String(p.token_number).trim() !== ''
+																			? String(p.token_number)
+																			: '—';
+																return (
+																	<tr key={p.id}>
+																		<td className='fw-semibold'>#{display}</td>
+																		<td>
+																			<Badge
+																				color={statusBadgeColor(
+																					String(p.status),
+																				)}
+																				isLight>
+																				{p.status}
+																			</Badge>
+																		</td>
+																		<td className='text-nowrap'>
+																			{formatDate(p.created_at)}
+																		</td>
+																	</tr>
+																);
+															})}
+														</tbody>
+													</table>
+												</div>
+											</>
+										) : null}
+									</div>
+								)}
+
+								{detailToken.token_user && (
+									<Card shadow='sm' className='mb-0'>
+										<CardHeader>
+											<CardLabel icon='Person' iconColor='success'>
+												<CardTitle tag='h6' className='h6 mb-0'>
+													Token user
+												</CardTitle>
+											</CardLabel>
+										</CardHeader>
+										<CardBody>
+											<div className='row g-3'>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Name</div>
+													<div className='fw-semibold'>
+														{displayOrDash(detailToken.token_user.name)}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Email</div>
+													<div className='fw-semibold'>
+														{displayOrDash(detailToken.token_user.email)}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Phone</div>
+													<div className='fw-semibold'>
+														{displayOrDash(detailToken.token_user.phone)}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Age</div>
+													<div className='fw-semibold'>
+														{detailToken.token_user.age != null &&
+														detailToken.token_user.age !== ''
+															? String(detailToken.token_user.age)
+															: '—'}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Place</div>
+													<div className='fw-semibold'>
+														{displayOrDash(detailToken.token_user.place)}
+													</div>
+												</div>
+												<div className='col-12'>
+													<div className='small text-muted'>Remarks</div>
+													<div
+														className='fw-semibold text-break'
+														style={{ whiteSpace: 'pre-wrap' }}>
+														{detailToken.token_user.remarks != null &&
+														detailToken.token_user.remarks !== ''
+															? detailToken.token_user.remarks
+															: '—'}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>User created at</div>
+													<div className='fw-semibold'>
+														{formatDate(detailToken.token_user.created_at)}
+													</div>
+												</div>
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>User updated at</div>
+													<div className='fw-semibold'>
+														{formatDate(detailToken.token_user.updated_at)}
+													</div>
+												</div>
+											</div>
+										</CardBody>
+									</Card>
+								)}
+							</div>
+
+							<div
+								id='token-modal-panel-serving'
+								role='tabpanel'
+								aria-labelledby='token-modal-tab-serving'
+								hidden={detailModalTab !== 'serving'}
+								className={detailModalTab === 'serving' ? undefined : 'd-none'}>
+								<div className='rounded-3 border p-3 bg-body'>
+									<div className='text-muted small text-uppercase fw-semibold mb-2 d-flex align-items-center gap-2'>
+										<Icon icon='Timeline' className='text-info' />
+										Serving history
+										{servingHistoryCount > 0 ? (
+											<span className='badge bg-info bg-opacity-25 text-info rounded-pill'>
+												{servingHistoryCount}
+											</span>
+										) : null}
+									</div>
+									<ThemeProvider theme={theme}>
+										<TimeLine items={servingHistoryTimeLineItems} />
+									</ThemeProvider>
+								</div>
+							</div>
+						</div>
+					)}
+				</ModalBody>
+				<ModalFooter>
+					<Button
+						color='secondary'
+						isOutline
+						onClick={closeDetailModal}
+						isDisable={detailLoading}>
+						Close
+					</Button>
+				</ModalFooter>
+			</Modal>
+
+			<Modal
+				isCentered
+				isOpen={editUserOpen}
+				setIsOpen={(open) => {
+					if (!open) closeEditUserModal();
+				}}
+				size='lg'
+				titleId='token-user-edit-modal-title'>
+				<ModalHeader setIsOpen={closeEditUserModal}>
+					<ModalTitle id='token-user-edit-modal-title'>Edit token user</ModalTitle>
+				</ModalHeader>
+				<ModalBody>
+					<form
+						className='d-grid gap-3'
+						onSubmit={(e) => {
+							e.preventDefault();
+							void handleSaveTokenUser();
+						}}>
+						<div>
+							<label htmlFor='token-user-edit-name' className='form-label small'>
+								Name <span className='text-danger'>*</span>
+							</label>
+							<input
+								id='token-user-edit-name'
+								type='text'
+								className='form-control'
+								value={editDraft.name}
+								onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+								autoComplete='name'
+								required
+							/>
+						</div>
+						<div>
+							<label htmlFor='token-user-edit-email' className='form-label small'>
+								Email
+							</label>
+							<input
+								id='token-user-edit-email'
+								type='email'
+								className='form-control'
+								value={editDraft.email}
+								onChange={(e) => setEditDraft((d) => ({ ...d, email: e.target.value }))}
+								autoComplete='email'
+							/>
+						</div>
+						<div>
+							<label htmlFor='token-user-edit-phone' className='form-label small'>
+								Phone
+							</label>
+							<input
+								id='token-user-edit-phone'
+								type='tel'
+								className='form-control'
+								value={editDraft.phone}
+								onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))}
+								autoComplete='tel'
+							/>
+						</div>
+						<div className='row g-3'>
+							<div className='col-12 col-sm-6'>
+								<label htmlFor='token-user-edit-age' className='form-label small'>
+									Age
+								</label>
+								<input
+									id='token-user-edit-age'
+									type='text'
+									inputMode='numeric'
+									className='form-control'
+									value={editDraft.age}
+									onChange={(e) => setEditDraft((d) => ({ ...d, age: e.target.value }))}
+								/>
+							</div>
+							<div className='col-12 col-sm-6'>
+								<label htmlFor='token-user-edit-place' className='form-label small'>
+									Place
+								</label>
+								<input
+									id='token-user-edit-place'
+									type='text'
+									className='form-control'
+									value={editDraft.place}
+									onChange={(e) => setEditDraft((d) => ({ ...d, place: e.target.value }))}
+								/>
+							</div>
+						</div>
+						<div>
+							<label htmlFor='token-user-edit-remarks' className='form-label small'>
+								Remarks
+							</label>
+							<textarea
+								id='token-user-edit-remarks'
+								className='form-control'
+								rows={3}
+								value={editDraft.remarks}
+								onChange={(e) => setEditDraft((d) => ({ ...d, remarks: e.target.value }))}
+							/>
+						</div>
+					</form>
+				</ModalBody>
+				<ModalFooter>
+					<Button
+						color='secondary'
+						isOutline
+						onClick={closeEditUserModal}
+						isDisable={savingUser}>
+						Cancel
+					</Button>
+					<Button
+						color='primary'
+						onClick={() => void handleSaveTokenUser()}
+						isDisable={savingUser}>
+						{savingUser ? 'Saving…' : 'Save'}
+					</Button>
+				</ModalFooter>
+			</Modal>
 		</div>
 	);
 };
