@@ -1,3 +1,4 @@
+import type { TColor } from '../type/color-type';
 
 export const userTypes:any ={'Superuser':'Superuser','Admin':'Admin','User':'User','Inspector':'Inspector','Assistant User':'Assistant User'}
 export const AxiosTimeout = 20000;
@@ -326,6 +327,27 @@ export const customStyles = {
   ];
 
   export const buttonColor=["#d33","#46BCAA","#0082C2","#4D69FA"]
+
+	/**
+	 * Maps workflow stage keys to bootstrap `text-*` / `Icon` colors for the shared TimeLine component.
+	 * Add keys for your API statuses; unknown keys fall back via `getTimeLineColor`.
+	 */
+	export const TimeLineColor: Record<string, TColor> = {
+		HostApproval: 'primary',
+		CyberSecurity: 'info',
+		Security: 'warning',
+		Clearance: 'success',
+		PhysicalVerification: 'secondary',
+		/** Serving history row: still at counter */
+		serving_active: 'info',
+		/** Serving history row: visit ended */
+		serving_completed: 'success',
+	};
+
+	export const getTimeLineColor = (status?: string | null): TColor => {
+		if (!status) return 'secondary';
+		return TimeLineColor[status] ?? 'secondary';
+	};
 
 
 
