@@ -9,6 +9,7 @@ interface QueueCardTileProps {
 	groupName: string | number;
 	selected: boolean;
 	onSelect: (id: number) => void;
+	onEditQueue: (queue: Queue) => void;
 	onToggleQueue: (queue: Queue) => void;
 	isActionLoading: boolean;
 }
@@ -18,6 +19,7 @@ const QueueCardTile: React.FC<QueueCardTileProps> = ({
 	groupName,
 	selected,
 	onSelect,
+	onEditQueue,
 	onToggleQueue,
 	isActionLoading,
 }) => {
@@ -57,6 +59,15 @@ const QueueCardTile: React.FC<QueueCardTileProps> = ({
 								</Button>
 							</DropdownToggle>
 							<DropdownMenu isAlignmentEnd>
+								<DropdownItem>
+									<button
+										type='button'
+										className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-body'
+										onClick={() => onEditQueue(queue)}>
+										<Icon icon='Edit' />
+										<span>Edit queue</span>
+									</button>
+								</DropdownItem>
 								<DropdownItem>
 									<button
 										type='button'

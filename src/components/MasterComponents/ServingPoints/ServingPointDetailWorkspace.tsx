@@ -8,10 +8,12 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type ScheduleServingPoint,
 	type ServingPoint,
+	eventsApi,
 	queuesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
 import { formatDate, servingPointQueueIds } from '../QueueManagement/queueManagementUtils';
+import QueueEventsTimelineCard from '../QueueManagement/QueueEventsTimelineCard';
 import ServingPointWindowsCalendar from './ServingPointWindowsCalendar';
 
 type ServingPointDetailWorkspaceProps = {
@@ -188,6 +190,18 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 					onWindowClick={handleWindowClick}
 				/>
 			)}
+
+			<QueueEventsTimelineCard
+				queryId={id}
+				loadEvents={(spId) => eventsApi.byServingPoint(spId)}
+				captionOverride={servingPoint?.name ?? null}
+				getCaptionFromEvents={(ev) =>
+					(ev[0]?.serving_point_name && String(ev[0].serving_point_name).trim()) || null
+				}
+				subtitleFallback='Timeline of queue and schedule activity for this serving point.'
+				emptyText='No events found for this serving point'
+				emptyHelpText='Status changes, tokens, and other activity involving this counter will show up here.'
+			/>
 		</div>
 	);
 };

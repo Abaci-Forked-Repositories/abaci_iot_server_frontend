@@ -1,4 +1,48 @@
-import type { Queue, ServingPoint, Token } from '../../../services/queueManagementApi';
+import type { Queue, ScheduleServingPoint, ServingPoint, Token } from '../../../services/queueManagementApi';
+
+/** `YYYY-MM-DD` for `<input type="date" />` and schedule list filters (local calendar). */
+export function formatLocalDateInputValue(d: Date = new Date()): string {
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
+
+/**
+ * Query params so the API returns schedules whose window overlaps the given local calendar day.
+ * Uses `to_datetime__gte` / `from_datetime__lte` (common DRF / django-filter pattern).
+ */
+export function getScheduleListDayOverlapParams(yyyyMmDd: string): {
+	to_datetime__gte: string;
+	from_datetime__lte: string;
+} {
+	const parts = yyyyMmDd.split('-').map(Number);
+	const y = parts[0];
+	const m = parts[1];
+	const d = parts[2];
+	const safeY = Number.isFinite(y) ? y : new Date().getFullYear();
+	const safeM = Number.isFinite(m) ? Math.min(12, Math.max(1, m)) : 1;
+	const safeD = Number.isFinite(d) ? Math.max(1, d) : 1;
+	const start = new Date(safeY, safeM - 1, safeD, 0, 0, 0, 0);
+	const end = new Date(safeY, safeM - 1, safeD, 23, 59, 59, 999);
+	return {
+		to_datetime__gte: start.toISOString(),
+		from_datetime__lte: end.toISOString(),
+	};
+}
+
+/** Same overlap logic as a single day, but spanning `startYyyyMmDd`…`endYyyyMmDd` (inclusive, local calendar). */
+export function getScheduleListRangeOverlapParams(
+	startYyyyMmDd: string,
+	endYyyyMmDd: string,
+): { to_datetime__gte: string; from_datetime__lte: string } {
+	let start = startYyyyMmDd;
+	let end = endYyyyMmDd;
+	if (start > end) [start, end] = [end, start];
+	const { to_datetime__gte } = getScheduleListDayOverlapParams(start);
+	const { from_datetime__lte } = getScheduleListDayOverlapParams(end);
+	return { to_datetime__gte, from_datetime__lte };
+}
 
 /** Normalizes `ServingPoint.queue` whether the API returns a single id or a list. */
 export const servingPointQueueIds = (point: ServingPoint): number[] => {
@@ -14,6 +58,42 @@ export const servingPointAssignedUserIds = (point: ServingPoint): number[] => {
 	return u
 		.map((item) => (typeof item === 'number' ? item : item.id))
 		.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
+};
+
+/** Same transition rules as queue / schedule serving-point UIs (global counter via `queuesApi.updateServingPoint`). */
+export const normalizeServingPointStatus = (status?: string) =>
+	(status || '').toLowerCase().trim().replace(/\s+/g, '_');
+
+export const getNextAllowedServingPointStatuses = (status?: string): string[] => {
+	const n = normalizeServingPointStatus(status);
+	if (n === 'scheduled') return ['running', 'cancelled'];
+	if (n === 'running') return ['on_hold', 'completed', 'cancelled'];
+	if (n === 'on_hold') return ['running', 'completed', 'cancelled'];
+	return [];
+};
+
+export const getWindowServingPointStatus = (row: ScheduleServingPoint): string | undefined =>
+	row.serving_point_status ?? row.status;
+
+export const SP_STATUS_LABELS: Record<string, string> = {
+	running: 'Running',
+	on_hold: 'On Hold',
+	completed: 'Completed',
+	cancelled: 'Cancelled',
+};
+
+export const SP_STATUS_COLORS: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'secondary'> = {
+	running: 'primary',
+	on_hold: 'warning',
+	completed: 'success',
+	cancelled: 'danger',
+};
+
+/** True while the schedule window’s `to_datetime` is still strictly in the future (invalid/missing end → false). */
+export const isServingWindowEndInFuture = (row: ScheduleServingPoint): boolean => {
+	if (!row.to_datetime) return false;
+	const end = new Date(row.to_datetime).getTime();
+	return !Number.isNaN(end) && end > Date.now();
 };
 
 const FIELD_LABELS: Record<string, string> = {

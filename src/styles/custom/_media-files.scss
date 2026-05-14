@@ -351,6 +351,210 @@
 	}
 }
 
+// ── Schedule list tiles (distinct from queue cards; status-tinted surface) ──
+.schedule-tile {
+	position: relative;
+	height: 100%;
+	padding: 1rem 1rem 1rem 1.1rem;
+	border-radius: 1rem;
+	border: 1px solid var(--schedule-tile-border, rgba(#94a3b8, 0.35));
+	background: var(
+		--schedule-tile-bg,
+		color-mix(in srgb, #ffffff 94%, #64748b 6%)
+	);
+	box-shadow:
+		0 1px 0 rgba(#ffffff, 0.55) inset,
+		0 8px 24px rgba(#0f172a, 0.055);
+	cursor: pointer;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease;
+	text-align: left;
+
+	@include dark-mode {
+		box-shadow:
+			0 1px 0 rgba(#ffffff, 0.04) inset,
+			0 10px 28px rgba(#000000, 0.32);
+	}
+
+	&::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.65rem;
+		bottom: 0.65rem;
+		width: 4px;
+		border-radius: 999px;
+		background: var(--schedule-tile-accent, rgba($primary, 0.85));
+	}
+
+	&:hover {
+		border-color: var(--schedule-tile-accent, rgba($primary, 0.45));
+		box-shadow:
+			0 1px 0 rgba(#ffffff, 0.55) inset,
+			0 12px 32px rgba(#0f172a, 0.095);
+
+		@include dark-mode {
+			box-shadow:
+				0 1px 0 rgba(#ffffff, 0.04) inset,
+				0 14px 36px rgba(#000000, 0.42);
+		}
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--schedule-tile-accent, $primary);
+		outline-offset: 2px;
+	}
+}
+
+@mixin schedule-tile-palette($accent, $mix-light: 10%, $mix-dark: 14%) {
+	--schedule-tile-accent: #{$accent};
+	--schedule-tile-border: color-mix(in srgb, #{$accent} 32%, #cbd5e1 68%);
+	--schedule-tile-bg: color-mix(in srgb, #ffffff calc(100% - #{$mix-light}), #{$accent} #{$mix-light});
+
+	@include dark-mode {
+		--schedule-tile-border: color-mix(in srgb, #{$accent} 42%, #0f172a 58%);
+		--schedule-tile-bg: color-mix(in srgb, #111827 calc(100% - #{$mix-dark}), #{$accent} #{$mix-dark});
+	}
+}
+
+.schedule-tile--scheduled {
+	@include schedule-tile-palette(#2563eb, 9%, 12%);
+}
+
+.schedule-tile--running {
+	@include schedule-tile-palette(#059669, 9%, 12%);
+}
+
+.schedule-tile--on_hold {
+	@include schedule-tile-palette(#d97706, 10%, 13%);
+}
+
+.schedule-tile--completed {
+	@include schedule-tile-palette(#0d9488, 9%, 12%);
+}
+
+.schedule-tile--cancelled {
+	@include schedule-tile-palette(#dc2626, 9%, 12%);
+}
+
+.schedule-tile--default {
+	@include schedule-tile-palette(#64748b, 8%, 11%);
+}
+
+.schedule-tile__eyebrow {
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: rgba(#475569, 0.95);
+
+	@include dark-mode {
+		color: rgba(#cbd5e1, 0.9);
+	}
+}
+
+.schedule-tile__queue {
+	font-size: 1.2rem;
+	font-weight: 800;
+	line-height: 1.2;
+	color: #0f172a;
+	margin-top: 0.15rem;
+
+	@include dark-mode {
+		color: #f8fafc;
+	}
+}
+
+.schedule-tile__desc {
+	font-size: 0.8rem;
+	color: #64748b;
+	margin-top: 0.25rem;
+	line-height: 1.35;
+
+	@include dark-mode {
+		color: #94a3b8;
+	}
+}
+
+.schedule-tile__range {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.55rem;
+	margin-top: 0.85rem;
+	padding: 0.55rem 0.65rem;
+	border-radius: 0.75rem;
+	background: color-mix(in srgb, var(--schedule-tile-accent, $primary) 7%, #ffffff 93%);
+	border: 1px solid color-mix(in srgb, var(--schedule-tile-accent, $primary) 18%, #e2e8f0 82%);
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #0f172a;
+
+	@include dark-mode {
+		background: color-mix(in srgb, var(--schedule-tile-accent, $primary-soft) 14%, #0f172a 86%);
+		border-color: color-mix(in srgb, var(--schedule-tile-accent, $primary-soft) 28%, #1e293b 72%);
+		color: #e2e8f0;
+	}
+}
+
+.schedule-tile__range-icon {
+	flex-shrink: 0;
+	margin-top: 0.1rem;
+	color: var(--schedule-tile-accent, $primary) !important;
+
+	@include dark-mode {
+		color: var(--schedule-tile-accent, $primary-soft) !important;
+	}
+}
+
+.schedule-tile__range-label {
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: rgba(#64748b, 0.95);
+	margin-bottom: 0.2rem;
+
+	@include dark-mode {
+		color: rgba(#94a3b8, 0.95);
+	}
+}
+
+.schedule-tile__footer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+	margin-top: 0.85rem;
+}
+
+.schedule-tile__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.28rem;
+	padding: 0.22rem 0.55rem;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	background: rgba(#ffffff, 0.72);
+	border: 1px solid rgba(#cbd5e1, 0.85);
+	color: #334155;
+
+	@include dark-mode {
+		background: rgba(#0f172a, 0.55);
+		border-color: rgba(#ffffff, 0.12);
+		color: #e2e8f0;
+	}
+}
+
+.schedule-tile__chip-value {
+	color: var(--schedule-tile-accent, $primary);
+}
+
+.schedule-tile__head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
 // ── Sticky top-bar — stays visible while grid scrolls ──
 .media-files-top-bar {
 	flex-shrink: 0;

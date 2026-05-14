@@ -1,16 +1,41 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { Col, Row } from 'reactstrap';
 import Card, { CardActions, CardBody, CardHeader } from '../../bootstrap/Card';
-import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import SearchComponent from '../../SearchComponent';
 import type { QueueSchedule } from '../../../services/queueManagementApi';
 import { schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import { getErrorMessage } from '../QueueManagement/queueManagementUtils';
+import {
+	formatLocalDateInputValue,
+	getErrorMessage,
+	getScheduleListRangeOverlapParams,
+} from '../QueueManagement/queueManagementUtils';
 import QueueManagementSkeleton from '../../CustomComponent/Skeleton/QueueManagementSkeleton';
 import ScheduleCardTile from './ScheduleCardTile';
+import DateRangeFilter from '../../CustomComponent/Filters/DateRangeFilterCustom';
+
+export type ScheduleListDateSelection = {
+	selection: {
+		startDate: Date;
+		endDate: Date;
+		key: string;
+		endDateFilter: string;
+		startDateFilter: string;
+	};
+};
+
+const buildTodaySelection = (): ScheduleListDateSelection => ({
+	selection: {
+		startDate: dayjs().startOf('day').toDate(),
+		endDate: dayjs().endOf('day').toDate(),
+		key: 'selection',
+		startDateFilter: formatLocalDateInputValue(),
+		endDateFilter: formatLocalDateInputValue(),
+	},
+});
 
 const SchedulesListWorkspace: React.FC = () => {
 	const navigate = useNavigate();
@@ -18,20 +43,28 @@ const SchedulesListWorkspace: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
 	const [searchApplied, setSearchApplied] = useState('');
+	const [selectedDateRange, setSelectedDateRange] = useState<ScheduleListDateSelection>(() =>
+		buildTodaySelection(),
+	);
 	const { showErrorNotification } = useToasterNotification();
 	/** Hook returns new function identities each render; ref avoids an infinite fetch loop from useEffect([load]). */
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
+
+	const rangeStart = selectedDateRange.selection.startDateFilter;
+	const rangeEnd = selectedDateRange.selection.endDateFilter;
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 		void (async () => {
 			try {
+				const dayParams = getScheduleListRangeOverlapParams(rangeStart, rangeEnd);
 				const res = await schedulesApi.list({
 					ordering: '-from_datetime',
 					page_size: 200,
 					search: searchApplied || undefined,
+					...dayParams,
 				});
 				if (!cancelled) setSchedules(res.results || []);
 			} catch (err) {
@@ -46,7 +79,7 @@ const SchedulesListWorkspace: React.FC = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [searchApplied]);
+	}, [searchApplied, rangeStart, rangeEnd]);
 
 	const runSearch = useCallback(() => {
 		const next = search.trim();
@@ -67,6 +100,17 @@ const SchedulesListWorkspace: React.FC = () => {
 		});
 	}, [navigate]);
 
+	const handleDateRangeFilter = useCallback(
+		(next: ScheduleListDateSelection | null) => {
+			if (!next) {
+				setSelectedDateRange(buildTodaySelection());
+				return;
+			}
+			setSelectedDateRange(next);
+		},
+		[],
+	);
+
 	return (
 		<Card stretch>
 			<CardHeader>
@@ -77,7 +121,12 @@ const SchedulesListWorkspace: React.FC = () => {
 					</div>
 				</div>
 				<CardActions>
-					<div className='d-flex align-items-center gap-2 flex-wrap'>
+					<div className='d-flex align-items-center gap-3 flex-wrap'>
+						<DateRangeFilter
+							placement='bottom-end'
+							selectedDate={selectedDateRange}
+							onFilter={handleDateRangeFilter}
+						/>
 						<SearchComponent
 							handleChange={setSearch}
 							value={search}
@@ -92,7 +141,6 @@ const SchedulesListWorkspace: React.FC = () => {
 							}}
 							onBlur={runSearch}
 						/>
-						
 					</div>
 				</CardActions>
 			</CardHeader>
@@ -101,7 +149,7 @@ const SchedulesListWorkspace: React.FC = () => {
 					<QueueManagementSkeleton count={8} />
 				) : (
 					<div className='queue-cards-scroll'>
-						<Row className='g-3 mx-0'>
+						<Row className='g-3 mx-0 pt-1'>
 							{schedules.map((sch) => (
 								<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={sch.id}>
 									<ScheduleCardTile schedule={sch} onSelect={handleOpenSchedule} />
@@ -109,7 +157,7 @@ const SchedulesListWorkspace: React.FC = () => {
 							))}
 							{!schedules.length && (
 								<Col xs={12} className='text-center text-muted py-4'>
-									No schedules found.
+									No schedules found for the selected dates.
 								</Col>
 							)}
 						</Row>

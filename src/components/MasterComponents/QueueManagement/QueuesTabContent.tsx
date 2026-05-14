@@ -17,6 +17,7 @@ export interface QueuesTabContentProps {
 	onGroupFilterChange: (value: QueueGroupFilterValue) => void;
 	onQueueGroupCardSelect: (groupId: number) => void;
 	refreshKey?: number;
+	onEditQueue: (queue: Queue) => void;
 	onToggleQueue: (queue: Queue) => void;
 	isQueueActionLoading: (queueId: number) => boolean;
 }
@@ -28,6 +29,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	onGroupFilterChange,
 	onQueueGroupCardSelect,
 	refreshKey,
+	onEditQueue,
 	onToggleQueue,
 	isQueueActionLoading,
 }) => {
@@ -198,6 +200,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 										groupName={groups.find((group) => group.id === queue.group)?.name || queue.group || '-'}
 										selected={false}
 										onSelect={(id) => navigate(`/queue-management/${id}`)}
+										onEditQueue={onEditQueue}
 										onToggleQueue={onToggleQueue}
 										isActionLoading={isQueueActionLoading(queue.id)}
 									/>

@@ -18,6 +18,8 @@ export interface TokenCreateFormProps {
 	onCancel?: () => void;
 	onSubmit: (e: FormEvent<HTMLFormElement>) => void;
 	isSubmitting: boolean;
+	/** Primary action label (default: Create Token). */
+	submitLabel?: string;
 }
 
 const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
@@ -33,6 +35,7 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 	onCancel,
 	onSubmit,
 	isSubmitting,
+	submitLabel = 'Create Token',
 }) => {
 	const scheduleOptions =
 		fixedScheduleId != null
@@ -168,7 +171,7 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 					</Button>
 				)}
 				<Button color='primary' type='submit' isDisable={isSubmitting}>
-					Create Token
+					{submitLabel}
 				</Button>
 			</div>
 		</form>

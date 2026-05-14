@@ -3,7 +3,92 @@ import PropTypes from 'prop-types';
 import { Tooltip } from '@mui/material';
 import useDarkMode from '../hooks/useDarkMode';
 import { useTranslation } from 'react-i18next';
-const StatusBadge = ({ status, is_active }) => {
+import Icon from './icon/Icon';
+
+/** Bootstrap semantic colors (aligned with former `StatusBadge` Button colors). */
+const STATUS_COLOR_MAP = {
+	active: 'success',
+	assigned: 'success',
+	available: 'success',
+	running: 'success',
+	scheduled: 'primary',
+	onhold: 'warning',
+	on_hold: 'warning',
+	completed: 'info',
+	cancelled: 'danger',
+	canceled: 'danger',
+	busy: 'danger',
+	inactive: 'secondary',
+	unassigned: 'secondary',
+	disabled: 'secondary',
+	registred: 'secondary',
+	reported: 'warning',
+	serving: 'info',
+	postponed: 'secondary',
+	no_show: 'danger',
+	unknown: 'secondary',
+	in_progress: 'success',
+};
+
+/** Material icon names. */
+const STATUS_ICON_MAP = {
+	active: 'CheckCircle',
+	assigned: 'AssignmentInd',
+	available: 'EventAvailable',
+	running: 'PlayCircle',
+	scheduled: 'Schedule',
+	onhold: 'PauseCircle',
+	on_hold: 'PauseCircle',
+	completed: 'TaskAlt',
+	cancelled: 'Cancel',
+	canceled: 'Cancel',
+	busy: 'DoNotDisturbOn',
+	inactive: 'Block',
+	unassigned: 'PersonOff',
+	disabled: 'Block',
+	unknown: 'HelpOutline',
+	registred: 'AppRegistration',
+	reported: 'NotificationsActive',
+	serving: 'SupportAgent',
+	postponed: 'Update',
+	no_show: 'PersonOff',
+	in_progress: 'HourglassEmpty',
+};
+
+const STATUS_LABEL_OVERRIDE = {
+	registred: 'Registered',
+};
+
+const normalizeStatusKey = (value) =>
+	String(value || '')
+		.toLowerCase()
+		.trim()
+		.replace(/\s+/g, '_');
+
+const toTitleCase = (value) =>
+	value
+		.replace(/_/g, ' ')
+		.trim()
+		.replace(/\b\w/g, (char) => char.toUpperCase());
+
+/** Maps `StatusBadge` / bootstrap semantic colors to existing pill gradient keys (visuals unchanged). */
+const T_COLOR_TO_BADGE_STYLE = {
+	primary: 'Scheduled',
+	success: 'Completed',
+	warning: 'Untag',
+	info: 'Tag',
+	danger: 'Cancelled',
+	secondary: 'Check',
+};
+
+const getPillStyleKeyFromNormalized = (normalized) => {
+	if (!normalized) return 'Check';
+	const color = STATUS_COLOR_MAP[normalized];
+	if (!color) return 'Check';
+	return T_COLOR_TO_BADGE_STYLE[color] || 'Check';
+};
+
+const StatusBadge = ({ status, is_active, isAvailable, emptyFallback }) => {
 	const { themeStatus } = useDarkMode();
 	const { t } = useTranslation();
 	const getStatusBadgeStyles = (key) => {
@@ -223,23 +308,44 @@ const StatusBadge = ({ status, is_active }) => {
 		);
 	};
 
-	/* ---------- Decide label & style source ---------- */
-	let label = '----';
-	let styleKey = null;
+	/* ---------- Status resolution (replaces former `CustomComponent/StatusBadge` + pill maps) ---------- */
+	const normalizedFromStatus = status ? normalizeStatusKey(String(status)) : '';
 
-	if (status) {
-		label = status;
-		styleKey = status;
+	if (
+		!normalizedFromStatus &&
+		is_active === undefined &&
+		isAvailable === undefined &&
+		emptyFallback != null
+	) {
+		return <span className='text-muted small'>{emptyFallback}</span>;
+	}
+
+	let normalized = '';
+	let label = '----';
+	let styleKey = 'Check';
+
+	if (normalizedFromStatus) {
+		normalized = normalizedFromStatus;
+		styleKey = getPillStyleKeyFromNormalized(normalized);
+		label =
+			STATUS_LABEL_OVERRIDE[normalized] ??
+			(normalized ? toTitleCase(normalized) : '----');
 	} else if (typeof is_active === 'boolean') {
+		normalized = is_active ? 'active' : 'disabled';
+		styleKey = getPillStyleKeyFromNormalized(normalized);
 		label = is_active ? 'Active' : 'Disabled';
-		styleKey = is_active ? 'active' : 'disabled';
+	} else if (typeof isAvailable === 'boolean') {
+		normalized = isAvailable ? 'available' : 'busy';
+		styleKey = getPillStyleKeyFromNormalized(normalized);
+		label = toTitleCase(normalized);
+	} else {
+		normalized = 'unknown';
+		styleKey = getPillStyleKeyFromNormalized('unknown');
+		label = 'Unknown';
 	}
 
 	const badgeStyles = getStatusBadgeStyles(styleKey);
-
-	if (!status && typeof is_active !== 'boolean') {
-		return '----';
-	}
+	const iconName = STATUS_ICON_MAP[normalized] ?? STATUS_ICON_MAP.unknown;
 
 	return (
 		<Tooltip title={label} arrow placement='top'>
@@ -257,12 +363,14 @@ const StatusBadge = ({ status, is_active }) => {
 					letterSpacing: '0.3px',
 					whiteSpace: 'nowrap',
 				}}>
-				<span
+				<Icon
+					icon={iconName}
+					className='flex-shrink-0'
 					style={{
-						width: '8px',
-						height: '8px',
-						borderRadius: '50%',
-						backgroundColor: badgeStyles.dotColor,
+						fontSize: '16px',
+						width: '1em',
+						height: '1em',
+						color: badgeStyles.color,
 					}}
 				/>
 				{t(label)}
@@ -274,11 +382,15 @@ const StatusBadge = ({ status, is_active }) => {
 StatusBadge.propTypes = {
 	status: PropTypes.string,
 	is_active: PropTypes.bool,
+	isAvailable: PropTypes.bool,
+	emptyFallback: PropTypes.string,
 };
 
 StatusBadge.defaultProps = {
 	status: null,
 	is_active: undefined,
+	isAvailable: undefined,
+	emptyFallback: undefined,
 };
 
 export default StatusBadge;

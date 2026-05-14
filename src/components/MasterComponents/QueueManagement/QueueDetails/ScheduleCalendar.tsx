@@ -1,17 +1,17 @@
-import React, { FormEvent, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { Calendar, dayjsLocalizer, Views, type View as TView } from 'react-big-calendar';
-import Card, { CardActions, CardBody, CardHeader, CardTitle } from '../../bootstrap/Card';
-import Button from '../../bootstrap/Button';
-import Dropdown, { DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown';
-import { CalendarTodayButton, getLabel, getUnitType } from '../../extras/calendarHelper';
-import Icon from '../../icon/Icon';
-import Tooltips from '../../bootstrap/Tooltips';
-import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
-import Spinner from '../../bootstrap/Spinner';
-import type { QueueSchedule } from '../../../services/queueManagementApi';
-import { schedulesApi } from '../../../services/queueManagementApi';
-import { getErrorMessage } from './queueManagementUtils';
+import Card, { CardActions, CardBody, CardHeader, CardTitle } from '../../../bootstrap/Card';
+import Button from '../../../bootstrap/Button';
+import Dropdown, { DropdownMenu, DropdownToggle } from '../../../bootstrap/Dropdown';
+import { CalendarTodayButton, getLabel, getUnitType } from '../../../extras/calendarHelper';
+import Icon from '../../../icon/Icon';
+import Tooltips from '../../../bootstrap/Tooltips';
+import type { QueueSchedule } from '../../../../services/queueManagementApi';
+import ScheduleFormModal, {
+	isScheduleMetadataEditable,
+	toDateTimeLocalValue,
+} from '../../../PageComponents/Schedules/ScheduleFormModal';
 
 const localizer = dayjsLocalizer(dayjs);
 
@@ -49,16 +49,6 @@ interface ScheduleCalendarProps {
 	onEventClick?: (event: QueueScheduleEvent) => void;
 	/** Called when the user selects an empty slot (month or day view) */
 	onSlotSelect?: (start: Date, end: Date) => void;
-}
-
-interface CreateScheduleForm {
-	description: string;
-	start: string;
-	end: string;
-	token_from: string;
-	token_to: string;
-	/** Maps to API `limit` (max tokens for this schedule). */
-	token_limit: string;
 }
 
 function hasScheduleWindow(s: QueueSchedule): s is QueueSchedule & { from_datetime: string; to_datetime: string } {
@@ -125,45 +115,9 @@ function formatDateTimeRange(start: Date, end: Date) {
 	return `${dayjs(start).format('DD MMM YYYY, hh:mm A')} - ${dayjs(end).format('DD MMM YYYY, hh:mm A')}`;
 }
 
-function toDateTimeLocalValue(value: Date) {
-	return dayjs(value).format('YYYY-MM-DDTHH:mm');
-}
-
-/** Earliest allowed end value in datetime-local format (strictly after start). */
-function minEndAfterStartLocal(startLocal: string): string | undefined {
-	const trimmed = startLocal?.trim();
-	if (!trimmed) return undefined;
-	const d = new Date(trimmed);
-	if (Number.isNaN(d.getTime())) return undefined;
-	return toDateTimeLocalValue(dayjs(d).add(1, 'minute').toDate());
-}
-
 function getScheduleName(event: QueueScheduleEvent) {
 	return event.title?.trim() || event.description?.trim() || 'Schedule';
 }
-
-/** Schedules that cannot change dates/tokens/description from the calendar edit modal. */
-function isScheduleMetadataEditable(status?: string) {
-	const s = (status || '').toLowerCase();
-	return s !== 'completed' && s !== 'cancelled' && s !== 'canceled';
-}
-
-function queueScheduleRowToForm(rec: QueueSchedule): CreateScheduleForm {
-	const start = rec.from_datetime ? new Date(rec.from_datetime) : new Date();
-	const end = rec.to_datetime ? new Date(rec.to_datetime) : dayjs(start).add(1, 'hour').toDate();
-	return {
-		description: rec.description ?? '',
-		start: toDateTimeLocalValue(start),
-		end: toDateTimeLocalValue(end),
-		token_from: rec.token_from != null ? String(rec.token_from) : '',
-		token_to: rec.token_to != null ? String(rec.token_to) : '',
-		token_limit: rec.limit != null ? String(rec.limit) : '',
-	};
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	queueName,
@@ -175,18 +129,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 }) => {
 	const [viewMode, setViewMode] = useState<TView>(Views.MONTH);
 	const [date, setDate] = useState<Date>(() => toLocalDate(new Date()));
-	const [showCreateModal, setShowCreateModal] = useState(false);
-	const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
-	const [createError, setCreateError] = useState('');
-	const [savingSchedule, setSavingSchedule] = useState(false);
-	const [scheduleForm, setScheduleForm] = useState<CreateScheduleForm>({
-		description: '',
-		start: toDateTimeLocalValue(new Date()),
-		end: toDateTimeLocalValue(dayjs().add(1, 'hour').toDate()),
-		token_from: '1',
-		token_to: '100',
-		token_limit: '100',
-	});
+	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+	const [scheduleModalMode, setScheduleModalMode] = useState<'create' | 'edit'>('create');
+	const [editingScheduleRecord, setEditingScheduleRecord] = useState<QueueSchedule | null>(null);
+	const [createInitialStart, setCreateInitialStart] = useState<string | undefined>();
+	const [createInitialEnd, setCreateInitialEnd] = useState<string | undefined>();
 
 	const events = useMemo(
 		() => (scheduleRecords || []).filter(hasScheduleWindow).map(mapQueueScheduleToCalendarEvent),
@@ -201,26 +148,21 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			? events.filter((ev) => isWithinDayRange(ev.start, ev.end, date))
 			: events;
 
-	const isEditMode = editingScheduleId != null;
-
-	const endDateTimeMin = useMemo(
-		() => minEndAfterStartLocal(scheduleForm.start),
-		[scheduleForm.start],
-	);
-
 	const closeScheduleModal = () => {
-		setShowCreateModal(false);
-		setEditingScheduleId(null);
-		setCreateError('');
+		setScheduleModalOpen(false);
+		setEditingScheduleRecord(null);
+		setCreateInitialStart(undefined);
+		setCreateInitialEnd(undefined);
 	};
 
 	const openEditScheduleModal = (scheduleId: number) => {
 		const rec = scheduleRecords?.find((s) => s.id === scheduleId);
 		if (!rec || !isScheduleMetadataEditable(rec.status)) return;
-		setEditingScheduleId(scheduleId);
-		setScheduleForm(queueScheduleRowToForm(rec));
-		setCreateError('');
-		setShowCreateModal(true);
+		setScheduleModalMode('edit');
+		setEditingScheduleRecord(rec);
+		setCreateInitialStart(undefined);
+		setCreateInitialEnd(undefined);
+		setScheduleModalOpen(true);
 	};
 
 	const handleDrillDown = (targetDate: Date) => {
@@ -240,18 +182,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			setViewMode(Views.DAY);
 		}
 
-		setScheduleForm((prev) => ({
-			...prev,
-			start: toDateTimeLocalValue(selectedStart),
-			end: toDateTimeLocalValue(selectedEnd),
-		}));
-		setCreateError('');
-		setEditingScheduleId(null);
-		setShowCreateModal(true);
+		setScheduleModalMode('create');
+		setEditingScheduleRecord(null);
+		setCreateInitialStart(toDateTimeLocalValue(selectedStart));
+		setCreateInitialEnd(toDateTimeLocalValue(selectedEnd));
+		setScheduleModalOpen(true);
 
-		if (onSlotSelect) {
-			onSlotSelect(selectedStart, selectedEnd);
-		}
+		onSlotSelect?.(selectedStart, selectedEnd);
 	};
 
 	const openCreateModalForCurrentDate = () => {
@@ -260,104 +197,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 		}
 		const start = dayjs(date).hour(9).minute(0).second(0).millisecond(0).toDate();
 		const end = dayjs(start).add(1, 'hour').toDate();
-		setScheduleForm((prev) => ({
-			...prev,
-			start: toDateTimeLocalValue(start),
-			end: toDateTimeLocalValue(end),
-		}));
-		setCreateError('');
-		setEditingScheduleId(null);
-		setShowCreateModal(true);
-	};
-
-	const handleScheduleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		setCreateError('');
-
-		const startDate = new Date(scheduleForm.start);
-		const endDate = new Date(scheduleForm.end);
-		if (Number.isNaN(startDate.getTime())) {
-			setCreateError('Start date and time is required.');
-			return;
-		}
-		if (Number.isNaN(endDate.getTime())) {
-			setCreateError('End date and time is required.');
-			return;
-		}
-		if (endDate <= startDate) {
-			setCreateError('End date and time must be later than start date and time.');
-			return;
-		}
-		if (!isEditMode && startDate.getTime() < Date.now()) {
-			setCreateError('Start date and time cannot be in the past.');
-			return;
-		}
-
-		const tokenFromNum = scheduleForm.token_from ? Number(scheduleForm.token_from) : undefined;
-		const tokenToNum = scheduleForm.token_to ? Number(scheduleForm.token_to) : undefined;
-		if (tokenFromNum != null && Number.isNaN(tokenFromNum)) {
-			setCreateError('Token from must be a valid number.');
-			return;
-		}
-		if (tokenToNum != null && Number.isNaN(tokenToNum)) {
-			setCreateError('Token to must be a valid number.');
-			return;
-		}
-		if (tokenFromNum != null && tokenFromNum < 1) {
-			setCreateError('Token from must be 1 or greater.');
-			return;
-		}
-		if (tokenToNum != null && tokenToNum < 1) {
-			setCreateError('Token to must be 1 or greater.');
-			return;
-		}
-		if (tokenFromNum != null && tokenToNum != null && tokenFromNum > tokenToNum) {
-			setCreateError('Token from must be less than or equal to token to.');
-			return;
-		}
-
-		const tokenLimitRaw = scheduleForm.token_limit.trim();
-		const tokenLimitNum = tokenLimitRaw ? Number(tokenLimitRaw) : undefined;
-		if (tokenLimitRaw && Number.isNaN(tokenLimitNum!)) {
-			setCreateError('Token limit must be a valid number.');
-			return;
-		}
-		if (tokenLimitNum != null && (!Number.isInteger(tokenLimitNum) || tokenLimitNum < 1)) {
-			setCreateError('Token limit must be a whole number of 1 or greater.');
-			return;
-		}
-
-		if (!isEditMode && !queueId) return;
-
-		setSavingSchedule(true);
-		try {
-			if (isEditMode && editingScheduleId != null) {
-				await schedulesApi.patch(editingScheduleId, {
-					from_datetime: startDate.toISOString(),
-					to_datetime: endDate.toISOString(),
-					description: scheduleForm.description.trim() || undefined,
-					...(tokenFromNum != null ? { token_from: tokenFromNum } : {}),
-					...(tokenToNum != null ? { token_to: tokenToNum } : {}),
-					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
-				});
-			} else if (queueId) {
-				await schedulesApi.create({
-					queue: queueId,
-					from_datetime: startDate.toISOString(),
-					to_datetime: endDate.toISOString(),
-					description: scheduleForm.description.trim() || undefined,
-					token_from: tokenFromNum,
-					token_to: tokenToNum,
-					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
-				});
-			}
-			closeScheduleModal();
-			await onScheduleCreated?.();
-		} catch (err) {
-			setCreateError(getErrorMessage(err));
-		} finally {
-			setSavingSchedule(false);
-		}
+		setScheduleModalMode('create');
+		setEditingScheduleRecord(null);
+		setCreateInitialStart(toDateTimeLocalValue(start));
+		setCreateInitialEnd(toDateTimeLocalValue(end));
+		setScheduleModalOpen(true);
 	};
 
 	const ScheduleEventContent = ({
@@ -623,153 +467,20 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				</div>
 			</CardBody>
 
-			<Modal
-				isOpen={showCreateModal}
+			<ScheduleFormModal
+				isOpen={scheduleModalOpen}
 				setIsOpen={(open) => {
 					if (!open) closeScheduleModal();
+					else setScheduleModalOpen(true);
 				}}
-				isCentered
-				size='lg'
-				isAnimation={false}>
-				<ModalHeader setIsOpen={(open) => !open && closeScheduleModal()}>
-					<ModalTitle id='schedule-form-modal'>
-						{isEditMode ? 'Edit Schedule' : 'Create Schedule'}
-					</ModalTitle>
-				</ModalHeader>
-				<form onSubmit={handleScheduleFormSubmit}>
-					<ModalBody>
-						{createError && <div className='alert alert-danger mb-3'>{createError}</div>}
-						<div className='row g-3'>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='schedule-start'>
-									Start Date & Time
-								</label>
-								<input
-									id='schedule-start'
-									type='datetime-local'
-									className='form-control'
-									min={isEditMode ? undefined : toDateTimeLocalValue(new Date())}
-									value={scheduleForm.start}
-									onChange={(e) => {
-										const nextStart = e.target.value;
-										setScheduleForm((prev) => {
-											const ns = new Date(nextStart);
-											const ne = new Date(prev.end);
-											let nextEnd = prev.end;
-											if (
-												nextStart &&
-												!Number.isNaN(ns.getTime()) &&
-												prev.end &&
-												!Number.isNaN(ne.getTime()) &&
-												ne <= ns
-											) {
-												nextEnd = toDateTimeLocalValue(dayjs(ns).add(1, 'minute').toDate());
-											}
-											return { ...prev, start: nextStart, end: nextEnd };
-										});
-									}}
-									required
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='schedule-end'>
-									End Date & Time
-								</label>
-								<input
-									id='schedule-end'
-									type='datetime-local'
-									className='form-control'
-									min={endDateTimeMin}
-									value={scheduleForm.end}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, end: e.target.value }))
-									}
-									required
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='schedule-token-from'>
-									Token from
-								</label>
-								<input
-									id='schedule-token-from'
-									type='number'
-									min={1}
-									className='form-control'
-									value={scheduleForm.token_from}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, token_from: e.target.value }))
-									}
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='schedule-token-to'>
-									Token to
-								</label>
-								<input
-									id='schedule-token-to'
-									type='number'
-									min={1}
-									className='form-control'
-									value={scheduleForm.token_to}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, token_to: e.target.value }))
-									}
-								/>
-							</div>
-							<div className='col-12 col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='schedule-token-limit'>
-									Token limit
-								</label>
-								<input
-									id='schedule-token-limit'
-									type='number'
-									min={1}
-									step={1}
-									className='form-control'
-									value={scheduleForm.token_limit}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, token_limit: e.target.value }))
-									}
-									placeholder='Optional — maps to schedule limit'
-								/>
-							</div>
-							<div className='col-12'>
-								<label className='form-label fw-semibold' htmlFor='schedule-description'>
-									Description
-								</label>
-								<textarea
-									id='schedule-description'
-									className='form-control'
-									rows={3}
-									value={scheduleForm.description}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, description: e.target.value }))
-									}
-									placeholder='Optional notes for this schedule'
-								/>
-							</div>
-						</div>
-					</ModalBody>
-					<ModalFooter>
-						<Button color='light' isLight type='button' onClick={closeScheduleModal}>
-							Cancel
-						</Button>
-						<Button color='primary' type='submit' isDisable={savingSchedule}>
-							{savingSchedule ? (
-								<>
-									<Spinner isSmall inButton />
-									Saving…
-								</>
-							) : isEditMode ? (
-								'Save changes'
-							) : (
-								'Create Schedule'
-							)}
-						</Button>
-					</ModalFooter>
-				</form>
-			</Modal>
+				mode={scheduleModalMode}
+				queueId={queueId ?? null}
+				scheduleId={scheduleModalMode === 'edit' ? editingScheduleRecord?.id ?? null : null}
+				editingSchedule={scheduleModalMode === 'edit' ? editingScheduleRecord : null}
+				initialStart={scheduleModalMode === 'create' ? createInitialStart : undefined}
+				initialEnd={scheduleModalMode === 'create' ? createInitialEnd : undefined}
+				onSaved={() => void onScheduleCreated?.()}
+			/>
 		</Card>
 	);
 };

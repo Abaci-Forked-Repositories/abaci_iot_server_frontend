@@ -1,17 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import type { CreateQueuePayload, Queue, ServingPoint } from '../../../services/queueManagementApi';
+import type {
+	CreateQueuePayload,
+	Queue,
+	ServingPoint,
+	UpdateQueuePayload,
+} from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
 
 interface QueueFormModalProps {
 	isOpen: boolean;
 	setIsOpen: (status: boolean) => void;
 	mode?: 'add' | 'edit';
-	initialQueue?: Queue | null;
+	/** When `mode` is `edit`, the modal loads the queue with `queuesApi.get(editQueueId)` before showing the form. */
+	editQueueId?: number | null;
 	servingPoints: ServingPoint[];
 	onSaved?: () => void | Promise<void>;
 }
@@ -26,39 +32,89 @@ interface QueueFormState {
 	serving_point_ids: number[];
 }
 
+const defaultFormState = (): QueueFormState => ({
+	name: '',
+	description: '',
+	limit: '50',
+	grace_period_minutes: '15',
+	allow_postpone: true,
+	is_reporting_enabled: false,
+	serving_point_ids: [],
+});
+
+const queueToFormState = (q: Queue): QueueFormState => ({
+	name: q.name || '',
+	description: q.description || '',
+	limit: String(q.limit ?? 50),
+	grace_period_minutes: String(q.grace_period_minutes ?? 15),
+	allow_postpone: q.allow_postpone ?? true,
+	is_reporting_enabled: q.is_reporting_enabled ?? false,
+	serving_point_ids: (q.serving_points || []).map((point) => point.id),
+});
+
 const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	isOpen,
 	setIsOpen,
 	mode = 'add',
-	initialQueue = null,
+	editQueueId = null,
 	servingPoints,
 	onSaved,
 }) => {
-	const isEdit = mode === 'edit' && Boolean(initialQueue?.id);
+	const isEditMode = mode === 'edit' && editQueueId != null && !Number.isNaN(editQueueId);
 	const [submitting, setSubmitting] = useState(false);
-	const [form, setForm] = useState<QueueFormState>({
-		name: '',
-		description: '',
-		limit: '50',
-		grace_period_minutes: '15',
-		allow_postpone: true,
-		is_reporting_enabled: false,
-		serving_point_ids: [],
-	});
+	const [loadingEditQueue, setLoadingEditQueue] = useState(false);
+	const [loadedEditQueue, setLoadedEditQueue] = useState<Queue | null>(null);
+	const [form, setForm] = useState<QueueFormState>(defaultFormState);
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
 
+	const setIsOpenRef = useRef(setIsOpen);
+	const showErrorNotificationRef = useRef(showErrorNotification);
+	setIsOpenRef.current = setIsOpen;
+	showErrorNotificationRef.current = showErrorNotification;
+
+	const canSubmitEdit = isEditMode && loadedEditQueue != null && !loadingEditQueue;
+	const isUpdateSubmit = isEditMode && loadedEditQueue != null;
+
 	useEffect(() => {
-		if (!isOpen) return;
-		setForm({
-			name: initialQueue?.name || '',
-			description: initialQueue?.description || '',
-			limit: String(initialQueue?.limit ?? 50),
-			grace_period_minutes: String(initialQueue?.grace_period_minutes ?? 15),
-			allow_postpone: initialQueue?.allow_postpone ?? true,
-			is_reporting_enabled: initialQueue?.is_reporting_enabled ?? false,
-			serving_point_ids: (initialQueue?.serving_points || []).map((point) => point.id),
-		});
-	}, [initialQueue, isOpen]);
+		let cancelled = false;
+
+		if (!isOpen) {
+			setLoadedEditQueue(null);
+			setLoadingEditQueue(false);
+			return;
+		}
+
+		if (!isEditMode) {
+			setLoadedEditQueue(null);
+			setLoadingEditQueue(false);
+			setForm(defaultFormState());
+			return;
+		}
+
+		setLoadingEditQueue(true);
+		setLoadedEditQueue(null);
+
+		void queuesApi
+			.get(editQueueId as number)
+			.then((q) => {
+				if (cancelled) return;
+				setLoadedEditQueue(q);
+				setForm(queueToFormState(q));
+			})
+			.catch((err) => {
+				if (!cancelled) {
+					showErrorNotificationRef.current(err);
+					setIsOpenRef.current(false);
+				}
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingEditQueue(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isOpen, isEditMode, editQueueId]);
 
 	const servingPointOptions = useMemo(
 		() =>
@@ -92,22 +148,29 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			return;
 		}
 
-		const payload: CreateQueuePayload = {
-			name: form.name.trim(),
-			description: form.description.trim() || undefined,
-			limit: Number(form.limit || 0) || 0,
-			grace_period_minutes: graceMinutes,
-			allow_postpone: form.allow_postpone,
-			is_reporting_enabled: form.is_reporting_enabled,
-			serving_points: form.serving_point_ids,
-		};
-
 		setSubmitting(true);
 		try {
-			if (isEdit && initialQueue?.id) {
-				await queuesApi.update(initialQueue.id, payload);
+			if (isUpdateSubmit) {
+				const updatePayload: UpdateQueuePayload = {
+					name: form.name.trim(),
+					description: form.description.trim() || undefined,
+					limit: Number(form.limit || 0) || 0,
+					grace_period_minutes: graceMinutes,
+					allow_postpone: form.allow_postpone,
+					is_reporting_enabled: form.is_reporting_enabled,
+				};
+				await queuesApi.update(loadedEditQueue!.id, updatePayload);
 				showSuccessNotification('Queue updated successfully.');
 			} else {
+				const payload: CreateQueuePayload = {
+					name: form.name.trim(),
+					description: form.description.trim() || undefined,
+					limit: Number(form.limit || 0) || 0,
+					grace_period_minutes: graceMinutes,
+					allow_postpone: form.allow_postpone,
+					is_reporting_enabled: form.is_reporting_enabled,
+					serving_points: form.serving_point_ids,
+				};
 				await queuesApi.create(payload);
 				showSuccessNotification('Queue created successfully.');
 			}
@@ -120,130 +183,150 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 		}
 	};
 
+	const formReady = !isEditMode || !loadingEditQueue;
+
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered size='lg' isAnimation={false}>
 			<ModalHeader setIsOpen={setIsOpen}>
-				<ModalTitle id='queue-form-modal'>{isEdit ? 'Edit Queue' : 'Add Queue'}</ModalTitle>
+				<ModalTitle id='queue-form-modal'>{isEditMode ? 'Edit Queue' : 'Add Queue'}</ModalTitle>
 			</ModalHeader>
 			<form onSubmit={handleSubmit}>
 				<ModalBody>
-					<div className='row g-3'>
-						<div className='col-12'>
-							<label className='form-label fw-semibold' htmlFor='queue-name'>
-								Queue Name
-							</label>
-							<input
-								id='queue-name'
-								className='form-control'
-								value={form.name}
-								onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-								placeholder='Enter queue name'
-								required
-							/>
+					{isEditMode && loadingEditQueue ? (
+						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
+							<Spinner color='primary' />
+							<span>Loading queue…</span>
 						</div>
-						<div className='col-12'>
-							<label className='form-label fw-semibold' htmlFor='queue-description'>
-								Description
-							</label>
-							<textarea
-								id='queue-description'
-								className='form-control'
-								rows={3}
-								value={form.description}
-								onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-								placeholder='Short description'
-							/>
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='queue-limit'>
-								Token Limit
-							</label>
-							<input
-								id='queue-limit'
-								type='number'
-								min={1}
-								className='form-control'
-								value={form.limit}
-								onChange={(e) => setForm((prev) => ({ ...prev, limit: e.target.value }))}
-							/>
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='queue-grace-period-minutes'>
-								Grace period (minutes)
-							</label>
-							<input
-								id='queue-grace-period-minutes'
-								type='number'
-								min={0}
-								step={1}
-								className='form-control'
-								value={form.grace_period_minutes}
-								onChange={(e) =>
-									setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
-								}
-								placeholder='e.g. 15'
-							/>
-						</div>
-						<div className='col-md-6 d-flex align-items-end'>
-							<div className='form-check form-switch mb-2'>
-								<input
-									className='form-check-input'
-									type='checkbox'
-									id='queue-allow-postpone'
-									checked={form.allow_postpone}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, allow_postpone: e.target.checked }))
-									}
-								/>
-								<label className='form-check-label fw-semibold' htmlFor='queue-allow-postpone'>
-									Allow Postpone
+					) : (
+						<div className='row g-3'>
+							<div className='col-12'>
+								<label className='form-label fw-semibold' htmlFor='queue-name'>
+									Queue Name
 								</label>
-							</div>
-						</div>
-						<div className='col-md-6 d-flex align-items-end'>
-							<div className='form-check form-switch mb-2'>
 								<input
-									className='form-check-input'
-									type='checkbox'
-									id='queue-is-reporting-enabled'
-									checked={form.is_reporting_enabled}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, is_reporting_enabled: e.target.checked }))
-									}
+									id='queue-name'
+									className='form-control'
+									value={form.name}
+									onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+									placeholder='Enter queue name'
+									required
+									disabled={!formReady}
 								/>
-								<label className='form-check-label fw-semibold' htmlFor='queue-is-reporting-enabled'>
-									Reporting Enabled
-								</label>
 							</div>
+							<div className='col-12'>
+								<label className='form-label fw-semibold' htmlFor='queue-description'>
+									Description
+								</label>
+								<textarea
+									id='queue-description'
+									className='form-control'
+									rows={3}
+									value={form.description}
+									onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+									placeholder='Short description'
+									disabled={!formReady}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className='form-label fw-semibold' htmlFor='queue-limit'>
+									Token Limit
+								</label>
+								<input
+									id='queue-limit'
+									type='number'
+									min={1}
+									className='form-control'
+									value={form.limit}
+									onChange={(e) => setForm((prev) => ({ ...prev, limit: e.target.value }))}
+									disabled={!formReady}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className='form-label fw-semibold' htmlFor='queue-grace-period-minutes'>
+									Grace period (minutes)
+								</label>
+								<input
+									id='queue-grace-period-minutes'
+									type='number'
+									min={0}
+									step={1}
+									className='form-control'
+									value={form.grace_period_minutes}
+									onChange={(e) =>
+										setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
+									}
+									placeholder='e.g. 15'
+									disabled={!formReady}
+								/>
+							</div>
+							<div className='col-md-6 d-flex align-items-end'>
+								<div className='form-check form-switch mb-2'>
+									<input
+										className='form-check-input'
+										type='checkbox'
+										id='queue-allow-postpone'
+										checked={form.allow_postpone}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, allow_postpone: e.target.checked }))
+										}
+										disabled={!formReady}
+									/>
+									<label className='form-check-label fw-semibold' htmlFor='queue-allow-postpone'>
+										Allow Postpone
+									</label>
+								</div>
+							</div>
+							<div className='col-md-6 d-flex align-items-end'>
+								<div className='form-check form-switch mb-2'>
+									<input
+										className='form-check-input'
+										type='checkbox'
+										id='queue-is-reporting-enabled'
+										checked={form.is_reporting_enabled}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, is_reporting_enabled: e.target.checked }))
+										}
+										disabled={!formReady}
+									/>
+									<label className='form-check-label fw-semibold' htmlFor='queue-is-reporting-enabled'>
+										Reporting Enabled
+									</label>
+								</div>
+							</div>
+							{!isEditMode && (
+								<div className='col-12'>
+									<label className='form-label fw-semibold'>Serving Points</label>
+									<ReactSelectWithState
+										options={servingPointOptions}
+										value={selectedServingPointOptions}
+										setValue={(selected: Array<{ value: number; label: string }> | null) =>
+											setForm((prev) => ({
+												...prev,
+												serving_point_ids: (selected || []).map((option) => option.value),
+											}))
+										}
+										isMulti
+										placeholder='Select serving points'
+									/>
+								</div>
+							)}
 						</div>
-						<div className='col-12'>
-							<label className='form-label fw-semibold'>Serving Points</label>
-							<ReactSelectWithState
-								options={servingPointOptions}
-								value={selectedServingPointOptions}
-								setValue={(selected: Array<{ value: number; label: string }> | null) =>
-									setForm((prev) => ({
-										...prev,
-										serving_point_ids: (selected || []).map((option) => option.value),
-									}))
-								}
-								isMulti
-								placeholder='Select serving points'
-							/>
-						</div>
-					</div>
+					)}
 				</ModalBody>
 				<ModalFooter>
-					<Button color='light' isLight onClick={() => setIsOpen(false)}>
+					<Button color='secondary' isLight onClick={() => setIsOpen(false)}>
 						Cancel
 					</Button>
-					<Button color='primary' type='submit' isDisable={submitting}>
+					<Button
+						color='primary'
+						type='submit'
+						isDisable={submitting || (isEditMode && !canSubmitEdit)}>
 						{submitting ? (
 							<>
 								<Spinner isSmall inButton />
-								{isEdit ? 'Updating...' : 'Creating...'}
+								{isUpdateSubmit ? 'Updating...' : 'Creating...'}
 							</>
-						) : isEdit ? (
+						) : isUpdateSubmit ? (
 							'Update Queue'
 						) : (
 							'Create Queue'

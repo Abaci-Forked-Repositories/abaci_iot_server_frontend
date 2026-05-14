@@ -23,6 +23,7 @@ const QueueManagementWorkspace: React.FC = () => {
 	const [queueRefreshKey, setQueueRefreshKey] = useState(0);
 	const [queueGroupFilter, setQueueGroupFilter] = useState<QueueGroupFilterValue>('all');
 	const [showQueueModal, setShowQueueModal] = useState(false);
+	const [editQueueId, setEditQueueId] = useState<number | null>(null);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	const clearMessages = () => {
@@ -102,6 +103,11 @@ const QueueManagementWorkspace: React.FC = () => {
 		setQueueRefreshKey((v) => v + 1);
 	};
 
+	const handleOpenEditQueue = (queue: Queue) => {
+		setEditQueueId(queue.id);
+		setShowQueueModal(true);
+	};
+
 	return (
 		<Card stretch>
 			<CardHeader>
@@ -151,7 +157,13 @@ const QueueManagementWorkspace: React.FC = () => {
 							}}
 							onBlur={runQueueHeaderSearch}
 						/>
-						<Button color='primary' icon='Add' onClick={() => setShowQueueModal(true)}>
+						<Button
+							color='primary'
+							icon='Add'
+							onClick={() => {
+								setEditQueueId(null);
+								setShowQueueModal(true);
+							}}>
 							Add Queue
 						</Button>
 					</div>
@@ -168,14 +180,19 @@ const QueueManagementWorkspace: React.FC = () => {
 						handleQueueGroupFilterChange(groupId);
 					}}
 					refreshKey={queueRefreshKey}
+					onEditQueue={handleOpenEditQueue}
 					onToggleQueue={handleToggleQueue}
 					isQueueActionLoading={(id) => actionLoading === `queue-${id}`}
 				/>
 			</CardBody>
 			<QueueFormModal
 				isOpen={showQueueModal}
-				setIsOpen={setShowQueueModal}
-				mode='add'
+				setIsOpen={(open) => {
+					setShowQueueModal(open);
+					if (!open) setEditQueueId(null);
+				}}
+				mode={editQueueId != null ? 'edit' : 'add'}
+				editQueueId={editQueueId}
 				servingPoints={servingPoints}
 				onSaved={() => setQueueRefreshKey((v) => v + 1)}
 			/>

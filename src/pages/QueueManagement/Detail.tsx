@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
-import QueueDetailView from '../../components/MasterComponents/QueueManagement/QueueDetailView';
+import QueueDetailView from '../../components/MasterComponents/QueueManagement/QueueDetails/QueueDetailView';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 
 const QueueManagementDetailPage: React.FC = () => {

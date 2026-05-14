@@ -110,7 +110,37 @@ export interface TokenUser {
 	phone?: string;
 	age?: number | string;
 	place?: string;
+	remarks?: string;
 	created_at?: string;
+	updated_at?: string;
+}
+
+/** GET /api/queues/{id}/currently_serving/ — rows for “currently serving” UI (shape may vary; map in the component). */
+export interface CurrentlyServingEntry {
+	id?: number;
+	token_number?: string | number;
+	token_display?: string;
+	token?: string | number;
+	customer_name?: string;
+	customer?: string;
+	token_user?: TokenUser;
+	queue_name?: string;
+	schedule?: number;
+	status?: string;
+	created_at?: string;
+	started_serving_at?: string | null;
+	completed_at?: string | null;
+	cancelled_at?: string | null;
+	parent_token?: string | number | null;
+	notes?: string | null;
+	wait_time?: string | null;
+	wait?: string | null;
+	service_time?: string | null;
+	is_priority_queued?: boolean;
+	counter?: string;
+	serving_point_name?: string;
+	counter_name?: string;
+	serving_point?: string | { name?: string };
 }
 
 export interface TokenQueueRef {
@@ -160,6 +190,25 @@ export interface CreateTokenPayload {
 	is_vip?: boolean;
 }
 
+/** Nested `token_user` body for PATCH — mirrors GET token response shape. */
+export interface PatchTokenUserPayload {
+	id?: number;
+	name?: string;
+	email?: string;
+	phone?: string;
+	age?: number | null;
+	place?: string;
+	remarks?: string;
+}
+
+/** PATCH /api/tokens/{id}/ — send customer fields under `token_user` like the list/detail response. */
+export interface PatchTokenPayload {
+	token_user?: PatchTokenUserPayload;
+	notes?: string | null;
+	priority?: number;
+	is_vip?: boolean;
+}
+
 export interface CreateQueuePayload {
 	name: string;
 	description?: string;
@@ -192,6 +241,7 @@ export interface UpdateServingPointPayload {
 	name?: string;
 	queue?: number[];
 	description?: string;
+	status?: string;
 	is_available?: boolean;
 	is_active?: boolean;
 	assigned_users?: number[];
@@ -222,6 +272,8 @@ export interface QueueSchedule {
 	token_to?: number;
 	available_serving_points?: number[];
 	allow_postpone?: boolean;
+	/** From schedule detail API; gates registered → reported in schedule token UI. */
+	is_reporting_enabled?: boolean;
 	serving_point_windows?: ScheduleServingPoint[];
 	created_at?: string;
 	updated_at?: string;
@@ -254,12 +306,11 @@ export interface ScheduleServingPoint {
 	queue_schedule_queue_id?: number;
 	serving_point: number;
 	serving_point_name?: string;
+	serving_point_status?: string;
 	from_datetime: string;
 	to_datetime: string;
-	/** Window status; API may also send `schedule_status` on nested payloads. */
 	status?: string;
 	schedule_status?: string;
-	/** Legacy flat id/number, or nested token object from schedule detail API. */
 	current_token?: number | Token | null;
 	current_token_number?: string | null;
 	current_token_status?: string | null;
@@ -305,6 +356,12 @@ export interface QueryParams {
 	status?: TokenStatus | string;
 	group?: number | string;
 	is_available?: boolean | string;
+	/** Schedules list: single calendar day `YYYY-MM-DD` if the backend supports it. */
+	date?: string;
+	/** Schedules list: window overlaps local day — `to_datetime >= dayStart` (ISO 8601). */
+	to_datetime__gte?: string;
+	/** Schedules list: window overlaps local day — `from_datetime <= dayEnd` (ISO 8601). */
+	from_datetime__lte?: string;
 }
 
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
@@ -329,6 +386,11 @@ export const queuesApi = {
 		unwrap<Queue>(authAxios.patch(`api/queues/${id}/`, payload)),
 	statistics: (id: number) =>
 		unwrap<QueueStatistics>(authAxios.get(`api/queues/${id}/statistics/`)),
+	/** GET /api/queues/{id}/currently_serving/ */
+	currentlyServing: (id: number) =>
+		unwrap<CurrentlyServingEntry[] | PaginatedResponse<CurrentlyServingEntry>>(
+			authAxios.get(`api/queues/${id}/currently_serving/`),
+		),
 	activate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/activate/`)),
 	deactivate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/deactivate/`)),
 	groups: (params?: QueryParams) =>
@@ -384,6 +446,8 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`)),
 	postpone: (id: number) =>
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`)),
+	skipToken: (id: number) =>
+		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`)),
 	setStatus: (id: number, payload: SetScheduleServingPointStatusPayload) =>
 		unwrap<ScheduleServingPoint>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/set_status/`, payload),
@@ -391,11 +455,47 @@ export const scheduleServingPointsApi = {
 	delete: (id: number) => unwrap<void>(authAxios.delete(`api/queues/schedule-serving-points/${id}/`)),
 };
 
+export interface QueueEvent {
+	id: number;
+	event_type: string;
+	/** Human-readable label from API (e.g. "Schedule Status Change"). */
+	event_type_display?: string | null;
+	description?: string | null;
+	timestamp?: string | null;
+	created_at?: string | null;
+	updated_at?: string | null;
+	token?: number | null;
+	token_number?: string | null;
+	serving_point?: number | null;
+	serving_point_name?: string | null;
+	schedule?: number | null;
+	schedule_name?: string | null;
+	queue_name?: string | null;
+	user?: number | null;
+	user_username?: string | null;
+	actor_name?: string | null;
+	details?: Record<string, unknown> | null;
+	[key: string]: unknown;
+}
+
+export const eventsApi = {
+	bySchedule: (scheduleId: number) =>
+		unwrap<QueueEvent[] | PaginatedResponse<QueueEvent>>(
+			authAxios.get('api/queues/events/by-schedule/', { params: { schedule_id: scheduleId } }),
+		),
+	byServingPoint: (servingPointId: number) =>
+		unwrap<QueueEvent[] | PaginatedResponse<QueueEvent>>(
+			authAxios.get('api/queues/events/by-serving-point/', { params: { serving_point_id: servingPointId } }),
+		),
+};
+
 export const tokensApi = {
 	list: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<Token>>(authAxios.get('api/tokens/', { params })),
 	create: (payload: CreateTokenPayload) =>
 		unwrap<Token>(authAxios.post('api/tokens/create-token/', payload)),
+	patch: (id: number, payload: PatchTokenPayload) =>
+		unwrap<Token>(authAxios.patch(`api/tokens/${id}/`, payload)),
 	queueStatus: (queueId: number) =>
 		unwrap<QueueStatus>(authAxios.get('api/tokens/queue-status/', { params: { queue_id: queueId } })),
 	recent: (limit = 10) =>

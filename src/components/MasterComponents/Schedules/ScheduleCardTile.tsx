@@ -1,7 +1,7 @@
 import React from 'react';
 import type { QueueSchedule } from '../../../services/queueManagementApi';
 import Icon from '../../icon/Icon';
-import StatusBadge from '../../CustomComponent/StatusBadge';
+import StatusBadge from '../../BadgeWithIcon.jsx';
 import { formatDate } from '../QueueManagement/queueManagementUtils';
 
 interface ScheduleCardTileProps {
@@ -9,12 +9,22 @@ interface ScheduleCardTileProps {
 	onSelect: (schedule: QueueSchedule) => void;
 }
 
+const statusToModifier = (status?: string) => {
+	const s = (status || '').toLowerCase().trim().replace(/\s+/g, '_');
+	if (s === 'running') return 'running';
+	if (s === 'scheduled') return 'scheduled';
+	if (s === 'on_hold' || s === 'onhold') return 'on_hold';
+	if (s === 'completed') return 'completed';
+	if (s === 'cancelled' || s === 'canceled') return 'cancelled';
+	return 'default';
+};
+
 const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect }) => {
 	const queueTitle =
 		schedule.queue_name?.trim() || (schedule.queue != null ? `Queue #${schedule.queue}` : '—');
 	const subtitle =
 		schedule.description?.trim() ||
-		(schedule.queue_name?.trim() ? `Schedule #${schedule.id}` : undefined);
+		(schedule.queue_name?.trim() ? `Schedule #${schedule.id}` : `Schedule #${schedule.id}`);
 	const fromLabel = formatDate(schedule.from_datetime);
 	const toLabel = formatDate(schedule.to_datetime);
 	const windowSummary =
@@ -22,10 +32,11 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 			? 'No start / end window'
 			: `${fromLabel} → ${toLabel}`;
 	const titleAttr = [queueTitle, windowSummary, schedule.status].filter(Boolean).join(' · ');
+	const mod = statusToModifier(schedule.status);
 
 	return (
 		<div
-			className='queue-modern-card'
+			className={`schedule-tile schedule-tile--${mod}`}
 			onClick={() => onSelect(schedule)}
 			role='button'
 			tabIndex={0}
@@ -36,60 +47,51 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 					onSelect(schedule);
 				}
 			}}>
-			<div className='queue-modern-card__header'>
-				<div className='queue-modern-card__header-main d-flex align-items-center gap-3'>
-					<div className='queue-modern-card__icon-box'>
-						<Icon icon='Event' className='queue-modern-card__icon' />
+			<div className='schedule-tile__head'>
+				<div className='min-w-0'>
+					<div className='schedule-tile__eyebrow'>Schedule · #{schedule.id}</div>
+					<div className='schedule-tile__queue text-truncate' title={queueTitle}>
+						{queueTitle}
 					</div>
-					<div className='min-w-0 flex-grow-1'>
-						<div className='queue-modern-card__title text-truncate' title={queueTitle}>
-							{queueTitle}
+					{subtitle ? (
+						<div className='schedule-tile__desc text-truncate' title={subtitle}>
+							{subtitle}
 						</div>
-						{subtitle && (
-							<div className='small text-muted text-truncate' title={subtitle}>
-								{subtitle}
-							</div>
-						)}
-					</div>
+					) : null}
 				</div>
-				<div className='queue-modern-card__header-actions d-flex align-items-center gap-2 flex-shrink-0'>
+				<div className='flex-shrink-0'>
 					<StatusBadge status={schedule.status} emptyFallback='—' />
 				</div>
 			</div>
 
-			<div className='queue-modern-card__desc small text-muted mt-1'>
-				<div className='d-flex justify-content-between gap-2'>
-					<span className='text-nowrap'>From</span>
-					<span className='text-end text-truncate'>{fromLabel}</span>
-				</div>
-				<div className='d-flex justify-content-between gap-2'>
-					<span className='text-nowrap'>To</span>
-					<span className='text-end text-truncate'>{toLabel}</span>
+			<div className='schedule-tile__range'>
+				<Icon icon='DateRange' size='sm' className='schedule-tile__range-icon' />
+				<div className='min-w-0'>
+					<div className='schedule-tile__range-label'>Window</div>
+					<div className='text-break'>{windowSummary}</div>
 				</div>
 			</div>
 
-			<hr className='queue-modern-card__divider' />
-
-			<div className='d-flex flex-wrap gap-2'>
+			<div className='schedule-tile__footer'>
 				{schedule.current_token_number != null && schedule.current_token_number !== '' && (
-					<div className='queue-modern-card__meta-pill'>
-						<Icon icon='ConfirmationNumber' className='queue-modern-card__meta-icon' />
-						<span className='queue-modern-card__meta-label'>Now</span>
-						<span className='queue-modern-card__meta-value'>{schedule.current_token_number}</span>
+					<div className='schedule-tile__chip'>
+						<Icon icon='ConfirmationNumber' size='sm' />
+						<span>Now</span>
+						<span className='schedule-tile__chip-value'>{schedule.current_token_number}</span>
 					</div>
 				)}
 				{schedule.limit != null && (
-					<div className='queue-modern-card__meta-pill'>
-						<Icon icon='FormatListNumbered' className='queue-modern-card__meta-icon' />
-						<span className='queue-modern-card__meta-label'>Limit</span>
-						<span className='queue-modern-card__meta-value'>{schedule.limit}</span>
+					<div className='schedule-tile__chip'>
+						<Icon icon='FormatListNumbered' size='sm' />
+						<span>Limit</span>
+						<span className='schedule-tile__chip-value'>{schedule.limit}</span>
 					</div>
 				)}
 				{schedule.token_from != null && schedule.token_to != null && (
-					<div className='queue-modern-card__meta-pill'>
-						<Icon icon='Tag' className='queue-modern-card__meta-icon' />
-						<span className='queue-modern-card__meta-label'>Tokens</span>
-						<span className='queue-modern-card__meta-value'>
+					<div className='schedule-tile__chip'>
+						<Icon icon='Tag' size='sm' />
+						<span>Tokens</span>
+						<span className='schedule-tile__chip-value'>
 							{schedule.token_from}–{schedule.token_to}
 						</span>
 					</div>
