@@ -14,13 +14,15 @@ import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type PatchTokenUserPayload,
+	type QueueEvent,
 	type Token,
+	type TokenParentSummary,
 	type TokenServingHistory,
 	type TokenUser,
 	tokensApi,
 } from '../../../services/queueManagementApi';
 import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
-import TimeLine, { type TimeLineStatusItem } from '../../CustomComponent/TimeLine';
+import { EventFeed } from '../QueueManagement/QueueEventsTimelineCard';
 
 type TokenUserDetailWorkspaceProps = {
 	onTokenUserNameChange?: (name: string | null) => void;
@@ -58,6 +60,14 @@ const formatParentTokenField = (token: Token): string => {
 	return label != null ? `#${label}` : '—';
 };
 
+const parentSummaryDisplayToken = (p: TokenParentSummary): string => {
+	if (p.token_display != null && String(p.token_display).trim() !== '')
+		return String(p.token_display).trim();
+	if (p.token_number != null && String(p.token_number).trim() !== '')
+		return String(p.token_number).trim();
+	return '—';
+};
+
 const tokenServingHistoryRows = (token: Token): TokenServingHistory[] => {
 	const rows = token.complete_serving_history ?? token.serving_history;
 	return rows?.length ? rows : [];
@@ -78,7 +88,8 @@ const servingHistoryEntryEnded = (h: TokenServingHistory): boolean => {
 	return false;
 };
 
-const mapServingHistoryToTimeLineItems = (token: Token): TimeLineStatusItem[] => {
+/** Map token serving history into `QueueEvent`-shaped rows for `EventFeed` (schedule event history UI). */
+const mapServingHistoryToQueueEvents = (token: Token): QueueEvent[] => {
 	const raw = tokenServingHistoryRows(token);
 	if (!raw.length) return [];
 	const sorted = [...raw].sort((a, b) => {
@@ -86,13 +97,24 @@ const mapServingHistoryToTimeLineItems = (token: Token): TimeLineStatusItem[] =>
 		const tb = b.entered_at ? Date.parse(b.entered_at) : 0;
 		return ta - tb;
 	});
+	const queueName =
+		token.queue_name ??
+		(typeof token.queue === 'object' && token.queue ? token.queue.name : null);
+
 	return sorted.map((h) => {
 		const ended = servingHistoryEntryEnded(h);
-		const lines: string[] = [];
 		const rel = h.relationship?.toLowerCase();
+		const isParent = rel === 'parent';
+		const event_type = !ended
+			? 'serving_history_active'
+			: isParent
+				? 'serving_history_parent'
+				: 'serving_history_self';
+
+		const lines: string[] = [];
 		if (rel === 'parent') {
 			const td = h.token_display?.trim();
-			lines.push(`Parent token${td ? ` #${td}` : ''}`);
+			lines.push(td ? `Parent token #${td}` : 'Parent token');
 		} else if (rel === 'self') {
 			lines.push('This token');
 		}
@@ -114,27 +136,30 @@ const mapServingHistoryToTimeLineItems = (token: Token): TimeLineStatusItem[] =>
 			lines.push(`Served by: ${h.served_by_username.trim()}`);
 		if (h.completed_by_username?.trim())
 			lines.push(`Completed by: ${h.completed_by_username.trim()}`);
-		lines.push(
-			`Notes: ${h.notes != null && String(h.notes).trim() !== '' ? String(h.notes) : '—'}`,
-		);
-		const statusKey = !ended
-			? 'serving_active'
-			: rel === 'parent'
-				? 'serving_parent'
-				: 'serving_completed';
-		const statusLabel = !ended
-			? 'In progress'
-			: rel === 'parent'
-				? 'Parent token'
-				: 'Completed';
+		if (h.notes != null && String(h.notes).trim() !== '') lines.push(String(h.notes).trim());
+
+		const pointLabel = h.serving_point_name?.trim() || `Serving point #${h.serving_point}`;
+		const event_type_display =
+			isParent && h.token_display?.trim()
+				? `Parent token #${h.token_display.trim()}`
+				: ended
+					? pointLabel
+					: `At counter · ${pointLabel}`;
+
+		const actor =
+			h.served_by_username?.trim() || h.completed_by_username?.trim() || undefined;
+
 		return {
 			id: h.id,
-			time: h.entered_at,
-			name: h.serving_point_name?.trim() || `Serving point #${h.serving_point}`,
-			desc: lines.join('\n'),
-			status: statusKey,
-			statusLabel,
-		};
+			event_type,
+			event_type_display,
+			description: lines.length ? lines.join('\n') : null,
+			timestamp: h.entered_at,
+			queue_name: queueName,
+			schedule_name: token.schedule != null ? `Schedule #${token.schedule}` : null,
+			serving_point_name: h.serving_point_name?.trim() || null,
+			user_username: actor ?? null,
+		} as QueueEvent;
 	});
 };
 
@@ -210,8 +235,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		place: '',
 		remarks: '',
 	});
-	/** Token detail modal: details vs serving history */
-	const [detailModalTab, setDetailModalTab] = useState<'details' | 'serving'>('details');
+	/** Token detail modal: details, optional parent chain list, serving history */
+	const [detailModalTab, setDetailModalTab] = useState<'details' | 'parents' | 'serving'>('details');
 
 	const { theme, headerStyles, rowStyles } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
@@ -301,6 +326,16 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	useEffect(() => {
 		setDetailModalTab('details');
 	}, [detailViewTokenId]);
+
+	useEffect(() => {
+		if (
+			detailToken &&
+			detailModalTab === 'parents' &&
+			!(detailToken.parent_tokens && detailToken.parent_tokens.length > 0)
+		) {
+			setDetailModalTab('details');
+		}
+	}, [detailToken, detailModalTab]);
 
 	const closeDetailModal = useCallback(() => {
 		setDetailViewTokenId(null);
@@ -650,11 +685,27 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		return `Token #${detailViewTokenId}`;
 	}, [detailToken, detailViewTokenId, tokens]);
 
-	const servingHistoryTimeLineItems = useMemo(
-		() => (detailToken ? mapServingHistoryToTimeLineItems(detailToken) : []),
+	const servingHistoryQueueEvents = useMemo(
+		() => (detailToken ? mapServingHistoryToQueueEvents(detailToken) : []),
 		[detailToken],
 	);
+	const servingHistorySubtitle = useMemo(() => {
+		if (!detailToken) return null;
+		const parts: string[] = [];
+		const qn = tokenQueueName(detailToken);
+		if (qn && qn !== '—') parts.push(qn);
+		if (detailToken.schedule != null) parts.push(`Schedule #${detailToken.schedule}`);
+		const td =
+			detailToken.token_display != null && String(detailToken.token_display).trim() !== ''
+				? String(detailToken.token_display).trim()
+				: detailToken.token_number != null && String(detailToken.token_number).trim() !== ''
+					? String(detailToken.token_number).trim()
+					: null;
+		if (td) parts.push(`Token #${td}`);
+		return parts.length ? parts.join(' · ') : null;
+	}, [detailToken]);
 	const servingHistoryCount = detailToken ? tokenServingHistoryRows(detailToken).length : 0;
+	const parentTokensCount = detailToken?.parent_tokens?.length ?? 0;
 
 	if (!id || Number.isNaN(id)) {
 		return <div className='alert alert-warning'>Invalid token user.</div>;
@@ -819,9 +870,26 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 										aria-selected={detailModalTab === 'details'}
 										aria-controls='token-modal-panel-details'
 										onClick={() => setDetailModalTab('details')}>
-										Details & parent
+										Details
 									</button>
 								</NavItem>
+								{parentTokensCount > 0 ? (
+									<NavItem isActive={detailModalTab === 'parents'}>
+										<button
+											type='button'
+											className='w-100 d-inline-flex align-items-center justify-content-center gap-2'
+											id='token-modal-tab-parents'
+											role='tab'
+											aria-selected={detailModalTab === 'parents'}
+											aria-controls='token-modal-panel-parents'
+											onClick={() => setDetailModalTab('parents')}>
+											<span>Parent tokens</span>
+											<span className='badge bg-warning bg-opacity-25 text-warning rounded-pill'>
+												{parentTokensCount}
+											</span>
+										</button>
+									</NavItem>
+								) : null}
 								<NavItem isActive={detailModalTab === 'serving'}>
 									<button
 										type='button'
@@ -1001,6 +1069,95 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 							</div>
 
 							<div
+								id='token-modal-panel-parents'
+								role='tabpanel'
+								aria-labelledby='token-modal-tab-parents'
+								hidden={detailModalTab !== 'parents'}
+								className={detailModalTab === 'parents' ? undefined : 'd-none'}>
+								<Card shadow='sm' className='mb-0'>
+									<CardHeader>
+										<CardLabel icon='AccountTree' iconColor='warning'>
+											<CardTitle
+												tag='h6'
+												className='h6 mb-0 d-flex align-items-center gap-2 flex-wrap'>
+												Parent tokens
+												<span className='badge bg-warning bg-opacity-25 text-warning rounded-pill'>
+													{parentTokensCount}
+												</span>
+											</CardTitle>
+										</CardLabel>
+									</CardHeader>
+									<CardBody>
+										{/* {detailToken.parent_token != null ? (
+											<p className='text-muted small mb-3 lh-base'>
+												Immediate parent reference:{' '}
+												<span className='fw-semibold text-body'>
+													record #{detailToken.parent_token}
+												</span>
+												{' '}
+												<span className='text-muted'>
+													— matches the highlighted row when present.
+												</span>
+											</p>
+										) : (
+											<p className='text-muted small mb-3 lh-base'>
+												Parent tokens linked to this token from the API.
+											</p>
+										)} */}
+										<div className='table-responsive rounded border'>
+											<table className='table table-sm table-striped mb-0 align-middle'>
+												<thead className='table-light'>
+													<tr>
+														<th scope='col' className='small text-muted fw-semibold'>
+															Token
+														</th>
+														<th scope='col' className='small text-muted fw-semibold'>
+															Status
+														</th>
+														<th scope='col' className='small text-muted fw-semibold'>
+															Created at
+														</th>
+													</tr>
+												</thead>
+												<tbody>
+													{detailToken.parent_tokens?.map((p) => {
+														const display = parentSummaryDisplayToken(p);
+														const isDirectParent =
+															detailToken.parent_token != null &&
+															p.id === detailToken.parent_token;
+														return (
+															<tr
+																key={p.id}
+																className={isDirectParent ? 'table-info' : undefined}>
+																<td className='fw-semibold'>
+																	<span className='me-2'>#{display}</span>
+																	{isDirectParent ? (
+																		<Badge color='info' isLight className='rounded-pill'>
+																			Parent
+																		</Badge>
+																	) : null}
+																</td>
+																<td>
+																	<Badge
+																		color={statusBadgeColor(String(p.status))}
+																		isLight>
+																		{p.status}
+																	</Badge>
+																</td>
+																<td className='text-nowrap'>
+																	{formatDate(p.created_at)}
+																</td>
+															</tr>
+														);
+													})}
+												</tbody>
+											</table>
+										</div>
+									</CardBody>
+								</Card>
+							</div>
+
+							<div
 								id='token-modal-panel-serving'
 								role='tabpanel'
 								aria-labelledby='token-modal-tab-serving'
@@ -1022,9 +1179,17 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 										</CardLabel>
 									</CardHeader>
 									<CardBody>
-										<ThemeProvider theme={theme}>
-											<TimeLine items={servingHistoryTimeLineItems} />
-										</ThemeProvider>
+										{servingHistorySubtitle ? (
+											<p className='text-muted small mb-3 lh-base fw-medium'>
+												{servingHistorySubtitle}
+											</p>
+										) : null}
+										<EventFeed
+											events={servingHistoryQueueEvents}
+											loading={false}
+											emptyText='No serving history yet.'
+											emptyHelpText='Visits to counters will appear here once recorded.'
+										/>
 									</CardBody>
 								</Card>
 							</div>

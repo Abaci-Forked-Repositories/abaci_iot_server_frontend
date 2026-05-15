@@ -194,6 +194,8 @@ export interface TokenParentSummary {
 
 export interface Token {
 	id: number;
+	/** Customer-facing token label when provided by the API (e.g. token detail). */
+	token_display?: string | null;
 	token_number: string;
 	/** Prefix + number label from API (e.g. queue prefix + token number). */
 	token_display?: string | null;
