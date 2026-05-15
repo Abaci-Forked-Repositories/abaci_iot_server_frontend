@@ -16,7 +16,15 @@ import {
 } from '../../../services/queueManagementApi';
 import { formatDate } from '../QueueManagement/queueManagementUtils';
 import swalFire from '../../../helpers/swalHelper';
+import ScheduleAddServingPointsModal from './ScheduleAddServingPointsModal';
 import { buttonColor } from '../../../helpers/constants';
+
+function formatServingPointStatusLabel(raw?: string | null): string {
+	if (raw == null || String(raw).trim() === '') return '—';
+	return String(raw)
+		.replace(/_/g, ' ')
+		.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const toLocalDateTimeInputValue = (iso?: string) => {
 	if (!iso) return '';
@@ -51,6 +59,7 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
 
 	const [saving, setSaving] = useState(false);
+	const [showAddServingPointsModal, setShowAddServingPointsModal] = useState(false);
 	const [showServingPointEditModal, setShowServingPointEditModal] = useState(false);
 	const [servingPointFromDateTimeFormValue, setServingPointFromDateTimeFormValue] = useState('');
 	const [servingPointToDateTimeFormValue, setServingPointToDateTimeFormValue] = useState('');
@@ -162,13 +171,36 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 		}
 	};
 
+	const scheduleServingPointIds = useMemo(
+		() =>
+			(scheduleRecord?.serving_point_windows || [])
+				.map((w) => w.serving_point)
+				.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id)),
+		[scheduleRecord?.serving_point_windows],
+	);
+
+	const canAddServingPoints = useMemo(() => {
+		const s = (scheduleRecord?.status || '').toLowerCase().trim();
+		return queueId > 0 && s !== 'completed' && s !== 'cancelled' && s !== 'canceled';
+	}, [scheduleRecord?.status, queueId]);
+
 	const servingPointColumns = useMemo(
 		() => [
 			{
 				title: 'Name',
 				field: 'serving_point_name',
-				render: (rowData: ScheduleServingPoint) =>
-					rowData.serving_point_name || `Serving Point #${rowData.serving_point}`,
+				render: (rowData: ScheduleServingPoint) => {
+					const label = rowData.serving_point_name || `Serving Point #${rowData.serving_point}`;
+					const statusLine = formatServingPointStatusLabel(rowData.serving_point_status);
+					const tooltipTitle = `Current serving point status: ${statusLine}`;
+					return (
+						<Tooltip title={tooltipTitle} placement='top' arrow enterDelay={400}>
+							<span className='d-inline-block text-truncate' style={{ maxWidth: '100%', cursor: 'default' }}>
+								{label}
+							</span>
+						</Tooltip>
+					);
+				},
 			},
 			{
 				title: 'From',
@@ -247,6 +279,13 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 							Serving points ({scheduleRecord?.serving_point_windows?.length || 0})
 						</CardTitle>
 					</CardLabel>
+					<Button
+						color='primary'
+						icon='Add'
+						isDisable={!canAddServingPoints || loading}
+						onClick={() => setShowAddServingPointsModal(true)}>
+						Add Serving Point
+					</Button>
 				</CardHeader>
 				<CardBody>
 					{loading ? (
@@ -296,6 +335,15 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 					)}
 				</CardBody>
 			</Card>
+
+			<ScheduleAddServingPointsModal
+				isOpen={showAddServingPointsModal}
+				setIsOpen={setShowAddServingPointsModal}
+				scheduleId={scheduleId}
+				queueId={queueId}
+				currentServingPointIds={scheduleServingPointIds}
+				onSaved={() => void onReload()}
+			/>
 
 			<Modal
 				isOpen={showServingPointEditModal}

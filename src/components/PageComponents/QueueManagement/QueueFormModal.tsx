@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
@@ -29,6 +31,7 @@ interface QueueFormState {
 	grace_period_minutes: string;
 	allow_postpone: boolean;
 	is_reporting_enabled: boolean;
+	token_prefix: string;
 	serving_point_ids: number[];
 }
 
@@ -39,6 +42,7 @@ const defaultFormState = (): QueueFormState => ({
 	grace_period_minutes: '15',
 	allow_postpone: true,
 	is_reporting_enabled: false,
+	token_prefix: '',
 	serving_point_ids: [],
 });
 
@@ -49,6 +53,7 @@ const queueToFormState = (q: Queue): QueueFormState => ({
 	grace_period_minutes: String(q.grace_period_minutes ?? 15),
 	allow_postpone: q.allow_postpone ?? true,
 	is_reporting_enabled: q.is_reporting_enabled ?? false,
+	token_prefix: q.token_prefix || '',
 	serving_point_ids: (q.serving_points || []).map((point) => point.id),
 });
 
@@ -158,6 +163,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					grace_period_minutes: graceMinutes,
 					allow_postpone: form.allow_postpone,
 					is_reporting_enabled: form.is_reporting_enabled,
+					token_prefix: form.token_prefix.trim() || undefined,
 				};
 				await queuesApi.update(loadedEditQueue!.id, updatePayload);
 				showSuccessNotification('Queue updated successfully.');
@@ -169,6 +175,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					grace_period_minutes: graceMinutes,
 					allow_postpone: form.allow_postpone,
 					is_reporting_enabled: form.is_reporting_enabled,
+					token_prefix: form.token_prefix.trim() || undefined,
 					serving_points: form.serving_point_ids,
 				};
 				await queuesApi.create(payload);
@@ -224,6 +231,26 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 									value={form.description}
 									onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
 									placeholder='Short description'
+									disabled={!formReady}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className='form-label fw-semibold d-flex align-items-center gap-1' htmlFor='queue-token-prefix'>
+									Token Prefix
+									<Tooltip
+										arrow
+										placement='top'
+										title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
+										<InfoOutlinedIcon style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }} />
+									</Tooltip>
+								</label>
+								<input
+									id='queue-token-prefix'
+									className='form-control'
+									value={form.token_prefix}
+									onChange={(e) => setForm((prev) => ({ ...prev, token_prefix: e.target.value }))}
+									placeholder='e.g. A'
+									maxLength={10}
 									disabled={!formReady}
 								/>
 							</div>

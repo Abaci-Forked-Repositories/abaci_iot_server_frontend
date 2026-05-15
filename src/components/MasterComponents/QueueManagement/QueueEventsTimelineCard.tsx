@@ -10,12 +10,11 @@ import {
 } from '../../../services/queueManagementApi';
 import type { TColor } from '../../../type/color-type';
 
-/** Fixed panel height; inner list scrolls (same Card pattern as serving points / tokens). */
+/** Fixed panel height; events list scrolls inside the card body (not the page). */
 const PANEL_HEIGHT = 'min(62vh, 520px)';
 const PANEL_MIN_HEIGHT = 320;
 
-const SCROLL_PANEL_CLASS =
-	'schedule-detail-events-scroll flex-grow-1 min-h-0 overflow-auto px-3 px-lg-4 py-3';
+const SCROLL_PANEL_CLASS = 'schedule-detail-events-scroll px-3 px-lg-4 py-3';
 
 const normalizeEvents = (
 	data: QueueEvent[] | PaginatedResponse<QueueEvent> | unknown,
@@ -339,6 +338,9 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 		showErrorRef.current = showErrorNotification;
 	}, [showErrorNotification]);
 
+	const loadEventsRef = useRef(loadEvents);
+	loadEventsRef.current = loadEvents;
+
 	const [events, setEvents] = useState<QueueEvent[]>([]);
 	const [loading, setLoading] = useState(false);
 
@@ -346,7 +348,7 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 		if (!queryId || Number.isNaN(queryId)) return;
 		setLoading(true);
 		try {
-			const raw = await loadEvents(queryId);
+			const raw = await loadEventsRef.current(queryId);
 			setEvents(sortEventsNewestFirst(normalizeEvents(raw)));
 		} catch (err) {
 			showErrorRef.current(err);
@@ -354,7 +356,7 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 		} finally {
 			setLoading(false);
 		}
-	}, [queryId, loadEvents]);
+	}, [queryId]);
 
 	useEffect(() => {
 		void fetchEvents();
@@ -373,9 +375,8 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 .schedule-detail-events-scroll::-webkit-scrollbar-thumb { background: var(--bs-border-color); border-radius: 4px; }
 `}</style>
 			<Card
-				stretch
 				className='d-flex flex-column overflow-hidden'
-				style={{ height: PANEL_HEIGHT, minHeight: PANEL_MIN_HEIGHT }}>
+				style={{ height: PANEL_HEIGHT, minHeight: PANEL_MIN_HEIGHT, maxHeight: PANEL_HEIGHT }}>
 				<CardHeader className='flex-shrink-0'>
 					<CardLabel icon='History'>
 						<CardTitle tag='h5' className='d-flex align-items-center flex-wrap gap-2 mb-0'>
@@ -389,7 +390,9 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 					</CardLabel>
 					<RefreshButton loading={loading} onClick={() => void fetchEvents()} />
 				</CardHeader>
-				<CardBody className='d-flex flex-column flex-grow-1 min-h-0 p-0'>
+				<CardBody
+					className='d-flex flex-column min-h-0 p-0'
+					style={{ flex: '1 1 0%', minHeight: 0 }}>
 					<div className='flex-shrink-0 border-bottom px-4 pt-3 pb-2'>
 						{subtitle ? (
 							<p className='text-muted small mb-0 lh-base fw-medium'>{subtitle}</p>
@@ -397,13 +400,27 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 							<p className='text-muted small mb-0 lh-base'>{subtitleFallback}</p>
 						)}
 					</div>
-					<div className={SCROLL_PANEL_CLASS}>
-						<EventFeed
-							events={events}
-							loading={loading}
-							emptyText={emptyText}
-							emptyHelpText={emptyHelpText}
-						/>
+					{/* Fill remaining card height so overflow is only on this region (flex + absolute inset). */}
+					<div
+						className='position-relative flex-grow-1 min-h-0'
+						style={{ flex: '1 1 0%', minHeight: 0 }}>
+						<div
+							className={SCROLL_PANEL_CLASS}
+							style={{
+								position: 'absolute',
+								inset: 0,
+								overflowY: 'auto',
+								overflowX: 'hidden',
+								overscrollBehavior: 'contain',
+								WebkitOverflowScrolling: 'touch',
+							}}>
+							<EventFeed
+								events={events}
+								loading={loading}
+								emptyText={emptyText}
+								emptyHelpText={emptyHelpText}
+							/>
+						</div>
 					</div>
 				</CardBody>
 			</Card>

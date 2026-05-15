@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card, { CardActions, CardBody, CardHeader } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
-import Badge from '../../bootstrap/Badge';
+import StatusBadge from '../../BadgeWithIcon.jsx';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import ServingPointModal, {
@@ -123,13 +123,10 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Status',
 				field: 'is_active',
-				render: (rowData: ServingPoint) => (
-					<Badge
-						color={(rowData.is_active ?? rowData.is_available) ? 'success' : 'secondary'}
-						isLight>
-						{(rowData.is_active ?? rowData.is_available) ? 'Active' : 'Inactive'}
-					</Badge>
-				),
+				render: (rowData: ServingPoint) => {
+					const isOn = rowData.is_active ?? rowData.is_available ?? false;
+					return <StatusBadge status={isOn ? 'active' : 'inactive'} />;
+				},
 			},
 			{
 				title: 'Created at',
@@ -207,10 +204,6 @@ const ServingPointsWorkspace: React.FC = () => {
 	const handleSubmitServingPoint = async () => {
 		if (!form.name.trim()) {
 			showNotification('Error', 'Serving point name is required.', 'danger');
-			return;
-		}
-		if (form.queue_ids.length === 0) {
-			showNotification('Error', 'Select at least one queue.', 'danger');
 			return;
 		}
 

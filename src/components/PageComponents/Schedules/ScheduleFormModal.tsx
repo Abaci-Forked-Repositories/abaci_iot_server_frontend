@@ -1,5 +1,7 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
+import { Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
@@ -32,6 +34,10 @@ export interface ScheduleFormState {
 	token_from: string;
 	token_to: string;
 	token_limit: string;
+	/** Edit only — shown and PATCHed when `mode === 'edit'`; create uses the queue default. */
+	token_prefix: string;
+	is_reporting_enabled: boolean;
+	allow_postpone: boolean;
 }
 
 function queueScheduleRowToForm(rec: QueueSchedule): ScheduleFormState {
@@ -44,6 +50,12 @@ function queueScheduleRowToForm(rec: QueueSchedule): ScheduleFormState {
 		token_from: rec.token_from != null ? String(rec.token_from) : '',
 		token_to: rec.token_to != null ? String(rec.token_to) : '',
 		token_limit: rec.limit != null ? String(rec.limit) : '',
+		token_prefix:
+			rec.token_prefix != null && String(rec.token_prefix).trim() !== ''
+				? String(rec.token_prefix).trim()
+				: '',
+		is_reporting_enabled: rec.is_reporting_enabled ?? true,
+		allow_postpone: rec.allow_postpone ?? true,
 	};
 }
 
@@ -55,6 +67,9 @@ function defaultCreateForm(): ScheduleFormState {
 		token_from: '1',
 		token_to: '100',
 		token_limit: '100',
+		token_prefix: '',
+		is_reporting_enabled: true,
+		allow_postpone: true,
 	};
 }
 
@@ -175,6 +190,9 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 					from_datetime: startDate.toISOString(),
 					to_datetime: endDate.toISOString(),
 					description: scheduleForm.description.trim() || undefined,
+					is_reporting_enabled: scheduleForm.is_reporting_enabled,
+					allow_postpone: scheduleForm.allow_postpone,
+					token_prefix: scheduleForm.token_prefix.trim() || null,
 					...(tokenFromNum != null ? { token_from: tokenFromNum } : {}),
 					...(tokenToNum != null ? { token_to: tokenToNum } : {}),
 					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
@@ -187,6 +205,8 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 					description: scheduleForm.description.trim() || undefined,
 					token_from: tokenFromNum,
 					token_to: tokenToNum,
+					is_reporting_enabled: scheduleForm.is_reporting_enabled,
+					allow_postpone: scheduleForm.allow_postpone,
 					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
 				});
 			}
@@ -294,6 +314,70 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 								placeholder='Optional — maps to schedule limit'
 							/>
 						</div>
+						{isEditMode && (
+							<div className='col-12 col-md-6'>
+								<label
+									className='form-label fw-semibold d-flex align-items-center gap-1'
+									htmlFor='schedule-token-prefix'>
+									Token prefix
+									<Tooltip
+										arrow
+										placement='top'
+										title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
+										<InfoOutlinedIcon style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }} />
+									</Tooltip>
+								</label>
+								<input
+									id='schedule-token-prefix'
+									type='text'
+									className='form-control'
+									value={scheduleForm.token_prefix}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_prefix: e.target.value }))
+									}
+									placeholder='e.g. A'
+									maxLength={10}
+									autoComplete='off'
+								/>
+							</div>
+						)}
+						<div className='col-md-6'>
+							<div className='form-check form-switch pt-md-4'>
+								<input
+									id='schedule-is-reporting-enabled'
+									type='checkbox'
+									className='form-check-input'
+									role='switch'
+									checked={scheduleForm.is_reporting_enabled}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({
+											...prev,
+											is_reporting_enabled: e.target.checked,
+										}))
+									}
+								/>
+								<label className='form-check-label fw-semibold' htmlFor='schedule-is-reporting-enabled'>
+									Reporting enabled
+								</label>
+							</div>
+						</div>
+						<div className='col-md-6'>
+							<div className='form-check form-switch pt-md-4'>
+								<input
+									id='schedule-allow-postpone'
+									type='checkbox'
+									className='form-check-input'
+									role='switch'
+									checked={scheduleForm.allow_postpone}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, allow_postpone: e.target.checked }))
+									}
+								/>
+								<label className='form-check-label fw-semibold' htmlFor='schedule-allow-postpone'>
+									Allow postpone
+								</label>
+							</div>
+						</div>
 						<div className='col-12'>
 							<label className='form-label fw-semibold' htmlFor='schedule-description'>
 								Description
@@ -310,7 +394,7 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 					</div>
 				</ModalBody>
 				<ModalFooter>
-					<Button color='light' isLight type='button' onClick={closeModal}>
+					<Button color='secondary' isLight type='button' onClick={closeModal}>
 						Cancel
 					</Button>
 					<Button color='primary' type='submit' isDisable={savingSchedule}>

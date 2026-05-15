@@ -296,7 +296,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
-								<div className='col-md-6'>
+								<div className='col-md-4'>
 									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -317,7 +317,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
-								<div className='col-md-6'>
+								<div className='col-md-4'>
 									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -336,6 +336,24 @@ const ScheduleDetailWorkspace: React.FC = () => {
 														{scheduleRecord.is_reporting_enabled ? 'Yes' : 'No'}
 													</Badge>
 												)}
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className='col-md-4'>
+									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(114, 57, 234, 0.14)' }}>
+											<Icon icon='Label' color='info' />
+										</div>
+										<div>
+											<div className='text-muted small mb-1'>Token prefix</div>
+											<div className='fw-semibold'>
+												{scheduleRecord?.token_prefix != null &&
+												String(scheduleRecord.token_prefix).trim() !== ''
+													? String(scheduleRecord.token_prefix).trim()
+													: '—'}
 											</div>
 										</div>
 									</div>

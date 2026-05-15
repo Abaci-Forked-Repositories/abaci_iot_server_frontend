@@ -65,6 +65,7 @@ export interface Queue {
 	grace_period_minutes?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
+	token_prefix?: string;
 	is_active?: boolean;
 	serving_points?: ServingPoint[];
 	created_at?: string;
@@ -235,6 +236,7 @@ export interface PatchTokenPayload {
 	notes?: string | null;
 	priority?: number;
 	is_vip?: boolean;
+	is_priority_queued?: boolean;
 }
 
 export interface CreateQueuePayload {
@@ -244,6 +246,7 @@ export interface CreateQueuePayload {
 	grace_period_minutes?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
+	token_prefix?: string;
 	serving_points?: number[];
 }
 
@@ -254,6 +257,7 @@ export interface UpdateQueuePayload {
 	grace_period_minutes?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
+	token_prefix?: string;
 	serving_points?: number[];
 }
 
@@ -298,6 +302,8 @@ export interface QueueSchedule {
 	limit?: number;
 	token_from?: number;
 	token_to?: number;
+	/** Optional override of the queue token prefix for this schedule (edit / PATCH). */
+	token_prefix?: string | null;
 	available_serving_points?: number[];
 	allow_postpone?: boolean;
 	/** From schedule detail API; gates registered → reported in schedule token UI. */
@@ -316,6 +322,8 @@ export interface CreateSchedulePayload {
 	limit?: number;
 	token_from?: number;
 	token_to?: number;
+	is_reporting_enabled?: boolean;
+	allow_postpone?: boolean;
 }
 
 export interface PatchSchedulePayload {
@@ -326,6 +334,9 @@ export interface PatchSchedulePayload {
 	limit?: number;
 	token_from?: number;
 	token_to?: number;
+	token_prefix?: string | null;
+	is_reporting_enabled?: boolean;
+	allow_postpone?: boolean;
 }
 
 export interface ScheduleServingPoint {
@@ -447,7 +458,9 @@ export const schedulesApi = {
 	refreshCurrentToken: (id: number) =>
 		unwrap<QueueSchedule>(authAxios.post(`api/queues/schedules/${id}/refresh-current-token/`)),
 	setAvailableServingPoints: (id: number, payload: SetScheduleServingPointsPayload) =>
-		unwrap<unknown>(authAxios.post(`api/queues/schedules/${id}/set-available-serving-points/`, payload)),
+		unwrap<unknown>(
+			authAxios.post(`api/queues/schedules/${id}/set-available-serving-points/`, payload),
+		),
 };
 
 export const scheduleServingPointsApi = {
@@ -474,8 +487,19 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`)),
 	postpone: (id: number) =>
 		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`)),
-	skipToken: (id: number) =>
-		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`)),
+	skipToken: (id: number, options?: { serving_point_status?: string }) => {
+		const trimmed = options?.serving_point_status?.trim();
+		if (trimmed) {
+			return unwrap<ScheduleServingPoint>(
+				authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`, {}, {
+					params: { serving_point_status: trimmed },
+				}),
+			);
+		}
+		return unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`),
+		);
+	},
 	setStatus: (id: number, payload: SetScheduleServingPointStatusPayload) =>
 		unwrap<ScheduleServingPoint>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/set_status/`, payload),
@@ -526,8 +550,6 @@ export const tokensApi = {
 		unwrap<Token>(authAxios.patch(`api/tokens/${id}/`, payload)),
 	create: (payload: CreateTokenPayload) =>
 		unwrap<Token>(authAxios.post('api/tokens/create-token/', payload)),
-	patch: (id: number, payload: PatchTokenPayload) =>
-		unwrap<Token>(authAxios.patch(`api/tokens/${id}/`, payload)),
 	queueStatus: (queueId: number) =>
 		unwrap<QueueStatus>(authAxios.get('api/tokens/queue-status/', { params: { queue_id: queueId } })),
 	recent: (limit = 10) =>

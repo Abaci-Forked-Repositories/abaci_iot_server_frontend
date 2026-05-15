@@ -151,6 +151,15 @@ const QueueDetailView: React.FC = () => {
 		},
 		{ label: 'Limit', value: <span className='queue-detail-meta-value'><Icon icon='Timelapse' size='sm' className='me-1 opacity-75' />{queueData.limit ?? '—'}</span> },
 		{
+			label: 'Token prefix',
+			value: (
+				<span className='queue-detail-meta-value'>
+					<Icon icon='Label' size='sm' className='me-1 opacity-75' />
+					{queueData.token_prefix?.trim() ? queueData.token_prefix.trim() : '—'}
+				</span>
+			),
+		},
+		{
 			label: 'Allow postpone',
 			value: (
 				<Badge color={queueData.allow_postpone ? 'success' : 'secondary'} isLight>
@@ -234,10 +243,6 @@ const QueueDetailView: React.FC = () => {
 											</Tooltip>
 										</div>
 									</div>
-
-									{queueData.description && (
-										<p className='small text-muted mb-3'>{queueData.description}</p>
-									)}
 
 									{/* Meta pills row */}
 									<div className='d-flex flex-wrap gap-3 mb-4 align-items-center'>

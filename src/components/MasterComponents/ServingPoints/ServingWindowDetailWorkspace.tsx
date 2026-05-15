@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
 import Card, { CardBody } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
+import SplitDropdownButton from '../../CustomComponent/Buttons/SplitDropdownButton';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
 import Icon from '../../icon/Icon';
@@ -24,6 +25,7 @@ import {
 	getNextAllowedServingPointStatuses,
 	getWindowServingPointStatus,
 	isServingWindowEndInFuture,
+	normalizeServingPointStatus,
 	SP_STATUS_COLORS,
 	SP_STATUS_LABELS,
 	servingPointQueueIds,
@@ -269,11 +271,24 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		}
 	};
 
-	const triggerSkipToken = async (row: ScheduleServingPoint) => {
+	const triggerSkipToken = async (
+		row: ScheduleServingPoint,
+		opts?: { serving_point_status?: string },
+	) => {
 		setActionLoading(`skip-${row.id}`);
 		try {
-			await scheduleServingPointsApi.skipToken(row.id);
-			showSuccessNotification('Token skipped. The queue will advance to the next token.');
+			await scheduleServingPointsApi.skipToken(
+				row.id,
+				opts?.serving_point_status?.trim()
+					? { serving_point_status: opts.serving_point_status.trim() }
+					: undefined,
+			);
+			const st = opts?.serving_point_status?.trim();
+			showSuccessNotification(
+				st
+					? `Token skipped; counter set to ${SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')}.`
+					: 'Token skipped. The queue will advance to the next token.',
+			);
 			await load();
 		} catch (err) {
 			showErrorNotification(err);
@@ -500,6 +515,20 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				if (user?.remarks?.trim())
 					detailRows.push({ icon: 'Notes', label: 'Remarks', value: user.remarks.trim() });
 
+				const skipWithStatusChoices = ['on_hold', 'completed', 'cancelled'] as const;
+				const allowedSpTransitions = getNextAllowedServingPointStatuses(windowSpStatus);
+				const skipMenuItems =
+					normalizeServingPointStatus(windowSpStatus) === 'running'
+						? skipWithStatusChoices
+								.filter((st) => allowedSpTransitions.includes(st))
+								.map((st) => ({
+									label: `Skip & set counter to ${SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')}`,
+									onClick: () => {
+										void triggerSkipToken(windowRow, { serving_point_status: st });
+									},
+								}))
+						: [];
+
 				return (
 					<Card className='border-0 shadow-sm rounded-4 overflow-hidden'>
 						<CardBody className='p-0'>
@@ -562,18 +591,25 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 												</Tooltip>
 											))}
 											<Tooltip
-												title='Skip this token and advance to the next in line.'
+												title={
+													skipMenuItems.length > 0
+														? 'Skip token: main advances only. Menu skips and sets counter (on hold, completed, or cancelled).'
+														: 'Skip this token and advance to the next in line.'
+												}
 												arrow
 												placement='top'>
 												<span className='d-inline-flex'>
-													<Button
+													<SplitDropdownButton
+														mainLabel='Skip token'
+														mainIcon='SkipNext'
 														color='dark'
-														isLight
-														icon='SkipNext'
+														mainIsLight
+														caretSolid
+														mainTitle='Skip this token and advance (no counter status change).'
 														isDisable={actionLoading === `skip-${windowRow.id}`}
-														onClick={() => void triggerSkipToken(windowRow)}>
-														Skip token
-													</Button>
+														onMainClick={() => void triggerSkipToken(windowRow)}
+														menuItems={skipMenuItems}
+													/>
 												</span>
 											</Tooltip>
 											{visibleTokenActions.length === 0 && (
