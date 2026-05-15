@@ -194,6 +194,8 @@ export interface TokenParentSummary {
 
 export interface Token {
 	id: number;
+	/** Customer-facing token label when provided by the API (e.g. token detail). */
+	token_display?: string | null;
 	token_number: string;
 	token_user?: TokenUser;
 	queue: number | TokenQueueRef;
@@ -262,7 +264,6 @@ export interface PatchTokenPayload {
 	notes?: string | null;
 	priority?: number;
 	is_vip?: boolean;
-	is_priority_queued?: boolean;
 	is_priority_queued?: boolean;
 }
 

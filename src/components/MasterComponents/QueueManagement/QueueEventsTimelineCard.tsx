@@ -71,6 +71,9 @@ const eventActor = (event: QueueEvent): string | null => {
 
 const eventColor = (eventType?: string): TColor => {
 	const s = (eventType || '').toLowerCase();
+	if (s.includes('serving_history_parent')) return 'warning';
+	if (s.includes('serving_history_self')) return 'success';
+	if (s.includes('serving_history_active')) return 'info';
 	if (s.includes('schedule_status')) return 'primary';
 	if (s.includes('serving_point_status')) return 'info';
 	if (s.includes('complet') || s.includes('finish') || s.includes('done')) return 'success';
@@ -86,6 +89,9 @@ const eventColor = (eventType?: string): TColor => {
 
 const eventIcon = (eventType?: string): string => {
 	const s = (eventType || '').toLowerCase();
+	if (s.includes('serving_history_parent')) return 'AccountTree';
+	if (s.includes('serving_history_self')) return 'Monitor';
+	if (s.includes('serving_history_active')) return 'PlayCircle';
 	if (s.includes('schedule_status')) return 'Event';
 	if (s.includes('serving_point_status')) return 'Monitor';
 	if (s.includes('complet') || s.includes('finish') || s.includes('done')) return 'TaskAlt';
@@ -145,7 +151,7 @@ interface EventFeedProps {
 	emptyHelpText?: string;
 }
 
-const EventFeed: React.FC<EventFeedProps> = ({ events, loading, emptyText, emptyHelpText }) => {
+export const EventFeed: React.FC<EventFeedProps> = ({ events, loading, emptyText, emptyHelpText }) => {
 	if (loading) {
 		return (
 			<div className='d-flex align-items-center justify-content-center h-100 min-h-0 py-5 gap-3'>
@@ -244,7 +250,9 @@ const EventFeed: React.FC<EventFeedProps> = ({ events, loading, emptyText, empty
 												<div className='flex-grow-1 min-w-0'>
 													<h6 className='mb-1 fw-semibold text-body lh-sm fs-6'>{title}</h6>
 													{event.description ? (
-														<p className='text-body-secondary small lh-base mb-2 mb-lg-3'>
+														<p
+															className='text-body-secondary small lh-base mb-2 mb-lg-3'
+															style={{ whiteSpace: 'pre-line' }}>
 															{event.description}
 														</p>
 													) : null}
