@@ -3,6 +3,7 @@ import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
+import Nav, { NavItem } from '../../bootstrap/Nav';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown';
@@ -14,6 +15,7 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type PatchTokenUserPayload,
 	type Token,
+	type TokenServingHistory,
 	type TokenUser,
 	tokensApi,
 } from '../../../services/queueManagementApi';
@@ -38,30 +40,100 @@ const displayOrDash = (value: unknown): string => {
 	return String(value);
 };
 
+/** Customer-facing parent token label: `parent_tokens` row where `id === parent_token`, then `token_display` / `token_number`. */
+const resolveParentTokenDisplay = (token: Token): string | null => {
+	if (token.parent_token == null) return null;
+	const row = token.parent_tokens?.find((p) => p.id === token.parent_token);
+	if (!row) return null;
+	if (row.token_display != null && String(row.token_display).trim() !== '')
+		return String(row.token_display).trim();
+	if (row.token_number != null && String(row.token_number).trim() !== '')
+		return String(row.token_number).trim();
+	return null;
+};
+
+const formatParentTokenField = (token: Token): string => {
+	if (token.parent_token == null) return '—';
+	const label = resolveParentTokenDisplay(token);
+	return label != null ? `#${label}` : '—';
+};
+
+const tokenServingHistoryRows = (token: Token): TokenServingHistory[] => {
+	const rows = token.complete_serving_history ?? token.serving_history;
+	return rows?.length ? rows : [];
+};
+
+const servingHistoryEntryEnded = (h: TokenServingHistory): boolean => {
+	if (h.exited_at) return true;
+	if (
+		h.completed_at ||
+		h.cancelled_at ||
+		h.no_show_marked_at ||
+		h.postponed_at ||
+		h.skipped_at
+	)
+		return true;
+	const rel = h.relationship != null && String(h.relationship).trim() !== '';
+	if (rel && h.duration != null && String(h.duration).trim() !== '') return true;
+	return false;
+};
+
 const mapServingHistoryToTimeLineItems = (token: Token): TimeLineStatusItem[] => {
-	const raw = token.serving_history;
-	if (!raw?.length) return [];
+	const raw = tokenServingHistoryRows(token);
+	if (!raw.length) return [];
 	const sorted = [...raw].sort((a, b) => {
 		const ta = a.entered_at ? Date.parse(a.entered_at) : 0;
 		const tb = b.entered_at ? Date.parse(b.entered_at) : 0;
 		return ta - tb;
 	});
 	return sorted.map((h) => {
-		const inProgress = !h.exited_at;
+		const ended = servingHistoryEntryEnded(h);
 		const lines: string[] = [];
-		if (h.exited_at) lines.push(`Exited: ${formatDate(h.exited_at)}`);
-		else lines.push('Still at counter');
+		const rel = h.relationship?.toLowerCase();
+		if (rel === 'parent') {
+			const td = h.token_display?.trim();
+			lines.push(`Parent token${td ? ` #${td}` : ''}`);
+		} else if (rel === 'self') {
+			lines.push('This token');
+		}
+		if (!ended) {
+			lines.push('Still at counter');
+		} else {
+			const endBits: string[] = [];
+			if (h.completed_at) endBits.push(`Completed: ${formatDate(h.completed_at)}`);
+			if (h.cancelled_at) endBits.push(`Cancelled: ${formatDate(h.cancelled_at)}`);
+			if (h.no_show_marked_at) endBits.push(`No-show: ${formatDate(h.no_show_marked_at)}`);
+			if (h.postponed_at) endBits.push(`Postponed: ${formatDate(h.postponed_at)}`);
+			if (h.skipped_at) endBits.push(`Skipped: ${formatDate(h.skipped_at)}`);
+			if (h.exited_at) endBits.push(`Exited: ${formatDate(h.exited_at)}`);
+			if (endBits.length) lines.push(...endBits);
+			else lines.push('Visit ended');
+		}
 		if (h.duration != null && h.duration !== '') lines.push(`Duration: ${h.duration}`);
+		if (h.served_by_username?.trim())
+			lines.push(`Served by: ${h.served_by_username.trim()}`);
+		if (h.completed_by_username?.trim())
+			lines.push(`Completed by: ${h.completed_by_username.trim()}`);
 		lines.push(
 			`Notes: ${h.notes != null && String(h.notes).trim() !== '' ? String(h.notes) : '—'}`,
 		);
+		const statusKey = !ended
+			? 'serving_active'
+			: rel === 'parent'
+				? 'serving_parent'
+				: 'serving_completed';
+		const statusLabel = !ended
+			? 'In progress'
+			: rel === 'parent'
+				? 'Parent token'
+				: 'Completed';
 		return {
 			id: h.id,
 			time: h.entered_at,
 			name: h.serving_point_name?.trim() || `Serving point #${h.serving_point}`,
 			desc: lines.join('\n'),
-			status: inProgress ? 'serving_active' : 'serving_completed',
-			statusLabel: inProgress ? 'In progress' : 'Completed',
+			status: statusKey,
+			statusLabel,
 		};
 	});
 };
@@ -582,7 +654,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		() => (detailToken ? mapServingHistoryToTimeLineItems(detailToken) : []),
 		[detailToken],
 	);
-	const servingHistoryCount = detailToken?.serving_history?.length ?? 0;
+	const servingHistoryCount = detailToken ? tokenServingHistoryRows(detailToken).length : 0;
 
 	if (!id || Number.isNaN(id)) {
 		return <div className='alert alert-warning'>Invalid token user.</div>;
@@ -733,13 +805,15 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 					)}
 					{!detailLoading && detailToken && (
 						<div>
-							<ul className='nav nav-tabs nav-fill mb-3' role='tablist'>
-								<li className='nav-item' role='presentation'>
+							<Nav
+								design='pills'
+								isFill
+								className='mb-3 gap-2'
+								role='tablist'>
+								<NavItem isActive={detailModalTab === 'details'}>
 									<button
 										type='button'
-										className={`nav-link w-100 ${
-											detailModalTab === 'details' ? 'active' : ''
-										}`}
+										className='w-100 text-center'
 										id='token-modal-tab-details'
 										role='tab'
 										aria-selected={detailModalTab === 'details'}
@@ -747,13 +821,11 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 										onClick={() => setDetailModalTab('details')}>
 										Details & parent
 									</button>
-								</li>
-								<li className='nav-item' role='presentation'>
+								</NavItem>
+								<NavItem isActive={detailModalTab === 'serving'}>
 									<button
 										type='button'
-										className={`nav-link w-100 d-inline-flex align-items-center justify-content-center gap-2 ${
-											detailModalTab === 'serving' ? 'active' : ''
-										}`}
+										className='w-100 d-inline-flex align-items-center justify-content-center gap-2'
 										id='token-modal-tab-serving'
 										role='tab'
 										aria-selected={detailModalTab === 'serving'}
@@ -766,8 +838,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 											</span>
 										) : null}
 									</button>
-								</li>
-							</ul>
+								</NavItem>
+							</Nav>
 
 							<div
 								id='token-modal-panel-details'
@@ -794,7 +866,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 											<div className='col-12 col-md-6'>
 												<div className='small text-muted'>Schedule</div>
 												<div className='fw-semibold'>
-													{detailToken.schedule != null ? `#${detailToken.schedule}` : '—'}
+													{detailToken.schedule != null ? `${detailToken.schedule}` : '—'}
 												</div>
 											</div>
 											<div className='col-12 col-md-6'>
@@ -805,16 +877,16 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 													</Badge>
 												</div>
 											</div>
-											<div className='col-12 col-md-6'>
+											{/* <div className='col-12 col-md-6'>
 												<div className='small text-muted'>Created at</div>
 												<div className='fw-semibold'>{formatDate(detailToken.created_at)}</div>
-											</div>
-											<div className='col-12 col-md-6'>
+											</div> */}
+											{/* <div className='col-12 col-md-6'>
 												<div className='small text-muted'>Started serving</div>
 												<div className='fw-semibold'>
 													{formatDate(detailToken.started_serving_at)}
 												</div>
-											</div>
+											</div> */}
 											<div className='col-12 col-md-6'>
 												<div className='small text-muted'>Completed</div>
 												<div className='fw-semibold'>{formatDate(detailToken.completed_at)}</div>
@@ -833,6 +905,14 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 													{displayOrDash(detailToken.service_time)}
 												</div>
 											</div>
+											{detailToken.parent_token != null && (
+												<div className='col-12 col-md-6'>
+													<div className='small text-muted'>Parent token</div>
+													<div className='fw-semibold'>
+														{formatParentTokenField(detailToken)}
+													</div>
+												</div>
+											)}
 											<div className='col-12'>
 												<div className='small text-muted'>Notes</div>
 												<div
@@ -846,76 +926,6 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 										</div>
 									</CardBody>
 								</Card>
-
-								{(detailToken.parent_token != null ||
-									(detailToken.parent_tokens && detailToken.parent_tokens.length > 0)) && (
-									<div className='rounded-3 border bg-light bg-opacity-50 p-3'>
-										<div className='text-muted small text-uppercase fw-semibold mb-3'>
-											Parent lineage
-										</div>
-										<div className='row g-2 align-items-end mb-3'>
-											<div className='col-12 col-sm-6 col-md-4'>
-												<div className='small text-muted'>Parent token</div>
-												<div className='fw-semibold fs-6'>
-													{detailToken.parent_token != null
-														? `#${detailToken.parent_token}`
-														: '—'}
-												</div>
-											</div>
-										</div>
-										{detailToken.parent_tokens && detailToken.parent_tokens.length > 0 ? (
-											<>
-												<div className='small text-muted fw-semibold mb-2'>Parent tokens</div>
-												<div className='table-responsive rounded border bg-white'>
-													<table className='table table-sm table-striped mb-0 align-middle'>
-														<thead className='table-light'>
-															<tr>
-																<th scope='col' className='small text-muted fw-semibold'>
-																	Token
-																</th>
-																<th scope='col' className='small text-muted fw-semibold'>
-																	Status
-																</th>
-																<th scope='col' className='small text-muted fw-semibold'>
-																	Created at
-																</th>
-															</tr>
-														</thead>
-														<tbody>
-															{detailToken.parent_tokens.map((p) => {
-																const display =
-																	p.token_display != null &&
-																	String(p.token_display).trim() !== ''
-																		? String(p.token_display)
-																		: p.token_number != null &&
-																			  String(p.token_number).trim() !== ''
-																			? String(p.token_number)
-																			: '—';
-																return (
-																	<tr key={p.id}>
-																		<td className='fw-semibold'>#{display}</td>
-																		<td>
-																			<Badge
-																				color={statusBadgeColor(
-																					String(p.status),
-																				)}
-																				isLight>
-																				{p.status}
-																			</Badge>
-																		</td>
-																		<td className='text-nowrap'>
-																			{formatDate(p.created_at)}
-																		</td>
-																	</tr>
-																);
-															})}
-														</tbody>
-													</table>
-												</div>
-											</>
-										) : null}
-									</div>
-								)}
 
 								{detailToken.token_user && (
 									<Card shadow='sm' className='mb-0'>
@@ -996,20 +1006,27 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								aria-labelledby='token-modal-tab-serving'
 								hidden={detailModalTab !== 'serving'}
 								className={detailModalTab === 'serving' ? undefined : 'd-none'}>
-								<div className='rounded-3 border p-3 bg-body'>
-									<div className='text-muted small text-uppercase fw-semibold mb-2 d-flex align-items-center gap-2'>
-										<Icon icon='Timeline' className='text-info' />
-										Serving history
-										{servingHistoryCount > 0 ? (
-											<span className='badge bg-info bg-opacity-25 text-info rounded-pill'>
-												{servingHistoryCount}
-											</span>
-										) : null}
-									</div>
-									<ThemeProvider theme={theme}>
-										<TimeLine items={servingHistoryTimeLineItems} />
-									</ThemeProvider>
-								</div>
+								<Card shadow='sm' className='mb-0'>
+									<CardHeader>
+										<CardLabel icon='Timeline' iconColor='info'>
+											<CardTitle
+												tag='h6'
+												className='h6 mb-0 d-flex align-items-center gap-2 flex-wrap'>
+												Serving history
+												{servingHistoryCount > 0 ? (
+													<span className='badge bg-info bg-opacity-25 text-info rounded-pill'>
+														{servingHistoryCount}
+													</span>
+												) : null}
+											</CardTitle>
+										</CardLabel>
+									</CardHeader>
+									<CardBody>
+										<ThemeProvider theme={theme}>
+											<TimeLine items={servingHistoryTimeLineItems} />
+										</ThemeProvider>
+									</CardBody>
+								</Card>
 							</div>
 						</div>
 					)}

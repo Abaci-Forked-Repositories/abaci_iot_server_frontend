@@ -156,9 +156,31 @@ export interface TokenServingHistory {
 	serving_point: number;
 	serving_point_name?: string | null;
 	entered_at: string;
+	/** Legacy responses: end of visit at counter. */
 	exited_at?: string | null;
 	duration?: string | null;
 	notes?: string | null;
+	served_by?: number | null;
+	served_by_username?: string | null;
+	completed_at?: string | null;
+	completed_by?: number | null;
+	completed_by_username?: string | null;
+	no_show_marked_at?: string | null;
+	no_show_marked_by?: number | null;
+	no_show_marked_by_username?: string | null;
+	postponed_at?: string | null;
+	postponed_by?: number | null;
+	postponed_by_username?: string | null;
+	cancelled_at?: string | null;
+	cancelled_by?: number | null;
+	cancelled_by_username?: string | null;
+	skipped_at?: string | null;
+	skipped_by?: number | null;
+	skipped_by_username?: string | null;
+	token_display?: string | null;
+	token_id?: number | null;
+	/** Aggregated history: row is for the viewed token or a linked parent token. */
+	relationship?: 'parent' | 'self' | string | null;
 }
 
 /** Parent chain item on token detail (`GET /api/tokens/{id}/`). */
@@ -194,6 +216,9 @@ export interface Token {
 	notes?: string | null;
 	wait_time?: string;
 	service_time?: string | null;
+	/** Full lineage-aware serving events for token detail (`GET /api/tokens/{id}/`). */
+	complete_serving_history?: TokenServingHistory[] | null;
+	/** Older API shape; prefer `complete_serving_history` when present. */
 	serving_history?: TokenServingHistory[] | null;
 }
 
@@ -228,6 +253,7 @@ export interface PatchTokenUserPayload {
 	age?: number | null;
 	place?: string;
 	remarks?: string;
+	is_priority_queued?: boolean;
 }
 
 /** PATCH /api/tokens/{id}/ — send customer fields under `token_user` like the list/detail response. */
@@ -236,6 +262,7 @@ export interface PatchTokenPayload {
 	notes?: string | null;
 	priority?: number;
 	is_vip?: boolean;
+	is_priority_queued?: boolean;
 	is_priority_queued?: boolean;
 }
 
