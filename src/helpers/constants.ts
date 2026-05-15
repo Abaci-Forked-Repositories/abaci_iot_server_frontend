@@ -342,6 +342,8 @@ export const customStyles = {
 		serving_active: 'info',
 		/** Serving history row: visit ended */
 		serving_completed: 'success',
+		/** Serving history row from a parent token in aggregated history */
+		serving_parent: 'warning',
 	};
 
 	export const getTimeLineColor = (status?: string | null): TColor => {
