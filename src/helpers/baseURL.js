@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://definitely-jimmy-rays-summaries.trycloudflare.com';
+		return 'https://tar-pat-once-fixtures.trycloudflare.com';
 	}
 	return url;
 };
