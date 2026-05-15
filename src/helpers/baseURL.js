@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://tar-pat-once-fixtures.trycloudflare.com';
+		return 'https://shuttle-arrived-starter-intervention.trycloudflare.com';
 	}
 	return url;
 };

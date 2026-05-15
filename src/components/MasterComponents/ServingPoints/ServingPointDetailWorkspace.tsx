@@ -4,6 +4,9 @@ import Card, { CardBody } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
+import ServingPointModal from '../../PageComponents/ServingPoints/ServingPointModal';
+import ServingPointStatusModal from '../../PageComponents/ServingPoints/ServingPointStatusModal';
+import StatusBadge from '../../BadgeWithIcon.jsx';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type ScheduleServingPoint,
@@ -12,7 +15,11 @@ import {
 	queuesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
-import { formatDate, servingPointQueueIds } from '../QueueManagement/queueManagementUtils';
+import {
+	formatDate,
+	getNextAllowedServingPointStatuses,
+	servingPointQueueIds,
+} from '../QueueManagement/queueManagementUtils';
 import QueueEventsTimelineCard from '../QueueManagement/QueueEventsTimelineCard';
 import ServingPointWindowsCalendar from './ServingPointWindowsCalendar';
 
@@ -30,6 +37,8 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 	const [loading, setLoading] = useState(true);
 	const [servingPoint, setServingPoint] = useState<ServingPoint | null>(null);
 	const [windows, setWindows] = useState<ScheduleServingPoint[]>([]);
+	const [showEditModal, setShowEditModal] = useState(false);
+	const [showStatusModal, setShowStatusModal] = useState(false);
 
 	const { showErrorNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -131,13 +140,34 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 									</div>
 								</div>
 							</div>
-							<Button
-								color='dark'
-								isLight
-								icon='ArrowBack'
-								onClick={() => navigate('/serving-points')}>
-								Back to list
-							</Button>
+							<div className='d-flex flex-wrap gap-2'>
+								{servingPoint &&
+									getNextAllowedServingPointStatuses(servingPoint.status).length > 0 && (
+										<Button
+											color='primary'
+											isLight
+											icon='TrackChanges'
+											onClick={() => setShowStatusModal(true)}>
+											Change status
+										</Button>
+									)}
+								{servingPoint && (
+									<Button
+										color='primary'
+										isLight
+										icon='Edit'
+										onClick={() => setShowEditModal(true)}>
+										Edit
+									</Button>
+								)}
+								<Button
+									color='dark'
+									isLight
+									icon='ArrowBack'
+									onClick={() => navigate('/serving-points')}>
+									Back to list
+								</Button>
+							</div>
 						</div>
 					</div>
 
@@ -152,7 +182,14 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 								<div className='fw-semibold text-body'>{assignedUsersLabel}</div>
 							</div>
 							<div className='col-12 col-sm-6 col-md-4'>
-								<div className='small text-muted'>Point status</div>
+								<div className='small text-muted'>Counter status</div>
+								<StatusBadge
+									status={servingPoint?.status}
+									isAvailable={servingPoint?.is_available}
+								/>
+							</div>
+							<div className='col-12 col-sm-6 col-md-4'>
+								<div className='small text-muted'>Listing</div>
 								<Badge color={servingPoint?.is_active ? 'success' : 'secondary'} isLight>
 									{servingPoint?.is_active ? 'Active' : 'Inactive'}
 								</Badge>
@@ -201,6 +238,25 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 				subtitleFallback='Timeline of queue and schedule activity for this serving point.'
 				emptyText='No events found for this serving point'
 				emptyHelpText='Status changes, tokens, and other activity involving this counter will show up here.'
+			/>
+
+			<ServingPointModal
+				isOpen={showEditModal}
+				setIsOpen={setShowEditModal}
+				mode='edit'
+				servingPoint={servingPoint}
+				onSuccess={(updated) => {
+					setServingPoint(updated);
+				}}
+			/>
+
+			<ServingPointStatusModal
+				isOpen={showStatusModal}
+				setIsOpen={setShowStatusModal}
+				servingPoint={servingPoint}
+				onSuccess={(updated) => {
+					setServingPoint(updated);
+				}}
 			/>
 		</div>
 	);

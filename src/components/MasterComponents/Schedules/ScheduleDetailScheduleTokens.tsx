@@ -11,7 +11,7 @@ import Spinner from '../../bootstrap/Spinner';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import { type QueueSchedule, type Token, tokensApi } from '../../../services/queueManagementApi';
-import { formatDate } from '../QueueManagement/queueManagementUtils';
+import { formatDate, getTokenDisplay } from '../QueueManagement/queueManagementUtils';
 
 const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
 
@@ -138,7 +138,11 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 
 	const tokenColumns = useMemo(
 		() => [
-			{ title: 'Token', field: 'token_number' },
+			{
+				title: 'Token',
+				field: 'token_display',
+				render: (rowData: Token) => getTokenDisplay(rowData),
+			},
 			{
 				title: 'Customer',
 				field: 'token_user.name',
@@ -314,7 +318,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 					<form onSubmit={handleSubmitTokenStatus}>
 						<ModalBody>
 							<p className='fw-semibold mb-1'>
-								Token {statusModalToken.token_number}
+								Token {getTokenDisplay(statusModalToken)}
 								{statusModalToken.token_user?.name ? (
 									<span className='text-muted fw-normal'> · {statusModalToken.token_user.name}</span>
 								) : null}

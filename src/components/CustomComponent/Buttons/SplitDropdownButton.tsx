@@ -1,7 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown';
 import Button from '../../bootstrap/Button';
+import { buttonColor } from '../../../helpers/constants';
+import swalFire from '../../../helpers/swalHelper';
 import type { TColor } from '../../../type/color-type';
+import type { TDropdownDirection } from '../../../type/dropdown-type';
 
 export interface SplitDropdownMenuItem {
 	label: string;
@@ -13,13 +16,17 @@ export interface SplitDropdownButtonProps {
 	mainIcon?: string;
 	color?: TColor;
 	mainIsLight?: boolean;
-	/** Solid caret segment (contrast vs light main). Default true. */
-	caretSolid?: boolean;
+	/** Direction the menu opens. Default 'down'. Pass 'up' to open above the button. */
+	dropdownDirection?: TDropdownDirection;
 	isOutline?: boolean;
 	isDisable?: boolean;
 	mainTitle?: string;
 	className?: string;
 	dropdownMenuAlignmentEnd?: boolean;
+	/** When true (default), choosing a menu row opens SweetAlert2 before running `onClick`. Main button is never confirmed. */
+	confirmMenuSelection?: boolean;
+	confirmMenuTitle?: string;
+	confirmMenuText?: string | ((item: SplitDropdownMenuItem) => string);
 	onMainClick: () => void;
 	menuItems: SplitDropdownMenuItem[];
 }
@@ -33,22 +40,47 @@ const SplitDropdownButton: React.FC<SplitDropdownButtonProps> = ({
 	mainIcon,
 	color = 'primary',
 	mainIsLight = true,
-	caretSolid = true,
+	dropdownDirection = 'down',
 	isOutline = false,
 	isDisable = false,
 	mainTitle,
 	className,
 	dropdownMenuAlignmentEnd = true,
+	confirmMenuSelection = true,
+	confirmMenuTitle = 'Confirm action',
+	confirmMenuText,
 	onMainClick,
 	menuItems,
 }) => {
 	const [open, setOpen] = useState(false);
 	const hasMenu = menuItems.length > 0;
 
-	const runMenuItem = useCallback((fn: () => void) => {
-		setOpen(false);
-		fn();
-	}, []);
+	const handleMenuItemClick = useCallback(
+		async (item: SplitDropdownMenuItem) => {
+			setOpen(false);
+			if (!confirmMenuSelection) {
+				item.onClick();
+				return;
+			}
+			const text =
+				typeof confirmMenuText === 'function'
+					? confirmMenuText(item)
+					: (confirmMenuText ?? `Proceed with: ${item.label}?`);
+			const result = await swalFire({
+				title: confirmMenuTitle,
+				text,
+				icon: 'question',
+				showCancelButton: true,
+				iconColor: buttonColor[0],
+				confirmButtonColor: buttonColor[0],
+				cancelButtonColor: buttonColor[1],
+				confirmButtonText: 'Proceed',
+				cancelButtonText: 'Cancel',
+			});
+			if (result.isConfirmed) item.onClick();
+		},
+		[confirmMenuSelection, confirmMenuTitle, confirmMenuText],
+	);
 
 	if (!hasMenu) {
 		return (
@@ -66,10 +98,13 @@ const SplitDropdownButton: React.FC<SplitDropdownButtonProps> = ({
 		);
 	}
 
-	const caretIsLight = caretSolid ? false : mainIsLight;
-
 	return (
-		<Dropdown isButtonGroup className={className} isOpen={open} setIsOpen={setOpen}>
+		<Dropdown
+			isButtonGroup
+			className={className}
+			direction={dropdownDirection}
+			isOpen={open}
+			setIsOpen={setOpen}>
 			<Button
 				color={color}
 				isLight={mainIsLight}
@@ -80,18 +115,22 @@ const SplitDropdownButton: React.FC<SplitDropdownButtonProps> = ({
 				onClick={onMainClick}>
 				{mainLabel}
 			</Button>
-		<DropdownToggle>
-			<Button
-				color={color}
-				isLight={caretIsLight}
-				isOutline={isOutline}
-				isVisuallyHidden
-			/>
-		</DropdownToggle>
+			<DropdownToggle>
+				<Button
+					color={color}
+					isLight={mainIsLight}
+					isOutline={isOutline}
+					isVisuallyHidden
+				/>
+			</DropdownToggle>
 			<DropdownMenu isAlignmentEnd={dropdownMenuAlignmentEnd}>
 				{menuItems.map((item, index) => (
 					<DropdownItem key={`${item.label}-${index}`}>
-						<Button isDisable={isDisable} onClick={() => runMenuItem(item.onClick)}>
+						<Button
+							isDisable={isDisable}
+							onClick={() => {
+								void handleMenuItemClick(item);
+							}}>
 							{item.label}
 						</Button>
 					</DropdownItem>

@@ -60,6 +60,48 @@ export const servingPointAssignedUserIds = (point: ServingPoint): number[] => {
 		.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
 };
 
+/** Customer-facing token label: prefixed `token_display` from API, else raw `token_number`. */
+export const getTokenDisplay = (token: {
+	token_display?: string | null;
+	token_number?: string | number | null;
+}): string => {
+	const display = token.token_display != null ? String(token.token_display).trim() : '';
+	if (display) return display;
+	if (token.token_number != null && String(token.token_number).trim() !== '') {
+		return String(token.token_number);
+	}
+	return '—';
+};
+
+/** Current token label on a schedule row (flat display, nested token, then number/id). */
+export const getScheduleCurrentTokenDisplay = (schedule: {
+	current_token_display?: string | null;
+	current_token_number?: string | null;
+	current_token?: number | Token | null;
+}): string => {
+	const flatDisplay =
+		schedule.current_token_display != null ? String(schedule.current_token_display).trim() : '';
+	if (flatDisplay) return flatDisplay;
+
+	const nested = schedule.current_token;
+	if (
+		nested &&
+		typeof nested === 'object' &&
+		('token_number' in nested || 'token_display' in nested)
+	) {
+		const label = getTokenDisplay(nested);
+		if (label !== '—') return label;
+	}
+
+	if (schedule.current_token_number != null && String(schedule.current_token_number).trim() !== '') {
+		return String(schedule.current_token_number).trim();
+	}
+
+	if (typeof nested === 'number') return String(nested);
+
+	return '—';
+};
+
 /** Same transition rules as queue / schedule serving-point UIs (global counter via `queuesApi.updateServingPoint`). */
 export const normalizeServingPointStatus = (status?: string) =>
 	(status || '').toLowerCase().trim().replace(/\s+/g, '_');

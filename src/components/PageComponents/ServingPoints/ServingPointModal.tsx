@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
+import useToasterNotification from '../../../hooks/useToasterNotification';
+import {
+	type CreateServingPointPayload,
+	type Queue,
+	type ServingPoint,
+	type User,
+	queuesApi,
+	usersApi,
+} from '../../../services/queueManagementApi';
+import {
+	servingPointAssignedUserIds,
+	servingPointQueueIds,
+} from '../../MasterComponents/QueueManagement/queueManagementUtils';
 
 export interface ServingPointFormValues {
 	name: string;
@@ -12,36 +25,154 @@ export interface ServingPointFormValues {
 	assigned_users: number[];
 }
 
-interface ServingPointModalProps {
+export const emptyServingPointForm = (defaultQueueId?: number | null): ServingPointFormValues => ({
+	name: '',
+	queue_ids:
+		defaultQueueId != null && !Number.isNaN(defaultQueueId) && defaultQueueId > 0
+			? [defaultQueueId]
+			: [],
+	description: '',
+	is_active: true,
+	assigned_users: [],
+});
+
+export const servingPointToFormValues = (point: ServingPoint): ServingPointFormValues => ({
+	name: point.name || '',
+	queue_ids: servingPointQueueIds(point),
+	description: point.description || '',
+	is_active: Boolean(point.is_active ?? true),
+	assigned_users: servingPointAssignedUserIds(point),
+});
+
+export interface ServingPointModalProps {
 	isOpen: boolean;
-	setIsOpen: (status: boolean) => void;
+	setIsOpen: (open: boolean) => void;
 	mode?: 'add' | 'edit';
-	form: ServingPointFormValues;
-	setForm: React.Dispatch<React.SetStateAction<ServingPointFormValues>>;
-	queueOptions: Array<{ value: number; label: string }>;
-	selectedQueueOptions: Array<{ value: number; label: string }>;
-	userOptions: Array<{ value: number; label: string }>;
-	selectedUserOptions: Array<{ value: number; label: string }>;
-	isSubmitting?: boolean;
-	onSubmit: () => void;
-	onCancel: () => void;
+	/** When editing, pass the row to pre-fill the form. */
+	servingPoint?: ServingPoint | null;
+	/** Pre-select queue on add (e.g. `?queueId=` on list page). */
+	defaultQueueId?: number | null;
+	onSuccess?: (point: ServingPoint, mode: 'add' | 'edit') => void;
 }
 
 const ServingPointModal: React.FC<ServingPointModalProps> = ({
 	isOpen,
 	setIsOpen,
 	mode = 'add',
-	form,
-	setForm,
-	queueOptions,
-	selectedQueueOptions,
-	userOptions,
-	selectedUserOptions,
-	isSubmitting = false,
-	onSubmit,
-	onCancel,
+	servingPoint = null,
+	defaultQueueId = null,
+	onSuccess,
 }) => {
 	const isEdit = mode === 'edit';
+	const editId = isEdit ? servingPoint?.id : null;
+
+	const [form, setForm] = useState<ServingPointFormValues>(() => emptyServingPointForm(defaultQueueId));
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [optionsLoading, setOptionsLoading] = useState(false);
+	const [queues, setQueues] = useState<Queue[]>([]);
+	const [users, setUsers] = useState<User[]>([]);
+
+	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
+	const errorNotifierRef = useRef(showErrorNotification);
+	useEffect(() => {
+		errorNotifierRef.current = showErrorNotification;
+	}, [showErrorNotification]);
+
+	const loadOptions = useCallback(async () => {
+		setOptionsLoading(true);
+		try {
+			const [queuesRes, usersRes] = await Promise.all([
+				queuesApi.list({ ordering: 'name', page_size: 200 }),
+				usersApi.list({ ordering: 'username', page_size: 300 }),
+			]);
+			setQueues(queuesRes.results || []);
+			setUsers(usersRes.results || []);
+		} catch (err) {
+			errorNotifierRef.current(err);
+		} finally {
+			setOptionsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		void loadOptions();
+		if (isEdit && servingPoint) {
+			setForm(servingPointToFormValues(servingPoint));
+		} else {
+			setForm(emptyServingPointForm(defaultQueueId));
+		}
+	}, [isOpen, isEdit, servingPoint, defaultQueueId, loadOptions]);
+
+	const queueOptions = useMemo(
+		() => queues.map((q) => ({ value: q.id, label: q.name })),
+		[queues],
+	);
+
+	const userOptions = useMemo(
+		() =>
+			users.map((user) => ({
+				value: user.id,
+				label: user.username || user.email || `User ${user.id}`,
+			})),
+		[users],
+	);
+
+	const selectedQueueOptions = useMemo(
+		() => queueOptions.filter((o) => form.queue_ids.includes(o.value)),
+		[form.queue_ids, queueOptions],
+	);
+
+	const selectedUserOptions = useMemo(
+		() => userOptions.filter((o) => form.assigned_users.includes(o.value)),
+		[form.assigned_users, userOptions],
+	);
+
+	const handleClose = useCallback(() => {
+		setIsOpen(false);
+	}, [setIsOpen]);
+
+	const handleSubmit = async () => {
+		if (!form.name.trim()) {
+			showNotification('Error', 'Serving point name is required.', 'danger');
+			return;
+		}
+		if (isEdit && !editId) {
+			showErrorNotification('Serving point could not be identified for update.');
+			return;
+		}
+
+		setIsSubmitting(true);
+		try {
+			if (isEdit && editId) {
+				const updated = await queuesApi.updateServingPoint(editId, {
+					name: form.name.trim(),
+					queue: form.queue_ids,
+					description: form.description.trim() || undefined,
+					is_active: form.is_active,
+					assigned_users: form.assigned_users,
+				});
+				showSuccessNotification('Serving point updated successfully.');
+				onSuccess?.(updated, 'edit');
+			} else {
+				const payload: CreateServingPointPayload = {
+					name: form.name.trim(),
+					queue: form.queue_ids,
+					description: form.description.trim() || undefined,
+					is_active: form.is_active,
+					assigned_users: form.assigned_users,
+				};
+				const created = await queuesApi.createServingPoint(payload);
+				showSuccessNotification('Serving point created successfully.');
+				onSuccess?.(created, 'add');
+			}
+			handleClose();
+		} catch (err) {
+			showErrorNotification(err);
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered size='lg' isAnimation={false}>
@@ -53,9 +184,12 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 			<form
 				onSubmit={(event) => {
 					event.preventDefault();
-					onSubmit();
+					void handleSubmit();
 				}}>
 				<ModalBody>
+					{optionsLoading && queues.length === 0 ? (
+						<div className='text-muted small py-2'>Loading form options…</div>
+					) : null}
 					<div className='row g-3'>
 						<div className='col-12'>
 							<label className='form-label fw-semibold' htmlFor='sp-name'>
@@ -68,6 +202,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 								onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
 								placeholder='Enter serving point name'
 								required
+								disabled={isSubmitting}
 							/>
 						</div>
 						<div className='col-md-6'>
@@ -92,6 +227,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 									type='checkbox'
 									id='sp-active'
 									checked={form.is_active}
+									disabled={isSubmitting}
 									onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
 								/>
 								<label className='form-check-label fw-semibold' htmlFor='sp-active'>
@@ -123,6 +259,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 								className='form-control'
 								rows={3}
 								value={form.description}
+								disabled={isSubmitting}
 								onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
 								placeholder='Short description'
 							/>
@@ -130,10 +267,10 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 					</div>
 				</ModalBody>
 				<ModalFooter>
-					<Button color='light' isLight onClick={onCancel}>
+					<Button color='light' isLight type='button' isDisable={isSubmitting} onClick={handleClose}>
 						Cancel
 					</Button>
-					<Button color='primary' type='submit' isDisable={isSubmitting}>
+					<Button color='primary' type='submit' isDisable={isSubmitting || optionsLoading}>
 						{isSubmitting ? (
 							<>
 								<Spinner isSmall inButton />

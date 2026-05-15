@@ -1,21 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Queue, QueueGroup } from '../../../services/queueManagementApi';
+import type { Queue } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
 import { Col, Row } from 'reactstrap';
 import QueueManagementSkeleton from '../../CustomComponent/Skeleton/QueueManagementSkeleton';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import QueueCardTile from './QueueCardTile';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
-import QueueGroupTabContent from './QueueGroupTabContent';
 import { getErrorMessage } from './queueManagementUtils';
+
+const QUEUE_LIST_LIMIT = 12;
 
 export interface QueuesTabContentProps {
 	searchTerm: string;
-	displayMode: 'queues' | 'groups';
 	selectedGroupFilter: QueueGroupFilterValue;
-	onGroupFilterChange: (value: QueueGroupFilterValue) => void;
-	onQueueGroupCardSelect: (groupId: number) => void;
 	refreshKey?: number;
 	onEditQueue: (queue: Queue) => void;
 	onToggleQueue: (queue: Queue) => void;
@@ -24,10 +22,7 @@ export interface QueuesTabContentProps {
 
 const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	searchTerm,
-	displayMode,
 	selectedGroupFilter,
-	onGroupFilterChange,
-	onQueueGroupCardSelect,
 	refreshKey,
 	onEditQueue,
 	onToggleQueue,
@@ -35,13 +30,9 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 }) => {
 	const navigate = useNavigate();
 	const [queues, setQueues] = useState<Queue[]>([]);
-	const [groups, setGroups] = useState<QueueGroup[]>([]);
-	const [queuePage, setQueuePage] = useState(1);
-	const [groupPage, setGroupPage] = useState(1);
+	const queueOffsetRef = useRef(0);
 	const [hasMoreQueues, setHasMoreQueues] = useState(true);
-	const [hasMoreGroups, setHasMoreGroups] = useState(true);
 	const [isLoadingMoreQueues, setIsLoadingMoreQueues] = useState(false);
-	const [isLoadingMoreGroups, setIsLoadingMoreGroups] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [error, setError] = useState('');
 	const { showErrorNotification } = useToasterNotification();
@@ -52,95 +43,49 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 		setError('');
 	}, [error, showErrorNotification]);
 
-	const loadGroups = useCallback(
-		async (reset = true) => {
-			const requestedPage = reset ? 1 : groupPage;
-			try {
-				if (!reset) setIsLoadingMoreGroups(true);
-				const response = await queuesApi.groups({
-					search: searchTerm || undefined,
-					ordering: 'name',
-					page: requestedPage,
-					page_size: 12,
-				});
-				const incomingRows = response.results || [];
-				setGroups((prev) => (reset ? incomingRows : [...prev, ...incomingRows]));
-				setHasMoreGroups(Boolean(response.next));
-				setGroupPage(reset ? 2 : requestedPage + 1);
-			} catch (err) {
-				setError(getErrorMessage(err));
-			} finally {
-				if (!reset) setIsLoadingMoreGroups(false);
-			}
-		},
-		[groupPage, searchTerm],
-	);
-
 	const loadQueues = useCallback(
 		async (reset = true) => {
-			const requestedPage = reset ? 1 : queuePage;
+			const offset = reset ? 0 : queueOffsetRef.current;
 			try {
 				if (!reset) setIsLoadingMoreQueues(true);
-				if (selectedGroupFilter === 'ungrouped' && reset) {
-					const response = await queuesApi.list({
-						search: searchTerm || undefined,
-						ordering: 'name',
-						page: 1,
-						page_size: 200,
-					});
-					const incomingRows = (response.results || []).filter((q) => q.group == null);
-					setQueues(incomingRows);
-					setHasMoreQueues(false);
-					setQueuePage(2);
-					return;
-				}
 				const response = await queuesApi.list({
 					search: searchTerm || undefined,
-					ordering: 'name',
-					page: requestedPage,
-					page_size: 12,
+					limit: QUEUE_LIST_LIMIT,
+					offset,
 					group: typeof selectedGroupFilter === 'number' ? selectedGroupFilter : undefined,
 				});
-				const incomingRows = response.results || [];
+				const pageRows = response.results || [];
+				const incomingRows =
+					selectedGroupFilter === 'ungrouped'
+						? pageRows.filter((q) => q.group == null)
+						: pageRows;
+				const nextOffset = offset + pageRows.length;
 				setQueues((prev) => (reset ? incomingRows : [...prev, ...incomingRows]));
-				setHasMoreQueues(Boolean(response.next));
-				setQueuePage(reset ? 2 : requestedPage + 1);
+				queueOffsetRef.current = nextOffset;
+				setHasMoreQueues(nextOffset < (response.count ?? nextOffset));
 			} catch (err) {
 				setError(getErrorMessage(err));
 			} finally {
 				if (!reset) setIsLoadingMoreQueues(false);
 			}
 		},
-		[queuePage, searchTerm, selectedGroupFilter],
+		[searchTerm, selectedGroupFilter],
 	);
 
 	useEffect(() => {
 		let isMounted = true;
 		const run = async () => {
+			queueOffsetRef.current = 0;
 			setInitialLoading(true);
 			setError('');
-			if (displayMode === 'groups') {
-				await loadGroups(true);
-			} else {
-				await Promise.all([loadQueues(true), loadGroups(true)]);
-			}
+			await loadQueues(true);
 			if (isMounted) setInitialLoading(false);
 		};
 		void run();
 		return () => {
 			isMounted = false;
 		};
-	}, [displayMode, searchTerm, selectedGroupFilter, refreshKey, loadGroups, loadQueues]);
-
-	const queueCountsByGroup = useMemo(() => {
-		const map = new Map<number, number>();
-		for (const q of queues) {
-			if (typeof q.group === 'number') {
-				map.set(q.group, (map.get(q.group) || 0) + 1);
-			}
-		}
-		return map;
-	}, [queues]);
+	}, [searchTerm, selectedGroupFilter, refreshKey, loadQueues]);
 
 	const handleScroll = useCallback(
 		(event: React.UIEvent<HTMLDivElement>) => {
@@ -155,69 +100,36 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 		},
 		[hasMoreQueues, isLoadingMoreQueues, loadQueues],
 	);
-	const handleGroupScroll = useCallback(
-		(event: React.UIEvent<HTMLDivElement>) => {
-			if (isLoadingMoreGroups || !hasMoreGroups) {
-				return;
-			}
-			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-			const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
-			if (isNearBottom) {
-				void loadGroups(false);
-			}
-		},
-		[hasMoreGroups, isLoadingMoreGroups, loadGroups],
-	);
+
+	if (initialLoading) {
+		return <QueueManagementSkeleton count={8} />;
+	}
 
 	return (
-		<div>
-			{initialLoading ? (
-				<QueueManagementSkeleton count={8} />
-			) : displayMode === 'groups' ? (
-				<div>
-					<div className='queue-cards-scroll' onScroll={handleGroupScroll}>
-						<QueueGroupTabContent
-							groups={groups}
-							queueCountsByGroup={queueCountsByGroup}
-							selectedGroupFilter={selectedGroupFilter}
-							onGroupSelect={onQueueGroupCardSelect}
+		<div className='queue-cards-scroll' onScroll={handleScroll}>
+			<Row className='g-3 mx-0'>
+				{queues.map((queue) => (
+					<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
+						<QueueCardTile
+							queue={queue}
+							groupName={queue.group_name || queue.group || '-'}
+							selected={false}
+							onSelect={(id) => navigate(`/queue-management/${id}`)}
+							onEditQueue={onEditQueue}
+							onToggleQueue={onToggleQueue}
+							isActionLoading={isQueueActionLoading(queue.id)}
 						/>
-						{isLoadingMoreGroups && (
-							<div className='py-3'>
-								<QueueManagementSkeleton count={4} />
-							</div>
-						)}
-					</div>
-				</div>
-			) : (
-				<div>
-					<div className='queue-cards-scroll' onScroll={handleScroll}>
-						<Row className='g-3 mx-0'>
-							{queues.map((queue) => (
-								<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
-									<QueueCardTile
-										queue={queue}
-										groupName={groups.find((group) => group.id === queue.group)?.name || queue.group || '-'}
-										selected={false}
-										onSelect={(id) => navigate(`/queue-management/${id}`)}
-										onEditQueue={onEditQueue}
-										onToggleQueue={onToggleQueue}
-										isActionLoading={isQueueActionLoading(queue.id)}
-									/>
-								</Col>
-							))}
-							{!queues.length && (
-								<Col xs={12} className='text-center text-muted py-4'>
-									No queues found for this filter.
-								</Col>
-							)}
-						</Row>
-						{isLoadingMoreQueues && (
-							<div className='py-3'>
-								<QueueManagementSkeleton count={4} />
-							</div>
-						)}
-					</div>
+					</Col>
+				))}
+				{!queues.length && (
+					<Col xs={12} className='text-center text-muted py-4'>
+						No queues found for this filter.
+					</Col>
+				)}
+			</Row>
+			{isLoadingMoreQueues && (
+				<div className='py-3'>
+					<QueueManagementSkeleton count={4} />
 				</div>
 			)}
 		</div>

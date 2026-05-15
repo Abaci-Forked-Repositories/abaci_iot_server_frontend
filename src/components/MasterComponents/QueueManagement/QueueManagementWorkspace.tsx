@@ -4,20 +4,20 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import SearchComponent from '../../SearchComponent';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
-import type { Queue, ServingPoint } from '../../../services/queueManagementApi';
+import type { Queue } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import QueueFormModal from '../../PageComponents/QueueManagement/QueueFormModal';
 import QueuesTabContent from './QueuesTabContent';
+import QueueGroupTabContent from './QueueGroupTabContent';
 
 const QueueManagementWorkspace: React.FC = () => {
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
 
-	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
 	const [queueSearch, setQueueSearch] = useState('');
 	const [queueDisplayMode, setQueueDisplayMode] = useState<'queues' | 'groups'>('queues');
 	const [queueRefreshKey, setQueueRefreshKey] = useState(0);
@@ -47,34 +47,6 @@ const QueueManagementWorkspace: React.FC = () => {
 		showSuccessNotification(success);
 		setSuccess('');
 	}, [showSuccessNotification, success]);
-
-	useEffect(() => {
-		let cancelled = false;
-		const loadServingPoints = async () => {
-			try {
-				const res = await queuesApi.servingPoints({
-					ordering: 'name',
-					page: 1,
-					page_size: 500,
-				});
-				if (!cancelled) {
-					setServingPoints(res.results || []);
-				}
-			} catch {
-				/* optional for create-queue modal */
-			}
-		};
-		void loadServingPoints();
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
-	useEffect(() => {
-		if (queueDisplayMode === 'groups') {
-			setQueueRefreshKey((v) => v + 1);
-		}
-	}, [queueDisplayMode]);
 
 	const runAction = async (key: string, action: () => Promise<unknown>, message: string) => {
 		setActionLoading(key);
@@ -170,20 +142,26 @@ const QueueManagementWorkspace: React.FC = () => {
 				</CardActions>
 			</CardHeader>
 			<CardBody>
-				<QueuesTabContent
-					searchTerm={queueSearch}
-					displayMode={queueDisplayMode}
-					selectedGroupFilter={queueGroupFilter}
-					onGroupFilterChange={handleQueueGroupFilterChange}
-					onQueueGroupCardSelect={(groupId) => {
-						setQueueDisplayMode('queues');
-						handleQueueGroupFilterChange(groupId);
-					}}
-					refreshKey={queueRefreshKey}
-					onEditQueue={handleOpenEditQueue}
-					onToggleQueue={handleToggleQueue}
-					isQueueActionLoading={(id) => actionLoading === `queue-${id}`}
-				/>
+				{queueDisplayMode === 'groups' ? (
+					<QueueGroupTabContent
+						searchTerm={queueSearch}
+						selectedGroupFilter={queueGroupFilter}
+						refreshKey={queueRefreshKey}
+						onGroupSelect={(groupId) => {
+							setQueueDisplayMode('queues');
+							handleQueueGroupFilterChange(groupId);
+						}}
+					/>
+				) : (
+					<QueuesTabContent
+						searchTerm={queueSearch}
+						selectedGroupFilter={queueGroupFilter}
+						refreshKey={queueRefreshKey}
+						onEditQueue={handleOpenEditQueue}
+						onToggleQueue={handleToggleQueue}
+						isQueueActionLoading={(id) => actionLoading === `queue-${id}`}
+					/>
+				)}
 			</CardBody>
 			<QueueFormModal
 				isOpen={showQueueModal}
@@ -193,7 +171,6 @@ const QueueManagementWorkspace: React.FC = () => {
 				}}
 				mode={editQueueId != null ? 'edit' : 'add'}
 				editQueueId={editQueueId}
-				servingPoints={servingPoints}
 				onSaved={() => setQueueRefreshKey((v) => v + 1)}
 			/>
 		</Card>

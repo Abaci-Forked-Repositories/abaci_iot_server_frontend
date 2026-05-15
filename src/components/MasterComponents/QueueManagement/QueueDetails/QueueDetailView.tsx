@@ -345,7 +345,6 @@ const QueueDetailView: React.FC = () => {
 				setIsOpen={setShowQueueEditModal}
 				mode='edit'
 				editQueueId={showQueueEditModal && id ? id : null}
-				servingPoints={[]}
 				onSaved={() => void load()}
 			/>
 		</div>

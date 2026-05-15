@@ -1,12 +1,11 @@
-import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
 import Card, { CardBody } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import SplitDropdownButton from '../../CustomComponent/Buttons/SplitDropdownButton';
-import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
-import Spinner from '../../bootstrap/Spinner';
+import ServingPointStatusModal from '../../PageComponents/ServingPoints/ServingPointStatusModal';
 import Icon from '../../icon/Icon';
 import StatusBadge from '../../BadgeWithIcon.jsx';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -23,10 +22,10 @@ import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import {
 	formatDate,
 	getNextAllowedServingPointStatuses,
+	getTokenDisplay,
 	getWindowServingPointStatus,
 	isServingWindowEndInFuture,
 	normalizeServingPointStatus,
-	SP_STATUS_COLORS,
 	SP_STATUS_LABELS,
 	servingPointQueueIds,
 } from '../QueueManagement/queueManagementUtils';
@@ -44,16 +43,27 @@ export type ServingWindowNavState = {
 
 const getCurrentToken = (row: ScheduleServingPoint): Token | null => {
 	const nested = row.current_token;
-	if (nested && typeof nested === 'object' && nested !== null && 'token_number' in nested) {
+	if (
+		nested &&
+		typeof nested === 'object' &&
+		nested !== null &&
+		('token_number' in nested || 'token_display' in nested)
+	) {
 		return nested as Token;
 	}
 	return null;
 };
 
-const getWindowCurrentTokenNumber = (row: ScheduleServingPoint): string | null => {
+/** Customer-facing label for the window’s current token (`token_display` preferred). */
+const getWindowCurrentTokenDisplay = (row: ScheduleServingPoint): string | null => {
 	const t = getCurrentToken(row);
-	if (t?.token_number) return t.token_number;
-	if (row.current_token_number) return row.current_token_number;
+	if (t) {
+		const label = getTokenDisplay(t);
+		if (label !== '—') return label;
+	}
+	if (row.current_token_number != null && String(row.current_token_number).trim() !== '') {
+		return String(row.current_token_number).trim();
+	}
 	const nested = row.current_token;
 	if (typeof nested === 'number') return String(nested);
 	return null;
@@ -88,9 +98,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const [windowRow, setWindowRow] = useState<ScheduleServingPoint | null>(null);
 	const [servingPoint, setServingPoint] = useState<ServingPoint | null>(null);
 	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
-	const [statusModalWindow, setStatusModalWindow] = useState<ScheduleServingPoint | null>(null);
-	const [statusFormValue, setStatusFormValue] = useState('');
-	const [statusSaving, setStatusSaving] = useState(false);
+	const [showStatusModal, setShowStatusModal] = useState(false);
 
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -133,37 +141,6 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
-
-	useEffect(() => {
-		if (!statusModalWindow) return;
-		const allowed = getNextAllowedServingPointStatuses(getWindowServingPointStatus(statusModalWindow));
-		setStatusFormValue(allowed[0] ?? '');
-	}, [statusModalWindow]);
-
-	const handleSubmitServingPointStatus = useCallback(
-		async (e: FormEvent<HTMLFormElement>) => {
-			e.preventDefault();
-			if (!statusModalWindow?.serving_point) return;
-			const current = getWindowServingPointStatus(statusModalWindow);
-			const allowed = getNextAllowedServingPointStatuses(current);
-			if (!statusFormValue || !allowed.includes(statusFormValue)) {
-				showErrorNotification('Selected status transition is not allowed.');
-				return;
-			}
-			setStatusSaving(true);
-			try {
-				await queuesApi.updateServingPoint(statusModalWindow.serving_point, { status: statusFormValue });
-				showSuccessNotification('Serving point status updated successfully.');
-				setStatusModalWindow(null);
-				await load();
-			} catch (err) {
-				showErrorNotification(err);
-			} finally {
-				setStatusSaving(false);
-			}
-		},
-		[statusModalWindow, statusFormValue, load, showErrorNotification, showSuccessNotification],
-	);
 
 	const backTarget = useMemo(() => {
 		if (scheduleEntryPath) {
@@ -254,15 +231,33 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const triggerWindowAction = async (
 		row: ScheduleServingPoint,
 		action: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone',
+		opts?: { serving_point_status?: string },
 	) => {
 		setActionLoading(`${action}-${row.id}`);
+		const apiOpts = opts?.serving_point_status?.trim()
+			? { serving_point_status: opts.serving_point_status.trim() }
+			: undefined;
 		try {
 			if (action === 'start') await scheduleServingPointsApi.startServing(row.id);
-			if (action === 'complete') await scheduleServingPointsApi.complete(row.id);
-			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id);
-			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id);
-			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id);
-			showSuccessNotification('Window token updated successfully.');
+			if (action === 'complete') await scheduleServingPointsApi.complete(row.id, apiOpts);
+			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, apiOpts);
+			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, apiOpts);
+			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id, apiOpts);
+			const st = opts?.serving_point_status?.trim();
+			if (st) {
+				const slab = SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ');
+				const prefix =
+					action === 'complete'
+						? 'Service completed'
+						: action === 'cancel'
+							? 'Token cancelled'
+							: action === 'no_show'
+								? 'No show recorded'
+								: 'Token postponed';
+				showSuccessNotification(`${prefix}; counter set to ${slab}.`);
+			} else {
+				showSuccessNotification('Window token updated successfully.');
+			}
 			await load();
 		} catch (err) {
 			showErrorNotification(err);
@@ -347,7 +342,6 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				icon: 'Cancel',
 				color: 'danger',
 				show: allowed.canCancel,
-				outline: true,
 				tooltip: 'Cancel this token at this window.',
 			},
 		];
@@ -407,7 +401,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 																isLight
 																size='sm'
 																icon='Edit'
-																onClick={() => setStatusModalWindow(windowRow)}
+																onClick={() => setShowStatusModal(true)}
 															>
 																Change status
 															</Button>
@@ -501,7 +495,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			</Card>
 
 			{!loading && windowRow && (() => {
-				const tokenNo = getWindowCurrentTokenNumber(windowRow);
+				const tokenDisplay = getWindowCurrentTokenDisplay(windowRow);
 				const token = getCurrentToken(windowRow);
 				const tokStatus = getWindowCurrentTokenStatusRaw(windowRow);
 				const user = token?.token_user;
@@ -515,24 +509,47 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				if (user?.remarks?.trim())
 					detailRows.push({ icon: 'Notes', label: 'Remarks', value: user.remarks.trim() });
 
-				const skipWithStatusChoices = ['on_hold', 'completed', 'cancelled'] as const;
+				const spStatusMenuChoices = ['on_hold', 'completed', 'cancelled'] as const;
 				const allowedSpTransitions = getNextAllowedServingPointStatuses(windowSpStatus);
-				const skipMenuItems =
-					normalizeServingPointStatus(windowSpStatus) === 'running'
-						? skipWithStatusChoices
+				const showCounterStatusMenu = normalizeServingPointStatus(windowSpStatus) === 'running';
+
+				const skipMenuItems = showCounterStatusMenu
+					? spStatusMenuChoices
+							.filter((st) => allowedSpTransitions.includes(st))
+							.map((st) => ({
+								label: `Skip & set counter to ${SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')}`,
+								onClick: () => {
+									void triggerSkipToken(windowRow, { serving_point_status: st });
+								},
+							}))
+					: [];
+
+				type TokenSplitActionKey = 'complete' | 'cancel' | 'no_show' | 'postpone';
+				const tokenActionMenuVerb: Record<TokenSplitActionKey, string> = {
+					complete: 'Complete',
+					cancel: 'Cancel token',
+					no_show: 'No show',
+					postpone: 'Postpone',
+				};
+
+				const tokenActionStatusMenuItems = (action: TokenSplitActionKey) =>
+					showCounterStatusMenu
+						? spStatusMenuChoices
 								.filter((st) => allowedSpTransitions.includes(st))
 								.map((st) => ({
-									label: `Skip & set counter to ${SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')}`,
+									label: `${tokenActionMenuVerb[action]} & set counter to ${
+										SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')
+									}`,
 									onClick: () => {
-										void triggerSkipToken(windowRow, { serving_point_status: st });
+										void triggerWindowAction(windowRow, action, { serving_point_status: st });
 									},
 								}))
 						: [];
 
 				return (
-					<Card className='border-0 shadow-sm rounded-4 overflow-hidden'>
+					<Card className='border-0 shadow-sm rounded-4 overflow-visible'>
 						<CardBody className='p-0'>
-							{!tokenNo ? (
+							{!tokenDisplay ? (
 								<div className='text-muted p-4 p-lg-5 d-flex align-items-center gap-4'>
 									<div className='queue-modern-card__icon-box flex-shrink-0 rounded-3 opacity-75'>
 										<Icon icon='ConfirmationNumber' className='queue-modern-card__icon' />
@@ -552,7 +569,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 									</div>
 									<div className='row g-4 align-items-start'>
 										<div className='col-12 col-lg-6'>
-											<div className='display-5 fw-bold text-primary lh-sm mb-1'>#{tokenNo}</div>
+											<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
 											{user?.name?.trim() ? (
 												<div className='fs-4 fw-semibold text-body-emphasis mb-3'>{user.name.trim()}</div>
 											) : null}
@@ -575,21 +592,56 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 											)}
 										</div>
 										<div className='col-12 col-lg-6 d-flex flex-wrap align-items-start gap-2 pt-lg-1'>
-											{visibleTokenActions.map((a) => (
-												<Tooltip key={a.key} title={a.tooltip} arrow placement='top'>
-													<span className='d-inline-flex'>
-														<Button
-															color={a.color}
-															isOutline={Boolean(a.outline)}
-															isLight={!a.outline}
-															icon={a.icon}
-															isDisable={actionLoading === `${a.key}-${windowRow.id}`}
-															onClick={() => void triggerWindowAction(windowRow, a.key)}>
-															{a.label}
-														</Button>
-													</span>
-												</Tooltip>
-											))}
+											{visibleTokenActions.map((a) => {
+												if (a.key === 'start') {
+													return (
+														<Tooltip key={a.key} title={a.tooltip} arrow placement='top'>
+															<span className='d-inline-flex'>
+																<Button
+																	color={a.color}
+																	isOutline={Boolean(a.outline)}
+																	isLight={!a.outline}
+																	icon={a.icon}
+																	isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+																	onClick={() => void triggerWindowAction(windowRow, a.key)}>
+																	{a.label}
+																</Button>
+															</span>
+														</Tooltip>
+													);
+												}
+												const statusMenuItems = tokenActionStatusMenuItems(a.key);
+												return (
+													<Tooltip
+														key={a.key}
+														title={
+															statusMenuItems.length > 0
+																? `${a.tooltip} Use the menu to perform the same action and set the counter (on hold, completed, or cancelled).`
+																: a.tooltip
+														}
+														arrow
+														placement='top'>
+														<span className='d-inline-flex'>
+															<SplitDropdownButton
+																mainLabel={a.label}
+																mainIcon={a.icon}
+																color={a.color}
+																mainIsLight={!a.outline}
+																isOutline={Boolean(a.outline)}
+																dropdownDirection='down'
+																mainTitle={
+																	statusMenuItems.length > 0
+																		? `${String(a.label)} only (counter status unchanged).`
+																		: undefined
+																}
+																isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+																onMainClick={() => void triggerWindowAction(windowRow, a.key)}
+																menuItems={statusMenuItems}
+															/>
+														</span>
+													</Tooltip>
+												);
+											})}
 											<Tooltip
 												title={
 													skipMenuItems.length > 0
@@ -604,7 +656,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 														mainIcon='SkipNext'
 														color='dark'
 														mainIsLight
-														caretSolid
+														dropdownDirection='down'
 														mainTitle='Skip this token and advance (no counter status change).'
 														isDisable={actionLoading === `skip-${windowRow.id}`}
 														onMainClick={() => void triggerSkipToken(windowRow)}
@@ -626,91 +678,16 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				);
 			})()}
 
-			<Modal
-				isOpen={statusModalWindow != null}
-				setIsOpen={(open) => {
-					if (!open) setStatusModalWindow(null);
+			<ServingPointStatusModal
+				isOpen={showStatusModal}
+				setIsOpen={setShowStatusModal}
+				servingPoint={servingPoint}
+				helperText="This updates the counter's status everywhere it is used, not only this schedule window."
+				onSuccess={async (updated) => {
+					setServingPoint(updated);
+					await load();
 				}}
-				isCentered
-				size='sm'
-				isAnimation={false}>
-				<ModalHeader
-					setIsOpen={(open) => {
-						if (!open) setStatusModalWindow(null);
-					}}>
-					<ModalTitle id='serving-window-detail-sp-status-modal'>Update serving point status</ModalTitle>
-				</ModalHeader>
-				{statusModalWindow && (
-					<form onSubmit={handleSubmitServingPointStatus}>
-						<ModalBody>
-							<p className='fw-semibold mb-1'>
-								{statusModalWindow.serving_point_name ||
-									`Serving Point #${statusModalWindow.serving_point}`}
-							</p>
-							<p className='text-muted small mb-3 lh-base'>
-								This updates the counter&apos;s status everywhere it is used, not only this schedule
-								window.
-							</p>
-							<div className='d-flex align-items-center gap-2 mb-3 flex-wrap'>
-								<span className='text-muted small'>Current status</span>
-								{getWindowServingPointStatus(statusModalWindow) ? (
-									<StatusBadge status={getWindowServingPointStatus(statusModalWindow)!} />
-								) : (
-									<span className='fw-semibold'>—</span>
-								)}
-							</div>
-							<label className='form-label fw-semibold' htmlFor='serving-window-sp-next-status'>
-								Change to
-							</label>
-							<select
-								id='serving-window-sp-next-status'
-								className='form-select'
-								value={statusFormValue}
-								disabled={statusSaving}
-								onChange={(e) => setStatusFormValue(e.target.value)}>
-								{getNextAllowedServingPointStatuses(getWindowServingPointStatus(statusModalWindow)).map(
-									(v) => (
-										<option key={v} value={v}>
-											{SP_STATUS_LABELS[v] ?? v.replace(/_/g, ' ')}
-										</option>
-									),
-								)}
-							</select>
-							{getNextAllowedServingPointStatuses(getWindowServingPointStatus(statusModalWindow)).length ===
-								0 && (
-								<div className='text-muted small mt-2'>No status transitions available.</div>
-							)}
-						</ModalBody>
-						<ModalFooter>
-							<Button
-								color='light'
-								isLight
-								type='button'
-								isDisable={statusSaving}
-								onClick={() => setStatusModalWindow(null)}>
-								Cancel
-							</Button>
-							<Button
-								color={SP_STATUS_COLORS[statusFormValue] ?? 'primary'}
-								type='submit'
-								isDisable={
-									statusSaving ||
-									getNextAllowedServingPointStatuses(getWindowServingPointStatus(statusModalWindow))
-										.length === 0
-								}>
-								{statusSaving ? (
-									<>
-										<Spinner isSmall inButton />
-										Updating…
-									</>
-								) : (
-									`Set ${SP_STATUS_LABELS[statusFormValue] ?? statusFormValue}`
-								)}
-							</Button>
-						</ModalFooter>
-					</form>
-				)}
-			</Modal>
+			/>
 		</div>
 	);
 };

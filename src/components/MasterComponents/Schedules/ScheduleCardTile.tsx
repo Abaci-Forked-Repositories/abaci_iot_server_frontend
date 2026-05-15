@@ -73,13 +73,6 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 			</div>
 
 			<div className='schedule-tile__footer'>
-				{schedule.current_token_number != null && schedule.current_token_number !== '' && (
-					<div className='schedule-tile__chip'>
-						<Icon icon='ConfirmationNumber' size='sm' />
-						<span>Now</span>
-						<span className='schedule-tile__chip-value'>{schedule.current_token_number}</span>
-					</div>
-				)}
 				{schedule.limit != null && (
 					<div className='schedule-tile__chip'>
 						<Icon icon='FormatListNumbered' size='sm' />

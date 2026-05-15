@@ -19,7 +19,7 @@ import {
 	tokensApi,
 } from '../../../services/queueManagementApi';
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
-import { formatDate } from '../QueueManagement/queueManagementUtils';
+import { formatDate, getScheduleCurrentTokenDisplay } from '../QueueManagement/queueManagementUtils';
 import ScheduleDetailServingPoints from './ScheduleDetailServingPoints';
 import ScheduleDetailScheduleTokens from './ScheduleDetailScheduleTokens';
 import ScheduleDetailEventsPanel from './ScheduleDetailEventsPanel';
@@ -178,6 +178,11 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const reportedTokenCount = useMemo(
 		() => tokens.filter((t) => t.status === 'reported').length,
 		[tokens],
+	);
+
+	const currentTokenDisplay = useMemo(
+		() => (scheduleRecord ? getScheduleCurrentTokenDisplay(scheduleRecord) : '—'),
+		[scheduleRecord],
 	);
 
 	const scheduleStatusOptions = useMemo(
@@ -414,12 +419,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 											</div>
 											<div className='text-muted small'>Current token</div>
 										</div>
-										<div className='fs-5 fw-bold'>
-											{scheduleRecord?.current_token_number ??
-												(scheduleRecord?.current_token != null
-													? String(scheduleRecord.current_token)
-													: '—')}
-										</div>
+										<div className='fs-5 fw-bold'>{currentTokenDisplay}</div>
 									</div>
 								</div>
 								<div className='col-6'>

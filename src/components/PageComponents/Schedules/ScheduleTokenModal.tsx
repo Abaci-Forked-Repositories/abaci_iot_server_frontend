@@ -6,6 +6,7 @@ import type { CreateTokenPayload, Queue, QueueSchedule, Token } from '../../../s
 import { tokensApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import { initialTokenForm } from '../../MasterComponents/QueueManagement/queueManagementConstants';
+import { getTokenDisplay } from '../../MasterComponents/QueueManagement/queueManagementUtils';
 
 export interface ScheduleTokenModalProps {
 	isOpen: boolean;
@@ -137,7 +138,7 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 				{mode === 'edit' && editingToken && (
 					<div className='d-flex flex-wrap align-items-center gap-2 text-muted small mb-3'>
 						<span>Token</span>
-						<span className='fw-semibold text-body'>{editingToken.token_number}</span>
+						<span className='fw-semibold text-body'>{getTokenDisplay(editingToken)}</span>
 						<span className='text-muted'>·</span>
 						<span>Status</span>
 						<StatusBadge status={editingToken.status} />

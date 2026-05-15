@@ -195,6 +195,8 @@ export interface TokenParentSummary {
 export interface Token {
 	id: number;
 	token_number: string;
+	/** Prefix + number label from API (e.g. queue prefix + token number). */
+	token_display?: string | null;
 	token_user?: TokenUser;
 	queue: number | TokenQueueRef;
 	/** Schedule id this token belongs to */
@@ -263,7 +265,6 @@ export interface PatchTokenPayload {
 	priority?: number;
 	is_vip?: boolean;
 	is_priority_queued?: boolean;
-	is_priority_queued?: boolean;
 }
 
 export interface CreateQueuePayload {
@@ -323,7 +324,9 @@ export interface QueueSchedule {
 	from_datetime: string | null;
 	to_datetime: string | null;
 	description?: string;
-	current_token?: number | null;
+	current_token?: number | Token | null;
+	/** Prefixed label for the active token on this schedule. */
+	current_token_display?: string | null;
 	current_token_number?: string | null;
 	status: ScheduleApiStatus;
 	limit?: number;
@@ -506,25 +509,39 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/start-serving/`),
 		),
-	complete: (id: number) =>
-		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/complete/`)),
-	cancel: (id: number) =>
-		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/cancel/`)),
-	noShow: (id: number) =>
-		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`)),
-	postpone: (id: number) =>
-		unwrap<ScheduleServingPoint>(authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`)),
+	complete: (id: number, options?: { serving_point_status?: string }) => {
+		const trimmed = options?.serving_point_status?.trim();
+		const body = trimmed ? { serving_point_status: trimmed } : {};
+		return unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/complete/`, body),
+		);
+	},
+	cancel: (id: number, options?: { serving_point_status?: string }) => {
+		const trimmed = options?.serving_point_status?.trim();
+		const body = trimmed ? { serving_point_status: trimmed } : {};
+		return unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/cancel/`, body),
+		);
+	},
+	noShow: (id: number, options?: { serving_point_status?: string }) => {
+		const trimmed = options?.serving_point_status?.trim();
+		const body = trimmed ? { serving_point_status: trimmed } : {};
+		return unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/no-show/`, body),
+		);
+	},
+	postpone: (id: number, options?: { serving_point_status?: string }) => {
+		const trimmed = options?.serving_point_status?.trim();
+		const body = trimmed ? { serving_point_status: trimmed } : {};
+		return unwrap<ScheduleServingPoint>(
+			authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`, body),
+		);
+	},
 	skipToken: (id: number, options?: { serving_point_status?: string }) => {
 		const trimmed = options?.serving_point_status?.trim();
-		if (trimmed) {
-			return unwrap<ScheduleServingPoint>(
-				authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`, {}, {
-					params: { serving_point_status: trimmed },
-				}),
-			);
-		}
+		const body = trimmed ? { serving_point_status: trimmed } : {};
 		return unwrap<ScheduleServingPoint>(
-			authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`),
+			authAxios.post(`api/queues/schedule-serving-points/${id}/skip-token/`, body),
 		);
 	},
 	setStatus: (id: number, payload: SetScheduleServingPointStatusPayload) =>

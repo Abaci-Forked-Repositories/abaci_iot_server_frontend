@@ -20,7 +20,6 @@ interface QueueFormModalProps {
 	mode?: 'add' | 'edit';
 	/** When `mode` is `edit`, the modal loads the queue with `queuesApi.get(editQueueId)` before showing the form. */
 	editQueueId?: number | null;
-	servingPoints: ServingPoint[];
 	onSaved?: () => void | Promise<void>;
 }
 
@@ -62,13 +61,14 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	setIsOpen,
 	mode = 'add',
 	editQueueId = null,
-	servingPoints,
 	onSaved,
 }) => {
 	const isEditMode = mode === 'edit' && editQueueId != null && !Number.isNaN(editQueueId);
 	const [submitting, setSubmitting] = useState(false);
 	const [loadingEditQueue, setLoadingEditQueue] = useState(false);
 	const [loadedEditQueue, setLoadedEditQueue] = useState<Queue | null>(null);
+	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
+	const [loadingServingPoints, setLoadingServingPoints] = useState(false);
 	const [form, setForm] = useState<QueueFormState>(defaultFormState);
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
 
@@ -120,6 +120,33 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			cancelled = true;
 		};
 	}, [isOpen, isEditMode, editQueueId]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		if (!isOpen || isEditMode) {
+			setServingPoints([]);
+			setLoadingServingPoints(false);
+			return;
+		}
+
+		setLoadingServingPoints(true);
+		void queuesApi
+			.servingPoints({ ordering: 'name', page: 1, page_size: 500 })
+			.then((res) => {
+				if (!cancelled) setServingPoints(res.results || []);
+			})
+			.catch((err) => {
+				if (!cancelled) showErrorNotificationRef.current(err);
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingServingPoints(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isOpen, isEditMode]);
 
 	const servingPointOptions = useMemo(
 		() =>
@@ -323,18 +350,22 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 							{!isEditMode && (
 								<div className='col-12'>
 									<label className='form-label fw-semibold'>Serving Points</label>
-									<ReactSelectWithState
-										options={servingPointOptions}
-										value={selectedServingPointOptions}
-										setValue={(selected: Array<{ value: number; label: string }> | null) =>
-											setForm((prev) => ({
-												...prev,
-												serving_point_ids: (selected || []).map((option) => option.value),
-											}))
-										}
-										isMulti
-										placeholder='Select serving points'
-									/>
+									{loadingServingPoints ? (
+										<div className='text-muted small py-2'>Loading serving points…</div>
+									) : (
+										<ReactSelectWithState
+											options={servingPointOptions}
+											value={selectedServingPointOptions}
+											setValue={(selected: Array<{ value: number; label: string }> | null) =>
+												setForm((prev) => ({
+													...prev,
+													serving_point_ids: (selected || []).map((option) => option.value),
+												}))
+											}
+											isMulti
+											placeholder='Select serving points'
+										/>
+									)}
 								</div>
 							)}
 						</div>

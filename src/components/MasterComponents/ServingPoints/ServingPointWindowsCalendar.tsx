@@ -8,6 +8,7 @@ import Dropdown, { DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown
 import { CalendarTodayButton, getLabel, getUnitType } from '../../extras/calendarHelper';
 import Icon from '../../icon/Icon';
 import Tooltips from '../../bootstrap/Tooltips';
+import { getTokenDisplay } from '../QueueManagement/queueManagementUtils';
 
 const localizer = dayjsLocalizer(dayjs);
 
@@ -73,8 +74,9 @@ function mapWindowToEvent(w: ScheduleServingPoint): ServingWindowCalendarEvent {
 	const statusKey = normalizeStatusKey(statusRaw);
 	const tok = getNestedToken(w);
 	const scheduleLabel = `Schedule #${w.queue_schedule}`;
-	const tokenHint = tok?.token_number
-		? ` · Token #${tok.token_number}${tok.token_user?.name ? ` (${tok.token_user.name})` : ''}`
+	const tokenLabel = tok ? getTokenDisplay(tok) : '';
+	const tokenHint = tokenLabel && tokenLabel !== '—'
+		? ` · Token ${tokenLabel}${tok?.token_user?.name ? ` (${tok.token_user.name})` : ''}`
 		: w.current_token
 			? ''
 			: ' · No token';
@@ -105,7 +107,7 @@ function getWindowTooltipTitle(ev: ServingWindowCalendarEvent) {
 			</div>
 			{tok && (
 				<div className='queue-schedule-tooltip-stats small'>
-					<span>Token #{tok.token_number}</span>
+					<span>Token {getTokenDisplay(tok)}</span>
 					{tok.token_user?.name && <span> · {tok.token_user.name}</span>}
 					{tok.status && <span className='text-capitalize'> · {tok.status}</span>}
 				</div>
