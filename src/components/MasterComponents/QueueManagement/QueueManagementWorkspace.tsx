@@ -4,12 +4,14 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import SearchComponent from '../../SearchComponent';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
-import type { Queue } from '../../../services/queueManagementApi';
+import type { Queue, QueueGroup } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import swalFire from '../../../helpers/swalHelper';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import QueueFormModal from '../../PageComponents/QueueManagement/QueueFormModal';
+import QueueGroupFormModal from '../../PageComponents/QueueManagement/QueueGroupFormModal';
 import QueuesTabContent from './QueuesTabContent';
 import QueueGroupTabContent from './QueueGroupTabContent';
 
@@ -23,7 +25,9 @@ const QueueManagementWorkspace: React.FC = () => {
 	const [queueRefreshKey, setQueueRefreshKey] = useState(0);
 	const [queueGroupFilter, setQueueGroupFilter] = useState<QueueGroupFilterValue>('all');
 	const [showQueueModal, setShowQueueModal] = useState(false);
+	const [showGroupModal, setShowGroupModal] = useState(false);
 	const [editQueueId, setEditQueueId] = useState<number | null>(null);
+	const [editGroupId, setEditGroupId] = useState<number | null>(null);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	const clearMessages = () => {
@@ -80,6 +84,30 @@ const QueueManagementWorkspace: React.FC = () => {
 		setShowQueueModal(true);
 	};
 
+	const handleOpenEditGroup = (group: QueueGroup) => {
+		setEditGroupId(group.id);
+		setShowGroupModal(true);
+	};
+
+	const handleDeleteGroup = async (group: QueueGroup) => {
+		const result = await swalFire({
+			title: 'Delete group?',
+			text: `Delete "${group.name}"? Queues in this group will be unassigned.`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'Delete',
+			cancelButtonText: 'Cancel',
+			reverseButtons: true,
+		});
+		if (!result.isConfirmed) return;
+
+		await runAction(
+			`group-${group.id}`,
+			() => queuesApi.deleteGroup(group.id),
+			'Queue group deleted successfully.',
+		);
+	};
+
 	return (
 		<Card stretch>
 			<CardHeader>
@@ -129,15 +157,27 @@ const QueueManagementWorkspace: React.FC = () => {
 							}}
 							onBlur={runQueueHeaderSearch}
 						/>
-						<Button
-							color='primary'
-							icon='Add'
-							onClick={() => {
-								setEditQueueId(null);
-								setShowQueueModal(true);
-							}}>
-							Add Queue
-						</Button>
+						{queueDisplayMode === 'groups' ? (
+							<Button
+								color='primary'
+								icon='Add'
+								onClick={() => {
+									setEditGroupId(null);
+									setShowGroupModal(true);
+								}}>
+								Add Group
+							</Button>
+						) : (
+							<Button
+								color='primary'
+								icon='Add'
+								onClick={() => {
+									setEditQueueId(null);
+									setShowQueueModal(true);
+								}}>
+								Add Queue
+							</Button>
+						)}
 					</div>
 				</CardActions>
 			</CardHeader>
@@ -151,6 +191,9 @@ const QueueManagementWorkspace: React.FC = () => {
 							setQueueDisplayMode('queues');
 							handleQueueGroupFilterChange(groupId);
 						}}
+						onEditGroup={handleOpenEditGroup}
+						onDeleteGroup={handleDeleteGroup}
+						isGroupDeleteLoading={(id) => actionLoading === `group-${id}`}
 					/>
 				) : (
 					<QueuesTabContent
@@ -171,6 +214,16 @@ const QueueManagementWorkspace: React.FC = () => {
 				}}
 				mode={editQueueId != null ? 'edit' : 'add'}
 				editQueueId={editQueueId}
+				onSaved={() => setQueueRefreshKey((v) => v + 1)}
+			/>
+			<QueueGroupFormModal
+				isOpen={showGroupModal}
+				setIsOpen={(open) => {
+					setShowGroupModal(open);
+					if (!open) setEditGroupId(null);
+				}}
+				mode={editGroupId != null ? 'edit' : 'add'}
+				editGroupId={editGroupId}
 				onSaved={() => setQueueRefreshKey((v) => v + 1)}
 			/>
 		</Card>
