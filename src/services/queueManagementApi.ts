@@ -41,6 +41,17 @@ export interface QueueGroup {
 	created_at?: string;
 }
 
+export interface QueueGroupQueueRef {
+	id: number;
+	name: string;
+	description?: string;
+	limit?: number;
+}
+
+export interface QueueGroupDetail extends QueueGroup {
+	queues?: QueueGroupQueueRef[];
+}
+
 export interface ServingPoint {
 	id: number;
 	name: string;
@@ -203,7 +214,7 @@ export interface TokenParentSummary {
 export interface Token {
 	id: number;
 	/** Customer-facing token label when provided by the API (e.g. token detail). */
-	token_display?: string | null;
+	// token_display?: string | null;
 	token_number: string;
 	/** Prefix + number label from API (e.g. queue prefix + token number). */
 	token_user?: TokenUser;
@@ -276,6 +287,18 @@ export interface PatchTokenPayload {
 	is_priority_queued?: boolean;
 }
 
+export interface CreateQueueGroupPayload {
+	name: string;
+	description?: string;
+	/** Queue ids to assign to this group on create (when supported by the API). */
+	queues?: number[];
+}
+
+export interface UpdateQueueGroupPayload {
+	name?: string;
+	description?: string;
+}
+
 export interface CreateQueuePayload {
 	name: string;
 	description?: string;
@@ -290,6 +313,7 @@ export interface CreateQueuePayload {
 export interface UpdateQueuePayload {
 	name?: string;
 	description?: string;
+	group?: number | null;
 	limit?: number;
 	grace_period_minutes?: number;
 	allow_postpone?: boolean;
@@ -473,6 +497,14 @@ export const queuesApi = {
 	deactivate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/deactivate/`)),
 	groups: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<QueueGroup>>(authAxios.get('api/queues/groups/', { params })),
+	getGroup: (id: number) => unwrap<QueueGroupDetail>(authAxios.get(`api/queues/groups/${id}/`)),
+	getGroupQueues: (id: number) =>
+		unwrap<QueueGroupQueueRef[]>(authAxios.get(`api/queues/groups/${id}/queues/`)),
+	createGroup: (payload: CreateQueueGroupPayload) =>
+		unwrap<QueueGroup>(authAxios.post('api/queues/groups/', payload)),
+	updateGroup: (id: number, payload: UpdateQueueGroupPayload) =>
+		unwrap<QueueGroup>(authAxios.patch(`api/queues/groups/${id}/`, payload)),
+	deleteGroup: (id: number) => unwrap<void>(authAxios.delete(`api/queues/groups/${id}/`)),
 	servingPoints: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<ServingPoint>>(authAxios.get('api/queues/serving-points/', { params })),
 	getServingPoint: (id: number) =>
