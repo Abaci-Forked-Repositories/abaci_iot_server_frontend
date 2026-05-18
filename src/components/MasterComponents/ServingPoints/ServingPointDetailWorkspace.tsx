@@ -22,6 +22,7 @@ import {
 } from '../QueueManagement/queueManagementUtils';
 import QueueEventsTimelineCard from '../QueueManagement/QueueEventsTimelineCard';
 import ServingPointWindowsCalendar from './ServingPointWindowsCalendar';
+import ServingPointCurrentServingCard from './ServingPointCurrentServingCard';
 
 type ServingPointDetailWorkspaceProps = {
 	onServingPointNameChange?: (name: string | null) => void;
@@ -39,6 +40,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 	const [windows, setWindows] = useState<ScheduleServingPoint[]>([]);
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showStatusModal, setShowStatusModal] = useState(false);
+	const [tokenCardRefreshKey, setTokenCardRefreshKey] = useState(0);
 
 	const { showErrorNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -218,6 +220,12 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 				</CardBody>
 			</Card>
 
+			<ServingPointCurrentServingCard
+				servingPointId={id}
+				refreshKey={tokenCardRefreshKey}
+				onServingPointUpdated={(updated) => setServingPoint(updated)}
+			/>
+
 			{loading ? (
 				<div className='text-center text-muted py-5'>Loading serving windows…</div>
 			) : (
@@ -247,6 +255,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 				servingPoint={servingPoint}
 				onSuccess={(updated) => {
 					setServingPoint(updated);
+					setTokenCardRefreshKey((k) => k + 1);
 				}}
 			/>
 
@@ -256,6 +265,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 				servingPoint={servingPoint}
 				onSuccess={(updated) => {
 					setServingPoint(updated);
+					setTokenCardRefreshKey((k) => k + 1);
 				}}
 			/>
 		</div>

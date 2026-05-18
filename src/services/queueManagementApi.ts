@@ -55,6 +55,14 @@ export interface ServingPoint {
 	assigned_users?: number[] | Array<{ id: number }>;
 }
 
+/** GET /api/queues/serving-points/{id}/current-serving-window/ */
+export interface CurrentServingWindowResponse {
+	serving_point: ServingPoint;
+	active_window: ScheduleServingPoint | null;
+	windows_with_token_count: number;
+	detail?: string;
+}
+
 export interface Queue {
 	id: number;
 	name: string;
@@ -198,7 +206,6 @@ export interface Token {
 	token_display?: string | null;
 	token_number: string;
 	/** Prefix + number label from API (e.g. queue prefix + token number). */
-	token_display?: string | null;
 	token_user?: TokenUser;
 	queue: number | TokenQueueRef;
 	/** Schedule id this token belongs to */
@@ -470,6 +477,11 @@ export const queuesApi = {
 		unwrap<PaginatedResponse<ServingPoint>>(authAxios.get('api/queues/serving-points/', { params })),
 	getServingPoint: (id: number) =>
 		unwrap<ServingPoint>(authAxios.get(`api/queues/serving-points/${id}/`)),
+	/** GET /api/queues/serving-points/{id}/current-serving-window/ */
+	currentServingWindow: (id: number) =>
+		unwrap<CurrentServingWindowResponse>(
+			authAxios.get(`api/queues/serving-points/${id}/current-serving-window/`),
+		),
 	createServingPoint: (payload: CreateServingPointPayload) =>
 		unwrap<ServingPoint>(authAxios.post('api/queues/serving-points/', payload)),
 	updateServingPoint: (id: number, payload: UpdateServingPointPayload) =>
