@@ -14,7 +14,7 @@ export interface QueueGroupTabContentProps {
 	searchTerm: string;
 	selectedGroupFilter: QueueGroupFilterValue;
 	refreshKey?: number;
-	onGroupSelect: (groupId: number) => void;
+	onGroupSelect: (group: QueueGroup) => void;
 	onEditGroup: (group: QueueGroup) => void;
 	onDeleteGroup: (group: QueueGroup) => void;
 	isGroupDeleteLoading: (groupId: number) => boolean;
@@ -142,7 +142,7 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 								group={group}
 								queueCount={queueCounts[group.id] ?? 0}
 								selected={selectedGroupFilter === group.id}
-								onSelect={onGroupSelect}
+								onSelect={(g) => onGroupSelect(g)}
 								onEditGroup={onEditGroup}
 								onDeleteGroup={onDeleteGroup}
 								isDeleteLoading={isGroupDeleteLoading(group.id)}

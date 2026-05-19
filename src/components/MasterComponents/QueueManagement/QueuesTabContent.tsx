@@ -8,6 +8,7 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import QueueCardTile from './QueueCardTile';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
+import Button from '../../bootstrap/Button';
 
 const QUEUE_LIST_LIMIT = 12;
 
@@ -18,6 +19,8 @@ export interface QueuesTabContentProps {
 	onEditQueue: (queue: Queue) => void;
 	onToggleQueue: (queue: Queue) => void;
 	isQueueActionLoading: (queueId: number) => boolean;
+	/** When viewing a single group’s queues, clears filter back to all queues. */
+	onClearGroupFilter?: () => void;
 }
 
 const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
@@ -27,6 +30,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	onEditQueue,
 	onToggleQueue,
 	isQueueActionLoading,
+	onClearGroupFilter,
 }) => {
 	const navigate = useNavigate();
 	const [queues, setQueues] = useState<Queue[]>([]);
@@ -35,6 +39,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	const [isLoadingMoreQueues, setIsLoadingMoreQueues] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [error, setError] = useState('');
+	const [groupDrilldownName, setGroupDrilldownName] = useState('');
 	const { showErrorNotification } = useToasterNotification();
 
 	useEffect(() => {
@@ -43,16 +48,72 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 		setError('');
 	}, [error, showErrorNotification]);
 
+	useEffect(() => {
+		if (typeof selectedGroupFilter !== 'number') {
+			setGroupDrilldownName('');
+			return;
+		}
+		let cancelled = false;
+		void queuesApi
+			.getGroup(selectedGroupFilter)
+			.then((g) => {
+				if (!cancelled) setGroupDrilldownName(g.name || `Group ${g.id}`);
+			})
+			.catch(() => {
+				if (!cancelled) setGroupDrilldownName(`Group ${selectedGroupFilter}`);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [selectedGroupFilter]);
+
 	const loadQueues = useCallback(
 		async (reset = true) => {
 			const offset = reset ? 0 : queueOffsetRef.current;
 			try {
 				if (!reset) setIsLoadingMoreQueues(true);
+
+				if (typeof selectedGroupFilter === 'number') {
+					if (!reset) {
+						setIsLoadingMoreQueues(false);
+						return;
+					}
+					const refs = await queuesApi.getGroupQueues(selectedGroupFilter);
+					const fullQueues = await Promise.all(
+						refs.map(async (r) => {
+							try {
+								return await queuesApi.get(r.id);
+							} catch {
+								return {
+									id: r.id,
+									name: r.name,
+									description: r.description,
+									limit: r.limit,
+									group: selectedGroupFilter,
+									is_active: true,
+								} as Queue;
+							}
+						}),
+					);
+					const needle = searchTerm.trim().toLowerCase();
+					const filtered = needle
+						? fullQueues.filter(
+								(q) =>
+									(q.name || '').toLowerCase().includes(needle) ||
+									(q.description || '').toLowerCase().includes(needle),
+							)
+						: fullQueues;
+					setQueues(filtered);
+					queueOffsetRef.current = filtered.length;
+					setHasMoreQueues(false);
+					return;
+				}
+
 				const response = await queuesApi.list({
 					search: searchTerm || undefined,
 					limit: QUEUE_LIST_LIMIT,
 					offset,
-					group: typeof selectedGroupFilter === 'number' ? selectedGroupFilter : undefined,
+					group: undefined,
 				});
 				const pageRows = response.results || [];
 				const incomingRows =
@@ -89,6 +150,9 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 
 	const handleScroll = useCallback(
 		(event: React.UIEvent<HTMLDivElement>) => {
+			if (typeof selectedGroupFilter === 'number') {
+				return;
+			}
 			if (isLoadingMoreQueues || !hasMoreQueues) {
 				return;
 			}
@@ -98,15 +162,33 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 				void loadQueues(false);
 			}
 		},
-		[hasMoreQueues, isLoadingMoreQueues, loadQueues],
+		[hasMoreQueues, isLoadingMoreQueues, loadQueues, selectedGroupFilter],
 	);
 
 	if (initialLoading) {
 		return <QueueManagementSkeleton count={8} />;
 	}
 
+	const isGroupDrilldown = typeof selectedGroupFilter === 'number';
+
 	return (
 		<div className='queue-cards-scroll' onScroll={handleScroll}>
+			{isGroupDrilldown && (
+				<div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 p-3 rounded border bg-light'>
+					<span className='text-body'>
+						Showing queues in <strong>{groupDrilldownName || `Group ${selectedGroupFilter}`}</strong>
+						{searchTerm.trim() ? (
+							<span className='text-muted'> (filtered by search)</span>
+						) : null}
+						.
+					</span>
+					{onClearGroupFilter ? (
+						<Button color='primary' isLink onClick={onClearGroupFilter}>
+							Show all queues
+						</Button>
+					) : null}
+				</div>
+			)}
 			<Row className='g-3 mx-0'>
 				{queues.map((queue) => (
 					<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
