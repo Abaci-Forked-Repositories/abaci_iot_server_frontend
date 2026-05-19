@@ -9,7 +9,7 @@ interface QueueGroupCardTileProps {
 	group: QueueGroup;
 	queueCount: number;
 	selected: boolean;
-	onSelect: (id: number) => void;
+	onSelect: (group: QueueGroup) => void;
 	onEditGroup: (group: QueueGroup) => void;
 	onDeleteGroup: (group: QueueGroup) => void;
 	isDeleteLoading: boolean;
@@ -26,7 +26,7 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 }) => (
 	<div
 		className={`queue-modern-card ${selected ? 'queue-modern-card--selected' : ''}`}
-		onClick={() => onSelect(group.id)}
+		onClick={() => onSelect(group)}
 		role='button'>
 		<div className='queue-modern-card__header'>
 			<div className='queue-modern-card__header-main d-flex align-items-center gap-3'>

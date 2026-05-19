@@ -187,9 +187,10 @@ const QueueManagementWorkspace: React.FC = () => {
 						searchTerm={queueSearch}
 						selectedGroupFilter={queueGroupFilter}
 						refreshKey={queueRefreshKey}
-						onGroupSelect={(groupId) => {
+						onGroupSelect={(group) => {
+							setQueueSearch('');
 							setQueueDisplayMode('queues');
-							handleQueueGroupFilterChange(groupId);
+							handleQueueGroupFilterChange(group.id);
 						}}
 						onEditGroup={handleOpenEditGroup}
 						onDeleteGroup={handleDeleteGroup}
@@ -203,6 +204,10 @@ const QueueManagementWorkspace: React.FC = () => {
 						onEditQueue={handleOpenEditQueue}
 						onToggleQueue={handleToggleQueue}
 						isQueueActionLoading={(id) => actionLoading === `queue-${id}`}
+						onClearGroupFilter={() => {
+							setQueueGroupFilter('all');
+							setQueueRefreshKey((v) => v + 1);
+						}}
 					/>
 				)}
 			</CardBody>
