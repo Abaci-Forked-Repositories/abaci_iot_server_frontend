@@ -213,6 +213,7 @@ export interface TokenParentSummary {
 
 export interface Token {
 	id: number;
+	token_display?: string | null;
 	/** Customer-facing token label when provided by the API (e.g. token detail). */
 	// token_display?: string | null;
 	token_number: string;

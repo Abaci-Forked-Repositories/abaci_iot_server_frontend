@@ -1181,7 +1181,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 									<CardBody>
 										{servingHistorySubtitle ? (
 											<p className='text-muted small mb-3 lh-base fw-medium'>
-												{servingHistorySubtitle}
+												{/* {servingHistorySubtitle} */}
 											</p>
 										) : null}
 										<EventFeed
