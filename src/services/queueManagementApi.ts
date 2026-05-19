@@ -87,6 +87,8 @@ export interface Queue {
 	token_prefix?: string;
 	is_active?: boolean;
 	serving_points?: ServingPoint[];
+	/** Queues tokens can advance to after this queue (ids or nested on GET). */
+	next_queues?: Queue[] | number[];
 	created_at?: string;
 	updated_at?: string;
 }
@@ -214,7 +216,7 @@ export interface TokenParentSummary {
 export interface Token {
 	id: number;
 	/** Customer-facing token label when provided by the API (e.g. token detail). */
-	// token_display?: string | null;
+	token_display?: string | null;
 	token_number: string;
 	/** Prefix + number label from API (e.g. queue prefix + token number). */
 	token_user?: TokenUser;
@@ -308,6 +310,7 @@ export interface CreateQueuePayload {
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
 	serving_points?: number[];
+	next_queues?: number[];
 }
 
 export interface UpdateQueuePayload {
@@ -320,6 +323,7 @@ export interface UpdateQueuePayload {
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
 	serving_points?: number[];
+	next_queues?: number[];
 }
 
 export interface CreateServingPointPayload {
@@ -555,9 +559,11 @@ export const scheduleServingPointsApi = {
 		unwrap<ScheduleServingPoint>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/start-serving/`),
 		),
-	complete: (id: number, options?: { serving_point_status?: string }) => {
+	complete: (id: number, options?: { serving_point_status?: string; next_queue_id?: number }) => {
+		const body: Record<string, string | number> = {};
 		const trimmed = options?.serving_point_status?.trim();
-		const body = trimmed ? { serving_point_status: trimmed } : {};
+		if (trimmed) body.serving_point_status = trimmed;
+		if (options?.next_queue_id != null) body.next_queue_id = options.next_queue_id;
 		return unwrap<ScheduleServingPoint>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/complete/`, body),
 		);

@@ -10,6 +10,7 @@ import Icon from '../../icon/Icon';
 import StatusBadge from '../../BadgeWithIcon.jsx';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
+	type Queue,
 	type QueueSchedule,
 	type ScheduleServingPoint,
 	type ServingPoint,
@@ -18,6 +19,7 @@ import {
 	schedulesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
+import CompleteWithNextQueueModal from '../../PageComponents/ServingPoints/CompleteWithNextQueueModal';
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import {
 	formatDate,
@@ -98,7 +100,12 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const [windowRow, setWindowRow] = useState<ScheduleServingPoint | null>(null);
 	const [servingPoint, setServingPoint] = useState<ServingPoint | null>(null);
 	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
+	const [currentQueue, setCurrentQueue] = useState<Queue | null>(null);
 	const [showStatusModal, setShowStatusModal] = useState(false);
+	const [showCompleteModal, setShowCompleteModal] = useState(false);
+	const [pendingCompleteOpts, setPendingCompleteOpts] = useState<
+		{ serving_point_status?: string } | undefined
+	>(undefined);
 
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -128,11 +135,18 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			setWindowRow(win);
 			setServingPoint(pointRes);
 			setSchedule(scheduleRes);
+			try {
+				const queueRes = await queuesApi.get(scheduleRes.queue);
+				setCurrentQueue(queueRes);
+			} catch {
+				setCurrentQueue(null);
+			}
 		} catch (err) {
 			errorNotifierRef.current(err);
 			setWindowRow(null);
 			setServingPoint(null);
 			setSchedule(null);
+			setCurrentQueue(null);
 		} finally {
 			setLoading(false);
 		}
@@ -231,19 +245,23 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const triggerWindowAction = async (
 		row: ScheduleServingPoint,
 		action: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone',
-		opts?: { serving_point_status?: string },
+		opts?: { serving_point_status?: string; next_queue_id?: number },
 	) => {
 		setActionLoading(`${action}-${row.id}`);
-		const apiOpts = opts?.serving_point_status?.trim()
-			? { serving_point_status: opts.serving_point_status.trim() }
-			: undefined;
+		const spStatus = opts?.serving_point_status?.trim();
+		const apiOpts = {
+			...(spStatus ? { serving_point_status: spStatus } : {}),
+			...(opts?.next_queue_id != null ? { next_queue_id: opts.next_queue_id } : {}),
+		};
+		const hasOpts = Object.keys(apiOpts).length > 0;
 		try {
 			if (action === 'start') await scheduleServingPointsApi.startServing(row.id);
-			if (action === 'complete') await scheduleServingPointsApi.complete(row.id, apiOpts);
-			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, apiOpts);
-			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, apiOpts);
-			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id, apiOpts);
-			const st = opts?.serving_point_status?.trim();
+			if (action === 'complete') await scheduleServingPointsApi.complete(row.id, hasOpts ? apiOpts : undefined);
+			const spOnlyOpts = spStatus ? { serving_point_status: spStatus } : undefined;
+			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, spOnlyOpts);
+			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, spOnlyOpts);
+			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id, spOnlyOpts);
+			const st = spStatus;
 			if (st) {
 				const slab = SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ');
 				const prefix =
@@ -290,6 +308,37 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		} finally {
 			setActionLoading(null);
 		}
+	};
+
+	const nextQueues = useMemo(() => {
+		const nq = currentQueue?.next_queues;
+		if (!nq?.length) return [];
+		if (typeof nq[0] === 'number') {
+			return (nq as number[]).map((id) => ({ id, name: `Queue #${id}` }));
+		}
+		return (nq as Queue[]).map((q) => ({ id: q.id, name: q.name, description: q.description }));
+	}, [currentQueue]);
+
+	const initiateCompleteAction = (
+		row: ScheduleServingPoint,
+		opts?: { serving_point_status?: string },
+	) => {
+		if (nextQueues.length > 0) {
+			setPendingCompleteOpts(opts);
+			setShowCompleteModal(true);
+		} else {
+			void triggerWindowAction(row, 'complete', opts);
+		}
+	};
+
+	const handleCompleteConfirmed = (nextQueueId?: number) => {
+		setShowCompleteModal(false);
+		if (!windowRow) return;
+		void triggerWindowAction(windowRow, 'complete', {
+			...pendingCompleteOpts,
+			...(nextQueueId != null ? { next_queue_id: nextQueueId } : {}),
+		});
+		setPendingCompleteOpts(undefined);
 	};
 
 	const visibleTokenActions = useMemo(() => {
@@ -524,27 +573,31 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 							}))
 					: [];
 
-				type TokenSplitActionKey = 'complete' | 'cancel' | 'no_show' | 'postpone';
-				const tokenActionMenuVerb: Record<TokenSplitActionKey, string> = {
-					complete: 'Complete',
-					cancel: 'Cancel token',
-					no_show: 'No show',
-					postpone: 'Postpone',
-				};
+			type TokenSplitActionKey = 'complete' | 'cancel' | 'no_show' | 'postpone';
+			const tokenActionMenuVerb: Record<TokenSplitActionKey, string> = {
+				complete: 'Complete',
+				cancel: 'Cancel token',
+				no_show: 'No show',
+				postpone: 'Postpone',
+			};
 
-				const tokenActionStatusMenuItems = (action: TokenSplitActionKey) =>
-					showCounterStatusMenu
-						? spStatusMenuChoices
-								.filter((st) => allowedSpTransitions.includes(st))
-								.map((st) => ({
-									label: `${tokenActionMenuVerb[action]} & set counter to ${
-										SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')
-									}`,
-									onClick: () => {
+			const tokenActionStatusMenuItems = (action: TokenSplitActionKey) =>
+				showCounterStatusMenu
+					? spStatusMenuChoices
+							.filter((st) => allowedSpTransitions.includes(st))
+							.map((st) => ({
+								label: `${tokenActionMenuVerb[action]} & set counter to ${
+									SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')
+								}`,
+								onClick: () => {
+									if (action === 'complete') {
+										initiateCompleteAction(windowRow, { serving_point_status: st });
+									} else {
 										void triggerWindowAction(windowRow, action, { serving_point_status: st });
-									},
-								}))
-						: [];
+									}
+								},
+							}))
+					: [];
 
 				return (
 					<Card className='border-0 shadow-sm rounded-4 overflow-visible'>
@@ -592,56 +645,60 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 											)}
 										</div>
 										<div className='col-12 col-lg-6 d-flex flex-wrap align-items-start gap-2 pt-lg-1'>
-											{visibleTokenActions.map((a) => {
-												if (a.key === 'start') {
-													return (
-														<Tooltip key={a.key} title={a.tooltip} arrow placement='top'>
-															<span className='d-inline-flex'>
-																<Button
-																	color={a.color}
-																	isOutline={Boolean(a.outline)}
-																	isLight={!a.outline}
-																	icon={a.icon}
-																	isDisable={actionLoading === `${a.key}-${windowRow.id}`}
-																	onClick={() => void triggerWindowAction(windowRow, a.key)}>
-																	{a.label}
-																</Button>
-															</span>
-														</Tooltip>
-													);
-												}
-												const statusMenuItems = tokenActionStatusMenuItems(a.key);
+										{visibleTokenActions.map((a) => {
+											if (a.key === 'start') {
 												return (
-													<Tooltip
-														key={a.key}
-														title={
-															statusMenuItems.length > 0
-																? `${a.tooltip} Use the menu to perform the same action and set the counter (on hold, completed, or cancelled).`
-																: a.tooltip
-														}
-														arrow
-														placement='top'>
+													<Tooltip key={a.key} title={a.tooltip} arrow placement='top'>
 														<span className='d-inline-flex'>
-															<SplitDropdownButton
-																mainLabel={a.label}
-																mainIcon={a.icon}
+															<Button
 																color={a.color}
-																mainIsLight={!a.outline}
 																isOutline={Boolean(a.outline)}
-																dropdownDirection='down'
-																mainTitle={
-																	statusMenuItems.length > 0
-																		? `${String(a.label)} only (counter status unchanged).`
-																		: undefined
-																}
+																isLight={!a.outline}
+																icon={a.icon}
 																isDisable={actionLoading === `${a.key}-${windowRow.id}`}
-																onMainClick={() => void triggerWindowAction(windowRow, a.key)}
-																menuItems={statusMenuItems}
-															/>
+																onClick={() => void triggerWindowAction(windowRow, a.key)}>
+																{a.label}
+															</Button>
 														</span>
 													</Tooltip>
 												);
-											})}
+											}
+											const statusMenuItems = tokenActionStatusMenuItems(a.key);
+											const isComplete = a.key === 'complete';
+											const mainClickHandler = isComplete
+												? () => initiateCompleteAction(windowRow)
+												: () => void triggerWindowAction(windowRow, a.key);
+											return (
+												<Tooltip
+													key={a.key}
+													title={
+														statusMenuItems.length > 0
+															? `${a.tooltip} Use the menu to perform the same action and set the counter (on hold, completed, or cancelled).`
+															: a.tooltip
+													}
+													arrow
+													placement='top'>
+													<span className='d-inline-flex'>
+														<SplitDropdownButton
+															mainLabel={a.label}
+															mainIcon={a.icon}
+															color={a.color}
+															mainIsLight={!a.outline}
+															isOutline={Boolean(a.outline)}
+															dropdownDirection='down'
+															mainTitle={
+																statusMenuItems.length > 0
+																	? `${String(a.label)} only (counter status unchanged).`
+																	: undefined
+															}
+															isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+															onMainClick={mainClickHandler}
+															menuItems={statusMenuItems}
+														/>
+													</span>
+												</Tooltip>
+											);
+										})}
 											<Tooltip
 												title={
 													skipMenuItems.length > 0
@@ -687,6 +744,20 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 					setServingPoint(updated);
 					await load();
 				}}
+			/>
+
+			<CompleteWithNextQueueModal
+				isOpen={showCompleteModal}
+				setIsOpen={(open) => {
+					setShowCompleteModal(open);
+					if (!open) setPendingCompleteOpts(undefined);
+				}}
+				tokenDisplay={windowRow ? getWindowCurrentTokenDisplay(windowRow) : null}
+				customerName={
+					windowRow ? (getCurrentToken(windowRow)?.token_user?.name ?? null) : null
+				}
+				nextQueues={nextQueues}
+				onComplete={handleCompleteConfirmed}
 			/>
 		</div>
 	);

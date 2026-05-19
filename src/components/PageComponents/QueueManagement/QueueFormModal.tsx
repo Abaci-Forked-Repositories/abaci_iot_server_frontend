@@ -32,6 +32,7 @@ interface QueueFormState {
 	is_reporting_enabled: boolean;
 	token_prefix: string;
 	serving_point_ids: number[];
+	next_queue_ids: number[];
 }
 
 const defaultFormState = (): QueueFormState => ({
@@ -43,7 +44,14 @@ const defaultFormState = (): QueueFormState => ({
 	is_reporting_enabled: false,
 	token_prefix: '',
 	serving_point_ids: [],
+	next_queue_ids: [],
 });
+
+const extractNextQueueIds = (nextQueues?: Queue[] | number[]): number[] => {
+	if (!nextQueues?.length) return [];
+	if (typeof nextQueues[0] === 'number') return nextQueues as number[];
+	return (nextQueues as Queue[]).map((queue) => queue.id);
+};
 
 const queueToFormState = (q: Queue): QueueFormState => ({
 	name: q.name || '',
@@ -54,6 +62,7 @@ const queueToFormState = (q: Queue): QueueFormState => ({
 	is_reporting_enabled: q.is_reporting_enabled ?? false,
 	token_prefix: q.token_prefix || '',
 	serving_point_ids: (q.serving_points || []).map((point) => point.id),
+	next_queue_ids: extractNextQueueIds(q.next_queues),
 });
 
 const QueueFormModal: React.FC<QueueFormModalProps> = ({
@@ -69,6 +78,8 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	const [loadedEditQueue, setLoadedEditQueue] = useState<Queue | null>(null);
 	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
 	const [loadingServingPoints, setLoadingServingPoints] = useState(false);
+	const [allQueues, setAllQueues] = useState<Queue[]>([]);
+	const [loadingQueues, setLoadingQueues] = useState(false);
 	const [form, setForm] = useState<QueueFormState>(defaultFormState);
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
 
@@ -131,8 +142,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 		}
 
 		setLoadingServingPoints(true);
-		void queuesApi
-			.servingPoints({ ordering: 'name', page: 1, page_size: 500 })
+		void queuesApi.servingPoints()
 			.then((res) => {
 				if (!cancelled) setServingPoints(res.results || []);
 			})
@@ -148,6 +158,33 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 		};
 	}, [isOpen, isEditMode]);
 
+	useEffect(() => {
+		let cancelled = false;
+
+		if (!isOpen) {
+			setAllQueues([]);
+			setLoadingQueues(false);
+			return;
+		}
+
+		setLoadingQueues(true);
+		void queuesApi
+			.list()
+			.then((res) => {
+				if (!cancelled) setAllQueues(res.results || []);
+			})
+			.catch((err) => {
+				if (!cancelled) showErrorNotificationRef.current(err);
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingQueues(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isOpen]);
+
 	const servingPointOptions = useMemo(
 		() =>
 			servingPoints.map((point) => ({
@@ -160,6 +197,21 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	const selectedServingPointOptions = useMemo(
 		() => servingPointOptions.filter((option) => form.serving_point_ids.includes(option.value)),
 		[form.serving_point_ids, servingPointOptions],
+	);
+
+	const queueOptions = useMemo(() => {
+		const excludeId = isEditMode && editQueueId != null ? editQueueId : null;
+		return allQueues
+			.filter((queue) => excludeId == null || queue.id !== excludeId)
+			.map((queue) => ({
+				value: queue.id,
+				label: queue.name,
+			}));
+	}, [allQueues, isEditMode, editQueueId]);
+
+	const selectedNextQueueOptions = useMemo(
+		() => queueOptions.filter((option) => form.next_queue_ids.includes(option.value)),
+		[form.next_queue_ids, queueOptions],
 	);
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -191,6 +243,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					allow_postpone: form.allow_postpone,
 					is_reporting_enabled: form.is_reporting_enabled,
 					token_prefix: form.token_prefix.trim() || undefined,
+					next_queues: form.next_queue_ids,
 				};
 				await queuesApi.update(loadedEditQueue!.id, updatePayload);
 				showSuccessNotification('Queue updated successfully.');
@@ -204,6 +257,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					is_reporting_enabled: form.is_reporting_enabled,
 					token_prefix: form.token_prefix.trim() || undefined,
 					serving_points: form.serving_point_ids,
+					next_queues: form.next_queue_ids,
 				};
 				await queuesApi.create(payload);
 				showSuccessNotification('Queue created successfully.');
@@ -346,6 +400,25 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 										Reporting Enabled
 									</label>
 								</div>
+							</div>
+							<div className='col-12'>
+								<label className='form-label fw-semibold'>Next queue</label>
+								{loadingQueues ? (
+									<div className='text-muted small py-2'>Loading queues…</div>
+								) : (
+									<ReactSelectWithState
+										options={queueOptions}
+										value={selectedNextQueueOptions}
+										setValue={(selected: Array<{ value: number; label: string }> | null) =>
+											setForm((prev) => ({
+												...prev,
+												next_queue_ids: (selected || []).map((option) => option.value),
+											}))
+										}
+										isMulti
+										placeholder='Select next queues'
+									/>
+								)}
 							</div>
 							{!isEditMode && (
 								<div className='col-12'>
