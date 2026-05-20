@@ -38,7 +38,10 @@ export interface QueueGroup {
 	name: string;
 	description?: string;
 	is_active?: boolean;
+	/** From GET /api/queues/groups/ list/detail. */
+	queue_count?: number;
 	created_at?: string;
+	updated_at?: string;
 }
 
 export interface QueueGroupQueueRef {
@@ -215,7 +218,6 @@ export interface TokenParentSummary {
 
 export interface Token {
 	id: number;
-	token_display?: string | null;
 	/** Customer-facing token label when provided by the API (e.g. token detail). */
 	token_display?: string | null;
 	token_number: string;

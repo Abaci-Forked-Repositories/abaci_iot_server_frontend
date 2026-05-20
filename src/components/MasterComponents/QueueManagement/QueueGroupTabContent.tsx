@@ -30,7 +30,6 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 	isGroupDeleteLoading,
 }) => {
 	const [groups, setGroups] = useState<QueueGroup[]>([]);
-	const [queueCounts, setQueueCounts] = useState<Record<number, number>>({});
 	const groupOffsetRef = useRef(0);
 	const [hasMoreGroups, setHasMoreGroups] = useState(true);
 	const [isLoadingMoreGroups, setIsLoadingMoreGroups] = useState(false);
@@ -43,26 +42,6 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 		showErrorNotification(error);
 		setError('');
 	}, [error, showErrorNotification]);
-
-	const loadGroupQueueCounts = useCallback(async (groupList: QueueGroup[]) => {
-		const counts = await Promise.all(
-			groupList.map(async (group) => {
-				try {
-					const queues = await queuesApi.getGroupQueues(group.id);
-					return [group.id, queues.length] as const;
-				} catch {
-					return [group.id, 0] as const;
-				}
-			}),
-		);
-		setQueueCounts((prev) => {
-			const next = { ...prev };
-			for (const [id, count] of counts) {
-				next[id] = count;
-			}
-			return next;
-		});
-	}, []);
 
 	const loadGroups = useCallback(
 		async (reset = true) => {
@@ -79,14 +58,13 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 				setGroups((prev) => (reset ? incomingRows : [...prev, ...incomingRows]));
 				groupOffsetRef.current = nextOffset;
 				setHasMoreGroups(nextOffset < (response.count ?? nextOffset));
-				void loadGroupQueueCounts(incomingRows);
 			} catch (err) {
 				setError(getErrorMessage(err));
 			} finally {
 				if (!reset) setIsLoadingMoreGroups(false);
 			}
 		},
-		[searchTerm, loadGroupQueueCounts],
+		[searchTerm],
 	);
 
 	useEffect(() => {
@@ -140,7 +118,7 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 						<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={group.id}>
 							<QueueGroupCardTile
 								group={group}
-								queueCount={queueCounts[group.id] ?? 0}
+								queueCount={group.queue_count ?? 0}
 								selected={selectedGroupFilter === group.id}
 								onSelect={(g) => onGroupSelect(g)}
 								onEditGroup={onEditGroup}
