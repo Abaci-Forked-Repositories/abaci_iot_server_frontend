@@ -19,8 +19,8 @@ export interface QueuesTabContentProps {
 	onEditQueue: (queue: Queue) => void;
 	onToggleQueue: (queue: Queue) => void;
 	isQueueActionLoading: (queueId: number) => boolean;
-	/** When viewing a single group’s queues, clears filter back to all queues. */
-	onClearGroupFilter?: () => void;
+	/** When viewing a single group’s queues, return to the queue groups listing. */
+	onBackToGroups?: () => void;
 }
 
 const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
@@ -30,7 +30,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	onEditQueue,
 	onToggleQueue,
 	isQueueActionLoading,
-	onClearGroupFilter,
+	onBackToGroups,
 }) => {
 	const navigate = useNavigate();
 	const [queues, setQueues] = useState<Queue[]>([]);
@@ -182,9 +182,9 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 						) : null}
 						.
 					</span>
-					{onClearGroupFilter ? (
-						<Button color='primary' isLink onClick={onClearGroupFilter}>
-							Show all queues
+					{onBackToGroups ? (
+						<Button color='primary' isLight icon='ArrowBack' onClick={onBackToGroups}>
+							Back
 						</Button>
 					) : null}
 				</div>

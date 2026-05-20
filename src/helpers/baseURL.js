@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://joshua-ministries-fruit-premiere.trycloudflare.com';
+		return 'https://wooden-founder-contest-measuring.trycloudflare.com';
 	}
 	return url;
 };
