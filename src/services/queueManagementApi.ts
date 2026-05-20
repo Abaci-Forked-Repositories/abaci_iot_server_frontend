@@ -39,7 +39,10 @@ export interface QueueGroup {
 	name: string;
 	description?: string;
 	is_active?: boolean;
+	/** From GET /api/queues/groups/ list/detail. */
+	queue_count?: number;
 	created_at?: string;
+	updated_at?: string;
 }
 
 export interface QueueGroupQueueRef {

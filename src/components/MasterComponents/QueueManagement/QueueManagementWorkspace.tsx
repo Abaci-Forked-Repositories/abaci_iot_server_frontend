@@ -204,10 +204,15 @@ const QueueManagementWorkspace: React.FC = () => {
 						onEditQueue={handleOpenEditQueue}
 						onToggleQueue={handleToggleQueue}
 						isQueueActionLoading={(id) => actionLoading === `queue-${id}`}
-						onClearGroupFilter={() => {
-							setQueueGroupFilter('all');
-							setQueueRefreshKey((v) => v + 1);
-						}}
+						onBackToGroups={
+							typeof queueGroupFilter === 'number'
+								? () => {
+										setQueueGroupFilter('all');
+										setQueueDisplayMode('groups');
+										setQueueRefreshKey((v) => v + 1);
+									}
+								: undefined
+						}
 					/>
 				)}
 			</CardBody>

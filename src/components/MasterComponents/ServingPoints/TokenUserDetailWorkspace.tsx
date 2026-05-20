@@ -88,6 +88,20 @@ const servingHistoryEntryEnded = (h: TokenServingHistory): boolean => {
 	return false;
 };
 
+const trimStr = (v: unknown): string | undefined => {
+	if (v === null || v === undefined) return undefined;
+	const s = String(v).trim();
+	return s === '' ? undefined : s;
+};
+
+/** Prefer username; otherwise show `User #id` when id is set. */
+const servingHistoryActor = (username?: string | null, userId?: number | null): string | undefined => {
+	const u = trimStr(username);
+	if (u) return u;
+	if (userId != null && !Number.isNaN(Number(userId))) return `User #${userId}`;
+	return undefined;
+};
+
 /** Map token serving history into `QueueEvent`-shaped rows for `EventFeed` (schedule event history UI). */
 const mapServingHistoryToQueueEvents = (token: Token): QueueEvent[] => {
 	const raw = tokenServingHistoryRows(token);
@@ -121,22 +135,50 @@ const mapServingHistoryToQueueEvents = (token: Token): QueueEvent[] => {
 		if (!ended) {
 			lines.push('Still at counter');
 		} else {
-			const endBits: string[] = [];
-			if (h.completed_at) endBits.push(`Completed: ${formatDate(h.completed_at)}`);
-			if (h.cancelled_at) endBits.push(`Cancelled: ${formatDate(h.cancelled_at)}`);
-			if (h.no_show_marked_at) endBits.push(`No-show: ${formatDate(h.no_show_marked_at)}`);
-			if (h.postponed_at) endBits.push(`Postponed: ${formatDate(h.postponed_at)}`);
-			if (h.skipped_at) endBits.push(`Skipped: ${formatDate(h.skipped_at)}`);
-			if (h.exited_at) endBits.push(`Exited: ${formatDate(h.exited_at)}`);
-			if (endBits.length) lines.push(...endBits);
-			else lines.push('Visit ended');
+			const hasTerminal =
+				!!h.completed_at ||
+				!!h.cancelled_at ||
+				!!h.no_show_marked_at ||
+				!!h.postponed_at ||
+				!!h.skipped_at ||
+				!!h.exited_at;
+			if (!hasTerminal) lines.push('Visit ended');
 		}
-		if (h.duration != null && h.duration !== '') lines.push(`Duration: ${h.duration}`);
-		if (h.served_by_username?.trim())
-			lines.push(`Served by: ${h.served_by_username.trim()}`);
-		if (h.completed_by_username?.trim())
-			lines.push(`Completed by: ${h.completed_by_username.trim()}`);
-		if (h.notes != null && String(h.notes).trim() !== '') lines.push(String(h.notes).trim());
+
+		const sp = trimStr(h.serving_point_name);
+		if (sp) lines.push(`Serving point: ${sp}`);
+		if (h.entered_at) lines.push(`Entered at: ${formatDate(h.entered_at)}`);
+
+		const served = servingHistoryActor(h.served_by_username, h.served_by);
+		if (served) lines.push(`Served by: ${served}`);
+
+		if (h.completed_at) lines.push(`Completed at: ${formatDate(h.completed_at)}`);
+		const completedBy = servingHistoryActor(h.completed_by_username, h.completed_by);
+		if (completedBy) lines.push(`Completed by: ${completedBy}`);
+
+		if (h.postponed_at) lines.push(`Postponed at: ${formatDate(h.postponed_at)}`);
+		const postponedBy = servingHistoryActor(h.postponed_by_username, h.postponed_by);
+		if (postponedBy) lines.push(`Postponed by: ${postponedBy}`);
+
+		if (h.cancelled_at) lines.push(`Cancelled at: ${formatDate(h.cancelled_at)}`);
+		const cancelledBy = servingHistoryActor(h.cancelled_by_username, h.cancelled_by);
+		if (cancelledBy) lines.push(`Cancelled by: ${cancelledBy}`);
+
+		if (h.skipped_at) lines.push(`Skipped at: ${formatDate(h.skipped_at)}`);
+		const skippedBy = servingHistoryActor(h.skipped_by_username, h.skipped_by);
+		if (skippedBy) lines.push(`Skipped by: ${skippedBy}`);
+
+		if (h.no_show_marked_at) lines.push(`No-show at: ${formatDate(h.no_show_marked_at)}`);
+		const noShowBy = servingHistoryActor(h.no_show_marked_by_username, h.no_show_marked_by);
+		if (noShowBy) lines.push(`No-show by: ${noShowBy}`);
+
+		if (h.exited_at) lines.push(`Exited at: ${formatDate(h.exited_at)}`);
+
+		const dur = trimStr(h.duration);
+		if (dur) lines.push(`Duration: ${dur}`);
+
+		const notes = trimStr(h.notes);
+		if (notes) lines.push(`Notes: ${notes}`);
 
 		const pointLabel = h.serving_point_name?.trim() || `Serving point #${h.serving_point}`;
 		const event_type_display =
@@ -147,7 +189,13 @@ const mapServingHistoryToQueueEvents = (token: Token): QueueEvent[] => {
 					: `At counter · ${pointLabel}`;
 
 		const actor =
-			h.served_by_username?.trim() || h.completed_by_username?.trim() || undefined;
+			trimStr(h.served_by_username) ||
+			trimStr(h.completed_by_username) ||
+			trimStr(h.postponed_by_username) ||
+			trimStr(h.cancelled_by_username) ||
+			trimStr(h.skipped_by_username) ||
+			trimStr(h.no_show_marked_by_username) ||
+			undefined;
 
 		return {
 			id: h.id,
