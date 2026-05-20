@@ -17,6 +17,7 @@ export interface User {
 	is_superuser?: boolean;
 	date_joined?: string;
 	last_login?: string | null;
+	role?: UserRole & { display_name?: string };
 }
 
 export interface UserRole {
@@ -86,6 +87,8 @@ export interface Queue {
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
 	is_active?: boolean;
+	/** e.g. `"active"` | `"inactive"` when returned by the API. */
+	status?: string;
 	serving_points?: ServingPoint[];
 	/** Queues tokens can advance to after this queue (ids or nested on GET). */
 	next_queues?: Queue[] | number[];
@@ -101,8 +104,8 @@ export interface QueueStatistics {
 	today_tokens?: number;
 	completed: number;
 	cancelled: number;
-	/** Tokens that have checked in (replaces legacy `waiting`). */
-	reported: number;
+	/** Tokens waiting to be served (checked in). */
+	waiting: number;
 	serving: number;
 	current_count?: number;
 	/** Optional legacy or extended stats */
@@ -118,7 +121,7 @@ export interface QueueStatistics {
 
 export type TokenStatus =
 	| 'registred'
-	| 'reported'
+	| 'waiting'
 	| 'serving'
 	| 'completed'
 	| 'cancelled'
@@ -127,6 +130,7 @@ export type TokenStatus =
 
 export interface TokenUser {
 	id?: number;
+	uuid?: string;
 	name: string;
 	email?: string;
 	phone?: string;
@@ -215,7 +219,6 @@ export interface TokenParentSummary {
 
 export interface Token {
 	id: number;
-	token_display?: string | null;
 	/** Customer-facing token label when provided by the API (e.g. token detail). */
 	token_display?: string | null;
 	token_number: string;
@@ -249,8 +252,8 @@ export interface Token {
 
 export interface QueueStatus {
 	queue_id: number | string;
-	/** Checked-in tokens (replaces legacy `waiting`). */
-	reported: number;
+	/** Checked-in tokens waiting to be served. */
+	waiting: number;
 	serving: number;
 	completed_today: number;
 	total: number;
@@ -374,7 +377,7 @@ export interface QueueSchedule {
 	token_prefix?: string | null;
 	available_serving_points?: number[];
 	allow_postpone?: boolean;
-	/** From schedule detail API; gates registered → reported in schedule token UI. */
+	/** From schedule detail API; gates registered → waiting in schedule token UI. */
 	is_reporting_enabled?: boolean;
 	serving_point_windows?: ScheduleServingPoint[];
 	created_at?: string;
@@ -423,6 +426,19 @@ export interface ScheduleServingPoint {
 	current_token_status?: string | null;
 	created_at?: string;
 	updated_at?: string;
+}
+
+/** POST /api/queues/schedule-serving-points/{id}/postpone/ */
+export interface ScheduleServingPointPostponeResponse extends ScheduleServingPoint {
+	detail?: string;
+	new_token_number?: number;
+	new_token?: Token;
+}
+
+/** POST /api/queues/schedule-serving-points/{id}/complete/ (with next_queue_id) */
+export interface ScheduleServingPointCompleteResponse extends ScheduleServingPoint {
+	detail?: string;
+	next_token?: Token;
 }
 
 export interface CreateScheduleServingPointPayload {
@@ -493,10 +509,9 @@ export const queuesApi = {
 		unwrap<Queue>(authAxios.patch(`api/queues/${id}/`, payload)),
 	statistics: (id: number) =>
 		unwrap<QueueStatistics>(authAxios.get(`api/queues/${id}/statistics/`)),
-	/** GET /api/queues/{id}/currently_serving/ */
-	currentlyServing: (id: number) =>
+	currentlyServing: (id: number, params?: QueryParams) =>
 		unwrap<CurrentlyServingEntry[] | PaginatedResponse<CurrentlyServingEntry>>(
-			authAxios.get(`api/queues/${id}/currently_serving/`),
+			authAxios.get(`api/queues/${id}/currently_serving/`, { params }),
 		),
 	activate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/activate/`)),
 	deactivate: (id: number) => unwrap<Queue>(authAxios.post(`api/queues/${id}/deactivate/`)),
@@ -565,7 +580,7 @@ export const scheduleServingPointsApi = {
 		const trimmed = options?.serving_point_status?.trim();
 		if (trimmed) body.serving_point_status = trimmed;
 		if (options?.next_queue_id != null) body.next_queue_id = options.next_queue_id;
-		return unwrap<ScheduleServingPoint>(
+		return unwrap<ScheduleServingPointCompleteResponse>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/complete/`, body),
 		);
 	},
@@ -586,7 +601,7 @@ export const scheduleServingPointsApi = {
 	postpone: (id: number, options?: { serving_point_status?: string }) => {
 		const trimmed = options?.serving_point_status?.trim();
 		const body = trimmed ? { serving_point_status: trimmed } : {};
-		return unwrap<ScheduleServingPoint>(
+		return unwrap<ScheduleServingPointPostponeResponse>(
 			authAxios.post(`api/queues/schedule-serving-points/${id}/postpone/`, body),
 		);
 	},

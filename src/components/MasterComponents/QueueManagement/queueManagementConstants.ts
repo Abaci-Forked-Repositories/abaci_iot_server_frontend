@@ -5,7 +5,7 @@ export type QueueGroupFilterValue = 'all' | 'ungrouped' | number;
 
 export const TOKEN_STATUSES: TokenStatus[] = [
 	'registred',
-	'reported',
+	'waiting',
 	'serving',
 	'completed',
 	'cancelled',

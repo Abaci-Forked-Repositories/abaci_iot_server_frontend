@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
+import StatusBadge from '../../BadgeWithIcon.jsx';
 
 export interface NextQueueOption {
 	id: number;
 	name: string;
 	description?: string;
+	status?: string;
+	is_active?: boolean;
 }
+
+const isNextQueueActive = (queue: NextQueueOption): boolean => {
+	const status = queue.status?.toLowerCase().trim();
+	if (status) return status === 'active';
+	if (queue.is_active != null) return queue.is_active;
+	return true;
+};
 
 export interface CompleteWithNextQueueModalProps {
 	isOpen: boolean;
@@ -30,13 +40,16 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 
 	useEffect(() => {
 		if (isOpen) {
-			setSelectedQueueId(nextQueues.length === 1 ? nextQueues[0].id : null);
+			const activeQueues = nextQueues.filter(isNextQueueActive);
+			setSelectedQueueId(activeQueues.length === 1 ? activeQueues[0].id : null);
 		}
 	}, [isOpen, nextQueues]);
 
 	const handleClose = () => setIsOpen(false);
 
 	const selectedQueue = nextQueues.find((q) => q.id === selectedQueueId) ?? null;
+	const canCompleteWithSelectedQueue =
+		selectedQueue != null && isNextQueueActive(selectedQueue);
 
 	return (
 		<Modal
@@ -64,7 +77,6 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 			</ModalHeader>
 
 			<ModalBody>
-				{/* Token pill */}
 				{(tokenDisplay || customerName) && (
 					<div className='d-flex align-items-center gap-3 p-3 rounded-3 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
 						<span
@@ -83,31 +95,34 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 					</div>
 				)}
 
-				{/* Queue selection */}
 				{nextQueues.length > 0 ? (
 					<>
 						<p className='text-muted small mb-3 lh-base'>
-							This queue has follow-up queues configured. Select one to redirect the customer, or
-							complete without redirecting.
+							This queue has follow-up queues configured. Select an active queue to redirect the
+							customer, or complete without redirecting.
 						</p>
 						<div className='d-flex flex-column gap-2'>
 							{nextQueues.map((queue) => {
-								const isSelected = selectedQueueId === queue.id;
+								const isActive = isNextQueueActive(queue);
+								const isSelected = isActive && selectedQueueId === queue.id;
 								return (
 									<button
 										key={queue.id}
 										type='button'
-										onClick={() =>
-											setSelectedQueueId(isSelected ? null : queue.id)
-										}
+										disabled={!isActive}
+										onClick={() => {
+											if (!isActive) return;
+											setSelectedQueueId(isSelected ? null : queue.id);
+										}}
 										className={[
 											'd-flex align-items-center gap-3 p-3 rounded-3 border text-start w-100 transition-all',
-											isSelected
-												? 'border-success bg-success bg-opacity-10'
-												: 'border-secondary border-opacity-25 bg-transparent',
+											!isActive
+												? 'border-secondary border-opacity-25 bg-body-secondary opacity-75'
+												: isSelected
+													? 'border-success bg-success bg-opacity-10'
+													: 'border-secondary border-opacity-25 bg-transparent',
 										].join(' ')}
-										style={{ cursor: 'pointer' }}>
-										{/* Radio dot */}
+										style={{ cursor: isActive ? 'pointer' : 'not-allowed' }}>
 										<span
 											className={[
 												'd-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 border',
@@ -121,7 +136,6 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 											)}
 										</span>
 
-										{/* Queue icon */}
 										<span
 											className={[
 												'd-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0',
@@ -138,9 +152,18 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 										</span>
 
 										<div className='flex-grow-1 min-w-0'>
-											<div
-												className={`fw-semibold text-truncate ${isSelected ? 'text-success' : 'text-body'}`}>
-												{queue.name}
+											<div className='d-flex align-items-center gap-2 flex-wrap mb-1'>
+												<div
+													className={`fw-semibold text-truncate ${isSelected ? 'text-success' : 'text-body'}`}>
+													{queue.name}
+												</div>
+												<StatusBadge
+													status={
+														isActive
+															? queue.status?.trim() || 'active'
+															: queue.status?.trim() || 'inactive'
+													}
+												/>
 											</div>
 											{queue.description?.trim() ? (
 												<div className='text-muted small text-truncate'>
@@ -148,6 +171,11 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 												</div>
 											) : (
 												<div className='text-muted small'>Queue #{queue.id}</div>
+											)}
+											{!isActive && (
+												<div className='text-muted small mt-1'>
+													This queue is inactive. Complete only, or choose another queue.
+												</div>
 											)}
 										</div>
 
@@ -181,13 +209,15 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 						color='success'
 						type='button'
 						icon='ArrowForward'
-						isDisable={selectedQueueId == null}
+						isDisable={!canCompleteWithSelectedQueue}
 						onClick={() => {
-							if (selectedQueueId != null) onComplete(selectedQueueId);
+							if (canCompleteWithSelectedQueue && selectedQueueId != null) {
+								onComplete(selectedQueueId);
+							}
 						}}>
 						{selectedQueue
-							? `Complete & redirect to ${selectedQueue.name}`
-							: 'Complete & redirect'}
+							? `Complete & create new token in ${selectedQueue.name}`
+							: 'Complete & create new token'}
 					</Button>
 				)}
 			</ModalFooter>

@@ -86,6 +86,7 @@ const CustomBadgeWithIcon = ({ children }) => {
 			'Synced': 'info',
 			'Initiated': 'info',
 			'Reported': 'info',
+			'Waiting': 'info',
 			'STARTED': 'info'
 		};
 

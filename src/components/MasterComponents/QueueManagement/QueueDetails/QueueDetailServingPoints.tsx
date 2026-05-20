@@ -16,6 +16,8 @@ import { buttonColor } from '../../../../helpers/constants';
 import swalFire from '../../../../helpers/swalHelper';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
 
+const MODAL_PAGE_SIZE = 5;
+
 // ---------------------------------------------------------------------------
 // Status helpers
 // ---------------------------------------------------------------------------
@@ -51,7 +53,10 @@ const STATUS_COLORS: Record<string, 'primary' | 'success' | 'warning' | 'danger'
 
 export interface QueueDetailServingPointsProps {
 	queueId: number;
-	servingPoints: ServingPoint[];
+	/** IDs already linked to this queue (from parent queue GET — used for assign/remove PATCH). */
+	assignedServingPointIds: number[];
+	/** Increment when parent reloads so the table refetches. */
+	refreshVersion: number;
 	onChanged: () => void | Promise<void>;
 }
 
@@ -61,12 +66,10 @@ export interface QueueDetailServingPointsProps {
 
 const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	queueId,
-	servingPoints,
+	assignedServingPointIds,
+	refreshVersion,
 	onChanged,
 }) => {
-	const [allServingPoints, setAllServingPoints] = useState<ServingPoint[]>([]);
-	const [loadingAllServingPoints, setLoadingAllServingPoints] = useState(false);
-	const [loadedAllServingPoints, setLoadedAllServingPoints] = useState(false);
 	const [showAssignServingPointModal, setShowAssignServingPointModal] = useState(false);
 	const [assignServingPointSearch, setAssignServingPointSearch] = useState('');
 	const [selectedServingPointIds, setSelectedServingPointIds] = useState<number[]>([]);
@@ -75,6 +78,15 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	const [statusModalPoint, setStatusModalPoint] = useState<ServingPoint | null>(null);
 	const [statusFormValue, setStatusFormValue] = useState('');
 	const [statusSaving, setStatusSaving] = useState(false);
+	const [totalCount, setTotalCount] = useState(0);
+
+	// Assign modal — paginated list with infinite scroll
+	const [modalServingPoints, setModalServingPoints] = useState<ServingPoint[]>([]);
+	const [modalPage, setModalPage] = useState(1);
+	const [modalHasMore, setModalHasMore] = useState(false);
+	const [modalLoading, setModalLoading] = useState(false);
+	const [modalLoadingMore, setModalLoadingMore] = useState(false);
+	const assignedServingPointIdsRef = useRef<Set<number>>(new Set(assignedServingPointIds));
 
 	const navigate = useNavigate();
 	const { theme, headerStyles, rowStyles } = useTablestyle();
@@ -82,70 +94,153 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
 
-	// Reset cached all-points list when queue changes
-	useEffect(() => {
-		setLoadedAllServingPoints(false);
-		setAllServingPoints([]);
-	}, [queueId]);
+	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
+	const prevRefreshVersionRef = useRef(refreshVersion);
 
-	// Pre-fill dropdown when modal opens
+	useEffect(() => {
+		if (prevRefreshVersionRef.current === refreshVersion) return;
+		prevRefreshVersionRef.current = refreshVersion;
+		tableRef.current?.onQueryChange?.();
+	}, [refreshVersion]);
+
 	useEffect(() => {
 		if (!statusModalPoint) return;
 		const allowed = getNextAllowedStatuses(statusModalPoint.status);
 		setStatusFormValue(allowed[0] ?? '');
 	}, [statusModalPoint]);
 
-	// ── Load all serving points (for assign modal) ──────────────────────────
+	useEffect(() => {
+		assignedServingPointIdsRef.current = new Set(assignedServingPointIds);
+	}, [assignedServingPointIds]);
 
-	const loadAllServingPoints = useCallback(async () => {
-		if (loadingAllServingPoints || loadedAllServingPoints) return;
-		setLoadingAllServingPoints(true);
-		try {
-			const pageSize = 300;
-			let page = 1;
-			let hasNext = true;
-			const merged: ServingPoint[] = [];
-			while (hasNext) {
-				const res = await queuesApi.servingPoints({ ordering: 'name', page_size: pageSize, page });
-				merged.push(...(res.results || []));
-				hasNext = Boolean(res.next);
-				page += 1;
+	// ── Assign modal: page_size chunks + scroll to load more ─────────────────
+
+	const fetchAssignModalChunk = useCallback(
+		async (page: number, search: string, append: boolean) => {
+			const res = await queuesApi.servingPoints({
+				ordering: 'name',
+				page_size: MODAL_PAGE_SIZE,
+				page,
+				...(search ? { search } : {}),
+			});
+			const incoming = res.results || [];
+			setModalServingPoints((prev) => (append ? [...prev, ...incoming] : incoming));
+			setModalPage(page);
+			setModalHasMore(Boolean(res.next));
+			return { incoming, hasMore: Boolean(res.next) };
+		},
+		[],
+	);
+
+	const loadAssignModalList = useCallback(
+		async (search: string) => {
+			setModalLoading(true);
+			try {
+				const assigned = assignedServingPointIdsRef.current;
+				let page = 1;
+				let merged: ServingPoint[] = [];
+				let hasMore = true;
+
+				// Load pages until we have enough unassigned rows to show, or no more pages
+				while (hasMore) {
+					const res = await queuesApi.servingPoints({
+						ordering: 'name',
+						page_size: MODAL_PAGE_SIZE,
+						page,
+						...(search ? { search } : {}),
+					});
+					const incoming = res.results || [];
+					merged = [...merged, ...incoming];
+					hasMore = Boolean(res.next);
+					const availableCount = merged.filter((p) => !assigned.has(p.id)).length;
+					if (availableCount >= MODAL_PAGE_SIZE || !hasMore) {
+						setModalServingPoints(merged);
+						setModalPage(page);
+						setModalHasMore(hasMore);
+						break;
+					}
+					page += 1;
+					if (page > 50) {
+						setModalServingPoints(merged);
+						setModalPage(page);
+						setModalHasMore(false);
+						break;
+					}
+				}
+			} catch (err) {
+				showErrorRef.current(err);
+				setModalServingPoints([]);
+				setModalHasMore(false);
+			} finally {
+				setModalLoading(false);
 			}
-			setAllServingPoints(merged);
-			setLoadedAllServingPoints(true);
+		},
+		[],
+	);
+
+	const loadMoreAssignModal = useCallback(async () => {
+		if (modalLoadingMore || modalLoading || !modalHasMore) return;
+		setModalLoadingMore(true);
+		try {
+			await fetchAssignModalChunk(modalPage + 1, assignServingPointSearch.trim(), true);
 		} catch (err) {
 			showErrorRef.current(err);
 		} finally {
-			setLoadingAllServingPoints(false);
+			setModalLoadingMore(false);
 		}
-	}, [loadedAllServingPoints, loadingAllServingPoints]);
+	}, [
+		assignServingPointSearch,
+		fetchAssignModalChunk,
+		modalHasMore,
+		modalLoading,
+		modalLoadingMore,
+		modalPage,
+	]);
+
+	const handleAssignModalScroll = useCallback(
+		(event: React.UIEvent<HTMLDivElement>) => {
+			if (modalLoadingMore || !modalHasMore) return;
+			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+			if (scrollTop + clientHeight >= scrollHeight - 48) {
+				void loadMoreAssignModal();
+			}
+		},
+		[loadMoreAssignModal, modalHasMore, modalLoadingMore],
+	);
+
+	useEffect(() => {
+		if (!showAssignServingPointModal) return;
+		const search = assignServingPointSearch.trim();
+		// Debounce search only; load immediately when the modal opens.
+		const delay = search ? 400 : 0;
+		const timer = window.setTimeout(() => {
+			void loadAssignModalList(search);
+		}, delay);
+		return () => window.clearTimeout(timer);
+	}, [assignServingPointSearch, loadAssignModalList, showAssignServingPointModal]);
 
 	const availableServingPoints = useMemo(() => {
-		const current = new Set(servingPoints.map((p) => p.id));
-		const term = assignServingPointSearch.trim().toLowerCase();
-		return allServingPoints.filter((p) => {
-			if (current.has(p.id)) return false;
-			if (!term) return true;
-			return p.name.toLowerCase().includes(term) || (p.description || '').toLowerCase().includes(term);
-		});
-	}, [allServingPoints, assignServingPointSearch, servingPoints]);
+		const assigned = new Set(assignedServingPointIds);
+		return modalServingPoints.filter((p) => !assigned.has(p.id));
+	}, [modalServingPoints, assignedServingPointIds]);
 
 	// ── Handlers ────────────────────────────────────────────────────────────
 
 	const handleRemove = useCallback(
 		async (point: ServingPoint) => {
-			const nextServingPointIds = servingPoints.filter((p) => p.id !== point.id).map((p) => p.id);
 			setRemovingServingPointId(point.id);
 			try {
+				const nextServingPointIds = assignedServingPointIds.filter((id) => id !== point.id);
 				await queuesApi.update(queueId, { serving_points: nextServingPointIds });
 				await onChanged();
+				tableRef.current?.onQueryChange?.();
 			} catch (err) {
 				showErrorRef.current(err);
 			} finally {
 				setRemovingServingPointId(null);
 			}
 		},
-		[queueId, onChanged, servingPoints],
+		[assignedServingPointIds, onChanged, queueId],
 	);
 
 	const toggleAssignSelection = useCallback((id: number) => {
@@ -161,14 +256,14 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 		}
 		setAssigningServingPoints(true);
 		try {
-			const currentIds = servingPoints.map((p) => p.id);
-			const mergedIds = Array.from(new Set(currentIds.concat(selectedServingPointIds)));
+			const mergedIds = Array.from(new Set(assignedServingPointIds.concat(selectedServingPointIds)));
 			await queuesApi.update(queueId, { serving_points: mergedIds });
 			showSuccessNotification('Serving points added to this queue.');
 			setShowAssignServingPointModal(false);
 			setSelectedServingPointIds([]);
 			setAssignServingPointSearch('');
 			await onChanged();
+			tableRef.current?.onQueryChange?.();
 		} catch (err) {
 			showErrorRef.current(err);
 		} finally {
@@ -191,6 +286,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 				showSuccessNotification('Status updated successfully.');
 				setStatusModalPoint(null);
 				await onChanged();
+				tableRef.current?.onQueryChange?.();
 			} catch (err) {
 				showErrorNotification(err);
 			} finally {
@@ -203,8 +299,11 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	const openAssignModal = () => {
 		setSelectedServingPointIds([]);
 		setAssignServingPointSearch('');
+		setModalServingPoints([]);
+		setModalPage(1);
+		setModalHasMore(false);
 		setShowAssignServingPointModal(true);
-		void loadAllServingPoints();
+		// List load is handled by the effect above when showAssignServingPointModal becomes true.
 	};
 
 	const goToServingPointDetail = useCallback((row: ServingPoint) => {
@@ -317,12 +416,11 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 
 	return (
 		<>
-			{/* Serving points table */}
 			<div className='col-12 col-xl-6'>
 				<Card stretch>
 					<CardHeader>
 						<CardLabel icon='Monitor'>
-							<CardTitle tag='h5'>Serving Points ({servingPoints.length})</CardTitle>
+							<CardTitle tag='h5'>Serving Points ({totalCount})</CardTitle>
 						</CardLabel>
 						<Button color='primary' icon='Add' onClick={openAssignModal}>
 							Add Serving Point
@@ -334,13 +432,48 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 								<ThemeProvider theme={theme}>
 									<MaterialTable
 										title=' '
+										tableRef={tableRef}
 										//@ts-ignore
 										columns={servingPointColumns}
-										data={servingPoints}
+										data={(query) =>
+											new Promise((resolve) => {
+												if (!queueId || Number.isNaN(queueId)) {
+													setTotalCount(0);
+													resolve({ data: [], page: query.page, totalCount: 0 });
+													return;
+												}
+
+												const search = query.search?.trim();
+												queuesApi
+													.servingPoints({
+														queue: queueId,
+														ordering: 'name',
+														page_size: query.pageSize,
+														page: query.page + 1,
+														...(search ? { search } : {}),
+													})
+													.then((res) => {
+														const list = res.results || [];
+														const count = res.count ?? list.length;
+														setTotalCount(count);
+														resolve({
+															data: list,
+															page: query.page,
+															totalCount: count,
+														});
+													})
+													.catch((err) => {
+														showErrorRef.current(err);
+														setTotalCount(0);
+														resolve({ data: [], page: query.page, totalCount: 0 });
+													});
+											})
+										}
 										options={{
 											headerStyle: headerStyles(),
 											rowStyle: rowStyles(),
 											search: true,
+											debounceInterval: 500,
 											pageSize: 5,
 											pageSizeOptions: [5, 10, 20],
 											emptyRowsWhenPaging: false,
@@ -359,14 +492,18 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 				</Card>
 			</div>
 
-			{/* ── Status update modal ── */}
 			<Modal
 				isOpen={statusModalPoint != null}
-				setIsOpen={(open) => { if (!open) setStatusModalPoint(null); }}
+				setIsOpen={(open) => {
+					if (!open) setStatusModalPoint(null);
+				}}
 				isCentered
 				size='sm'
 				isAnimation={false}>
-				<ModalHeader setIsOpen={(open) => { if (!open) setStatusModalPoint(null); }}>
+				<ModalHeader
+					setIsOpen={(open) => {
+						if (!open) setStatusModalPoint(null);
+					}}>
 					<ModalTitle id='sp-status-modal'>Update serving point status</ModalTitle>
 				</ModalHeader>
 				{statusModalPoint && (
@@ -407,7 +544,10 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 								type='submit'
 								isDisable={statusSaving}>
 								{statusSaving ? (
-									<><Spinner isSmall inButton />Updating…</>
+									<>
+										<Spinner isSmall inButton />
+										Updating…
+									</>
 								) : (
 									`Set ${STATUS_LABELS[statusFormValue] ?? statusFormValue}`
 								)}
@@ -417,7 +557,6 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 				)}
 			</Modal>
 
-			{/* ── Add serving points ── */}
 			<Modal
 				isOpen={showAssignServingPointModal}
 				setIsOpen={setShowAssignServingPointModal}
@@ -452,23 +591,24 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 							<span className='badge bg-primary rounded-pill'>{selectedServingPointIds.length}</span>
 						</div>
 					)}
-					{availableServingPoints.length === 0 ? (
-						loadingAllServingPoints ? (
-							<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
-								<Spinner color='primary' />
-								<span>Loading serving points…</span>
+					{modalLoading && availableServingPoints.length === 0 ? (
+						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
+							<Spinner color='primary' />
+							<span>Loading serving points…</span>
+						</div>
+					) : availableServingPoints.length === 0 ? (
+						<div className='text-center text-muted py-5 px-3 border rounded-3 bg-light'>
+							<Icon icon='Monitor' size='3x' className='mb-3 opacity-50' />
+							<div className='fw-semibold text-body'>No matches</div>
+							<div className='small mt-1'>
+								All serving points may already be on this queue, or nothing matches your search.
 							</div>
-						) : (
-							<div className='text-center text-muted py-5 px-3 border rounded-3 bg-light'>
-								<Icon icon='Monitor' size='3x' className='mb-3 opacity-50' />
-								<div className='fw-semibold text-body'>No matches</div>
-								<div className='small mt-1'>
-									All serving points may already be on this queue, or nothing matches your search.
-								</div>
-							</div>
-						)
+						</div>
 					) : (
-						<div className='d-flex flex-column gap-2' style={{ maxHeight: 360, overflowY: 'auto' }}>
+						<div
+							className='d-flex flex-column gap-2'
+							style={{ maxHeight: 360, overflowY: 'auto' }}
+							onScroll={handleAssignModalScroll}>
 							{availableServingPoints.map((point) => {
 								const selected = selectedServingPointIds.includes(point.id);
 								return (
@@ -503,6 +643,11 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 									</button>
 								);
 							})}
+							{modalLoadingMore && (
+								<div className='d-flex justify-content-center py-2 text-muted'>
+									<Spinner color='primary' isSmall />
+								</div>
+							)}
 						</div>
 					)}
 				</ModalBody>

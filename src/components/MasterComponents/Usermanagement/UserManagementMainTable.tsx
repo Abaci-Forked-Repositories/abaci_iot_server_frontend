@@ -13,6 +13,7 @@ import CustomButtonWithNoName from '../../CustomComponent/Buttons/CustomButtonWi
 import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
 import StatusBadge from '../../BadgeWithIcon';
+import Button from '../../bootstrap/Button';
 
 interface UserManagementTableComponentProps {
 	tableRef: any;
@@ -36,13 +37,6 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 			},
 		},
 		{
-			title: 'Mobile Number',
-			field: 'mobile_number',
-			render: (rowData: any) => {
-				return rowData?.mobile_number || '----';
-			},
-		},
-		{
 			title: 'Email',
 			field: 'email',
 			render: (rowData: any) => {
@@ -61,10 +55,10 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 			},
 		},
 		{
-			title: 'Staff ID',
-			field: 'staff_id',
+			title: 'Role',
+			field: 'role',
 			render: (rowData: any) => {
-				return rowData?.staff_id || '----';
+				return rowData?.role?.display_name || '----';
 			},
 		},
 		// {
@@ -98,13 +92,15 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 				<div className='d-flex gap-1 justify-content-end'>
 					{rowData.status !== 'DELETED' && (
 						<>
-							<CustomButtonWithNoName
-								icon={'Edit'}
+							<Button
+								color='light'
+								icon='Edit'
 								onClick={() => handleEdit(rowData)}
 								id={rowData.id}
-								size='sm'
-							/>
+							>
+							</Button>
 							<DeleteButton
+							    color='danger'
 								tableRef={tableRef}
 								apiEndpoint={`api/users/${rowData.id}/`}
 								text='Are you sure you want to delete this User?'

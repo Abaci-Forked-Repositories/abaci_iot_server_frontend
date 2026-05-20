@@ -244,11 +244,10 @@ export const formatDate = (value?: string | null) => {
 };
 
 export const statusBadgeColor = (status?: string) => {
-	switch (status) {
+	const s = (status || '').toLowerCase().trim();
+	switch (s) {
 		case 'registred':
 			return 'secondary';
-		case 'reported':
-			return 'warning';
 		case 'waiting':
 			return 'warning';
 		case 'serving':

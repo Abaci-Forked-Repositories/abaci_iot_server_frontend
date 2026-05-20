@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
@@ -20,6 +20,10 @@ import {
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
 import CompleteWithNextQueueModal from '../../PageComponents/ServingPoints/CompleteWithNextQueueModal';
+import IssuedTokenModal, { type IssuedTokenModalVariant } from '../../PageComponents/ServingPoints/IssuedTokenModal';
+const ShareTokenModal = lazy(
+	() => import('../../PageComponents/ServingPoints/ShareTokenModal'),
+);
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import {
 	formatDate,
@@ -106,6 +110,12 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const [pendingCompleteOpts, setPendingCompleteOpts] = useState<
 		{ serving_point_status?: string } | undefined
 	>(undefined);
+	const [issuedTokenModal, setIssuedTokenModal] = useState<{
+		variant: IssuedTokenModalVariant;
+		token: Token;
+		detail: string | null;
+	} | null>(null);
+	const [showShareModal, setShowShareModal] = useState(false);
 
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -233,10 +243,11 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	);
 
 	const getAllowedActions = (row: ScheduleServingPoint) => {
-		const tokenStatus = normalizeTokenStatus(getWindowCurrentTokenStatusRaw(row));
-		const canStart = tokenStatus === 'registred' || tokenStatus === 'reported';
+		const tokenStatus = (getWindowCurrentTokenStatusRaw(row) || '').toLowerCase().trim();
+		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
 		const canComplete = tokenStatus === 'serving';
-		const canCancel = tokenStatus === 'registred' || tokenStatus === 'reported' || tokenStatus === 'serving';
+		const canCancel =
+			tokenStatus === 'registred' || tokenStatus === 'waiting' || tokenStatus === 'serving';
 		const canNoShow = canCancel;
 		const canPostpone = canCancel && Boolean(schedule?.allow_postpone);
 		return { canStart, canComplete, canCancel, canNoShow, canPostpone };
@@ -254,13 +265,36 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			...(opts?.next_queue_id != null ? { next_queue_id: opts.next_queue_id } : {}),
 		};
 		const hasOpts = Object.keys(apiOpts).length > 0;
+		let completeIssuedNextToken = false;
 		try {
-			if (action === 'start') await scheduleServingPointsApi.startServing(row.id);
-			if (action === 'complete') await scheduleServingPointsApi.complete(row.id, hasOpts ? apiOpts : undefined);
 			const spOnlyOpts = spStatus ? { serving_point_status: spStatus } : undefined;
+			if (action === 'start') await scheduleServingPointsApi.startServing(row.id);
+			if (action === 'complete') {
+				const completeRes = await scheduleServingPointsApi.complete(
+					row.id,
+					hasOpts ? apiOpts : undefined,
+				);
+				if (completeRes.next_token) {
+					completeIssuedNextToken = true;
+					setIssuedTokenModal({
+						variant: 'complete',
+						token: completeRes.next_token,
+						detail: completeRes.detail ?? null,
+					});
+				}
+			}
 			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, spOnlyOpts);
 			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, spOnlyOpts);
-			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id, spOnlyOpts);
+			if (action === 'postpone') {
+				const postponeRes = await scheduleServingPointsApi.postpone(row.id, spOnlyOpts);
+				if (postponeRes.new_token) {
+					setIssuedTokenModal({
+						variant: 'postpone',
+						token: postponeRes.new_token,
+						detail: postponeRes.detail ?? null,
+					});
+				}
+			}
 			const st = spStatus;
 			if (st) {
 				const slab = SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ');
@@ -273,6 +307,10 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 								? 'No show recorded'
 								: 'Token postponed';
 				showSuccessNotification(`${prefix}; counter set to ${slab}.`);
+			} else if (action === 'postpone') {
+				showSuccessNotification('Token postponed. A new token has been issued.');
+			} else if (action === 'complete' && completeIssuedNextToken) {
+				showSuccessNotification('Token completed. A new token has been created in the next queue.');
 			} else {
 				showSuccessNotification('Window token updated successfully.');
 			}
@@ -316,7 +354,13 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		if (typeof nq[0] === 'number') {
 			return (nq as number[]).map((id) => ({ id, name: `Queue #${id}` }));
 		}
-		return (nq as Queue[]).map((q) => ({ id: q.id, name: q.name, description: q.description }));
+		return (nq as Queue[]).map((q) => ({
+			id: q.id,
+			name: q.name,
+			description: q.description,
+			status: q.status,
+			is_active: q.is_active,
+		}));
 	}, [currentQueue]);
 
 	const initiateCompleteAction = (
@@ -359,7 +403,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				icon: 'PlayCircle',
 				color: 'primary',
 				show: allowed.canStart,
-				tooltip: 'Begin serving this token at this window (registered or reported).',
+				tooltip: 'Begin serving this token at this window (registered or waiting).',
 			},
 			{
 				key: 'complete',
@@ -616,12 +660,24 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 								</div>
 								) : (
 								<div className='p-4'>
-									<div className='d-flex align-items-center gap-2 mb-4'>
-										<Icon icon='Person' className='text-primary' size='sm' />
-										<span className='small text-uppercase fw-semibold text-muted'>Current visitor</span>
+									<div className='d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap'>
+										<div className='d-flex align-items-center gap-2'>
+											<Icon icon='Person' className='text-primary' size='sm' />
+											<span className='small text-uppercase fw-semibold text-muted'>Current visitor</span>
+										</div>
+										{token?.token_user?.uuid && windowRow?.queue_schedule_queue_id != null && (
+											<Button
+												color='info'
+												isLight
+												size='sm'
+												icon='QrCode2'
+												onClick={() => setShowShareModal(true)}>
+												Share
+											</Button>
+										)}
 									</div>
 									<div className='row g-4 align-items-start'>
-										<div className='col-12 col-lg-6'>
+										<div className='col-12 col-lg-4'>
 											<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
 											{user?.name?.trim() ? (
 												<div className='fs-4 fw-semibold text-body-emphasis mb-3'>{user.name.trim()}</div>
@@ -644,7 +700,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 												</ul>
 											)}
 										</div>
-										<div className='col-12 col-lg-6 d-flex flex-wrap align-items-start gap-2 pt-lg-1'>
+										<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 										{visibleTokenActions.map((a) => {
 											if (a.key === 'start') {
 												return (
@@ -759,6 +815,35 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				nextQueues={nextQueues}
 				onComplete={handleCompleteConfirmed}
 			/>
+
+			<IssuedTokenModal
+				isOpen={issuedTokenModal != null}
+				setIsOpen={(open) => {
+					if (!open) setIssuedTokenModal(null);
+				}}
+				variant={issuedTokenModal?.variant ?? 'postpone'}
+				token={issuedTokenModal?.token ?? null}
+				detail={issuedTokenModal?.detail}
+			/>
+
+			{showShareModal && windowRow && (() => {
+				const shareToken = getCurrentToken(windowRow);
+				const shareUuid = shareToken?.token_user?.uuid ?? '';
+				const shareQueueId = windowRow.queue_schedule_queue_id ?? 0;
+				if (!shareUuid || !shareQueueId) return null;
+				return (
+					<Suspense fallback={null}>
+						<ShareTokenModal
+							isOpen={showShareModal}
+							setIsOpen={setShowShareModal}
+							tokenUserUuid={shareUuid}
+							queueId={shareQueueId}
+							tokenDisplay={getWindowCurrentTokenDisplay(windowRow)}
+							customerName={shareToken?.token_user?.name ?? null}
+						/>
+					</Suspense>
+				);
+			})()}
 		</div>
 	);
 };

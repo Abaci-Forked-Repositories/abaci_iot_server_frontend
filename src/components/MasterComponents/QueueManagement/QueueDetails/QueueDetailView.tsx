@@ -6,8 +6,8 @@ import Button from '../../../bootstrap/Button';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../../bootstrap/Card';
 import Icon from '../../../icon/Icon';
 import QueueDetailSkeleton from '../../../CustomComponent/Skeleton/QueueDetailSkeleton';
-import type { Queue, QueueSchedule, QueueStatistics, ServingPoint } from '../../../../services/queueManagementApi';
-import { queuesApi, schedulesApi } from '../../../../services/queueManagementApi';
+import type { Queue, QueueStatistics } from '../../../../services/queueManagementApi';
+import { queuesApi } from '../../../../services/queueManagementApi';
 import type { TColor } from '../../../../type/color-type';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
 import QueueFormModal from '../../../PageComponents/QueueManagement/QueueFormModal';
@@ -25,7 +25,7 @@ const STAT_TILES: Array<{
 	color: TColor;
 }> = [
 	{ key: 'total_tokens', label: 'Total Tokens', icon: 'Insights', color: 'primary' },
-	{ key: 'reported', label: 'Reported', icon: 'HourglassEmpty', color: 'warning' },
+	{ key: 'waiting', label: 'Waiting', icon: 'HourglassEmpty', color: 'warning' },
 	{ key: 'serving', label: 'Serving', icon: 'SupportAgent', color: 'info' },
 	{ key: 'completed', label: 'Completed', icon: 'TaskAlt', color: 'success' },
 	{ key: 'no_show', label: 'No Show', icon: 'PersonOff', color: 'danger' },
@@ -52,8 +52,6 @@ const QueueDetailView: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [queue, setQueue] = useState<Queue | null>(null);
 	const [stats, setStats] = useState<QueueStatistics | null>(null);
-	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
-	const [scheduleRecords, setScheduleRecords] = useState<QueueSchedule[]>([]);
 	const [pageDataVersion, setPageDataVersion] = useState(0);
 	const [statRange, setStatRange] = useState<(typeof STAT_RANGE_OPTIONS)[number]>('Today');
 	const { showErrorNotification } = useToasterNotification();
@@ -70,15 +68,12 @@ const QueueDetailView: React.FC = () => {
 		}
 		setLoading(true);
 		try {
-			const [qRes, stRes, schRes] = await Promise.all([
+			const [qRes, stRes] = await Promise.all([
 				queuesApi.get(id),
 				queuesApi.statistics(id),
-				schedulesApi.list({ queue: id, page_size: 200, ordering: 'from_datetime' }),
 			]);
 			setQueue(qRes);
 			setStats(stRes);
-			setServingPoints(qRes.serving_points ?? []);
-			setScheduleRecords(schRes.results || []);
 			setPageDataVersion((v) => v + 1);
 		} catch (err) {
 			showErrorNotificationRef.current(err);
@@ -111,7 +106,7 @@ const QueueDetailView: React.FC = () => {
 
 	const statValue = (key: string): number => {
 		if (key === 'total_tokens') return stats?.total_tokens ?? 0;
-		if (key === 'reported') return stats?.reported ?? 0;
+		if (key === 'waiting') return stats?.waiting ?? 0;
 		if (key === 'serving') return stats?.serving ?? 0;
 		if (key === 'completed') return stats?.completed ?? 0;
 		if (key === 'no_show') return stats?.no_show ?? 0;
@@ -317,11 +312,10 @@ const QueueDetailView: React.FC = () => {
 
 			{/* ── Schedule Calendar ── */}
 			<div className='col-12'>
-				<ScheduleCalendar
-					queueName={queueData.name}
-					queueId={id}
-					scheduleRecords={scheduleRecords}
-					onScheduleCreated={() => void load()}
+			<ScheduleCalendar
+				queueName={queueData.name}
+				queueId={id}
+				onScheduleCreated={() => void load()}
 					onEventClick={(event: QueueScheduleEvent) =>
 						navigate(`/queue-management/schedules/${event.id}`, {
 							state: {
@@ -335,7 +329,12 @@ const QueueDetailView: React.FC = () => {
 			</div>
 
 			{/* ── Serving Points ── */}
-			<QueueDetailServingPoints queueId={id} servingPoints={servingPoints} onChanged={() => void load()} />
+			<QueueDetailServingPoints
+				queueId={id}
+				assignedServingPointIds={(queueData.serving_points ?? []).map((p) => p.id)}
+				refreshVersion={pageDataVersion}
+				onChanged={() => void load()}
+			/>
 
 				<QueueDetailCurrentlyServing queueId={id} refreshVersion={pageDataVersion} />
 			</div>

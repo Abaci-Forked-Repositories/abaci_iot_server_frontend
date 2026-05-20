@@ -1,74 +1,73 @@
 import React, { FC, useState } from 'react';
 import { Form } from 'reactstrap';
 import { useForm } from 'react-hook-form';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import { authAxios } from '../../../axiosInstance';
 import OffCanvasComponent from '../../OffCanvasComponent';
 import Card, { CardBody } from '../../bootstrap/Card';
 import SaveButton from '../../CustomComponent/Buttons/SaveButton';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import Fields from './Fields';
+import Fields, { type UserRoleSelectOption } from './Fields';
 
-interface AddSensorProps {
+interface AddUserProps {
 	isOpen: boolean;
 	setIsOpen: (isOpen: boolean) => void;
-	tableRef: any;
+	tableRef: React.RefObject<{ onQueryChange: () => void } | null>;
 	title: string;
 }
-const AddUser: FC<AddSensorProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
+
+type AddUserFormValues = {
+	first_name: string;
+	last_name: string;
+	email: string;
+	role: UserRoleSelectOption | null;
+	password: string;
+	password2: string;
+};
+
+const AddUser: FC<AddUserProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const {
 		register,
 		handleSubmit,
 		getValues,
 		control,
+		reset,
 		formState: { errors },
-		watch,
 		trigger,
-	} = useForm({
+	} = useForm<AddUserFormValues>({
 		defaultValues: {
-			name: '',
-			location: '',
-			description: '',
+			first_name: '',
+			last_name: '',
+			email: '',
+			role: null,
+			password: '',
+			password2: '',
 		},
 	});
 
 	const [waitingForAxios, setwaitingForAxios] = useState(false);
-	const [generatedPassword, setGeneratedPassword] = useState('');
-	const [emailId, setEmailId] = useState('');
-	const [username, setUsername] = useState('');
-	const [showPassword, setShowPassword] = useState(false);
 
-	const onSubmit = (data: any) => {
+	const onSubmit = (data: AddUserFormValues) => {
 		const payload = {
-			first_name: data.first_name,
-			last_name: data.last_name,
-			mobile_number: data.mobile_number,
-			email: data.email,
-			username: data.username,
-			staff_id: data.staff_id,
+			email: data.email.trim(),
+			first_name: data.first_name.trim(),
+			last_name: data.last_name.trim(),
+			role_id: data.role?.value ?? undefined,
+			password: data.password,
+			password2: data.password2,
 		};
+
 		setwaitingForAxios(true);
-		const url = '/api/users/create-user/';
 		authAxios
-			.post(url, payload)
+			.post('/api/users/', payload)
 			.then((res) => {
 				setwaitingForAxios(false);
-				if (tableRef) {
-					tableRef.current.onQueryChange();
-				}
-				const { user, generated_password } = res.data?.data || {};
-
-				setUsername(user?.username ?? '');
-				setEmailId(user?.email ?? payload.email);
-				setGeneratedPassword(generated_password ?? '');
-
+				tableRef?.current?.onQueryChange?.();
 				showSuccessNotification(
-					res.data?.message ||
-					'Success! User created successfully. Credentials have also been emailed to the registered email.',
+					res.data?.message || 'User created successfully.',
 				);
+				reset();
+				setIsOpen(false);
 			})
 			.catch((err) => {
 				setwaitingForAxios(false);
@@ -86,103 +85,13 @@ const AddUser: FC<AddSensorProps> = ({ isOpen, setIsOpen, tableRef, title }) => 
 							errors={errors}
 							getValues={getValues}
 							control={control}
-							watch={watch}
 							trigger={trigger}
 						/>
-						{generatedPassword && emailId && username ? (
-							<div className='col-12 mb-2'>
-								<div
-									style={{
-										backgroundColor: '#d4edda',
-										padding: '15px',
-										borderRadius: '8px',
-										border: '1px solid #c3e6cb',
-									}}>
-
-									<div className='mb-2'>
-										<label
-											style={{
-												fontSize: '14px',
-												fontWeight: 500,
-												color: '#155724',
-												marginBottom: '5px',
-											}}>
-											Username:
-										</label>
-										<div className='d-flex gap-2'>
-											<input
-												type='text'
-												disabled
-												className='form-control'
-												style={{ height: '40px' }}
-												value={username}
-											/>
-											<CopyToClipboard
-												text={username}
-												onCopy={() =>
-													showSuccessNotification('Username copied to clipboard')
-												}>
-												<button type='button' className='btn btn-outline-success btn-sm'>
-													Copy
-												</button>
-											</CopyToClipboard>
-										</div>
-									</div>
-									<div>
-										<label
-											style={{
-												fontSize: '14px',
-												fontWeight: 500,
-												color: '#155724',
-												marginBottom: '5px',
-											}}>
-											Generated Password:
-										</label>
-										<div className='d-flex gap-2 align-items-center'>
-											<div style={{ position: 'relative', flex: 1 }}>
-												<input
-													type={showPassword ? 'text' : 'password'}
-													disabled
-													className='form-control'
-													style={{ height: '40px', paddingRight: '40px' }}
-													value={generatedPassword}
-												/>
-												<button
-													type='button'
-													onClick={() => setShowPassword(!showPassword)}
-													style={{
-														position: 'absolute',
-														right: '10px',
-														top: '50%',
-														transform: 'translateY(-50%)',
-														background: 'none',
-														border: 'none',
-														cursor: 'pointer',
-														color: '#6c757d',
-													}}>
-													{showPassword ? <VisibilityIcon /> : <VisibilityOffIcon />}
-												</button>
-											</div>
-											<CopyToClipboard
-												text={generatedPassword}
-												onCopy={() =>
-													showSuccessNotification('Password copied to clipboard')
-												}>
-												<button type='button' className='btn btn-outline-success btn-sm'>
-													Copy
-												</button>
-											</CopyToClipboard>
-										</div>
-									</div>
-								</div>
+						<div className='row m-0'>
+							<div className='col-12 p-3'>
+								<SaveButton state={waitingForAxios} />
 							</div>
-						) : (
-							<div className='row m-0'>
-								<div className='col-12 p-3'>
-									<SaveButton state={waitingForAxios} />
-								</div>
-							</div>
-						)}
+						</div>
 					</CardBody>
 				</Card>
 			</Form>

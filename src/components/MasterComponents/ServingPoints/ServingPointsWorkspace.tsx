@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Tooltip from '@mui/material/Tooltip';
 import Card, { CardActions, CardBody, CardHeader } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
@@ -20,14 +21,14 @@ import {
 	getNextAllowedServingPointStatuses,
 	servingPointQueueIds,
 } from '../QueueManagement/queueManagementUtils';
-import Tooltip from '@mui/material/Tooltip';
 
 const ServingPointsWorkspace: React.FC = () => {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
 	const queueIdFromQuery = Number(searchParams.get('queueId'));
 
-	const [loading, setLoading] = useState(true);
+	const [pageSize] = useState(10);
+	const [totalCount, setTotalCount] = useState(0);
 	const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 	const [showModal, setShowModal] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -35,42 +36,29 @@ const ServingPointsWorkspace: React.FC = () => {
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [statusModalPoint, setStatusModalPoint] = useState<ServingPoint | null>(null);
 	const [queues, setQueues] = useState<Queue[]>([]);
-	const [servingPoints, setServingPoints] = useState<ServingPoint[]>([]);
 
+	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
 	const { theme, headerStyles, rowStyles } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
-	const errorNotifierRef = useRef(showErrorNotification);
-	useEffect(() => {
-		errorNotifierRef.current = showErrorNotification;
-	}, [showErrorNotification]);
+	const showErrorRef = useRef(showErrorNotification);
+	showErrorRef.current = showErrorNotification;
 
 	useEffect(() => {
 		let active = true;
-		const run = async () => {
-			setLoading(true);
-			try {
-				const [queuesRes, pointsRes] = await Promise.all([
-					queuesApi.list({ ordering: 'name', page_size: 200 }),
-					queuesApi.servingPoints({ ordering: '-created_at', page_size: 300 }),
-				]);
-				if (!active) return;
-				setQueues(queuesRes.results || []);
-				setServingPoints(pointsRes.results || []);
-			} catch (err) {
-				if (active) errorNotifierRef.current(err);
-			} finally {
-				if (active) setLoading(false);
-			}
-		};
-		void run();
+		void queuesApi
+			.list()
+			.then((res) => {
+				if (active) setQueues(res.results || []);
+			})
+			.catch((err) => {
+				if (active) showErrorRef.current(err);
+			});
 		return () => {
 			active = false;
 		};
 	}, []);
 
-	const queueNameMap = useMemo(() => {
-		return new Map(queues.map((q) => [q.id, q.name]));
-	}, [queues]);
+	const queueNameMap = useMemo(() => new Map(queues.map((q) => [q.id, q.name])), [queues]);
 
 	const columns = useMemo(
 		() => [
@@ -82,6 +70,7 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Queue',
 				field: 'queue',
+				sorting: false,
 				render: (rowData: ServingPoint) => {
 					const ids = servingPointQueueIds(rowData);
 					if (ids.length === 0) return '—';
@@ -172,48 +161,46 @@ const ServingPointsWorkspace: React.FC = () => {
 								</Tooltip>
 							)}
 							<Tooltip title='Edit Serving Point'>
-							<Button
-								color='primary'
-								isLight
-								size='sm'
-								icon='Edit'
-								onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-									event.preventDefault();
-									event.stopPropagation();
-									setModalMode('edit');
-									setModalServingPoint(rowData);
-									setShowModal(true);
-								}}>
-							</Button>
+								<Button
+									color='primary'
+									isLight
+									size='sm'
+									icon='Edit'
+									onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+										event.preventDefault();
+										event.stopPropagation();
+										setModalMode('edit');
+										setModalServingPoint(rowData);
+										setShowModal(true);
+									}}
+								/>
 							</Tooltip>
 							<Tooltip title={isActive ? 'Disable Serving Point' : 'Enable Serving Point'}>
-							<Button
-								color={isActive ? 'danger' : 'success'}
-								isLight
-								size='sm'
-								icon={isActive ? 'Block' : 'CheckCircle'}
-								isDisable={statusUpdatingId === rowData.id}
-								onClick={async (event: React.MouseEvent<HTMLButtonElement>) => {
-									event.preventDefault();
-									event.stopPropagation();
-									setStatusUpdatingId(rowData.id);
-									try {
-										const updated = await queuesApi.updateServingPoint(rowData.id, {
-											is_active: !isActive,
-										});
-										setServingPoints((prev) =>
-											prev.map((item) => (item.id === rowData.id ? updated : item)),
-										);
-										showSuccessNotification(
-											`Serving point ${isActive ? 'disabled' : 'enabled'} successfully.`,
-										);
-									} catch (err) {
-										showErrorNotification(err);
-									} finally {
-										setStatusUpdatingId(null);
-									}
-								}}>
-								</Button>
+								<Button
+									color={isActive ? 'danger' : 'success'}
+									isLight
+									size='sm'
+									icon={isActive ? 'Block' : 'CheckCircle'}
+									isDisable={statusUpdatingId === rowData.id}
+									onClick={async (event: React.MouseEvent<HTMLButtonElement>) => {
+										event.preventDefault();
+										event.stopPropagation();
+										setStatusUpdatingId(rowData.id);
+										try {
+											await queuesApi.updateServingPoint(rowData.id, {
+												is_active: !isActive,
+											});
+											showSuccessNotification(
+												`Serving point ${isActive ? 'disabled' : 'enabled'} successfully.`,
+											);
+											tableRef.current?.onQueryChange?.();
+										} catch (err) {
+											showErrorNotification(err);
+										} finally {
+											setStatusUpdatingId(null);
+										}
+									}}
+								/>
 							</Tooltip>
 						</div>
 					);
@@ -233,7 +220,7 @@ const ServingPointsWorkspace: React.FC = () => {
 					<div className='d-flex align-items-center gap-3'>
 						<div className='media-files-title-text d-flex align-items-center gap-2'>
 							<Icon icon='Monitor' color='primary' size='2x' />
-							<span>Serving Points ({servingPoints.length})</span>
+							<span>Serving Points ({totalCount})</span>
 						</div>
 					</div>
 					<CardActions>
@@ -250,42 +237,68 @@ const ServingPointsWorkspace: React.FC = () => {
 					</CardActions>
 				</CardHeader>
 				<CardBody>
-					{loading ? (
-						<div className='text-center text-muted py-5'>Loading serving points...</div>
-					) : (
-						<div className='material_tabel_wrapper'>
-							<div style={{ overflow: 'hidden' }}>
-								<ThemeProvider theme={theme}>
-									<MaterialTable
-										title=' '
-										// @ts-ignore
-										columns={columns}
-										data={servingPoints}
-										options={{
-											headerStyle: headerStyles(),
-											rowStyle: rowStyles(),
-											search: true,
-											pageSize: 10,
-											pageSizeOptions: [10, 20, 50],
-											emptyRowsWhenPaging: false,
-										}}
-										localization={{
-											pagination: {
-												labelRowsPerPage: '',
-											},
-										}}
-										onRowClick={(_, rowData) => {
-											const row = rowData as ServingPoint | undefined;
-											if (!row?.id) return;
-											navigate(`/serving-points/${row.id}`, {
-												state: { servingPointName: row.name || undefined },
-											});
-										}}
-									/>
-								</ThemeProvider>
-							</div>
+					<div className='material_tabel_wrapper'>
+						<div style={{ overflow: 'hidden' }}>
+							<ThemeProvider theme={theme}>
+								<MaterialTable
+									title=' '
+									tableRef={tableRef}
+									// @ts-ignore
+									columns={columns}
+									data={(query) =>
+										new Promise((resolve) => {
+											const search = query.search?.trim();
+											queuesApi
+												.servingPoints({
+													limit: query.pageSize,
+													offset: query.pageSize * query.page,
+													...(search ? { search } : {}),
+												})
+												.then((res) => {
+													const count = res.count ?? res.results?.length ?? 0;
+													setTotalCount(count);
+													resolve({
+														data: res.results || [],
+														page: query.page,
+														totalCount: count,
+													});
+												})
+												.catch((err) => {
+													showErrorRef.current(err);
+													setTotalCount(0);
+													resolve({
+														data: [],
+														page: query.page,
+														totalCount: 0,
+													});
+												});
+										})
+									}
+									options={{
+										headerStyle: headerStyles(),
+										rowStyle: rowStyles(),
+										debounceInterval: 500,
+										search: true,
+										pageSize,
+										pageSizeOptions: [10, 20, 50],
+										emptyRowsWhenPaging: false,
+									}}
+									localization={{
+										pagination: {
+											labelRowsPerPage: '',
+										},
+									}}
+									onRowClick={(_, rowData) => {
+										const row = rowData as ServingPoint | undefined;
+										if (!row?.id) return;
+										navigate(`/serving-points/${row.id}`, {
+											state: { servingPointName: row.name || undefined },
+										});
+									}}
+								/>
+							</ThemeProvider>
 						</div>
-					)}
+					</div>
 				</CardBody>
 			</Card>
 
@@ -295,12 +308,8 @@ const ServingPointsWorkspace: React.FC = () => {
 				mode={modalMode}
 				servingPoint={modalServingPoint}
 				defaultQueueId={defaultQueueId}
-				onSuccess={(point, mode) => {
-					if (mode === 'add') {
-						setServingPoints((prev) => [point, ...prev]);
-					} else {
-						setServingPoints((prev) => prev.map((item) => (item.id === point.id ? point : item)));
-					}
+				onSuccess={() => {
+					tableRef.current?.onQueryChange?.();
 					setModalServingPoint(null);
 				}}
 			/>
@@ -309,8 +318,8 @@ const ServingPointsWorkspace: React.FC = () => {
 				isOpen={showStatusModal}
 				setIsOpen={setShowStatusModal}
 				servingPoint={statusModalPoint}
-				onSuccess={(updated) => {
-					setServingPoints((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+				onSuccess={() => {
+					tableRef.current?.onQueryChange?.();
 					setStatusModalPoint(null);
 				}}
 			/>
@@ -319,4 +328,3 @@ const ServingPointsWorkspace: React.FC = () => {
 };
 
 export default ServingPointsWorkspace;
-

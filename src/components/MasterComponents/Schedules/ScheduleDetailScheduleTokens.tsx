@@ -13,9 +13,9 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import { type QueueSchedule, type Token, tokensApi } from '../../../services/queueManagementApi';
 import { formatDate, getTokenDisplay } from '../QueueManagement/queueManagementUtils';
 
-const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
+const tokenStatusKey = (status?: string) => (status || '').toLowerCase().trim();
 
-type TokenStatusAction = 'mark_reported' | 'cancel' | 'postpone';
+type TokenStatusAction = 'mark_waiting' | 'cancel' | 'postpone';
 
 const buildTokenStatusActionOptions = (
 	token: Token,
@@ -23,19 +23,20 @@ const buildTokenStatusActionOptions = (
 ): Array<{ value: TokenStatusAction; label: string }> => {
 	const isReportingEnabled = Boolean(schedule?.is_reporting_enabled);
 	const allowPostpone = Boolean(schedule?.allow_postpone);
-	const s = normalizeTokenStatus(token.status);
+	const s = tokenStatusKey(token.status);
 	const opts: Array<{ value: TokenStatusAction; label: string }> = [];
 	if (s === 'registred') {
 		if (isReportingEnabled) {
-			opts.push({ value: 'mark_reported', label: 'Reported' });
+			opts.push({ value: 'mark_waiting', label: 'Waiting' });
 		}
 		opts.push({ value: 'cancel', label: 'Cancelled' });
+		opts.push({ value: 'mark_waiting', label: 'Waiting' });
 		if (allowPostpone) {
 			opts.push({ value: 'postpone', label: 'Postponed' });
 		}
 		return opts;
 	}
-	if (s === 'reported') {
+	if (s === 'waiting') {
 		opts.push({ value: 'cancel', label: 'Cancelled' });
 		if (allowPostpone) {
 			opts.push({ value: 'postpone', label: 'Postponed' });
@@ -46,13 +47,13 @@ const buildTokenStatusActionOptions = (
 };
 
 const ACTION_SUBMIT_COLORS: Record<TokenStatusAction, 'primary' | 'danger' | 'secondary'> = {
-	mark_reported: 'primary',
+	mark_waiting: 'primary',
 	cancel: 'danger',
 	postpone: 'secondary',
 };
 
 const canEditTokenDetails = (token: Token) => {
-	const s = normalizeTokenStatus(token.status);
+	const s = tokenStatusKey(token.status);
 	return !['completed', 'cancelled', 'no_show'].includes(s);
 };
 
@@ -109,7 +110,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			}
 			setStatusSaving(true);
 			try {
-				if (statusActionValue === 'mark_reported') {
+				if (statusActionValue === 'mark_waiting') {
 					await tokensApi.markArrived(statusModalToken.id);
 				} else if (statusActionValue === 'cancel') {
 					await tokensApi.cancel(statusModalToken.id);
@@ -217,7 +218,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 		() => [
 			{ label: 'All', value: 'all' },
 			{ label: 'registred', value: 'registred' },
-			{ label: 'reported', value: 'reported' },
+			{ label: 'waiting', value: 'waiting' },
 			{ label: 'serving', value: 'serving' },
 			{ label: 'completed', value: 'completed' },
 			{ label: 'cancelled', value: 'cancelled' },
@@ -231,7 +232,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 		if (tokenStatusFilter.value === 'all') {
 			return tokens;
 		}
-		return tokens.filter((token) => token.status === tokenStatusFilter.value);
+		return tokens.filter((token) => tokenStatusKey(token.status) === tokenStatusFilter.value);
 	}, [tokenStatusFilter.value, tokens]);
 
 	const tokenToolbar = (props: any) => (

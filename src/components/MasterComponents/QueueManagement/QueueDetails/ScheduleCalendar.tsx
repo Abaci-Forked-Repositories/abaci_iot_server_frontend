@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { Calendar, dayjsLocalizer, Views, type View as TView } from 'react-big-calendar';
 import Card, { CardActions, CardBody, CardHeader, CardTitle } from '../../../bootstrap/Card';
@@ -8,6 +8,7 @@ import { CalendarTodayButton, getLabel, getUnitType } from '../../../extras/cale
 import Icon from '../../../icon/Icon';
 import Tooltips from '../../../bootstrap/Tooltips';
 import type { QueueSchedule } from '../../../../services/queueManagementApi';
+import { schedulesApi } from '../../../../services/queueManagementApi';
 import ScheduleFormModal, {
 	isScheduleMetadataEditable,
 	toDateTimeLocalValue,
@@ -30,7 +31,7 @@ export interface QueueScheduleEvent {
 	status?: 'scheduled' | 'running' | 'onhold' | 'completed' | 'canceled';
 	token_counts?: {
 		active?: number;
-		reported?: number;
+		waiting?: number;
 		completed?: number;
 		total?: number;
 	};
@@ -39,11 +40,9 @@ export interface QueueScheduleEvent {
 interface ScheduleCalendarProps {
 	/** Label shown in the card header alongside the icon */
 	queueName?: string;
-	/** API schedule records rendered in calendar. */
-	scheduleRecords?: QueueSchedule[];
-	/** Queue id for POST /api/queues/schedules/ — when set, create persists to the API */
-	queueId?: number;
-	/** Called after a schedule is successfully created via the API */
+	/** Queue id used to fetch schedules and create new ones via the API */
+	queueId: number;
+	/** Called after a schedule is successfully created/updated via the API */
 	onScheduleCreated?: () => void | Promise<void>;
 	/** Called when the user clicks an existing schedule event */
 	onEventClick?: (event: QueueScheduleEvent) => void;
@@ -121,7 +120,6 @@ function getScheduleName(event: QueueScheduleEvent) {
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	queueName,
-	scheduleRecords,
 	queueId,
 	onScheduleCreated,
 	onEventClick,
@@ -134,6 +132,34 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	const [editingScheduleRecord, setEditingScheduleRecord] = useState<QueueSchedule | null>(null);
 	const [createInitialStart, setCreateInitialStart] = useState<string | undefined>();
 	const [createInitialEnd, setCreateInitialEnd] = useState<string | undefined>();
+
+	const [scheduleRecords, setScheduleRecords] = useState<QueueSchedule[]>([]);
+
+	const monthKey = `${dayjs(date).year()}-${String(dayjs(date).month()).padStart(2, '0')}`;
+
+	const fetchSchedulesForMonth = useCallback(
+		async (monthDate: Date) => {
+			const start = dayjs(monthDate).startOf('month');
+			const end = dayjs(monthDate).endOf('month');
+			try {
+				const res = await schedulesApi.list({
+					queue: queueId,
+					from_datetime__lte: end.toISOString(),
+					to_datetime__gte: start.toISOString(),
+				});
+				setScheduleRecords(res.results || []);
+			} catch {
+				// silently ignore fetch errors for schedule calendar
+			}
+		},
+		[queueId],
+	);
+
+	// Re-fetch when the viewed month or queue changes
+	useEffect(() => {
+		void fetchSchedulesForMonth(date);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [fetchSchedulesForMonth, monthKey]);
 
 	const events = useMemo(
 		() => (scheduleRecords || []).filter(hasScheduleWindow).map(mapQueueScheduleToCalendarEvent),
@@ -223,7 +249,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				</div>
 				<div className='queue-schedule-tooltip-stats'>
 					<span>Active: {counts.active ?? 0}</span>
-					<span>Reported: {counts.reported ?? 0}</span>
+					<span>Waiting: {counts.waiting ?? 0}</span>
 					<span>Completed: {counts.completed ?? 0}</span>
 					<span>Total: {counts.total ?? 0}</span>
 				</div>
@@ -474,12 +500,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 					else setScheduleModalOpen(true);
 				}}
 				mode={scheduleModalMode}
-				queueId={queueId ?? null}
+				queueId={queueId}
 				scheduleId={scheduleModalMode === 'edit' ? editingScheduleRecord?.id ?? null : null}
 				editingSchedule={scheduleModalMode === 'edit' ? editingScheduleRecord : null}
 				initialStart={scheduleModalMode === 'create' ? createInitialStart : undefined}
 				initialEnd={scheduleModalMode === 'create' ? createInitialEnd : undefined}
-				onSaved={() => void onScheduleCreated?.()}
+				onSaved={() => {
+					void fetchSchedulesForMonth(date);
+					void onScheduleCreated?.();
+				}}
 			/>
 		</Card>
 	);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
@@ -10,6 +10,7 @@ import StatusBadge from '../../BadgeWithIcon.jsx';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type CurrentServingWindowResponse,
+	type Queue,
 	type QueueSchedule,
 	type ScheduleServingPoint,
 	type ServingPoint,
@@ -18,6 +19,11 @@ import {
 	schedulesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
+import CompleteWithNextQueueModal from '../../PageComponents/ServingPoints/CompleteWithNextQueueModal';
+import IssuedTokenModal, { type IssuedTokenModalVariant } from '../../PageComponents/ServingPoints/IssuedTokenModal';
+const ShareTokenModal = lazy(
+	() => import('../../PageComponents/ServingPoints/ShareTokenModal'),
+);
 import {
 	formatDate,
 	getNextAllowedServingPointStatuses,
@@ -68,8 +74,6 @@ const getWindowCurrentTokenStatusRaw = (row: ScheduleServingPoint): string => {
 	return '';
 };
 
-const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
-
 const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardProps> = ({
 	servingPointId,
 	refreshKey,
@@ -80,6 +84,17 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
 	const [payload, setPayload] = useState<CurrentServingWindowResponse | null>(null);
 	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
+	const [currentQueue, setCurrentQueue] = useState<Queue | null>(null);
+	const [showCompleteModal, setShowCompleteModal] = useState(false);
+	const [pendingCompleteOpts, setPendingCompleteOpts] = useState<
+		{ serving_point_status?: string } | undefined
+	>(undefined);
+	const [issuedTokenModal, setIssuedTokenModal] = useState<{
+		variant: IssuedTokenModalVariant;
+		token: Token;
+		detail: string | null;
+	} | null>(null);
+	const [showShareModal, setShowShareModal] = useState(false);
 
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -107,16 +122,25 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 				try {
 					const sched = await schedulesApi.get(res.active_window.queue_schedule);
 					setSchedule(sched);
+					try {
+						const queueRes = await queuesApi.get(sched.queue);
+						setCurrentQueue(queueRes);
+					} catch {
+						setCurrentQueue(null);
+					}
 				} catch {
 					setSchedule(null);
+					setCurrentQueue(null);
 				}
 			} else {
 				setSchedule(null);
+				setCurrentQueue(null);
 			}
 		} catch (err) {
 			errorNotifierRef.current(err);
 			setPayload(null);
 			setSchedule(null);
+			setCurrentQueue(null);
 		} finally {
 			setLoading(false);
 		}
@@ -132,19 +156,46 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	const triggerWindowAction = async (
 		row: ScheduleServingPoint,
 		action: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone',
-		opts?: { serving_point_status?: string },
+		opts?: { serving_point_status?: string; next_queue_id?: number },
 	) => {
 		setActionLoading(`${action}-${row.id}`);
-		const apiOpts = opts?.serving_point_status?.trim()
-			? { serving_point_status: opts.serving_point_status.trim() }
-			: undefined;
+		const spStatus = opts?.serving_point_status?.trim();
+		const apiOpts = {
+			...(spStatus ? { serving_point_status: spStatus } : {}),
+			...(opts?.next_queue_id != null ? { next_queue_id: opts.next_queue_id } : {}),
+		};
+		const hasOpts = Object.keys(apiOpts).length > 0;
+		let completeIssuedNextToken = false;
 		try {
+			const spOnlyOpts = spStatus ? { serving_point_status: spStatus } : undefined;
 			if (action === 'start') await scheduleServingPointsApi.startServing(row.id);
-			if (action === 'complete') await scheduleServingPointsApi.complete(row.id, apiOpts);
-			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, apiOpts);
-			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, apiOpts);
-			if (action === 'postpone') await scheduleServingPointsApi.postpone(row.id, apiOpts);
-			const st = opts?.serving_point_status?.trim();
+			if (action === 'complete') {
+				const completeRes = await scheduleServingPointsApi.complete(
+					row.id,
+					hasOpts ? apiOpts : undefined,
+				);
+				if (completeRes.next_token) {
+					completeIssuedNextToken = true;
+					setIssuedTokenModal({
+						variant: 'complete',
+						token: completeRes.next_token,
+						detail: completeRes.detail ?? null,
+					});
+				}
+			}
+			if (action === 'cancel') await scheduleServingPointsApi.cancel(row.id, spOnlyOpts);
+			if (action === 'no_show') await scheduleServingPointsApi.noShow(row.id, spOnlyOpts);
+			if (action === 'postpone') {
+				const postponeRes = await scheduleServingPointsApi.postpone(row.id, spOnlyOpts);
+				if (postponeRes.new_token) {
+					setIssuedTokenModal({
+						variant: 'postpone',
+						token: postponeRes.new_token,
+						detail: postponeRes.detail ?? null,
+					});
+				}
+			}
+			const st = spStatus;
 			if (st) {
 				const slab = SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ');
 				const prefix =
@@ -156,6 +207,10 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 								? 'No show recorded'
 								: 'Token postponed';
 				showSuccessNotification(`${prefix}; counter set to ${slab}.`);
+			} else if (action === 'postpone') {
+				showSuccessNotification('Token postponed. A new token has been issued.');
+			} else if (action === 'complete' && completeIssuedNextToken) {
+				showSuccessNotification('Token completed. A new token has been created in the next queue.');
 			} else {
 				showSuccessNotification('Window token updated successfully.');
 			}
@@ -167,7 +222,7 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 		}
 	};
 
-	const triggerSkipToken = async (
+const triggerSkipToken = async (
 		row: ScheduleServingPoint,
 		opts?: { serving_point_status?: string },
 	) => {
@@ -193,13 +248,50 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 		}
 	};
 
+	const nextQueues = useMemo(() => {
+		const nq = currentQueue?.next_queues;
+		if (!nq?.length) return [];
+		if (typeof nq[0] === 'number') {
+			return (nq as number[]).map((id) => ({ id, name: `Queue #${id}` }));
+		}
+		return (nq as Queue[]).map((q) => ({
+			id: q.id,
+			name: q.name,
+			description: q.description,
+			status: q.status,
+			is_active: q.is_active,
+		}));
+	}, [currentQueue]);
+
+	const initiateCompleteAction = (
+		row: ScheduleServingPoint,
+		opts?: { serving_point_status?: string },
+	) => {
+		if (nextQueues.length > 0) {
+			setPendingCompleteOpts(opts);
+			setShowCompleteModal(true);
+		} else {
+			void triggerWindowAction(row, 'complete', opts);
+		}
+	};
+
+	const handleCompleteConfirmed = (nextQueueId?: number) => {
+		setShowCompleteModal(false);
+		if (!windowRow) return;
+		void triggerWindowAction(windowRow, 'complete', {
+			...pendingCompleteOpts,
+			...(nextQueueId != null ? { next_queue_id: nextQueueId } : {}),
+		});
+		setPendingCompleteOpts(undefined);
+	};
+
 	const visibleTokenActions = useMemo(() => {
 		if (!windowRow) return [];
-		const tokenStatus = normalizeTokenStatus(getWindowCurrentTokenStatusRaw(windowRow));
-		const canStart = tokenStatus === 'registred' || tokenStatus === 'reported';
+		const tokenStatus = (getWindowCurrentTokenStatusRaw(windowRow) || '').toLowerCase().trim();
+		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
 		const canComplete = tokenStatus === 'serving';
 		const canCancel =
-			tokenStatus === 'registred' || tokenStatus === 'reported' || tokenStatus === 'serving';
+			tokenStatus === 'registred' || tokenStatus === 'waiting' || tokenStatus === 'serving';
 		const canNoShow = canCancel;
 		const canPostpone = canCancel && Boolean(schedule?.allow_postpone);
 		const allowed = { canStart, canComplete, canCancel, canNoShow, canPostpone };
@@ -218,7 +310,7 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 				icon: 'PlayCircle',
 				color: 'primary',
 				show: allowed.canStart,
-				tooltip: 'Begin serving this token at this window (registered or reported).',
+				tooltip: 'Begin serving this token at this window (registered or waiting).',
 			},
 			{
 				key: 'complete',
@@ -272,16 +364,31 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	};
 
 	return (
+		<>
 		<Card className='border-0 shadow-sm rounded-4 overflow-visible'>
 			<CardHeader>
 				<CardLabel icon='ConfirmationNumber'>
 					<CardTitle tag='h5'>Current token</CardTitle>
 				</CardLabel>
-				{windowRow?.id != null && (
-					<Button color='info' isLight size='sm' icon='OpenInNew' onClick={openWindowDetail}>
-						Open serving window
-					</Button>
-				)}
+				<div className='d-flex align-items-center gap-2'>
+					{windowRow &&
+						getCurrentToken(windowRow)?.token_user?.uuid &&
+						windowRow.queue_schedule_queue_id != null && (
+							<Button
+								color='info'
+								isLight
+								size='sm'
+								icon='QrCode2'
+								onClick={() => setShowShareModal(true)}>
+								Share
+							</Button>
+						)}
+					{windowRow?.id != null && (
+						<Button color='info' isLight size='sm' icon='OpenInNew' onClick={openWindowDetail}>
+							Open serving window
+						</Button>
+					)}
+				</div>
 			</CardHeader>
 			<CardBody className='p-0'>
 				{loading ? (
@@ -344,19 +451,23 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 							postpone: 'Postpone',
 						};
 
-						const tokenActionStatusMenuItems = (action: TokenSplitActionKey) =>
-							showCounterStatusMenu
-								? spStatusMenuChoices
-										.filter((st) => allowedSpTransitions.includes(st))
-										.map((st) => ({
-											label: `${tokenActionMenuVerb[action]} & set counter to ${
-												SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')
-											}`,
-											onClick: () => {
+					const tokenActionStatusMenuItems = (action: TokenSplitActionKey) =>
+						showCounterStatusMenu
+							? spStatusMenuChoices
+									.filter((st) => allowedSpTransitions.includes(st))
+									.map((st) => ({
+										label: `${tokenActionMenuVerb[action]} & set counter to ${
+											SP_STATUS_LABELS[st] ?? st.replace(/_/g, ' ')
+										}`,
+										onClick: () => {
+											if (action === 'complete') {
+												initiateCompleteAction(windowRow, { serving_point_status: st });
+											} else {
 												void triggerWindowAction(windowRow, action, { serving_point_status: st });
-											},
-										}))
-								: [];
+											}
+										},
+									}))
+							: [];
 
 						if (!tokenDisplay) {
 							return (
@@ -402,7 +513,7 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 									</div>
 								</div>
 								<div className='row g-4 align-items-start'>
-									<div className='col-12 col-lg-6'>
+									<div className='col-12 col-lg-4'>
 										<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
 										{user?.name?.trim() ? (
 											<div className='fs-4 fw-semibold text-body-emphasis mb-3'>
@@ -432,56 +543,65 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 											</ul>
 										)}
 									</div>
-									<div className='col-12 col-lg-6 d-flex flex-wrap align-items-start gap-2 pt-lg-1'>
+									<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 										{visibleTokenActions.map((a) => {
 											if (a.key === 'start') {
 												return (
-													<Tooltip key={a.key} title={a.tooltip} arrow placement='top'>
-														<span className='d-inline-flex'>
-															<Button
-																color={a.color}
-																isOutline={Boolean(a.outline)}
-																isLight={!a.outline}
-																icon={a.icon}
-																isDisable={actionLoading === `${a.key}-${windowRow.id}`}
-																onClick={() => void triggerWindowAction(windowRow, a.key)}>
-																{a.label}
-															</Button>
-														</span>
-													</Tooltip>
+													<span key={a.key} className='d-inline-flex'>
+														<Button
+															color={a.color}
+															isOutline={Boolean(a.outline)}
+															isLight={!a.outline}
+															icon={a.icon}
+															isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+															onClick={() => void triggerWindowAction(windowRow, a.key)}>
+															{a.label}
+														</Button>
+													</span>
 												);
 											}
 											const statusMenuItems = tokenActionStatusMenuItems(a.key);
-											return (
-												<Tooltip
-													key={a.key}
-													title={
-														statusMenuItems.length > 0
-															? `${a.tooltip} Use the menu to perform the same action and set the counter (on hold, completed, or cancelled).`
-															: a.tooltip
-													}
-													arrow
-													placement='top'>
-													<span className='d-inline-flex'>
-														<SplitDropdownButton
-															mainLabel={a.label}
-															mainIcon={a.icon}
-															color={a.color}
-															mainIsLight={!a.outline}
-															isOutline={Boolean(a.outline)}
-															dropdownDirection='down'
-															mainTitle={
-																statusMenuItems.length > 0
-																	? `${String(a.label)} only (counter status unchanged).`
-																	: undefined
-															}
-															isDisable={actionLoading === `${a.key}-${windowRow.id}`}
-															onMainClick={() => void triggerWindowAction(windowRow, a.key)}
-															menuItems={statusMenuItems}
-														/>
-													</span>
-												</Tooltip>
+											const isComplete = a.key === 'complete';
+											const mainClickHandler = isComplete
+												? () => initiateCompleteAction(windowRow)
+												: () => void triggerWindowAction(windowRow, a.key);
+											const showTooltip = a.key === 'postpone' || a.key === 'no_show';
+											const actionButton = (
+												<span className='d-inline-flex'>
+													<SplitDropdownButton
+														mainLabel={a.label}
+														mainIcon={a.icon}
+														color={a.color}
+														mainIsLight={!a.outline}
+														isOutline={Boolean(a.outline)}
+														dropdownDirection='down'
+														mainTitle={
+															statusMenuItems.length > 0
+																? `${String(a.label)} only (counter status unchanged).`
+																: undefined
+														}
+														isDisable={actionLoading === `${a.key}-${windowRow.id}`}
+														onMainClick={mainClickHandler}
+														menuItems={statusMenuItems}
+													/>
+												</span>
 											);
+											if (showTooltip) {
+												return (
+													<Tooltip
+														key={a.key}
+														title={
+															statusMenuItems.length > 0
+																? `${a.tooltip} Use the menu to perform the same action and set the counter (on hold, completed, or cancelled).`
+																: a.tooltip
+														}
+														arrow
+														placement='top'>
+														{actionButton}
+													</Tooltip>
+												);
+											}
+											return <React.Fragment key={a.key}>{actionButton}</React.Fragment>;
 										})}
 										<Tooltip
 											title={
@@ -518,6 +638,50 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 				)}
 			</CardBody>
 		</Card>
+
+		<CompleteWithNextQueueModal
+			isOpen={showCompleteModal}
+			setIsOpen={(open) => {
+				setShowCompleteModal(open);
+				if (!open) setPendingCompleteOpts(undefined);
+			}}
+			tokenDisplay={windowRow ? getWindowCurrentTokenDisplay(windowRow) : null}
+			customerName={
+				windowRow ? (getCurrentToken(windowRow)?.token_user?.name ?? null) : null
+			}
+			nextQueues={nextQueues}
+			onComplete={handleCompleteConfirmed}
+		/>
+
+		<IssuedTokenModal
+			isOpen={issuedTokenModal != null}
+			setIsOpen={(open) => {
+				if (!open) setIssuedTokenModal(null);
+			}}
+			variant={issuedTokenModal?.variant ?? 'postpone'}
+			token={issuedTokenModal?.token ?? null}
+			detail={issuedTokenModal?.detail}
+		/>
+
+		{showShareModal && windowRow && (() => {
+			const shareToken = getCurrentToken(windowRow);
+			const shareUuid = shareToken?.token_user?.uuid ?? '';
+			const shareQueueId = windowRow.queue_schedule_queue_id ?? 0;
+			if (!shareUuid || !shareQueueId) return null;
+			return (
+				<Suspense fallback={null}>
+					<ShareTokenModal
+						isOpen={showShareModal}
+						setIsOpen={setShowShareModal}
+						tokenUserUuid={shareUuid}
+						queueId={shareQueueId}
+						tokenDisplay={getWindowCurrentTokenDisplay(windowRow)}
+						customerName={shareToken?.token_user?.name ?? null}
+					/>
+				</Suspense>
+			);
+		})()}
+		</>
 	);
 };
 

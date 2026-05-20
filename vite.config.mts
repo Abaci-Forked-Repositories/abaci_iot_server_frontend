@@ -30,7 +30,18 @@ export default defineConfig({
       },
     },
     optimizeDeps: {
-      include: ["react", "react-dom", "@mui/material","@mui/icons-material","@mui/lab",],
+      include: [
+        "react",
+        "react-dom",
+        "react/jsx-dev-runtime",
+        "react/jsx-runtime",
+        "@tanstack/react-query",
+        "@mui/material",
+        "@mui/icons-material",
+        "@mui/lab",
+        "qrcode",
+      ],
+      exclude: ["react-qr-code"],
       esbuildOptions: {
         target: "esnext",
       },
@@ -41,7 +52,6 @@ export default defineConfig({
         strict: true,
       },
     },
-    cacheDir: "node_modules/.vite_cache",
     build: {
     outDir: 'build', 
 		rollupOptions: {

@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Badge from '../../../bootstrap/Badge';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../../bootstrap/Card';
 import Button from '../../../bootstrap/Button';
-import Spinner from '../../../bootstrap/Spinner';
 import useTablestyle from '../../../../hooks/useTablestyles';
 import type { CurrentlyServingEntry, PaginatedResponse } from '../../../../services/queueManagementApi';
 import { queuesApi } from '../../../../services/queueManagementApi';
@@ -24,6 +23,16 @@ function normalizeCurrentlyServingResponse(
 	return [];
 }
 
+function getTotalCount(
+	data: CurrentlyServingEntry[] | PaginatedResponse<CurrentlyServingEntry>,
+	fallback: number,
+): number {
+	if (!Array.isArray(data) && data && typeof data === 'object' && typeof data.count === 'number') {
+		return data.count;
+	}
+	return fallback;
+}
+
 function formatDuration(raw: string | null | undefined): string {
 	if (raw == null || String(raw).trim() === '') return '—';
 	return String(raw).replace(/\.\d+(?=\s*$)/, '');
@@ -36,6 +45,7 @@ function nonEmpty(s: string | number | null | undefined): string | undefined {
 }
 
 type CurrentlyServingRow = {
+	id: number | string;
 	token: string;
 	customer: string;
 	phone: string;
@@ -44,7 +54,7 @@ type CurrentlyServingRow = {
 	notes: string;
 };
 
-function entryToRow(entry: CurrentlyServingEntry): CurrentlyServingRow {
+function entryToRow(entry: CurrentlyServingEntry, index: number): CurrentlyServingRow {
 	const tokenDisplay =
 		entry.token_display != null && String(entry.token_display).trim() !== ''
 			? String(entry.token_display)
@@ -69,6 +79,7 @@ function entryToRow(entry: CurrentlyServingEntry): CurrentlyServingRow {
 	const email = nonEmpty(u?.email) ?? '—';
 
 	return {
+		id: entry.id ?? `row-${index}`,
 		token,
 		customer,
 		phone,
@@ -84,31 +95,16 @@ const QueueDetailCurrentlyServing: React.FC<QueueDetailCurrentlyServingProps> = 
 	const showErrorNotificationRef = useRef(showErrorNotification);
 	showErrorNotificationRef.current = showErrorNotification;
 
-	const [loading, setLoading] = useState(true);
-	const [rows, setRows] = useState<CurrentlyServingRow[]>([]);
-
-	const load = useCallback(async () => {
-		if (!queueId || Number.isNaN(queueId)) {
-			setRows([]);
-			setLoading(false);
-			return;
-		}
-		setLoading(true);
-		try {
-			const data = await queuesApi.currentlyServing(queueId);
-			const list = normalizeCurrentlyServingResponse(data);
-			setRows(list.map(entryToRow));
-		} catch (err) {
-			showErrorNotificationRef.current(err);
-			setRows([]);
-		} finally {
-			setLoading(false);
-		}
-	}, [queueId]);
+	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
+	const [totalCount, setTotalCount] = useState(0);
+	/** Skip the first effect run — MaterialTable already fetches on mount. */
+	const prevRefreshVersionRef = useRef(refreshVersion);
 
 	useEffect(() => {
-		void load();
-	}, [load, refreshVersion]);
+		if (prevRefreshVersionRef.current === refreshVersion) return;
+		prevRefreshVersionRef.current = refreshVersion;
+		tableRef.current?.onQueryChange?.();
+	}, [refreshVersion]);
 
 	const columns = useMemo(
 		() => [
@@ -144,45 +140,75 @@ const QueueDetailCurrentlyServing: React.FC<QueueDetailCurrentlyServingProps> = 
 			<Card stretch>
 				<CardHeader>
 					<CardLabel icon='Group'>
-						<CardTitle tag='h5'>Currently Serving ({rows.length})</CardTitle>
+						<CardTitle tag='h5'>Currently Serving ({totalCount})</CardTitle>
 					</CardLabel>
-					<Button color='light' size='sm' icon='Refresh' onClick={() => void load()} isDisable={loading}>
+					<Button
+						color='light'
+						size='sm'
+						icon='Refresh'
+						onClick={() => tableRef.current?.onQueryChange?.()}>
 						Refresh
 					</Button>
 				</CardHeader>
 				<CardBody>
-					{loading ? (
-						<div className='d-flex justify-content-center align-items-center py-5 gap-2 text-muted'>
-							<Spinner color='primary' />
-							<span>Loading…</span>
+					<div className='material_tabel_wrapper'>
+						<div style={{ overflow: 'hidden' }}>
+							<ThemeProvider theme={theme}>
+								<MaterialTable
+									title=' '
+									tableRef={tableRef}
+									// @ts-ignore
+									columns={columns}
+									data={(query) =>
+										new Promise((resolve) => {
+											if (!queueId || Number.isNaN(queueId)) {
+												setTotalCount(0);
+												resolve({ data: [], page: query.page, totalCount: 0 });
+												return;
+											}
+
+											const search = query.search?.trim();
+											queuesApi
+												.currentlyServing(queueId, {
+													limit: query.pageSize,
+													offset: query.pageSize * query.page,
+													...(search ? { search } : {}),
+												})
+												.then((data) => {
+													const list = normalizeCurrentlyServingResponse(data);
+													const count = getTotalCount(data, list.length);
+													setTotalCount(count);
+													resolve({
+														data: list.map(entryToRow),
+														page: query.page,
+														totalCount: count,
+													});
+												})
+												.catch((err) => {
+													showErrorNotificationRef.current(err);
+													setTotalCount(0);
+													resolve({ data: [], page: query.page, totalCount: 0 });
+												});
+										})
+									}
+									options={{
+										headerStyle: headerStyles(),
+										rowStyle: rowStyles(),
+										search: true,
+										debounceInterval: 500,
+										pageSize: 5,
+										pageSizeOptions: [5, 10, 20, 50],
+										emptyRowsWhenPaging: false,
+									}}
+									localization={{
+										pagination: {
+											labelRowsPerPage: '',
+										},
+									}}
+								/>
+							</ThemeProvider>
 						</div>
-					) : (
-						<div className='material_tabel_wrapper'>
-							<div style={{ overflow: 'hidden' }}>
-								<ThemeProvider theme={theme}>
-									<MaterialTable
-										title=' '
-										// @ts-ignore
-										columns={columns}
-										data={rows}
-										options={{
-											headerStyle: headerStyles(),
-											rowStyle: rowStyles(),
-											search: true,
-											pageSize: 5,
-											pageSizeOptions: [5, 10, 20, 50],
-											emptyRowsWhenPaging: false,
-										}}
-										localization={{
-											pagination: {
-												labelRowsPerPage: '',
-											},
-										}}
-									/>
-								</ThemeProvider>
-							</div>
-						</div>
-					)}
+					</div>
 				</CardBody>
 			</Card>
 		</div>

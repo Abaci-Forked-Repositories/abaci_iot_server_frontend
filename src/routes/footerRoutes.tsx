@@ -10,6 +10,7 @@ const footers: RouteProps[] = [
 	{ path: pagesNotInSideBar.Register.path, element: null },
 	{ path: pagesNotInSideBar.PrivacyPolicy.path, element: null },
 	{ path: pagesNotInSideBar.TermsAndConditions.path, element: null },
+	{ path: '/public/token-status', element: null },
 	{ path: '*', element: <DefaultFooter /> },
 	{ path: '/public/error', element: null },
 ];

@@ -22,7 +22,7 @@ const STATUS_COLOR_MAP = {
 	unassigned: 'secondary',
 	disabled: 'secondary',
 	registred: 'secondary',
-	reported: 'warning',
+	waiting: 'warning',
 	serving: 'info',
 	postponed: 'Warning',
 	no_show: 'danger',
@@ -48,7 +48,7 @@ const STATUS_ICON_MAP = {
 	disabled: 'Block',
 	unknown: 'HelpOutline',
 	registred: 'AppRegistration',
-	reported: 'NotificationsActive',
+	waiting: 'NotificationsActive',
 	serving: 'SupportAgent',
 	postponed: 'Update',
 	no_show: 'PersonOff',
@@ -57,6 +57,7 @@ const STATUS_ICON_MAP = {
 
 const STATUS_LABEL_OVERRIDE = {
 	registred: 'Registered',
+	waiting: 'Waiting',
 };
 
 const normalizeStatusKey = (value) =>

@@ -17,6 +17,19 @@ import {
 	servingPointQueueIds,
 } from '../../MasterComponents/QueueManagement/queueManagementUtils';
 
+/** Only Administrator (1) and Executive (2) may be assigned to serving points. */
+const ASSIGNABLE_USER_ROLE_IDS = new Set([1, 2]);
+
+function isAssignableServingPointUser(user: User): boolean {
+	const roleId = user.role?.id;
+	return roleId != null && ASSIGNABLE_USER_ROLE_IDS.has(roleId);
+}
+
+function servingPointUserLabel(user: User): string {
+	const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+	return name || user.email || user.username || `User ${user.id}`;
+}
+
 export interface ServingPointFormValues {
 	name: string;
 	queue_ids: number[];
@@ -83,10 +96,10 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 		try {
 			const [queuesRes, usersRes] = await Promise.all([
 				queuesApi.list({ ordering: 'name', page_size: 200 }),
-				usersApi.list({ ordering: 'username', page_size: 300 }),
+				usersApi.list(),
 			]);
 			setQueues(queuesRes.results || []);
-			setUsers(usersRes.results || []);
+			setUsers((usersRes.results || []).filter(isAssignableServingPointUser));
 		} catch (err) {
 			errorNotifierRef.current(err);
 		} finally {
@@ -104,6 +117,15 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 		}
 	}, [isOpen, isEdit, servingPoint, defaultQueueId, loadOptions]);
 
+	useEffect(() => {
+		if (!isOpen || users.length === 0) return;
+		const allowedIds = new Set(users.map((u) => u.id));
+		setForm((prev) => ({
+			...prev,
+			assigned_users: prev.assigned_users.filter((id) => allowedIds.has(id)),
+		}));
+	}, [isOpen, users]);
+
 	const queueOptions = useMemo(
 		() => queues.map((q) => ({ value: q.id, label: q.name })),
 		[queues],
@@ -113,7 +135,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 		() =>
 			users.map((user) => ({
 				value: user.id,
-				label: user.username || user.email || `User ${user.id}`,
+				label: servingPointUserLabel(user),
 			})),
 		[users],
 	);
@@ -145,22 +167,24 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 		setIsSubmitting(true);
 		try {
 			if (isEdit && editId) {
+				const assignableIds = new Set(users.map((u) => u.id));
 				const updated = await queuesApi.updateServingPoint(editId, {
 					name: form.name.trim(),
 					queue: form.queue_ids,
 					description: form.description.trim() || undefined,
 					is_active: form.is_active,
-					assigned_users: form.assigned_users,
+					assigned_users: form.assigned_users.filter((id) => assignableIds.has(id)),
 				});
 				showSuccessNotification('Serving point updated successfully.');
 				onSuccess?.(updated, 'edit');
 			} else {
+				const assignableIds = new Set(users.map((u) => u.id));
 				const payload: CreateServingPointPayload = {
 					name: form.name.trim(),
 					queue: form.queue_ids,
 					description: form.description.trim() || undefined,
 					is_active: form.is_active,
-					assigned_users: form.assigned_users,
+					assigned_users: form.assigned_users.filter((id) => assignableIds.has(id)),
 				};
 				const created = await queuesApi.createServingPoint(payload);
 				showSuccessNotification('Serving point created successfully.');

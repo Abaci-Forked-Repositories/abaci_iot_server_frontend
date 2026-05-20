@@ -175,8 +175,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		return queueId ? `Queue ${queueId}` : 'Queue';
 	}, [queueId, queueNameFromState, scheduleRecord?.queue_name]);
 
-	const reportedTokenCount = useMemo(
-		() => tokens.filter((t) => t.status === 'reported').length,
+	const waitingTokenCount = useMemo(
+		() => tokens.filter((t) => (t.status || '').toLowerCase().trim() === 'waiting').length,
 		[tokens],
 	);
 
@@ -430,9 +430,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 												style={{ width: 30, height: 30, backgroundColor: 'rgba(255, 168, 0, 0.16)' }}>
 												<Icon icon='Person' color='warning' size='lg' />
 											</div>
-											<div className='text-muted small'>Reported</div>
+											<div className='text-muted small'>Waiting</div>
 										</div>
-										<div className='fs-5 fw-bold'>{reportedTokenCount}</div>
+										<div className='fs-5 fw-bold'>{waitingTokenCount}</div>
 									</div>
 								</div>
 								<div className='col-6'>

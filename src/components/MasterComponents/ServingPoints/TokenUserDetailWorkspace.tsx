@@ -163,44 +163,44 @@ const mapServingHistoryToQueueEvents = (token: Token): QueueEvent[] => {
 	});
 };
 
-type StatusRuleKey = 'registred' | 'reported';
+type StatusRuleKey = 'registred' | 'waiting';
 
 const normalizeStatusForRules = (status: string): StatusRuleKey | null => {
 	const s = status.toLowerCase();
 	if (s === 'registred' || s === 'registered') return 'registred';
-	if (s === 'reported') return 'reported';
+	if (s === 'waiting') return 'waiting';
 	return null;
 };
 
-/** 1: registred → reported, cancelled, postponed. 2: reported → cancelled, postponed. */
+/** 1: registred → waiting, cancelled, postponed. 2: waiting → cancelled, postponed. */
 const allowedNextTokenStatuses = (
 	status: string,
-): Array<'reported' | 'cancelled' | 'postponed'> => {
+): Array<'waiting' | 'cancelled' | 'postponed'> => {
 	const key = normalizeStatusForRules(status);
-	if (key === 'registred') return ['reported', 'cancelled', 'postponed'];
-	if (key === 'reported') return ['cancelled', 'postponed'];
+	if (key === 'registred') return ['waiting', 'cancelled', 'postponed'];
+	if (key === 'waiting') return ['cancelled', 'postponed'];
 	return [];
 };
 
 const applyTokenStatusTransition = (
 	tokenId: number,
-	target: 'reported' | 'cancelled' | 'postponed',
+	target: 'waiting' | 'cancelled' | 'postponed',
 ): Promise<Token> => {
-	if (target === 'reported') return tokensApi.markArrived(tokenId);
+	if (target === 'waiting') return tokensApi.markArrived(tokenId);
 	if (target === 'cancelled') return tokensApi.cancel(tokenId);
 	return tokensApi.postpone(tokenId);
 };
 
 const statusTransitionButtonColor = (
-	target: 'reported' | 'cancelled' | 'postponed',
+	target: 'waiting' | 'cancelled' | 'postponed',
 ): 'primary' | 'danger' | 'warning' => {
-	if (target === 'reported') return 'primary';
+	if (target === 'waiting') return 'primary';
 	if (target === 'cancelled') return 'danger';
 	return 'warning';
 };
 
-const statusTransitionLabel = (target: 'reported' | 'cancelled' | 'postponed'): string => {
-	if (target === 'reported') return 'Report';
+const statusTransitionLabel = (target: 'waiting' | 'cancelled' | 'postponed'): string => {
+	if (target === 'waiting') return 'Mark waiting';
 	if (target === 'cancelled') return 'Cancel';
 	if (target === 'postponed') return 'Postpone';
 	return target;
@@ -346,7 +346,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	}, []);
 
 	const handleTokenStatusTransition = useCallback(
-		async (row: Token, target: 'reported' | 'cancelled' | 'postponed') => {
+		async (row: Token, target: 'waiting' | 'cancelled' | 'postponed') => {
 			const allowed = allowedNextTokenStatuses(row.status);
 			if (!allowed.includes(target)) {
 				showErrorNotification('That status change is not allowed from the current state.');
@@ -560,14 +560,14 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 						{(() => {
 							const allowed = allowedNextTokenStatuses(rowData.status);
 							const busy = statusTransitionTokenId === rowData.id;
-							const reportedTargets = allowed.filter((t) => t === 'reported');
+							const waitingTargets = allowed.filter((t) => t === 'waiting');
 							const cancelPostponeTargets = allowed.filter(
 								(t): t is 'cancelled' | 'postponed' =>
 									t === 'cancelled' || t === 'postponed',
 							);
 							return (
 								<>
-									{reportedTargets.map((target) => {
+									{waitingTargets.map((target) => {
 										const label = statusTransitionLabel(target);
 										return (
 											<Button

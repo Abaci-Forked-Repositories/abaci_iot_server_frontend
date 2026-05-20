@@ -8,15 +8,17 @@ import { buttonColor } from '../../../helpers/constants';
 import useDarkMode from '../../../hooks/useDarkMode';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import swalFire from '../../../helpers/swalHelper';
+import type { TColor } from '../../../type/color-type';
 
 interface DeleteButtonProps {
   apiEndpoint: string;
   tableRef?: React.RefObject<any>; // Reference to the table
   text:string
   reduxAction?: any
+  color?: TColor
 }
 
-const DeleteButton: React.FC<DeleteButtonProps> = ({  apiEndpoint, tableRef,text,reduxAction }) => {
+const DeleteButton: React.FC<DeleteButtonProps> = ({  apiEndpoint, tableRef,text,reduxAction,color }) => {
 	const {showErrorNotification}=useToasterNotification();
   const dispatch = useDispatch();
   const { darkModeStatus } = useDarkMode();
@@ -55,7 +57,7 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({  apiEndpoint, tableRef,text
   return (
     <Button
       isOutline={false}
-      color={darkModeStatus ? 'light' : 'dark'}
+      color={color ?? (darkModeStatus ? 'light' : 'dark')}
       isLight
       size='sm'
       className={classNames('text-nowrap', {

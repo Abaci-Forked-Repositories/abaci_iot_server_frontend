@@ -14,6 +14,7 @@ const headers: RouteProps[] = [
 	{ path: pagesNotInSideBar.TermsAndConditions.path, element: null },
 	{ path: pagesNotInSideBar.AdminSetup.path, element: null },
 	{ path: pagesNotInSideBar.LicenceSetup.path, element: null },
+	{ path: '/public/token-status', element: null },
 	{
 		path: `*`,
 		element: <MainHeader />,
