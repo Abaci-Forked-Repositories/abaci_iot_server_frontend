@@ -5,7 +5,8 @@ import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
 import ScreenCardTile from './ScreenCardTile';
-import { screensApi, type Screen } from '../../../services/screensManagementApi';
+import ScreenCreateModal from './ScreenCreateModal';
+import { screensApi, type CreateScreenPayload, type Screen } from '../../../services/screensManagementApi';
 import { FALLBACK_SCREENS } from './screensFallbackData';
 
 const toMessage = (error: unknown) => {
@@ -22,6 +23,7 @@ const ScreensWorkspace: React.FC = () => {
 	const [screenDisplayMode, setScreenDisplayMode] = useState<'grouped' | 'ungrouped'>('ungrouped');
 	const [search, setSearch] = useState('');
 	const [message, setMessage] = useState('');
+	const [showCreateModal, setShowCreateModal] = useState(false);
 
 	const displayedScreens = useMemo(() => {
 		return screens.filter((item) => {
@@ -59,8 +61,25 @@ const ScreensWorkspace: React.FC = () => {
 		loadScreens();
 	}, [loadScreens]);
 
+	const handleCreateScreen = async (payload: CreateScreenPayload) => {
+		try {
+			await screensApi.create(payload);
+			setMessage('');
+			await loadScreens();
+		} catch (error) {
+			setMessage(toMessage(error));
+			throw error;
+		}
+	};
+
 	return (
-		<Card stretch className='screens-workspace-card'>
+		<>
+			<ScreenCreateModal
+				isOpen={showCreateModal}
+				onClose={() => setShowCreateModal(false)}
+				onSubmit={handleCreateScreen}
+			/>
+			<Card stretch className='screens-workspace-card'>
 			<CardHeader>
 				<CardLabel icon='SmartScreen'>
 					<CardTitle tag='h4'>Screen Management</CardTitle>
@@ -114,6 +133,15 @@ const ScreensWorkspace: React.FC = () => {
 							icon='FilterAlt'
 							buttonClassName='app-control-btn'
 						/>
+						<Button
+							color='primary'
+							icon='Add'
+							onClick={() => {
+								setMessage('');
+								setShowCreateModal(true);
+							}}>
+							Add Screen
+						</Button>
 					</div>
 				</CardActions>
 			</CardHeader>
@@ -160,6 +188,7 @@ const ScreensWorkspace: React.FC = () => {
 				</div>
 			</CardBody>
 		</Card>
+		</>
 	);
 };
 
