@@ -37,79 +37,105 @@ const buildTodaySelection = (): ScheduleListDateSelection => ({
 	},
 });
 
+const PAGE_LIMIT = 12;
+
 const SchedulesListWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const [schedules, setSchedules] = useState<QueueSchedule[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [initialLoading, setInitialLoading] = useState(true);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
+	const offsetRef = useRef(0);
+
 	const [search, setSearch] = useState('');
 	const [searchApplied, setSearchApplied] = useState('');
 	const [selectedDateRange, setSelectedDateRange] = useState<ScheduleListDateSelection>(() =>
 		buildTodaySelection(),
 	);
 	const { showErrorNotification } = useToasterNotification();
-	/** Hook returns new function identities each render; ref avoids an infinite fetch loop from useEffect([load]). */
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
 
 	const rangeStart = selectedDateRange.selection.startDateFilter;
 	const rangeEnd = selectedDateRange.selection.endDateFilter;
 
-	useEffect(() => {
-		let cancelled = false;
-		setLoading(true);
-		void (async () => {
+	const loadSchedules = useCallback(
+		async (reset = true) => {
+			const offset = reset ? 0 : offsetRef.current;
 			try {
+				if (!reset) setIsLoadingMore(true);
 				const dayParams = getScheduleListRangeOverlapParams(rangeStart, rangeEnd);
 				const res = await schedulesApi.list({
 					ordering: '-from_datetime',
-					page_size: 200,
+					limit: PAGE_LIMIT,
+					offset,
 					search: searchApplied || undefined,
 					...dayParams,
 				});
-				if (!cancelled) setSchedules(res.results || []);
+				const pageRows = res.results || [];
+				const nextOffset = offset + pageRows.length;
+				setSchedules((prev) => (reset ? pageRows : [...prev, ...pageRows]));
+				offsetRef.current = nextOffset;
+				setHasMore(nextOffset < (res.count ?? nextOffset));
 			} catch (err) {
-				if (!cancelled) {
-					showErrorRef.current(getErrorMessage(err));
-					setSchedules([]);
-				}
+				showErrorRef.current(getErrorMessage(err));
+				if (reset) setSchedules([]);
 			} finally {
-				if (!cancelled) setLoading(false);
+				if (!reset) setIsLoadingMore(false);
 			}
-		})();
-		return () => {
-			cancelled = true;
+		},
+		[searchApplied, rangeStart, rangeEnd],
+	);
+
+	useEffect(() => {
+		let isMounted = true;
+		const run = async () => {
+			offsetRef.current = 0;
+			setInitialLoading(true);
+			await loadSchedules(true);
+			if (isMounted) setInitialLoading(false);
 		};
-	}, [searchApplied, rangeStart, rangeEnd]);
+		void run();
+		return () => {
+			isMounted = false;
+		};
+	}, [loadSchedules]);
+
+	const handleScroll = useCallback(
+		(event: React.UIEvent<HTMLDivElement>) => {
+			if (isLoadingMore || !hasMore) return;
+			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+			if (scrollTop + clientHeight >= scrollHeight - 100) {
+				void loadSchedules(false);
+			}
+		},
+		[hasMore, isLoadingMore, loadSchedules],
+	);
 
 	const runSearch = useCallback(() => {
-		const next = search.trim();
-		setSearchApplied((prev) => (prev === next ? prev : next));
+		setSearchApplied(search.trim());
 	}, [search]);
 
-	const handleOpenSchedule = useCallback((row: QueueSchedule) => {
-		const qid = row.queue;
-		navigate(`/queue-management/schedules/${row.id}`, {
-			state:
-				qid != null
-					? {
-							queueId: qid,
-							queueName: row.queue_name,
-							queueDetailPath: `/queue-management/${qid}`,
-						}
-					: undefined,
-		});
-	}, [navigate]);
-
-	const handleDateRangeFilter = useCallback(
-		(next: ScheduleListDateSelection | null) => {
-			if (!next) {
-				setSelectedDateRange(buildTodaySelection());
-				return;
-			}
-			setSelectedDateRange(next);
+	const handleOpenSchedule = useCallback(
+		(row: QueueSchedule) => {
+			const qid = row.queue;
+			navigate(`/queue-management/schedules/${row.id}`, {
+				state:
+					qid != null
+						? {
+								queueId: qid,
+								queueName: row.queue_name,
+								queueDetailPath: `/queue-management/${qid}`,
+							}
+						: undefined,
+			});
 		},
-		[],
+		[navigate],
 	);
+
+	const handleDateRangeFilter = useCallback((next: ScheduleListDateSelection | null) => {
+		setSelectedDateRange(next ?? buildTodaySelection());
+	}, []);
 
 	return (
 		<Card stretch>
@@ -145,10 +171,10 @@ const SchedulesListWorkspace: React.FC = () => {
 				</CardActions>
 			</CardHeader>
 			<CardBody>
-				{loading ? (
+				{initialLoading ? (
 					<QueueManagementSkeleton count={8} />
 				) : (
-					<div className='queue-cards-scroll'>
+					<div className='queue-cards-scroll' onScroll={handleScroll}>
 						<Row className='g-3 mx-0 pt-1'>
 							{schedules.map((sch) => (
 								<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={sch.id}>
@@ -161,6 +187,11 @@ const SchedulesListWorkspace: React.FC = () => {
 								</Col>
 							)}
 						</Row>
+						{isLoadingMore && (
+							<div className='py-3'>
+								<QueueManagementSkeleton count={4} />
+							</div>
+						)}
 					</div>
 				)}
 			</CardBody>

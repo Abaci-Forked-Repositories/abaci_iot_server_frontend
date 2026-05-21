@@ -372,6 +372,8 @@ export interface QueueSchedule {
 	/** Prefixed label for the active token on this schedule. */
 	current_token_display?: string | null;
 	current_token_number?: string | null;
+	waiting_token_count?: number;
+	scheduled_token_count?: number;
 	status: ScheduleApiStatus;
 	limit?: number;
 	token_from?: number;

@@ -47,22 +47,22 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 					onSelect(schedule);
 				}
 			}}>
-			<div className='schedule-tile__head'>
-				<div className='min-w-0'>
-					<div className='schedule-tile__eyebrow'>Schedule · #{schedule.id}</div>
-					<div className='schedule-tile__queue text-truncate' title={queueTitle}>
-						{queueTitle}
+		<div className='schedule-tile__head'>
+			<div style={{ minWidth: 0, flex: '1 1 0' }}>
+				<div className='schedule-tile__eyebrow'>Schedule · #{schedule.id}</div>
+				<div className='schedule-tile__queue' title={queueTitle}>
+					{queueTitle}
+				</div>
+				{subtitle ? (
+					<div className='schedule-tile__desc' title={subtitle}>
+						{subtitle}
 					</div>
-					{subtitle ? (
-						<div className='schedule-tile__desc text-truncate' title={subtitle}>
-							{subtitle}
-						</div>
-					) : null}
-				</div>
-				<div className='flex-shrink-0'>
-					<StatusBadge status={schedule.status} emptyFallback='—' />
-				</div>
+				) : null}
 			</div>
+			<div style={{ flexShrink: 0, maxWidth: '100%' }}>
+				<StatusBadge status={schedule.status} emptyFallback='—' />
+			</div>
+		</div>
 
 			<div className='schedule-tile__range'>
 				<Icon icon='DateRange' size='sm' className='schedule-tile__range-icon' />

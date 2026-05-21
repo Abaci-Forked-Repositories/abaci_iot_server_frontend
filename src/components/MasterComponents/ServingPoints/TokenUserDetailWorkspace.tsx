@@ -847,7 +847,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 				</CardHeader>
 				<CardBody className='table-responsive'>
 					<div className='material_tabel_wrapper'>
-						<ThemeProvider theme={theme}>
+						<div style={{ overflow: 'hidden' }}>
+							<ThemeProvider theme={theme}>
 							<MaterialTable
 								title=' '
 								//@ts-ignore
@@ -870,7 +871,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 									body: { emptyDataSourceMessage: 'No tokens for this user yet.' },
 								}}
 							/>
-						</ThemeProvider>
+							</ThemeProvider>
+						</div>
 					</div>
 				</CardBody>
 			</Card>
@@ -884,6 +886,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 
 			<Modal
 				isCentered
+				isAnimation={false}
 				isOpen={detailViewTokenId != null}
 				setIsOpen={(open) => {
 					if (!open) closeDetailModal();

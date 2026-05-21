@@ -16,7 +16,6 @@ import {
 	type QueueSchedule,
 	type Token,
 	schedulesApi,
-	tokensApi,
 } from '../../../services/queueManagementApi';
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import { formatDate, getScheduleCurrentTokenDisplay } from '../QueueManagement/queueManagementUtils';
@@ -60,7 +59,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [scheduleRecord, setScheduleRecord] = useState<QueueSchedule | null>(null);
 	const [statusFormValue, setStatusFormValue] = useState('scheduled');
-	const [tokens, setTokens] = useState<Token[]>([]);
 	const [showScheduleEditModal, setShowScheduleEditModal] = useState(false);
 
 	const queueId = scheduleRecord?.queue ?? queueIdFromState ?? 0;
@@ -76,9 +74,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		try {
 			const sch = await schedulesApi.get(sid);
 			setScheduleRecord(sch);
-
-			const tokensRes = await tokensApi.list({ schedule: sid, ordering: '-created_at', page_size: 200 });
-			setTokens(tokensRes.results || []);
 		} catch (err) {
 			showErrorNotification(err);
 		} finally {
@@ -175,10 +170,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		return queueId ? `Queue ${queueId}` : 'Queue';
 	}, [queueId, queueNameFromState, scheduleRecord?.queue_name]);
 
-	const waitingTokenCount = useMemo(
-		() => tokens.filter((t) => (t.status || '').toLowerCase().trim() === 'waiting').length,
-		[tokens],
-	);
+	// Read counts directly from the schedule API response
+	const waitingTokenCount = scheduleRecord?.waiting_token_count ?? 0;
+	const scheduledTokenCount = scheduleRecord?.scheduled_token_count ?? 0;
 
 	const currentTokenDisplay = useMemo(
 		() => (scheduleRecord ? getScheduleCurrentTokenDisplay(scheduleRecord) : '—'),
@@ -445,7 +439,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 											</div>
 											<div className='text-muted small'>Scheduled tokens</div>
 										</div>
-										<div className='fs-5 fw-bold'>{tokens.length}</div>
+										<div className='fs-5 fw-bold'>{scheduledTokenCount}</div>
 									</div>
 								</div>
 							</div>
@@ -469,8 +463,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				<div className='col-12 col-xl-7'>
 					<ScheduleDetailScheduleTokens
 						loading={loading}
+						scheduleId={sid}
 						scheduleRecord={scheduleRecord}
-						tokens={tokens}
 						onEditToken={openEditTokenModal}
 						onTokensUpdated={() => void load()}
 					/>

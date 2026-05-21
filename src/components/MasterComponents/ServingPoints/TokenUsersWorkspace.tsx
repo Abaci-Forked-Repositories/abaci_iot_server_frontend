@@ -118,6 +118,7 @@ const TokenUsersWorkspace: React.FC = () => {
 			</CardHeader>
 			<CardBody className='table-responsive'>
 				<div className='material_tabel_wrapper'>
+				<div style={{ overflow: 'hidden' }}>
 					<ThemeProvider theme={theme}>
 						<MaterialTable
 							title=' '
@@ -148,8 +149,9 @@ const TokenUsersWorkspace: React.FC = () => {
 									emptyDataSourceMessage: 'No token users found.',
 								},
 							}}
-						/>
-					</ThemeProvider>
+							/>
+						</ThemeProvider>
+					</div>
 				</div>
 			</CardBody>
 		</Card>

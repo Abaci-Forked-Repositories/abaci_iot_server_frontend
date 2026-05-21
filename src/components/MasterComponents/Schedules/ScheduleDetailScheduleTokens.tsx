@@ -1,4 +1,13 @@
-import React, { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+	type FormEvent,
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import MaterialTable, { MTableToolbar } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
@@ -10,8 +19,15 @@ import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bo
 import Spinner from '../../bootstrap/Spinner';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import { type QueueSchedule, type Token, tokensApi } from '../../../services/queueManagementApi';
+import {
+	type QueueSchedule,
+	type Token,
+	type TokenQueueRef,
+	tokensApi,
+} from '../../../services/queueManagementApi';
 import { formatDate, getTokenDisplay } from '../QueueManagement/queueManagementUtils';
+
+const ShareTokenModal = lazy(() => import('../../PageComponents/ServingPoints/ShareTokenModal'));
 
 const tokenStatusKey = (status?: string) => (status || '').toLowerCase().trim();
 
@@ -59,22 +75,24 @@ const canEditTokenDetails = (token: Token) => {
 
 export type ScheduleDetailScheduleTokensProps = {
 	loading: boolean;
-	/** Schedule GET payload; `is_reporting_enabled` and `allow_postpone` drive token status options. */
+	scheduleId: number;
 	scheduleRecord: QueueSchedule | null;
-	tokens: Token[];
 	onEditToken: (token: Token) => void;
 	onTokensUpdated: () => void | Promise<void>;
 };
 
 const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> = ({
 	loading,
+	scheduleId,
 	scheduleRecord,
-	tokens,
 	onEditToken,
 	onTokensUpdated,
 }) => {
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+
+	const tableRef = useRef<any>(null);
+
 	const [tokenStatusFilter, setTokenStatusFilter] = useState<{ label: string; value: string }>({
 		label: 'All',
 		value: 'all',
@@ -82,6 +100,17 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 	const [statusModalToken, setStatusModalToken] = useState<Token | null>(null);
 	const [statusActionValue, setStatusActionValue] = useState<TokenStatusAction | ''>('');
 	const [statusSaving, setStatusSaving] = useState(false);
+	const [shareToken, setShareToken] = useState<Token | null>(null);
+
+	// Refresh table when parent signals a reload (e.g. after create/edit token)
+	useEffect(() => {
+		tableRef.current?.onQueryChange();
+	}, [loading]);
+
+	// Re-query when status filter changes
+	useEffect(() => {
+		tableRef.current?.onQueryChange();
+	}, [tokenStatusFilter.value]);
 
 	const statusModalOptions = useMemo(
 		() => (statusModalToken ? buildTokenStatusActionOptions(statusModalToken, scheduleRecord) : []),
@@ -103,7 +132,9 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 		async (e: FormEvent<HTMLFormElement>) => {
 			e.preventDefault();
 			if (!statusModalToken || !statusActionValue) return;
-			const allowed = buildTokenStatusActionOptions(statusModalToken, scheduleRecord).map((o) => o.value);
+			const allowed = buildTokenStatusActionOptions(statusModalToken, scheduleRecord).map(
+				(o) => o.value,
+			);
 			if (!allowed.includes(statusActionValue)) {
 				showErrorNotification('Selected status change is not allowed.');
 				return;
@@ -119,6 +150,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 				}
 				showSuccessNotification('Token status updated successfully.');
 				closeStatusModal();
+				tableRef.current?.onQueryChange();
 				await onTokensUpdated();
 			} catch (err) {
 				showErrorNotification(err);
@@ -135,6 +167,42 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			showErrorNotification,
 			showSuccessNotification,
 		],
+	);
+
+	// ── Server-side data fetcher (limit/offset) ──────────────────────────────
+	const fetchTokenData = useCallback(
+		(query: any): Promise<{ data: Token[]; page: number; totalCount: number }> => {
+			return new Promise((resolve) => {
+				const limit = query.pageSize;
+				const offset = query.pageSize * query.page;
+				const search = query.search ?? '';
+
+				const params: Record<string, any> = {
+					schedule: scheduleId,
+					limit,
+					offset,
+					ordering: '-created_at',
+				};
+				if (search) params.search = search;
+				if (tokenStatusFilter.value !== 'all') params.status = tokenStatusFilter.value;
+
+				tokensApi
+					.list(params)
+					.then((tableRes) => {
+						resolve({
+							data: tableRes.results ?? [],
+							page: query.page,
+							totalCount: tableRes.count ?? 0,
+						});
+					})
+					.catch((err) => {
+						showErrorNotification(err);
+						resolve({ data: [], page: query.page, totalCount: 0 });
+					});
+			});
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[scheduleId, tokenStatusFilter.value],
 	);
 
 	const tokenColumns = useMemo(
@@ -165,13 +233,32 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 				sorting: false,
 				filtering: false,
 				render: (rowData: Token) => {
-					const canChangeStatus = buildTokenStatusActionOptions(rowData, scheduleRecord).length > 0;
+					const canChangeStatus =
+						buildTokenStatusActionOptions(rowData, scheduleRecord).length > 0;
 					const canEdit = canEditTokenDetails(rowData);
-					if (!canChangeStatus && !canEdit) {
+					const canShare = Boolean(rowData.token_user?.uuid);
+					if (!canChangeStatus && !canEdit && !canShare) {
 						return <span className='text-muted small'>—</span>;
 					}
 					return (
 						<div className='d-inline-flex flex-wrap gap-1 align-items-center'>
+							{canShare && (
+								<Tooltip title='Share token status link'>
+									<span className='d-inline-flex'>
+										<Button
+											color='info'
+											isLight
+											size='sm'
+											icon='QrCode2'
+											onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+												e.preventDefault();
+												e.stopPropagation();
+												setShareToken(rowData);
+											}}
+										/>
+									</span>
+								</Tooltip>
+							)}
 							{canChangeStatus && (
 								<Tooltip title='Change token status'>
 									<span className='d-inline-flex'>
@@ -217,23 +304,16 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 	const tokenStatusFilterOptions = useMemo(
 		() => [
 			{ label: 'All', value: 'all' },
-			{ label: 'registred', value: 'registred' },
-			{ label: 'waiting', value: 'waiting' },
-			{ label: 'serving', value: 'serving' },
-			{ label: 'completed', value: 'completed' },
-			{ label: 'cancelled', value: 'cancelled' },
-			{ label: 'postponed', value: 'postponed' },
-			{ label: 'no_show', value: 'no_show' },
+			{ label: 'Registred', value: 'registred' },
+			{ label: 'Waiting', value: 'waiting' },
+			{ label: 'Serving', value: 'serving' },
+			{ label: 'Completed', value: 'completed' },
+			{ label: 'Cancelled', value: 'cancelled' },
+			{ label: 'Postponed', value: 'postponed' },
+			{ label: 'No Show', value: 'no_show' },
 		],
 		[],
 	);
-
-	const filteredTokens = useMemo(() => {
-		if (tokenStatusFilter.value === 'all') {
-			return tokens;
-		}
-		return tokens.filter((token) => tokenStatusKey(token.status) === tokenStatusFilter.value);
-	}, [tokenStatusFilter.value, tokens]);
 
 	const tokenToolbar = (props: any) => (
 		<div className='d-flex align-items-center justify-content-end gap-2 pe-2'>
@@ -260,44 +340,39 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			<Card stretch>
 				<CardHeader>
 					<CardLabel icon='ConfirmationNumber'>
-						<CardTitle tag='h5'>Scheduled Tokens ({filteredTokens.length})</CardTitle>
+						<CardTitle tag='h5'>Scheduled Tokens</CardTitle>
 					</CardLabel>
 				</CardHeader>
 				<CardBody>
-					{loading ? (
-						<div className='text-center text-muted py-4'>Loading tokens...</div>
-					) : (
-						<div className='material_tabel_wrapper'>
-							<div style={{ overflow: 'hidden' }}>
-								<ThemeProvider theme={theme}>
-									<MaterialTable
-										title=' '
-										// @ts-ignore
-										columns={tokenColumns}
-										data={filteredTokens}
-										components={{
-											Toolbar: tokenToolbar,
-										}}
-										options={{
-											headerStyle: headerStyles(),
-											rowStyle: rowStyles(),
-											searchFieldStyle: searchFieldStyle(),
-											search: true,
-											filtering: false,
-											pageSize: 5,
-											pageSizeOptions: [5, 10, 20],
-											emptyRowsWhenPaging: false,
-										}}
-										localization={{
-											pagination: {
-												labelRowsPerPage: '',
-											},
-										}}
-									/>
-								</ThemeProvider>
-							</div>
+					<div className='material_tabel_wrapper'>
+						<div style={{ overflow: 'hidden' }}>
+							<ThemeProvider theme={theme}>
+								<MaterialTable
+									title=' '
+									tableRef={tableRef}
+									// @ts-ignore
+									columns={tokenColumns}
+									data={fetchTokenData}
+									components={{ Toolbar: tokenToolbar }}
+									options={{
+										headerStyle: headerStyles(),
+										rowStyle: rowStyles(),
+										searchFieldStyle: searchFieldStyle(),
+										search: true,
+										filtering: false,
+										sorting: false,
+										pageSize: 5,
+										pageSizeOptions: [5, 10, 20],
+										emptyRowsWhenPaging: false,
+										debounceInterval: 400,
+									}}
+									localization={{
+										pagination: { labelRowsPerPage: '' },
+									}}
+								/>
+							</ThemeProvider>
 						</div>
-					)}
+					</div>
 				</CardBody>
 			</Card>
 
@@ -321,14 +396,19 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 							<p className='fw-semibold mb-1'>
 								Token {getTokenDisplay(statusModalToken)}
 								{statusModalToken.token_user?.name ? (
-									<span className='text-muted fw-normal'> · {statusModalToken.token_user.name}</span>
+									<span className='text-muted fw-normal'>
+										{' '}
+										· {statusModalToken.token_user.name}
+									</span>
 								) : null}
 							</p>
 							<div className='d-flex align-items-center gap-2 mb-3'>
 								<span className='text-muted small'>Current status</span>
 								<StatusBadge status={String(statusModalToken.status)} />
 							</div>
-							<label className='form-label fw-semibold' htmlFor='schedule-token-next-status'>
+							<label
+								className='form-label fw-semibold'
+								htmlFor='schedule-token-next-status'>
 								Change to
 							</label>
 							<select
@@ -336,7 +416,9 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 								className='form-select'
 								value={statusActionValue}
 								disabled={statusSaving}
-								onChange={(e) => setStatusActionValue(e.target.value as TokenStatusAction)}>
+								onChange={(e) =>
+									setStatusActionValue(e.target.value as TokenStatusAction)
+								}>
 								{statusModalOptions.map((o) => (
 									<option key={o.value} value={o.value}>
 										{o.label}
@@ -354,7 +436,9 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 								Cancel
 							</Button>
 							<Button
-								color={statusActionValue ? ACTION_SUBMIT_COLORS[statusActionValue] : 'primary'}
+								color={
+									statusActionValue ? ACTION_SUBMIT_COLORS[statusActionValue] : 'primary'
+								}
 								type='submit'
 								isDisable={statusSaving || !statusActionValue}>
 								{statusSaving ? (
@@ -370,6 +454,32 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 					</form>
 				)}
 			</Modal>
+
+			{shareToken &&
+				(() => {
+					const uuid = shareToken.token_user?.uuid ?? '';
+					const queueId =
+						typeof shareToken.queue === 'number'
+							? shareToken.queue
+							: ((shareToken.queue as TokenQueueRef | undefined)?.id ??
+								scheduleRecord?.queue ??
+								0);
+					if (!uuid || !queueId) return null;
+					return (
+						<Suspense fallback={null}>
+							<ShareTokenModal
+								isOpen={shareToken != null}
+								setIsOpen={(open) => {
+									if (!open) setShareToken(null);
+								}}
+								tokenUserUuid={uuid}
+								queueId={queueId}
+								tokenDisplay={getTokenDisplay(shareToken)}
+								customerName={shareToken.token_user?.name ?? null}
+							/>
+						</Suspense>
+					);
+				})()}
 		</>
 	);
 };
