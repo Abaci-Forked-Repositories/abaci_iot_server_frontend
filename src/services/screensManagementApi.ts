@@ -17,6 +17,13 @@ export interface ScreenQueueRef {
 	name: string;
 }
 
+export interface CreateScreenPayload {
+	name: string;
+	location?: string;
+	description?: string;
+	is_active: boolean;
+}
+
 export interface Screen {
 	id: number;
 	name: string;
@@ -35,6 +42,8 @@ export interface Screen {
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
 
 export const screensApi = {
+	create: (payload: CreateScreenPayload) =>
+		unwrap<Screen>(authAxios.post('api/screens/', payload)),
 	list: (params?: {
 		location?: string;
 		search?: string;

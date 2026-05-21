@@ -16,32 +16,7 @@ const THUMB_MIN = 115;
 const THUMB_MAX = 250;
 const THUMB_STEP = 12;
 
-// const DUMMY_TEMPLATES: Template[] = [
-// 	{
-// 		id: 1001,
-// 		template_name: 'Lobby Welcome Board',
-// 		orientation: 'Landscape',
-// 		resolution_width: 1920,
-// 		resolution_height: 1080,
-// 		thumbnail: null,
-// 	},
-// 	{
-// 		id: 1002,
-// 		template_name: 'Queue Counter Display',
-// 		orientation: 'Landscape',
-// 		resolution_width: 1280,
-// 		resolution_height: 720,
-// 		thumbnail: null,
-// 	},
-// 	{
-// 		id: 1003,
-// 		template_name: 'Vertical Promo Screen',
-// 		orientation: 'Portrait',
-// 		resolution_width: 1080,
-// 		resolution_height: 1920,
-// 		thumbnail: null,
-// 	},
-// ];
+
 
 const getStoredThumb = () => {
 	const saved = Number(localStorage.getItem(THUMB_KEY));
