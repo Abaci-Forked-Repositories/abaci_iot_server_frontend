@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://wooden-founder-contest-measuring.trycloudflare.com';
+		return 'https://bridge-highly-script-korean.trycloudflare.com';
 	}
 	return url;
 };
