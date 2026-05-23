@@ -139,7 +139,10 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 			}
 		};
 
-		if (!location.pathname.includes('public')) {
+		if (
+			!location.pathname.includes('public') &&
+			!location.pathname.startsWith('/screenstokenstatus')
+		) {
 			fetchData();
 		} else {
 			setLoading(false);

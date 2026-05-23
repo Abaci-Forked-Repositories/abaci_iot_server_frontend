@@ -5,7 +5,16 @@ import Button from '../../bootstrap/Button';
 import { screensApi, type Screen } from '../../../services/screensManagementApi';
 import ScreenTvPreview from './ScreenTvPreview';
 import ScreenDetailPanel from './ScreenDetailPanel';
+import ScreenAssignTemplateModal from './ScreenAssignTemplateModal';
+import ScreenEditTemplateModal from './ScreenEditTemplateModal';
 import { FALLBACK_SCREENS } from './screensFallbackData';
+import {
+	screenTemplatesApi,
+	type ScreenTemplateAssignment,
+	type UpdateScreenTemplatePayload,
+} from '../../../services/screenTemplatesApi';
+import { templatesApi, type Template } from '../../../services/templatesApi';
+import { swalFire } from '../../../helpers/swalHelper';
 
 const toMessage = (error: unknown) => {
 	const typed = error as { response?: { data?: { detail?: string } } };
@@ -22,6 +31,9 @@ const ScreenDetailWorkspace: React.FC = () => {
 	const [actionLoadingKey, setActionLoadingKey] = useState<string | null>(null);
 	const [offlineMode, setOfflineMode] = useState(false);
 	const [message, setMessage] = useState('');
+	const [showAssignTemplateModal, setShowAssignTemplateModal] = useState(false);
+	const [editingAssignment, setEditingAssignment] = useState<ScreenTemplateAssignment | null>(null);
+	const [templateById, setTemplateById] = useState<Record<number, Template>>({});
 
 	const loadScreen = useCallback(async () => {
 		if (!Number.isFinite(screenId)) return;
@@ -43,6 +55,26 @@ const ScreenDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		loadScreen();
 	}, [loadScreen]);
+
+	useEffect(() => {
+		let cancelled = false;
+		templatesApi
+			.list({ limit: 200, ordering: 'name' })
+			.then((res) => {
+				if (cancelled) return;
+				const map: Record<number, Template> = {};
+				for (const item of res.results ?? []) {
+					map[item.id] = item;
+				}
+				setTemplateById(map);
+			})
+			.catch(() => {
+				if (!cancelled) setTemplateById({});
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	const runAction = async (
 		key: string,
@@ -90,7 +122,95 @@ const ScreenDetailWorkspace: React.FC = () => {
 		}));
 	};
 
+	const handleAssignTemplate = async (payload: Parameters<typeof screenTemplatesApi.create>[0]) => {
+		try {
+			await screenTemplatesApi.create(payload);
+			setMessage('');
+			await loadScreen();
+		} catch (error) {
+			setMessage(toMessage(error));
+			throw error;
+		}
+	};
+
+	const handleRemoveTemplate = (assignmentId: number) => {
+		const key = `screen-template-remove-${assignmentId}`;
+		runAction(key, () => screenTemplatesApi.remove(assignmentId));
+	};
+
+	const handleEditTemplate = async (
+		assignmentId: number,
+		payload: UpdateScreenTemplatePayload,
+	) => {
+		const key = `screen-template-edit-${assignmentId}`;
+		setActionLoadingKey(key);
+		setMessage('');
+		try {
+			await screenTemplatesApi.patch(assignmentId, payload);
+			setEditingAssignment(null);
+			await loadScreen();
+		} catch (error) {
+			setMessage(toMessage(error));
+			throw error;
+		} finally {
+			setActionLoadingKey(null);
+		}
+	};
+
+	const handleDeleteScreen = async () => {
+		if (!screen) return;
+		const result = await swalFire({
+			title: 'Delete screen?',
+			text: `Delete "${screen.name}"? This cannot be undone.`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'Delete',
+			cancelButtonText: 'Cancel',
+			reverseButtons: true,
+		});
+		if (!result.isConfirmed) return;
+
+		setActionLoadingKey(`screen-delete-${screen.id}`);
+		setMessage('');
+		try {
+			await screensApi.remove(screen.id);
+			navigate('/screens');
+		} catch (error) {
+			setMessage(toMessage(error));
+		} finally {
+			setActionLoadingKey(null);
+		}
+	};
+
+	const editingTemplate = editingAssignment
+		? templateById[
+				typeof editingAssignment.template === 'object'
+					? editingAssignment.template.id
+					: editingAssignment.template
+			]
+		: null;
+
+	const nextTemplateOrder =
+		(screen?.screen_templates?.length ?? 0) > 0
+			? Math.max(...(screen?.screen_templates ?? []).map((item) => item.order)) + 1
+			: 1;
+
 	return (
+		<>
+			<ScreenAssignTemplateModal
+				isOpen={showAssignTemplateModal}
+				screenId={screenId}
+				defaultOrder={nextTemplateOrder}
+				onClose={() => setShowAssignTemplateModal(false)}
+				onSubmit={handleAssignTemplate}
+			/>
+			<ScreenEditTemplateModal
+				isOpen={editingAssignment !== null}
+				assignment={editingAssignment}
+				template={editingTemplate}
+				onClose={() => setEditingAssignment(null)}
+				onSubmit={handleEditTemplate}
+			/>
 		<Card stretch className='screens-workspace-card'>
 			<CardHeader>
 				<CardLabel icon='SmartScreen'>
@@ -100,6 +220,27 @@ const ScreenDetailWorkspace: React.FC = () => {
 					<Button color='light' icon='ArrowBack' onClick={() => navigate('/screens')}>
 						Back to Screens
 					</Button>
+					{screen?.uuid && (
+						<Button
+							color='info'
+							isLight
+							icon='Link'
+							onClick={() => {
+								const url = `${window.location.origin}/screenstokenstatus/${screen.uuid}`;
+								window.open(url, '_blank', 'noopener,noreferrer');
+							}}>
+							Link
+						</Button>
+					)}
+					{screen && (
+						<Button
+							color='danger'
+							icon='Delete'
+							isDisable={actionLoadingKey === `screen-delete-${screen.id}`}
+							onClick={handleDeleteScreen}>
+							Delete Screen
+						</Button>
+					)}
 				</CardActions>
 			</CardHeader>
 			<CardBody className='screens-body'>
@@ -109,18 +250,23 @@ const ScreenDetailWorkspace: React.FC = () => {
 					<div className='text-center text-muted py-5'>Loading screen detail...</div>
 				) : (
 					<div className='screens-layout-detail-only'>
-						<ScreenTvPreview screen={screen} />
+						<ScreenTvPreview screen={screen} templateById={templateById} />
 						<ScreenDetailPanel
 							screen={screen}
+							templateById={templateById}
 							actionLoadingKey={actionLoadingKey}
 							onActivateToggle={handleActivateToggle}
 							onAudioToggle={handleAudioToggle}
 							onHeartbeat={handleHeartbeat}
+							onAssignTemplate={() => setShowAssignTemplateModal(true)}
+							onEditTemplate={setEditingAssignment}
+							onRemoveTemplate={handleRemoveTemplate}
 						/>
 					</div>
 				)}
 			</CardBody>
 		</Card>
+		</>
 	);
 };
 

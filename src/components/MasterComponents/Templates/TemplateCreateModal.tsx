@@ -35,7 +35,7 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 	const [width, setWidth] = useState(1920);
 	const [height, setHeight] = useState(1080);
 	const [resolution, setResolution] = useState<1 | 2 | 3>(1);
-
+	const [description, setDescription] = useState('');
 	const [previewW, setPreviewW] = useState(290);
 	const [previewH, setPreviewH] = useState(163);
 	const [border, setBorder] = useState(10);
@@ -84,9 +84,10 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 		try {
 			await onSubmit({
 				name: name.trim(),
-				orientation: isLandscape ? 'Landscape' : 'Portrait',
-				resolution_width: Number(width),
-				resolution_height: Number(height),
+				description: description.trim(),
+				// orientation: isLandscape ? 'landscape' : 'portrait',
+				// resolution_width: Number(width),
+				// resolution_height: Number(height),
 			});
 			handleClose();
 		} finally {
@@ -103,10 +104,10 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 				<div className='tpl-modal-body'>
 					<div className='tpl-modal-form'>
 						<header className='tpl-modal-intro'>
-							<h5 className='tpl-modal-intro-title'>Template setup</h5>
-							<p className='tpl-modal-intro-sub'>
+							{/* <h5 className='tpl-modal-intro-title'>Template setup</h5> */}
+							{/* <p className='tpl-modal-intro-sub'>
 								Name your layout, pick orientation and resolution, then refine zones in the editor.
-							</p>
+							</p> */}
 						</header>
 
 						<div className='tpl-field-group'>
@@ -124,8 +125,20 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 								autoComplete='off'
 							/>
 						</div>
-
 						<div className='tpl-field-group'>
+							<label className='tpl-field-label' htmlFor='tpl-description'>
+								Description
+							</label>
+							<textarea
+								id='tpl-description'
+								className='form-control'
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
+								placeholder='Optional notes'
+							/>
+						</div>
+
+						{/* <div className='tpl-field-group'>
 							<label className='tpl-field-label'>Screen orientation</label>
 							<div className='tpl-orient-row'>
 								<button
@@ -143,9 +156,9 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 									Portrait
 								</button>
 							</div>
-						</div>
+						</div> */}
 
-						<div className='tpl-field-group'>
+						{/* <div className='tpl-field-group'>
 							<label className='tpl-field-label'>Screen resolution</label>
 							<div className='tpl-res-list'>
 								{RESOLUTIONS.map(({ val, getLabel, tag }) => (
@@ -159,7 +172,7 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 									</button>
 								))}
 							</div>
-						</div>
+						</div> */}
 
 						{resolution === 3 && (
 							<div className='tpl-field-group'>
@@ -193,7 +206,7 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 						)}
 					</div>
 
-					<div className='tpl-modal-preview'>
+					{/* <div className='tpl-modal-preview'>
 						<div className='tpl-preview-inner'>
 							<div
 								className='tpl-screen'
@@ -222,7 +235,7 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 								</span>
 							</div>
 						</div>
-					</div>
+					</div> */}
 				</div>
 			</ModalBody>
 			<ModalFooter>

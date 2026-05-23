@@ -20,6 +20,8 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 	const [name, setName] = useState('');
 	const [location, setLocation] = useState('');
 	const [description, setDescription] = useState('');
+	const [ipAddress, setIpAddress] = useState('');
+	const [ipBind, setIpBind] = useState(false);
 	const [isActive, setIsActive] = useState(true);
 	const [loading, setLoading] = useState(false);
 
@@ -27,6 +29,8 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 		setName('');
 		setLocation('');
 		setDescription('');
+		setIpAddress('');
+		setIpBind(false);
 		setIsActive(true);
 		onClose();
 	};
@@ -39,6 +43,8 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 				name: name.trim(),
 				location: location.trim(),
 				description: description.trim(),
+				ip_address: ipAddress.trim() || null,
+				ip_bind: ipBind,
 				is_active: isActive,
 			});
 			handleClose();
@@ -95,6 +101,27 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 						placeholder='Optional notes'
 					/>
 				</div>
+				<div className='mb-3'>
+					<label className='form-label' htmlFor='screen-create-ip-address'>
+						IP address
+					</label>
+					<input
+						id='screen-create-ip-address'
+						className='form-control'
+						type='text'
+						value={ipAddress}
+						onChange={(e) => setIpAddress(e.target.value)}
+						placeholder='e.g. 192.168.1.100'
+						autoComplete='off'
+					/>
+				</div>
+				<Checks
+					id='screen-create-ip-bind'
+					type='switch'
+					label='IP bind'
+					checked={ipBind}
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIpBind(e.target.checked)}
+				/>
 				<Checks
 					id='screen-create-active'
 					type='switch'
