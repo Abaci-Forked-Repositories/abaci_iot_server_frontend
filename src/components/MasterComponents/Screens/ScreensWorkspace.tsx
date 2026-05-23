@@ -8,6 +8,7 @@ import ScreenCardTile from './ScreenCardTile';
 import ScreenCreateModal from './ScreenCreateModal';
 import { screensApi, type CreateScreenPayload, type Screen } from '../../../services/screensManagementApi';
 import { FALLBACK_SCREENS } from './screensFallbackData';
+import { swalFire } from '../../../helpers/swalHelper';
 
 const toMessage = (error: unknown) => {
 	const typed = error as { response?: { data?: { detail?: string } } };
@@ -24,6 +25,7 @@ const ScreensWorkspace: React.FC = () => {
 	const [search, setSearch] = useState('');
 	const [message, setMessage] = useState('');
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [deletingId, setDeletingId] = useState<number | null>(null);
 
 	const displayedScreens = useMemo(() => {
 		return screens.filter((item) => {
@@ -69,6 +71,30 @@ const ScreensWorkspace: React.FC = () => {
 		} catch (error) {
 			setMessage(toMessage(error));
 			throw error;
+		}
+	};
+
+	const handleDeleteScreen = async (screen: Screen) => {
+		const result = await swalFire({
+			title: 'Delete screen?',
+			text: `Delete "${screen.name}"? This cannot be undone.`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'Delete',
+			cancelButtonText: 'Cancel',
+			reverseButtons: true,
+		});
+		if (!result.isConfirmed) return;
+
+		setDeletingId(screen.id);
+		setMessage('');
+		try {
+			await screensApi.remove(screen.id);
+			setScreens((prev) => prev.filter((item) => item.id !== screen.id));
+		} catch (error) {
+			setMessage(toMessage(error));
+		} finally {
+			setDeletingId(null);
 		}
 	};
 
@@ -178,7 +204,9 @@ const ScreensWorkspace: React.FC = () => {
 										<ScreenCardTile
 											key={screen.id}
 											screen={screen}
+											deleting={deletingId === screen.id}
 											onOpen={(item) => navigate(`/screens/${item.id}`)}
+											onDelete={handleDeleteScreen}
 										/>
 									))}
 								</div>
