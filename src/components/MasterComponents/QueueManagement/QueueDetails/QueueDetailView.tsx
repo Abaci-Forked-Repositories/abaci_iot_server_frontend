@@ -10,6 +10,7 @@ import type { Queue, QueueStatistics } from '../../../../services/queueManagemen
 import { queuesApi } from '../../../../services/queueManagementApi';
 import type { TColor } from '../../../../type/color-type';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
+import usePermissions from '../../../../hooks/usePermissions';
 import QueueFormModal from '../../../PageComponents/QueueManagement/QueueFormModal';
 import { formatDate } from '../queueManagementUtils';
 import ScheduleCalendar, { type QueueScheduleEvent } from './ScheduleCalendar';
@@ -55,6 +56,8 @@ const QueueDetailView: React.FC = () => {
 	const [pageDataVersion, setPageDataVersion] = useState(0);
 	const [statRange, setStatRange] = useState<(typeof STAT_RANGE_OPTIONS)[number]>('Today');
 	const { showErrorNotification } = useToasterNotification();
+	const { can } = usePermissions();
+	const canWrite = can('queue_management_write');
 	const [showQueueEditModal, setShowQueueEditModal] = useState(false);
 	const [openingQueueEditModal, setOpeningQueueEditModal] = useState(false);
 	const queueEditOpenInFlightRef = useRef(false);
@@ -218,24 +221,26 @@ const QueueDetailView: React.FC = () => {
 												{queueData.is_active ? 'Active' : 'Inactive'}
 												<span className='queue-modern-card__status-dot' />
 											</span>
-											<Tooltip title='Edit queue'>
-												<span className='d-inline-flex'>
-													<Button
-														type='button'
-														color='info'
-														isLight
-														size='sm'
-														icon='Edit'
-														aria-label='Edit queue'
-														isDisable={openingQueueEditModal}
-														onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-															e.preventDefault();
-															e.stopPropagation();
-															void handleOpenQueueEditModal();
-														}}
-													/>
-												</span>
-											</Tooltip>
+											{canWrite && (
+												<Tooltip title='Edit queue'>
+													<span className='d-inline-flex'>
+														<Button
+															type='button'
+															color='info'
+															isLight
+															size='sm'
+															icon='Edit'
+															aria-label='Edit queue'
+															isDisable={openingQueueEditModal}
+															onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+																e.preventDefault();
+																e.stopPropagation();
+																void handleOpenQueueEditModal();
+															}}
+														/>
+													</span>
+												</Tooltip>
+											)}
 										</div>
 									</div>
 

@@ -7,6 +7,11 @@ import type { ServingPoint } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 
+const MODAL_PAGE_SIZE = 5;
+
+const servingPointsHasMore = (offset: number, incomingLength: number, total: number) =>
+	incomingLength > 0 && offset < total;
+
 export interface ScheduleAddServingPointsModalProps {
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
@@ -24,9 +29,11 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 	currentServingPointIds,
 	onSaved,
 }) => {
-	const [allServingPoints, setAllServingPoints] = useState<ServingPoint[]>([]);
-	const [loadingList, setLoadingList] = useState(false);
-	const [listLoaded, setListLoaded] = useState(false);
+	const [modalServingPoints, setModalServingPoints] = useState<ServingPoint[]>([]);
+	const [modalOffset, setModalOffset] = useState(0);
+	const [modalHasMore, setModalHasMore] = useState(false);
+	const [modalLoading, setModalLoading] = useState(false);
+	const [modalLoadingMore, setModalLoadingMore] = useState(false);
 	const [search, setSearch] = useState('');
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
 	const [saving, setSaving] = useState(false);
@@ -34,46 +41,115 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
+	const currentServingPointIdsRef = useRef<Set<number>>(new Set(currentServingPointIds));
 
-	const currentSet = useMemo(() => new Set(currentServingPointIds), [currentServingPointIds]);
+	useEffect(() => {
+		currentServingPointIdsRef.current = new Set(currentServingPointIds);
+	}, [currentServingPointIds]);
 
 	const availableServingPoints = useMemo(() => {
-		const term = search.trim().toLowerCase();
-		return allServingPoints.filter((p) => {
-			if (currentSet.has(p.id)) return false;
-			if (!term) return true;
-			return p.name.toLowerCase().includes(term) || (p.description || '').toLowerCase().includes(term);
-		});
-	}, [allServingPoints, currentSet, search]);
+		const onSchedule = currentServingPointIdsRef.current;
+		return modalServingPoints.filter((p) => !onSchedule.has(p.id));
+	}, [modalServingPoints, currentServingPointIds]);
 
-	const loadServingPointsForQueue = useCallback(async () => {
-		if (!queueId || Number.isNaN(queueId)) return;
-		setLoadingList(true);
-		try {
-			const pageSize = 200;
-			let page = 1;
-			let hasNext = true;
-			const merged: ServingPoint[] = [];
-			while (hasNext) {
-				const res = await queuesApi.servingPoints({
-					queue: queueId,
-					ordering: 'name',
-					page_size: pageSize,
-					page,
-				});
-				merged.push(...(res.results || []));
-				hasNext = Boolean(res.next);
-				page += 1;
+	const fetchModalChunk = useCallback(
+		async (offset: number, searchTerm: string, append: boolean) => {
+			if (!queueId || Number.isNaN(queueId)) return;
+			const res = await queuesApi.servingPoints({
+				queue: queueId,
+				ordering: 'name',
+				limit: MODAL_PAGE_SIZE,
+				offset,
+				...(searchTerm ? { search: searchTerm } : {}),
+			});
+			const incoming = res.results || [];
+			const total = res.count ?? 0;
+			const nextOffset = offset + incoming.length;
+			const hasMore = servingPointsHasMore(nextOffset, incoming.length, total);
+			setModalServingPoints((prev) => (append ? [...prev, ...incoming] : incoming));
+			setModalOffset(nextOffset);
+			setModalHasMore(hasMore);
+		},
+		[queueId],
+	);
+
+	const loadServingPointsList = useCallback(
+		async (searchTerm: string) => {
+			if (!queueId || Number.isNaN(queueId)) return;
+			setModalLoading(true);
+			try {
+				const onSchedule = currentServingPointIdsRef.current;
+				let offset = 0;
+				let merged: ServingPoint[] = [];
+				let hasMore = true;
+				let iterations = 0;
+
+				while (hasMore && iterations < 50) {
+					const res = await queuesApi.servingPoints({
+						queue: queueId,
+						ordering: 'name',
+						limit: MODAL_PAGE_SIZE,
+						offset,
+						...(searchTerm ? { search: searchTerm } : {}),
+					});
+					const incoming = res.results || [];
+					const total = res.count ?? 0;
+					merged = [...merged, ...incoming];
+					offset += incoming.length;
+					hasMore = servingPointsHasMore(offset, incoming.length, total);
+					const availableCount = merged.filter((p) => !onSchedule.has(p.id)).length;
+					if (availableCount >= MODAL_PAGE_SIZE || !hasMore) {
+						setModalServingPoints(merged);
+						setModalOffset(offset);
+						setModalHasMore(hasMore);
+						break;
+					}
+					iterations += 1;
+					if (incoming.length === 0) {
+						setModalServingPoints(merged);
+						setModalOffset(offset);
+						setModalHasMore(false);
+						break;
+					}
+				}
+				if (iterations >= 50) {
+					setModalServingPoints(merged);
+					setModalOffset(offset);
+					setModalHasMore(false);
+				}
+			} catch (err) {
+				showErrorRef.current(err);
+				setModalServingPoints([]);
+				setModalHasMore(false);
+			} finally {
+				setModalLoading(false);
 			}
-			setAllServingPoints(merged);
-			setListLoaded(true);
+		},
+		[queueId],
+	);
+
+	const loadMoreServingPoints = useCallback(async () => {
+		if (modalLoadingMore || modalLoading || !modalHasMore) return;
+		setModalLoadingMore(true);
+		try {
+			await fetchModalChunk(modalOffset, search.trim(), true);
 		} catch (err) {
 			showErrorRef.current(err);
-			setAllServingPoints([]);
 		} finally {
-			setLoadingList(false);
+			setModalLoadingMore(false);
 		}
-	}, [queueId]);
+	}, [fetchModalChunk, modalHasMore, modalLoading, modalLoadingMore, modalOffset, search]);
+
+	const handleModalScroll = useCallback(
+		(event: React.UIEvent<HTMLDivElement>) => {
+			if (modalLoadingMore || !modalHasMore) return;
+			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+			if (scrollTop + clientHeight >= scrollHeight - 48) {
+				void loadMoreServingPoints();
+			}
+		},
+		[loadMoreServingPoints, modalHasMore, modalLoadingMore],
+	);
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -81,10 +157,16 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 			setSelectedIds([]);
 			return;
 		}
-		setListLoaded(false);
-		setAllServingPoints([]);
-		void loadServingPointsForQueue();
-	}, [isOpen, loadServingPointsForQueue]);
+		setModalServingPoints([]);
+		setModalOffset(0);
+		setModalHasMore(false);
+		const searchTerm = search.trim();
+		const delay = searchTerm ? 400 : 0;
+		const timer = window.setTimeout(() => {
+			void loadServingPointsList(searchTerm);
+		}, delay);
+		return () => window.clearTimeout(timer);
+	}, [isOpen, loadServingPointsList, search]);
 
 	const toggleSelection = useCallback((id: number) => {
 		setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -140,7 +222,7 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						autoComplete='off'
-						disabled={loadingList}
+						disabled={modalLoading}
 					/>
 				</div>
 				{selectedIds.length > 0 && (
@@ -149,24 +231,25 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 						<span className='badge bg-primary rounded-pill'>{selectedIds.length}</span>
 					</div>
 				)}
-				{availableServingPoints.length === 0 ? (
-					loadingList || !listLoaded ? (
-						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
-							<Spinner color='primary' />
-							<span>Loading serving points…</span>
+				{modalLoading && availableServingPoints.length === 0 ? (
+					<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
+						<Spinner color='primary' />
+						<span>Loading serving points…</span>
+					</div>
+				) : availableServingPoints.length === 0 ? (
+					<div className='text-center text-muted py-5 px-3 border rounded-3 bg-light'>
+						<Icon icon='Monitor' size='3x' className='mb-3 opacity-50' />
+						<div className='fw-semibold text-body'>No matches</div>
+						<div className='small mt-1'>
+							All serving points for this queue may already be on this schedule, or nothing matches your
+							search.
 						</div>
-					) : (
-						<div className='text-center text-muted py-5 px-3 border rounded-3 bg-light'>
-							<Icon icon='Monitor' size='3x' className='mb-3 opacity-50' />
-							<div className='fw-semibold text-body'>No matches</div>
-							<div className='small mt-1'>
-								All serving points for this queue may already be on this schedule, or nothing matches
-								your search.
-							</div>
-						</div>
-					)
+					</div>
 				) : (
-					<div className='d-flex flex-column gap-2' style={{ maxHeight: 360, overflowY: 'auto' }}>
+					<div
+						className='d-flex flex-column gap-2'
+						style={{ maxHeight: 360, overflowY: 'auto' }}
+						onScroll={handleModalScroll}>
 						{availableServingPoints.map((point) => {
 							const selected = selectedIds.includes(point.id);
 							return (
@@ -201,6 +284,11 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 								</button>
 							);
 						})}
+						{modalLoadingMore && (
+							<div className='d-flex justify-content-center py-2 text-muted'>
+								<Spinner color='primary' isSmall />
+							</div>
+						)}
 					</div>
 				)}
 			</ModalBody>

@@ -38,10 +38,33 @@ const EditUser: FC<EditUserProps> = ({ isOpen, setIsOpen, tableRef, id, title })
 		formState: { errors },
 		trigger,
 	} = useForm<EditUserFormValues>();
+
 	const [waitingForAxios, setwaitingForAxios] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [roleOptions, setRoleOptions] = useState<UserRoleSelectOption[]>([]);
+	const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
 	const loadedUserIdRef = useRef<number | null>(null);
 
+	/** Fetch available roles whenever the offcanvas opens. */
+	useEffect(() => {
+		if (!isOpen) return;
+
+		setRoleOptionsLoading(true);
+		authAxios
+			.get('api/users/roles/')
+			.then((res) => {
+				const results: any[] = res.data?.results ?? res.data ?? [];
+				setRoleOptions(
+					Array.isArray(results)
+						? results.map((r) => ({ label: r.name, value: r.id }))
+						: [],
+				);
+			})
+			.catch((err) => showErrorRef.current(err))
+			.finally(() => setRoleOptionsLoading(false));
+	}, [isOpen]);
+
+	/** Fetch the specific user's current data to pre-fill the form. */
 	useEffect(() => {
 		if (!isOpen || !id) {
 			loadedUserIdRef.current = null;
@@ -74,7 +97,6 @@ const EditUser: FC<EditUserProps> = ({ isOpen, setIsOpen, tableRef, id, title })
 		return () => {
 			cancelled = true;
 		};
-
 	}, [id, isOpen]);
 
 	useEffect(() => {
@@ -122,6 +144,8 @@ const EditUser: FC<EditUserProps> = ({ isOpen, setIsOpen, tableRef, id, title })
 									control={control}
 									trigger={trigger}
 									edit
+									roleOptions={roleOptions}
+									roleOptionsLoading={roleOptionsLoading}
 								/>
 								<div className='row m-0'>
 									<div className='col-12 p-3'>

@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
-import TokenUsersWorkspace from '../../components/MasterComponents/ServingPoints/TokenUsersWorkspace';
+import TokenUsersWorkspace from '../../components/MasterComponents/TokenUsers/TokenUsersWorkspace';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 
 const TokenUsersPage: React.FC = () => {

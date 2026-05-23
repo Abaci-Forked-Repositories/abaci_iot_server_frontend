@@ -1,4 +1,4 @@
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import Card, { CardBody } from '../../bootstrap/Card';
@@ -19,9 +19,11 @@ import {
 } from '../../../services/queueManagementApi';
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import { formatDate, getScheduleCurrentTokenDisplay } from '../QueueManagement/queueManagementUtils';
+import ScheduleDetailSkeleton from '../../CustomComponent/Skeleton/ScheduleDetailSkeleton';
 import ScheduleDetailServingPoints from './ScheduleDetailServingPoints';
 import ScheduleDetailScheduleTokens from './ScheduleDetailScheduleTokens';
 import ScheduleDetailEventsPanel from './ScheduleDetailEventsPanel';
+import usePermissions from '../../../hooks/usePermissions';
 
 const normalizeScheduleStatus = (status?: string) => (status || '').toLowerCase().trim();
 
@@ -60,6 +62,10 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [scheduleRecord, setScheduleRecord] = useState<QueueSchedule | null>(null);
 	const [statusFormValue, setStatusFormValue] = useState('scheduled');
 	const [showScheduleEditModal, setShowScheduleEditModal] = useState(false);
+	const { can } = usePermissions();
+	const canWrite = can('schedules_write');
+
+	const refreshTokensTableRef = useRef<() => void>(() => {});
 
 	const queueId = scheduleRecord?.queue ?? queueIdFromState ?? 0;
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
@@ -143,6 +149,15 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		setShowTokenModal(true);
 	}, []);
 
+	const registerTokensTableRefresh = useCallback((refresh: () => void) => {
+		refreshTokensTableRef.current = refresh;
+	}, []);
+
+	const reloadScheduleAndTokens = useCallback(async () => {
+		await load();
+		refreshTokensTableRef.current();
+	}, [load]);
+
 	const handleUpdateScheduleStatus = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (!scheduleRecord?.id) return;
@@ -208,6 +223,26 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		[scheduleRecord?.status],
 	);
 
+	if (!sid || Number.isNaN(sid)) {
+		return <div className='alert alert-warning'>Invalid schedule.</div>;
+	}
+
+	if (loading && !scheduleRecord) {
+		return <ScheduleDetailSkeleton />;
+	}
+
+	if (!loading && !scheduleRecord) {
+		return (
+			<div className='d-flex justify-content-center align-items-center py-5'>
+				<Button color='primary' icon='Refresh' onClick={() => void load()}>
+					Try again
+				</Button>
+			</div>
+		);
+	}
+
+	const schedule = scheduleRecord!;
+
 	return (
 		<>
 			<Card className='mb-4'>
@@ -225,7 +260,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div className='h4 mb-0 fw-bold'>Schedule Details</div>
 										<div className='text-muted small mt-1'>
 											Queue:{' '}
-											{scheduleRecord?.queue != null ? (
+											{schedule.queue != null ? (
 												<Link to={queueDetailPath} className='fw-semibold text-decoration-none'>
 													{queueName}
 												</Link>
@@ -236,12 +271,12 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='d-flex align-items-center gap-2 flex-wrap justify-content-end'>
-									{scheduleRecord?.status ? (
-										<StatusBadge status={scheduleRecord.status} />
+									{schedule.status ? (
+										<StatusBadge status={schedule.status} />
 									) : (
 										<span className='text-muted small'>—</span>
 									)}
-									{canEditScheduleMetadata && scheduleRecord?.id != null && (
+									{canWrite && canEditScheduleMetadata && schedule.id != null && (
 										<Button
 											color='info'
 											size='sm'
@@ -251,7 +286,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 											Edit schedule
 										</Button>
 									)}
-									{canEditScheduleStatus && (
+									{canWrite && canEditScheduleStatus && (
 										<Button
 											color='primary'
 											size='sm'
@@ -275,7 +310,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div>
 											<div className='text-muted small mb-1'>Start</div>
 											<div className='fw-semibold'>
-												{scheduleRecord?.from_datetime ? formatDate(scheduleRecord.from_datetime) : '-'}
+												{schedule.from_datetime ? formatDate(schedule.from_datetime) : '-'}
 											</div>
 										</div>
 									</div>
@@ -290,7 +325,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div>
 											<div className='text-muted small mb-1'>End</div>
 											<div className='fw-semibold'>
-												{scheduleRecord?.to_datetime ? formatDate(scheduleRecord.to_datetime) : '-'}
+												{schedule.to_datetime ? formatDate(schedule.to_datetime) : '-'}
 											</div>
 										</div>
 									</div>
@@ -305,11 +340,11 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div>
 											<div className='text-muted small mb-1'>Allow postpone</div>
 											<div>
-												{scheduleRecord?.allow_postpone == null ? (
+												{schedule.allow_postpone == null ? (
 													<span className='text-muted'>—</span>
 												) : (
-													<Badge color={scheduleRecord.allow_postpone ? 'success' : 'secondary'} isLight>
-														{scheduleRecord.allow_postpone ? 'Yes' : 'No'}
+													<Badge color={schedule.allow_postpone ? 'success' : 'secondary'} isLight>
+														{schedule.allow_postpone ? 'Yes' : 'No'}
 													</Badge>
 												)}
 											</div>
@@ -326,13 +361,13 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div>
 											<div className='text-muted small mb-1'>Reporting enabled</div>
 											<div>
-												{scheduleRecord?.is_reporting_enabled == null ? (
+												{schedule.is_reporting_enabled == null ? (
 													<span className='text-muted'>—</span>
 												) : (
 													<Badge
-														color={scheduleRecord.is_reporting_enabled ? 'success' : 'secondary'}
+														color={schedule.is_reporting_enabled ? 'success' : 'secondary'}
 														isLight>
-														{scheduleRecord.is_reporting_enabled ? 'Yes' : 'No'}
+														{schedule.is_reporting_enabled ? 'Yes' : 'No'}
 													</Badge>
 												)}
 											</div>
@@ -349,9 +384,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										<div>
 											<div className='text-muted small mb-1'>Token prefix</div>
 											<div className='fw-semibold'>
-												{scheduleRecord?.token_prefix != null &&
-												String(scheduleRecord.token_prefix).trim() !== ''
-													? String(scheduleRecord.token_prefix).trim()
+												{schedule.token_prefix != null &&
+												String(schedule.token_prefix).trim() !== ''
+													? String(schedule.token_prefix).trim()
 													: '—'}
 											</div>
 										</div>
@@ -366,7 +401,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 										<div>
 											<div className='text-muted small mb-1'>Description</div>
-											<div>{scheduleRecord?.description || 'No schedule description provided.'}</div>
+											<div>{schedule.description || 'No schedule description provided.'}</div>
 										</div>
 									</div>
 								</div>
@@ -400,7 +435,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 											</div>
 											<div className='text-muted small'>Token limit</div>
 										</div>
-										<div className='fs-5 fw-bold'>{scheduleRecord?.limit ?? '-'}</div>
+										<div className='fs-5 fw-bold'>{schedule.limit ?? '-'}</div>
 									</div>
 								</div>
 								<div className='col-6'>
@@ -452,7 +487,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				<div className='col-12 col-xl-5'>
 					<ScheduleDetailServingPoints
 						loading={loading}
-						scheduleRecord={scheduleRecord}
+						scheduleRecord={schedule}
 						scheduleId={sid}
 						queueId={queueId}
 						queueName={queueName}
@@ -462,11 +497,11 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				</div>
 				<div className='col-12 col-xl-7'>
 					<ScheduleDetailScheduleTokens
-						loading={loading}
 						scheduleId={sid}
-						scheduleRecord={scheduleRecord}
+						scheduleRecord={schedule}
 						onEditToken={openEditTokenModal}
 						onTokensUpdated={() => void load()}
+						onRegisterTableRefresh={registerTokensTableRefresh}
 					/>
 				</div>
 			</div>
@@ -482,17 +517,17 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				scheduleId={sid}
 				queueId={queueId}
 				queues={tokenFormQueues}
-				schedules={scheduleRecord ? [scheduleRecord] : []}
+				schedules={[schedule]}
 				editingToken={editingToken}
-				onSaved={() => void load()}
+				onSaved={() => void reloadScheduleAndTokens()}
 			/>
 
 			<ScheduleFormModal
 				isOpen={showScheduleEditModal}
 				setIsOpen={setShowScheduleEditModal}
 				mode='edit'
-				scheduleId={scheduleRecord?.id ?? null}
-				editingSchedule={scheduleRecord}
+				scheduleId={schedule.id ?? null}
+				editingSchedule={schedule}
 				onSaved={() => void load()}
 			/>
 
@@ -504,8 +539,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 					<ModalBody>
 						<div className='text-muted small mb-2 d-flex align-items-center flex-wrap gap-2'>
 							<span>Current status:</span>
-							{scheduleRecord?.status ? (
-								<StatusBadge status={scheduleRecord.status} />
+							{schedule.status ? (
+								<StatusBadge status={schedule.status} />
 							) : (
 								<span className='fw-semibold'>—</span>
 							)}

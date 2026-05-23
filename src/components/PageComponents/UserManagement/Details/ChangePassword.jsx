@@ -62,16 +62,20 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
   const changePasswordHandler = (data) => {
     setWaitingForAxios(true);
 
-    const payload = isFormProfile ? {
-      current_password: data.currentPassword,
-      new_password: data.newPassword,
-      confirm_password: data.confirmPassword,
-    } : {
-      new_password: data.newPassword,
-      confirm_password: data.confirmPassword,
-    };
-    authAxios
-      .post(changePasswordApi, payload)
+    const payload = isFormProfile
+      ? {
+          old_password: data.currentPassword,
+          password: data.newPassword,
+          password2: data.confirmPassword,
+        }
+      : {
+          new_password: data.newPassword,
+          confirm_password: data.confirmPassword,
+        };
+    const request = isFormProfile
+      ? authAxios.patch(changePasswordApi, payload)
+      : authAxios.post(changePasswordApi, payload);
+    request
       .then(() => {
         setWaitingForAxios(false);
         showNotification('Success', 'Your password has been updated !!', 'success');

@@ -74,24 +74,26 @@ const canEditTokenDetails = (token: Token) => {
 };
 
 export type ScheduleDetailScheduleTokensProps = {
-	loading: boolean;
 	scheduleId: number;
 	scheduleRecord: QueueSchedule | null;
 	onEditToken: (token: Token) => void;
 	onTokensUpdated: () => void | Promise<void>;
+	/** Parent calls this after create/edit token to refresh the table without watching `loading`. */
+	onRegisterTableRefresh?: (refresh: () => void) => void;
 };
 
 const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> = ({
-	loading,
 	scheduleId,
 	scheduleRecord,
 	onEditToken,
 	onTokensUpdated,
+	onRegisterTableRefresh,
 }) => {
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	const tableRef = useRef<any>(null);
+	const statusFilterValueRef = useRef('all');
 
 	const [tokenStatusFilter, setTokenStatusFilter] = useState<{ label: string; value: string }>({
 		label: 'All',
@@ -102,15 +104,23 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 	const [statusSaving, setStatusSaving] = useState(false);
 	const [shareToken, setShareToken] = useState<Token | null>(null);
 
-	// Refresh table when parent signals a reload (e.g. after create/edit token)
-	useEffect(() => {
+	const refreshTable = useCallback(() => {
 		tableRef.current?.onQueryChange();
-	}, [loading]);
+	}, []);
 
-	// Re-query when status filter changes
 	useEffect(() => {
-		tableRef.current?.onQueryChange();
-	}, [tokenStatusFilter.value]);
+		onRegisterTableRefresh?.(refreshTable);
+	}, [onRegisterTableRefresh, refreshTable]);
+
+	const handleTokenStatusFilterChange = useCallback(
+		(option: { label: string; value: string }) => {
+			if (option.value === statusFilterValueRef.current) return;
+			statusFilterValueRef.current = option.value;
+			setTokenStatusFilter(option);
+			refreshTable();
+		},
+		[refreshTable],
+	);
 
 	const statusModalOptions = useMemo(
 		() => (statusModalToken ? buildTokenStatusActionOptions(statusModalToken, scheduleRecord) : []),
@@ -150,7 +160,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 				}
 				showSuccessNotification('Token status updated successfully.');
 				closeStatusModal();
-				tableRef.current?.onQueryChange();
+				refreshTable();
 				await onTokensUpdated();
 			} catch (err) {
 				showErrorNotification(err);
@@ -163,6 +173,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			statusActionValue,
 			scheduleRecord,
 			closeStatusModal,
+			refreshTable,
 			onTokensUpdated,
 			showErrorNotification,
 			showSuccessNotification,
@@ -184,7 +195,8 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 					ordering: '-created_at',
 				};
 				if (search) params.search = search;
-				if (tokenStatusFilter.value !== 'all') params.status = tokenStatusFilter.value;
+				const statusFilter = statusFilterValueRef.current;
+				if (statusFilter !== 'all') params.status = statusFilter;
 
 				tokensApi
 					.list(params)
@@ -201,8 +213,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 					});
 			});
 		},
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[scheduleId, tokenStatusFilter.value],
+		[scheduleId, showErrorNotification],
 	);
 
 	const tokenColumns = useMemo(
@@ -322,7 +333,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			</div>
 			<DropDownFilter
 				options={tokenStatusFilterOptions}
-				onChange={setTokenStatusFilter}
+				onChange={handleTokenStatusFilterChange}
 				selectedOption={tokenStatusFilter}
 				labelField='label'
 				icon='FilterAlt'

@@ -18,6 +18,7 @@ import { formatDate } from '../QueueManagement/queueManagementUtils';
 import swalFire from '../../../helpers/swalHelper';
 import ScheduleAddServingPointsModal from './ScheduleAddServingPointsModal';
 import { buttonColor } from '../../../helpers/constants';
+import usePermissions from '../../../hooks/usePermissions';
 
 function formatServingPointStatusLabel(raw?: string | null): string {
 	if (raw == null || String(raw).trim() === '') return '—';
@@ -57,6 +58,9 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 	const navigate = useNavigate();
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
+	const { can } = usePermissions();
+	const canWrite = can('serving_point_write');
+	const canReadServingPoint = can('serving_point_read');
 
 	const [saving, setSaving] = useState(false);
 	const [showAddServingPointsModal, setShowAddServingPointsModal] = useState(false);
@@ -185,7 +189,8 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 	}, [scheduleRecord?.status, queueId]);
 
 	const servingPointColumns = useMemo(
-		() => [
+		() => {
+			const baseColumns = [
 			{
 				title: 'Name',
 				field: 'serving_point_name',
@@ -212,6 +217,14 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 				field: 'to_datetime',
 				render: (rowData: ScheduleServingPoint) => formatDate(rowData.to_datetime),
 			},
+		];
+
+		if (!canWrite) {
+			return baseColumns;
+		}
+
+		return [
+			...baseColumns,
 			{
 				title: 'Actions',
 				field: 'actions',
@@ -266,8 +279,9 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 					</span>
 				),
 			},
-		],
-		[handleRemoveServingPoint],
+			];
+		},
+		[canWrite, handleRemoveServingPoint],
 	);
 
 	return (
@@ -279,13 +293,15 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 							Serving points ({scheduleRecord?.serving_point_windows?.length || 0})
 						</CardTitle>
 					</CardLabel>
-					<Button
-						color='primary'
-						icon='Add'
-						isDisable={!canAddServingPoints || loading}
-						onClick={() => setShowAddServingPointsModal(true)}>
-						Add Serving Point
-					</Button>
+					{canWrite && (
+						<Button
+							color='primary'
+							icon='Add'
+							isDisable={!canAddServingPoints || loading}
+							onClick={() => setShowAddServingPointsModal(true)}>
+							Add Serving Point
+						</Button>
+					)}
 				</CardHeader>
 				<CardBody>
 					{loading ? (
@@ -314,20 +330,28 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 												labelRowsPerPage: '',
 											},
 										}}
-										onRowClick={(_, rowData) => {
-											const row = rowData as ScheduleServingPoint | undefined;
-											if (!row?.id || row.serving_point == null) return;
-											navigate(`/serving-points/${row.serving_point}/windows/${row.id}`, {
-												state: {
-													from: 'schedule',
-													queueId,
-													queueName,
-													queueDetailPath,
-													scheduleId,
-													schedulePath: location.pathname + location.search,
-												},
-											});
-										}}
+										{...(canReadServingPoint
+											? {
+													onRowClick: (_: unknown, rowData: unknown) => {
+														const row = rowData as ScheduleServingPoint | undefined;
+														if (!row?.id || row.serving_point == null) return;
+														navigate(
+															`/serving-points/${row.serving_point}/windows/${row.id}`,
+															{
+																state: {
+																	from: 'schedule',
+																	queueId,
+																	queueName,
+																	queueDetailPath,
+																	scheduleId,
+																	schedulePath:
+																		location.pathname + location.search,
+																},
+															},
+														);
+													},
+												}
+											: {})}
 									/>
 								</ThemeProvider>
 							</div>

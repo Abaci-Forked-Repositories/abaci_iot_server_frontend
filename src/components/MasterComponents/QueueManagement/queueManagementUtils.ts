@@ -45,19 +45,17 @@ export function getScheduleListRangeOverlapParams(
 }
 
 /** Normalizes `ServingPoint.queue` whether the API returns a single id or a list. */
-export const servingPointQueueIds = (point: ServingPoint): number[] => {
-	const q = point.queue;
-	if (Array.isArray(q)) return q.filter((id): id is number => typeof id === 'number');
-	return typeof q === 'number' ? [q] : [];
+export const servingPointQueueIds = (
+	point: ServingPoint,
+): number[] => {
+	return (point.queue || []).map((queue) => queue.id);
 };
 
 /** Normalizes `ServingPoint.assigned_users` whether the API returns ids or nested objects. */
-export const servingPointAssignedUserIds = (point: ServingPoint): number[] => {
-	const u = point.assigned_users;
-	if (!u || !Array.isArray(u)) return [];
-	return u
-		.map((item) => (typeof item === 'number' ? item : item.id))
-		.filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
+export const servingPointAssignedUserIds = (
+	point: ServingPoint,
+): number[] => {
+	return (point.assigned_user || []).map((user) => user.id);
 };
 
 /** Customer-facing token label: prefixed `token_display` from API, else raw `token_number`. */

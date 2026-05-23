@@ -58,7 +58,7 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 			title: 'Role',
 			field: 'role',
 			render: (rowData: any) => {
-				return rowData?.role?.display_name || '----';
+				return rowData?.role?.name || '----';
 			},
 		},
 		// {
@@ -93,7 +93,8 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 					{rowData.status !== 'DELETED' && (
 						<>
 							<Button
-								color='light'
+								color='primary'
+								isLight
 								icon='Edit'
 								onClick={() => handleEdit(rowData)}
 								id={rowData.id}

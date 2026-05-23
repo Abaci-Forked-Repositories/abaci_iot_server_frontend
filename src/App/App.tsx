@@ -21,7 +21,7 @@ import Cookies from 'js-cookie';
 import { baseURL } from '../helpers/baseURL';
 
 axios.interceptors.request.use((request) => {
-  const token = Cookies.get("token");
+  const token = Cookies.get('accessToken') || Cookies.get('token');
   request.baseURL = baseURL;
   // @ts-ignore
   request.headers = {

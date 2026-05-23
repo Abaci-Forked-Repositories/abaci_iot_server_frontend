@@ -15,6 +15,7 @@ import useDarkMode from '../../hooks/useDarkMode';
 import AuthContext from '../../contexts/authContext';
 import { publicAxios } from '../../axiosInstance';
 import validateEmail from '../../helpers/emailValidator';
+import { clearAuthSession, getApiErrorMessage, persistAuthSession } from '../../helpers/authSession';
 import AbaciLoader from '../../components/AbaciLoader/AbaciLoader';
 import useToasterNotification from '../../hooks/useToasterNotification';
 import EnterOtpComponent from '../../components/CustomComponent/Fields/EnterOtpComponent';
@@ -106,7 +107,7 @@ LoginHeader.defaultProps = {
 
 const Login = ({ isSignUp }) => {
 	const navigate = useNavigate();
-	const { setUser, setUserData } = useContext(AuthContext);
+	const { setUser, setUserData, refreshProfile } = useContext(AuthContext);
 	const { showErrorNotification } = useToasterNotification();
 	const { darkModeStatus } = useDarkMode();
 	const [singUpStatus] = useState(!!isSignUp);
@@ -139,8 +140,7 @@ const Login = ({ isSignUp }) => {
 			}
 		} else {
 			setTimeout(() => setIsLoading(false), 1000);
-			Cookies.remove('accessToken');
-			Cookies.remove('refreshToken');
+			clearAuthSession();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [userData]);
@@ -164,7 +164,10 @@ const Login = ({ isSignUp }) => {
 			if (!isForgotPassword && !values.loginPassword) {
 				errors.loginPassword = 'Required';
 			}
-			if (emailError) {
+			if (!isForgotPassword && emailError) {
+				errors.loginUsername = emailError;
+			}
+			if (isForgotPassword && forgotPasswordStep === 1 && emailError) {
 				errors.loginUsername = emailError;
 			}
 			if (forgotPasswordStep === 3) {
@@ -221,39 +224,36 @@ const Login = ({ isSignUp }) => {
 		publicAxios
 			.post(url, payload)
 			.then((response) => {
-				if (response.data?.user?.user_status === 'INVITED') {
+				const { access, refresh, user } = response.data ?? {};
+
+				if (user?.user_status === 'INVITED') {
 					setReset(true);
 					setForgotPasswordStep(4);
 					setIsForgotPassword(true);
-				} else {
-					response.data.user = {
-						role: 'ADMIN',
-					}
-					setUser(response.data.user.email);
-					setUserData(response.data.user);
-					navigate('/');
+					return;
 				}
+
+				persistAuthSession({ access, refresh });
+				// Fetch the full profile so page_permission is loaded into context
+				// before navigating. Login response does not include page_permission.
+				// Returning the promise chains it into .finally() so the spinner
+				// stays until the profile (and permissions) are fully loaded.
+				return refreshProfile()
+					.then(() => navigate('/'))
+					.catch(() => navigate('/'));
 			})
 			.catch((error) => {
-				let errorMessage = 'Error occurred, please check your connection and try again!';
 				const status = error.response?.status;
-				const serverMessage = error.response?.data?.message;
-				const errorData = error.response?.data;
+				const serverMessage = getApiErrorMessage(error);
 
 				if (status === 401 || status === 403) {
 					if (serverMessage === 'Current password is incorrect') {
 						formik.setFieldError('confirmPassword', 'Passwords do not match');
 						return;
 					}
-					errorMessage = serverMessage || errorMessage;
 				}
-				if (status === 400) {
-					errorMessage =
-						errorData?.error ||
-						errorData?.errors?.non_field_errors?.[0] ||
-						errorMessage;
-				}
-				formik.setFieldError('loginPassword', errorMessage);
+
+				formik.setFieldError('loginPassword', serverMessage);
 				formik.setFieldError('loginUsername', ' ');
 			})
 			.finally(() => {

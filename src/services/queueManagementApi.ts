@@ -17,7 +17,7 @@ export interface User {
 	is_superuser?: boolean;
 	date_joined?: string;
 	last_login?: string | null;
-	role?: UserRole & { display_name?: string };
+	role?: UserRole;
 }
 
 export interface UserRole {
@@ -60,14 +60,14 @@ export interface ServingPoint {
 	id: number;
 	name: string;
 	/** Single id from older responses, or list when the API links a point to multiple queues. */
-	queue: number | number[];
+	queue: Queue[] | number[];
 	description?: string;
 	status?: string;
 	is_available?: boolean;
 	is_active?: boolean;
 	created_at?: string;
-	/** Present when the API includes staff assignments (ids or nested user refs). */
-	assigned_users?: number[] | Array<{ id: number }>;
+	assigned_user?: User[];
+
 }
 
 /** GET /api/queues/serving-points/{id}/current-serving-window/ */

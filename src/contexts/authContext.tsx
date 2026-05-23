@@ -8,18 +8,27 @@ import React, {
 	useState,
 } from 'react';
 import PropTypes from 'prop-types';
-import Cookies from 'js-cookie';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authAxios, publicAxios } from '../axiosInstance';
+import { clearAuthSession, restoreAuthTokenFromCookies } from '../helpers/authSession';
 import AbaciLoader from '../components/AbaciLoader/AbaciLoader';
 import useToasterNotification from '../hooks/useToasterNotification';
+import type { PagePermissions } from '../types/permissions';
 
 export interface IAuthContextProps {
-	user: any;
-	setUser?(...args: unknown[]): unknown;
+	user: string;
+	setUser: (u: string) => void;
 	userData: null | any;
-	setUserData: null | any;
-	setLogOut: null | any;
+	setUserData: (d: any) => void;
+	permissions: PagePermissions | null;
+	/** True when role.name === 'admin'. UI-only — does NOT bypass permission checks. */
+	isAdmin: boolean;
+	setLogOut: () => void;
+	/**
+	 * Fetches /api/users/profile/ and updates user, userData, and permissions.
+	 * Call this after login — the login response does not include page_permission.
+	 */
+	refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<IAuthContextProps>({} as IAuthContextProps);
@@ -28,49 +37,47 @@ interface IAuthContextProviderProps {
 	children: ReactNode;
 }
 
-// interface SystemStatusResponse {
-// 	details: {
-// 		admin_users_exist: boolean;
-// 	};
-// 	license: {
-// 		is_valid: boolean;
-// 		unique_id: string;
-// 		registration_date: string;
-// 		expiry_date: string;
-// 		expiration_timestamp: number;
-// 		version: string;
-// 		features: string[];
-// 	};
-// }
-export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children }) => {
-	//test purpose
-	// const [user, setUser] = useState<string>('admin@gmail.com');
-	// const [userData, setUserData] = useState<null | any>({
-	// 	role: 'ADMIN',
-	// 	full_name: 'Anugrah',
-	// 	email: 'admin@gmail.com',
-	// });
-	// const [loading, setLoading] = useState(false);
+const PROFILE_URL = 'api/users/profile/';
 
+export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children }) => {
 	const [loading, setLoading] = useState(true);
 	const [user, setUser] = useState<string>('');
 	const [userData, setUserData] = useState<null | any>(null);
+	const [permissions, setPermissions] = useState<PagePermissions | null>(null);
 	const [adminExists, setAdminExists] = useState(false);
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { showErrorNotification } = useToasterNotification();
+
+	const isAdmin = useMemo(() => userData?.role?.name === 'admin', [userData]);
+
+	/**
+	 * Safety net: whenever userData changes (e.g. setUserData called from Login.jsx),
+	 * sync permissions from the page_permission field if present.
+	 */
+	useEffect(() => {
+		if (userData && userData.page_permission) {
+			setPermissions(userData.page_permission);
+		}
+	}, [userData]);
+
+	/** Fetch profile and apply all three pieces of state atomically. */
+	const refreshProfile = useCallback(async () => {
+		restoreAuthTokenFromCookies();
+		const response = await authAxios.get(PROFILE_URL);
+		const profile = response.data?.user ?? response.data;
+		setUser(profile?.email ?? '');
+		setUserData(profile);
+		setPermissions(profile?.page_permission ?? null);
+	}, []);
+
 	const setLogOut = useCallback(() => {
 		publicAxios.post('api/auth/logout/').then(() => {
-			if (adminExists) {
-				navigate('/login');
-			} else {
-				navigate('/createsuperadmin');
-			}
+			navigate(adminExists ? '/login' : '/createsuperadmin');
 			setUser('');
 			setUserData({});
-			Cookies.remove('socketIOToken');
-			Cookies.remove('refreshToken');
-			Cookies.remove('accessToken');
+			setPermissions(null);
+			clearAuthSession();
 		}).catch((error: any) => {
 			showErrorNotification(error);
 		}).finally(() => {
@@ -78,72 +85,41 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 		});
 	}, [adminExists]);
 
-	// System status check is intentionally disabled for now.
-	// const fetchSystemCheck = async () => {
-	// 	try {
-	// 		const url = 'api/systems/status/';
-	// 		const res = await publicAxios.get<SystemStatusResponse>(url);
-	// 		const { license } = res.data;
-	// 		const tempAdminExists = res.data.details.admin_users_exist;
-	// 		if (!license || !license.is_valid) {
-	// 			navigate('/licence_setup', { replace: true });
-	// 			return;
-	// 		}
-	// 		if (!tempAdminExists) {
-	// 			navigate('/createsuperadmin');
-	// 		} else if (tempAdminExists && location.pathname.includes('/createsuperadmin')) {
-	// 			navigate('/login');
-	// 		}
-	// 		setAdminExists(tempAdminExists);
-	// 		return tempAdminExists;
-	// 	} catch (error) {
-	// 		console.error('Error fetching system status:', error);
-	// 		return null;
-	// 	}
-	// };
-
+	/**
+	 * On app boot / page refresh: restore token from cookies, then fetch profile.
+	 * NOTE: useEffect here intentionally does NOT call refreshProfile() from the
+	 * outer scope to avoid stale-closure issues. The fetch is inlined directly.
+	 */
 	useEffect(() => {
-		const fetchData = async () => {
-			// const adminExistsResult = await fetchSystemCheck();
-			const adminExistsResult = true;
-			setAdminExists(true);
+		if (location.pathname.includes('public')) {
+			setLoading(false);
+			return;
+		}
 
+		setAdminExists(true);
+
+		const boot = async () => {
 			try {
-				const url = 'api/users/profile';
-				const response = await authAxios.get(url);
-				setUser(response.data.user.email);
-				setUserData(response.data.user);
-			} catch (error: any) {
-				console.error('Error fetching user profile:', error);
-				if (adminExistsResult) {
-					navigate('/login');
-				} else if (error?.code === 'ERR_NETWORK') {
-					navigate('/login');
-				}
-				else {
-					navigate('/createsuperadmin');
-				}
+				restoreAuthTokenFromCookies();
+				const response = await authAxios.get(PROFILE_URL);
+				const profile = response.data?.user ?? response.data;
+				setUser(profile?.email ?? '');
+				setUserData(profile);
+				setPermissions(profile?.page_permission ?? null);
+			} catch (err: any) {
+				console.error('[authContext] profile fetch failed:', err?.response?.status, err?.message);
 				setUser('');
 				setUserData({});
-				// setUser('admin@gmail.com');
-				// setUserData({
-				// 	role: 'ADMIN',
-				// 	full_name: 'Anugrah',
-				// 	email: 'admin@gmail.com',
-				// });
-				Cookies.remove('socketIOToken');
-				Cookies.remove('refreshToken');
-				Cookies.remove('accessToken');
+				setPermissions(null);
+				clearAuthSession();
+				navigate('/login');
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		if (!location.pathname.includes('public')) {
-			fetchData();
-		} else {
-			setLoading(false);
-		}
+		boot();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const value = useMemo(
@@ -152,9 +128,12 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 			setUser,
 			userData,
 			setUserData,
+			permissions,
+			isAdmin,
 			setLogOut,
+			refreshProfile,
 		}),
-		[user, userData, setLogOut],
+		[user, userData, permissions, isAdmin, setLogOut, refreshProfile],
 	);
 
 	if (loading) return <AbaciLoader />;
@@ -162,7 +141,6 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-//
 AuthContextProvider.propTypes = {
 	// @ts-ignore
 	children: PropTypes.node.isRequired,

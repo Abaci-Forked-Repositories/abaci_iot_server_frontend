@@ -23,7 +23,7 @@ import {
 } from '../../../services/queueManagementApi';
 import { formatDate, statusBadgeColor } from '../QueueManagement/queueManagementUtils';
 import { EventFeed } from '../QueueManagement/QueueEventsTimelineCard';
-
+import usePermissions from '../../../hooks/usePermissions';
 type TokenUserDetailWorkspaceProps = {
 	onTokenUserNameChange?: (name: string | null) => void;
 };
@@ -263,7 +263,9 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	const id = Number(userId);
 	const seededTokenUser =
 		(location.state as { tokenUser?: TokenUser } | null)?.tokenUser ?? null;
-
+	const { can } = usePermissions();
+	const canReadSchedule = can('schedules_read');
+	const canWriteTokenUser = can('token_users_write');
 	const [loading, setLoading] = useState(true);
 	const [tokenUser, setTokenUser] = useState<TokenUser | null>(seededTokenUser);
 	const [tokens, setTokens] = useState<Token[]>([]);
@@ -303,7 +305,6 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 			const [tokensRes, usersListRes] = await Promise.all([
 				tokensApi.list({
 					token_user: id,
-					ordering: '-created_at',
 					limit: 500,
 					offset: 0,
 				}),
@@ -528,6 +529,9 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 				field: 'schedule',
 				render: (rowData: Token) => {
 					if (rowData.schedule == null) return '—';
+					if (!canReadSchedule) {
+						return <span>#{rowData.schedule}</span>;
+					}
 					return (
 						<button
 							type='button'
@@ -714,6 +718,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 			},
 		],
 		[
+			canReadSchedule,
 			navigate,
 			handleTokenStatusTransition,
 			handleSetPrioritizedQueue,
@@ -776,6 +781,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 							</div>
 						</div>
 						<div className='d-flex gap-2'>
+							{canWriteTokenUser && (
 							<Button
 								color='primary'
 								isLight
@@ -784,6 +790,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								onClick={openEditUserModal}>
 								Edit
 							</Button>
+							)}
 							<Button
 								color='light'
 								isLight

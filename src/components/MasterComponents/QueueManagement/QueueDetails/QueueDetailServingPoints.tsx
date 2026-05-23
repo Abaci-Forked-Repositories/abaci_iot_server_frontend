@@ -15,7 +15,7 @@ import { queuesApi } from '../../../../services/queueManagementApi';
 import { buttonColor } from '../../../../helpers/constants';
 import swalFire from '../../../../helpers/swalHelper';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
-
+import usePermissions from '../../../../hooks/usePermissions';
 const MODAL_PAGE_SIZE = 5;
 
 // ---------------------------------------------------------------------------
@@ -80,9 +80,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	const [statusSaving, setStatusSaving] = useState(false);
 	const [totalCount, setTotalCount] = useState(0);
 
-	// Assign modal — paginated list with infinite scroll
+	// Assign modal — limit/offset chunks + infinite scroll
 	const [modalServingPoints, setModalServingPoints] = useState<ServingPoint[]>([]);
-	const [modalPage, setModalPage] = useState(1);
+	const [modalOffset, setModalOffset] = useState(0);
 	const [modalHasMore, setModalHasMore] = useState(false);
 	const [modalLoading, setModalLoading] = useState(false);
 	const [modalLoadingMore, setModalLoadingMore] = useState(false);
@@ -94,6 +94,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
 
+	const { can } = usePermissions();
+	const canWrite = can('serving_point_write');
+	const canReadServingPoint = can('serving_point_read');
 	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
 	const prevRefreshVersionRef = useRef(refreshVersion);
 
@@ -113,21 +116,26 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 		assignedServingPointIdsRef.current = new Set(assignedServingPointIds);
 	}, [assignedServingPointIds]);
 
-	// ── Assign modal: page_size chunks + scroll to load more ─────────────────
+	// ── Assign modal: limit/offset chunks + scroll to load more ───────────────
+
+	const servingPointsHasMore = (offset: number, incomingLength: number, total: number) =>
+		incomingLength > 0 && offset < total;
 
 	const fetchAssignModalChunk = useCallback(
-		async (page: number, search: string, append: boolean) => {
+		async (offset: number, search: string, append: boolean) => {
 			const res = await queuesApi.servingPoints({
-				ordering: 'name',
-				page_size: MODAL_PAGE_SIZE,
-				page,
+				limit: MODAL_PAGE_SIZE,
+				offset,
 				...(search ? { search } : {}),
 			});
 			const incoming = res.results || [];
+			const total = res.count ?? 0;
+			const nextOffset = offset + incoming.length;
+			const hasMore = servingPointsHasMore(nextOffset, incoming.length, total);
 			setModalServingPoints((prev) => (append ? [...prev, ...incoming] : incoming));
-			setModalPage(page);
-			setModalHasMore(Boolean(res.next));
-			return { incoming, hasMore: Boolean(res.next) };
+			setModalOffset(nextOffset);
+			setModalHasMore(hasMore);
+			return { incoming, hasMore, total };
 		},
 		[],
 	);
@@ -137,35 +145,42 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 			setModalLoading(true);
 			try {
 				const assigned = assignedServingPointIdsRef.current;
-				let page = 1;
+				let offset = 0;
 				let merged: ServingPoint[] = [];
 				let hasMore = true;
+				let iterations = 0;
 
-				// Load pages until we have enough unassigned rows to show, or no more pages
-				while (hasMore) {
+				// Load chunks until we have enough unassigned rows to show, or no more results
+				while (hasMore && iterations < 50) {
 					const res = await queuesApi.servingPoints({
-						ordering: 'name',
-						page_size: MODAL_PAGE_SIZE,
-						page,
+						limit: MODAL_PAGE_SIZE,
+						offset,
 						...(search ? { search } : {}),
 					});
 					const incoming = res.results || [];
+					const total = res.count ?? 0;
 					merged = [...merged, ...incoming];
-					hasMore = Boolean(res.next);
+					offset += incoming.length;
+					hasMore = servingPointsHasMore(offset, incoming.length, total);
 					const availableCount = merged.filter((p) => !assigned.has(p.id)).length;
 					if (availableCount >= MODAL_PAGE_SIZE || !hasMore) {
 						setModalServingPoints(merged);
-						setModalPage(page);
+						setModalOffset(offset);
 						setModalHasMore(hasMore);
 						break;
 					}
-					page += 1;
-					if (page > 50) {
+					iterations += 1;
+					if (incoming.length === 0) {
 						setModalServingPoints(merged);
-						setModalPage(page);
+						setModalOffset(offset);
 						setModalHasMore(false);
 						break;
 					}
+				}
+				if (iterations >= 50) {
+					setModalServingPoints(merged);
+					setModalOffset(offset);
+					setModalHasMore(false);
 				}
 			} catch (err) {
 				showErrorRef.current(err);
@@ -182,7 +197,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 		if (modalLoadingMore || modalLoading || !modalHasMore) return;
 		setModalLoadingMore(true);
 		try {
-			await fetchAssignModalChunk(modalPage + 1, assignServingPointSearch.trim(), true);
+			await fetchAssignModalChunk(modalOffset, assignServingPointSearch.trim(), true);
 		} catch (err) {
 			showErrorRef.current(err);
 		} finally {
@@ -194,7 +209,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 		modalHasMore,
 		modalLoading,
 		modalLoadingMore,
-		modalPage,
+		modalOffset,
 	]);
 
 	const handleAssignModalScroll = useCallback(
@@ -300,23 +315,72 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 		setSelectedServingPointIds([]);
 		setAssignServingPointSearch('');
 		setModalServingPoints([]);
-		setModalPage(1);
+		setModalOffset(0);
 		setModalHasMore(false);
 		setShowAssignServingPointModal(true);
 		// List load is handled by the effect above when showAssignServingPointModal becomes true.
 	};
 
-	const goToServingPointDetail = useCallback((row: ServingPoint) => {
-		if (!row?.id) return;
-		navigate(`/serving-points/${row.id}`, {
-			state: { servingPointName: row.name || undefined },
-		});
-	}, [navigate]);
+	const goToServingPointDetail = useCallback(
+		(row: ServingPoint) => {
+			if (!canReadServingPoint || !row?.id) return;
+			navigate(`/serving-points/${row.id}`, {
+				state: { servingPointName: row.name || undefined },
+			});
+		},
+		[canReadServingPoint, navigate],
+	);
+
+	// ── Server-side data fetcher (limit/offset) ────────────────────────────────
+
+	const fetchServingPointData = useCallback(
+		(query: {
+			page: number;
+			pageSize: number;
+			search?: string;
+		}): Promise<{ data: ServingPoint[]; page: number; totalCount: number }> =>
+			new Promise((resolve) => {
+				if (!queueId || Number.isNaN(queueId)) {
+					setTotalCount(0);
+					resolve({ data: [], page: query.page, totalCount: 0 });
+					return;
+				}
+
+				const limit = query.pageSize;
+				const offset = query.pageSize * query.page;
+				const search = query.search?.trim();
+
+				queuesApi
+					.servingPoints({
+						queue: queueId,
+						limit,
+						offset,
+						...(search ? { search } : {}),
+					})
+					.then((res) => {
+						const list = res.results ?? [];
+						const count = res.count ?? 0;
+						setTotalCount(count);
+						resolve({
+							data: list,
+							page: query.page,
+							totalCount: count,
+						});
+					})
+					.catch((err) => {
+						showErrorRef.current(err);
+						setTotalCount(0);
+						resolve({ data: [], page: query.page, totalCount: 0 });
+					});
+			}),
+		[queueId],
+	);
 
 	// ── Table columns ────────────────────────────────────────────────────────
 
 	const servingPointColumns = useMemo(
-		() => [
+		() => {
+			const baseColumns = [
 			{
 				title: 'Name',
 				field: 'name',
@@ -334,6 +398,12 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 					<StatusBadge status={row.status} isAvailable={row.is_available} />
 				),
 			},
+		];
+		if (!canWrite) {
+			return baseColumns;
+		}
+		return [
+			...baseColumns,
 			{
 				title: 'Actions',
 				field: 'actions',
@@ -344,21 +414,23 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 					const canChangeStatus = allowedNext.length > 0;
 					return (
 						<div className='d-inline-flex flex-wrap gap-1 align-items-center'>
-							<Tooltip title='Open serving point detail'>
-								<span className='d-inline-flex'>
-									<Button
-										color='info'
-										isLight
-										size='sm'
-										icon='Visibility'
-										onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-											e.preventDefault();
-											e.stopPropagation();
-											goToServingPointDetail(row);
-										}}
-									/>
-								</span>
-							</Tooltip>
+							{canReadServingPoint && (
+								<Tooltip title='Open serving point detail'>
+									<span className='d-inline-flex'>
+										<Button
+											color='info'
+											isLight
+											size='sm'
+											icon='Visibility'
+											onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+												e.preventDefault();
+												e.stopPropagation();
+												goToServingPointDetail(row);
+											}}
+										/>
+									</span>
+								</Tooltip>
+							)}
 							{canChangeStatus && (
 								<Tooltip title='Change status'>
 									<span className='d-inline-flex'>
@@ -408,8 +480,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 					);
 				},
 			},
-		],
-		[goToServingPointDetail, handleRemove, removingServingPointId],
+		];
+		},
+		[canReadServingPoint, canWrite, goToServingPointDetail, handleRemove, removingServingPointId],
 	);
 
 	// ── Render ───────────────────────────────────────────────────────────────
@@ -422,9 +495,11 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 						<CardLabel icon='Monitor'>
 							<CardTitle tag='h5'>Serving Points ({totalCount})</CardTitle>
 						</CardLabel>
+						{canWrite && (
 						<Button color='primary' icon='Add' onClick={openAssignModal}>
 							Add Serving Point
 						</Button>
+						)}
 					</CardHeader>
 					<CardBody>
 						<div className='material_tabel_wrapper'>
@@ -435,55 +510,28 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 										tableRef={tableRef}
 										//@ts-ignore
 										columns={servingPointColumns}
-										data={(query) =>
-											new Promise((resolve) => {
-												if (!queueId || Number.isNaN(queueId)) {
-													setTotalCount(0);
-													resolve({ data: [], page: query.page, totalCount: 0 });
-													return;
-												}
-
-												const search = query.search?.trim();
-												queuesApi
-													.servingPoints({
-														queue: queueId,
-														ordering: 'name',
-														page_size: query.pageSize,
-														page: query.page + 1,
-														...(search ? { search } : {}),
-													})
-													.then((res) => {
-														const list = res.results || [];
-														const count = res.count ?? list.length;
-														setTotalCount(count);
-														resolve({
-															data: list,
-															page: query.page,
-															totalCount: count,
-														});
-													})
-													.catch((err) => {
-														showErrorRef.current(err);
-														setTotalCount(0);
-														resolve({ data: [], page: query.page, totalCount: 0 });
-													});
-											})
-										}
+										data={fetchServingPointData}
 										options={{
 											headerStyle: headerStyles(),
 											rowStyle: rowStyles(),
 											search: true,
+											filtering: false,
+											sorting: false,
 											debounceInterval: 500,
 											pageSize: 5,
 											pageSizeOptions: [5, 10, 20],
 											emptyRowsWhenPaging: false,
 										}}
 										localization={{ pagination: { labelRowsPerPage: '' } }}
-										onRowClick={(_, rowData) => {
-											const row = rowData as ServingPoint | undefined;
-											if (!row?.id) return;
-											goToServingPointDetail(row);
-										}}
+										{...(canReadServingPoint
+											? {
+													onRowClick: (_: unknown, rowData: unknown) => {
+														const row = rowData as ServingPoint | undefined;
+														if (!row?.id) return;
+														goToServingPointDetail(row);
+													},
+												}
+											: {})}
 									/>
 								</ThemeProvider>
 							</div>

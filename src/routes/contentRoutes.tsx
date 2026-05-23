@@ -1,16 +1,16 @@
 import React, { lazy } from 'react';
 import { allRoutesObject, pagesNotInSideBar } from './RoutesMenu';
+import type { PagePermissions } from '../types/permissions';
 
 const MAINROUTE = {
 	Dashboard: lazy(() => import('../pages/Dashboard/Dashboard')),
-	MediaFiles: lazy(() => import('../pages/MediaFiles/index')),
 	QueueManagement: lazy(() => import('../pages/QueueManagement/index')),
 	QueueManagementDetail: lazy(() => import('../pages/QueueManagement/Detail')),
 	QueueManagementServingPoints: lazy(() => import('../pages/ServingPoints/index')),
 	QueueManagementServingWindowDetail: lazy(() => import('../pages/ServingPoints/ServingWindowDetail')),
 	QueueManagementServingPointDetail: lazy(() => import('../pages/ServingPoints/Detail')),
-	TokenUsers: lazy(() => import('../pages/ServingPoints/TokenUsers')),
-	TokenUserDetail: lazy(() => import('../pages/ServingPoints/TokenUserDetail')),
+	TokenUsers: lazy(() => import('../pages/TokenUsers/TokenUsers')),
+	TokenUserDetail: lazy(() => import('../pages/TokenUsers/TokenUserDetail')),
 	ScheduleDetail: lazy(() => import('../pages/Schedules/Detail')),
 	SchedulesList: lazy(() => import('../pages/Schedules/List')),
 	Screens: lazy(() => import('../pages/Screens/index')),
@@ -19,98 +19,101 @@ const MAINROUTE = {
 	TemplateDetail: lazy(() => import('../pages/Templates/Detail')),
 	Profile: lazy(() => import('../pages/Profile/Index')),
 	Users: lazy(() => import('../pages/UserManagement/index')),
+	Settings: lazy(() => import('../pages/Settings/index')),
 };
-interface CustomRouteConfig {
+
+export interface CustomRouteConfig {
 	path: string;
 	element: React.ReactNode;
-	allowedTo?: string[]; // Custom property for role-based access control
+	/** Permission key required to view this route. Undefined = public/always accessible. */
+	permissionKey?: keyof PagePermissions;
 }
 
 const RouteConfig: CustomRouteConfig[] = [
 	{
 		path: allRoutesObject.dashboard.path,
 		element: <MAINROUTE.Dashboard />,
-		allowedTo: ['ADMIN'],
-	},
-	{
-		path: allRoutesObject.mediafiles.path,
-		element: <MAINROUTE.MediaFiles />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'dashboard_read',
 	},
 	{
 		path: allRoutesObject.queuemanagement.path,
 		element: <MAINROUTE.QueueManagement />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'queue_management_read',
 	},
 	{
 		path: allRoutesObject.queueDetails.path,
 		element: <MAINROUTE.QueueManagementDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'queue_management_read',
 	},
 	{
 		path: allRoutesObject.servingpoints.path,
 		element: <MAINROUTE.QueueManagementServingPoints />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'serving_point_read',
 	},
 	{
 		path: allRoutesObject.servingwindowdetails.path,
 		element: <MAINROUTE.QueueManagementServingWindowDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'serving_point_read',
 	},
 	{
 		path: allRoutesObject.servingpointdetails.path,
 		element: <MAINROUTE.QueueManagementServingPointDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'serving_point_read',
 	},
 	{
 		path: allRoutesObject.scheduleslist.path,
 		element: <MAINROUTE.SchedulesList />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'schedules_read',
 	},
 	{
 		path: allRoutesObject.tokenusers.path,
 		element: <MAINROUTE.TokenUsers />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'token_users_read',
 	},
 	{
 		path: allRoutesObject.tokenuserdetails.path,
 		element: <MAINROUTE.TokenUserDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'token_users_read',
 	},
 	{
 		path: allRoutesObject.scheduledetails.path,
 		element: <MAINROUTE.ScheduleDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'schedules_read',
 	},
 	{
 		path: allRoutesObject.screens.path,
 		element: <MAINROUTE.Screens />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'screens_read',
 	},
 	{
 		path: '/screens/:id',
 		element: <MAINROUTE.ScreenDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'screens_read',
 	},
 	{
 		path: allRoutesObject.templates.path,
 		element: <MAINROUTE.Templates />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'templates_read',
 	},
 	{
 		path: '/templates/:id',
 		element: <MAINROUTE.TemplateDetail />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'templates_read',
 	},
 	{
 		path: pagesNotInSideBar.Profile.path,
 		element: <MAINROUTE.Profile />,
-		allowedTo: ['ADMIN'],
+		// Profile is accessible to all authenticated users
 	},
 	{
 		path: allRoutesObject.usermanagement.path,
 		element: <MAINROUTE.Users />,
-		allowedTo: ['ADMIN'],
+		permissionKey: 'users_read',
+	},
+	{
+		path: allRoutesObject.settings.path,
+		element: <MAINROUTE.Settings />,
+		permissionKey: 'settings_read',
 	},
 ];
 

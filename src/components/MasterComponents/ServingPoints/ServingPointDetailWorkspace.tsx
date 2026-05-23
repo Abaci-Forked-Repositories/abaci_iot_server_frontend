@@ -23,6 +23,7 @@ import {
 import QueueEventsTimelineCard from '../QueueManagement/QueueEventsTimelineCard';
 import ServingPointWindowsCalendar from './ServingPointWindowsCalendar';
 import ServingPointCurrentServingCard from './ServingPointCurrentServingCard';
+import usePermissions from '../../../hooks/usePermissions';
 
 type ServingPointDetailWorkspaceProps = {
 	onServingPointNameChange?: (name: string | null) => void;
@@ -41,6 +42,8 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [tokenCardRefreshKey, setTokenCardRefreshKey] = useState(0);
+	const { can } = usePermissions();
+	const canWrite = can('serving_point_write');
 
 	const { showErrorNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -143,7 +146,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 								</div>
 							</div>
 							<div className='d-flex flex-wrap gap-2'>
-								{servingPoint &&
+								{canWrite && servingPoint &&
 									getNextAllowedServingPointStatuses(servingPoint.status).length > 0 && (
 										<Button
 											color='primary'
@@ -153,7 +156,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 											Change status
 										</Button>
 									)}
-								{servingPoint && (
+								{canWrite && servingPoint && (
 									<Button
 										color='primary'
 										isLight

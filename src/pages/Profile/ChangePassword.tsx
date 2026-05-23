@@ -13,7 +13,7 @@ const ChangePasswordComponent = () => {
         </CardLabel>
       </CardHeader>
       <CardBody isScrollable>
-        <ChangePassword isFormProfile changePasswordApi='/api/users/reset-password/' />
+        <ChangePassword isFormProfile changePasswordApi='/api/users/profile/' />
       </CardBody>
 
     </Card>

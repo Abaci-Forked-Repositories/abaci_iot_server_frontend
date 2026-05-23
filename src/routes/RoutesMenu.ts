@@ -1,17 +1,23 @@
-export const allRoutesObject = {
+import type { PagePermissions } from '../types/permissions';
+
+export interface RouteMenuItem {
+	id: string;
+	text: string;
+	path: string;
+	icon: string;
+	subMenu: null;
+	/** Permission key required to see/access this item. Undefined = always visible. */
+	permissionKey?: keyof PagePermissions;
+}
+
+export const allRoutesObject: Record<string, RouteMenuItem & { path: string }> = {
 	dashboard: {
 		id: 'dashboard',
 		text: 'Dashboard',
 		path: '/',
 		icon: 'Dashboard',
 		subMenu: null,
-	},
-	mediafiles: {
-		id: 'mediafiles',
-		text: 'Media Files',
-		icon: 'Folder',
-		path: '/media-files',
-		subMenu: null,
+		permissionKey: 'dashboard_read',
 	},
 	queuemanagement: {
 		id: 'queuemanagement',
@@ -19,6 +25,7 @@ export const allRoutesObject = {
 		icon: 'Queue',
 		path: '/queue-management',
 		subMenu: null,
+		permissionKey: 'queue_management_read',
 	},
 	queueDetails: {
 		id: 'queueDetail',
@@ -26,6 +33,7 @@ export const allRoutesObject = {
 		icon: 'Queue',
 		path: '/queue-management/:queueId',
 		subMenu: null,
+		permissionKey: 'queue_management_read',
 	},
 	servingpoints: {
 		id: 'servingpoints',
@@ -33,6 +41,7 @@ export const allRoutesObject = {
 		icon: 'Monitor',
 		path: '/serving-points',
 		subMenu: null,
+		permissionKey: 'serving_point_read',
 	},
 	tokenusers: {
 		id: 'tokenusers',
@@ -40,6 +49,7 @@ export const allRoutesObject = {
 		icon: 'Person',
 		path: '/token-users',
 		subMenu: null,
+		permissionKey: 'token_users_read',
 	},
 	tokenuserdetails: {
 		id: 'tokenuserdetails',
@@ -47,6 +57,7 @@ export const allRoutesObject = {
 		icon: 'Person',
 		path: '/token-users/:userId',
 		subMenu: null,
+		permissionKey: 'token_users_read',
 	},
 	servingwindowdetails: {
 		id: 'servingwindowdetails',
@@ -54,6 +65,7 @@ export const allRoutesObject = {
 		icon: 'Monitor',
 		path: '/serving-points/:servingPointId/windows/:windowId',
 		subMenu: null,
+		permissionKey: 'serving_point_read',
 	},
 	servingpointdetails: {
 		id: 'servingpointdetails',
@@ -61,6 +73,7 @@ export const allRoutesObject = {
 		icon: 'Monitor',
 		path: '/serving-points/:servingPointId',
 		subMenu: null,
+		permissionKey: 'serving_point_read',
 	},
 	screens: {
 		id: 'screens',
@@ -68,6 +81,7 @@ export const allRoutesObject = {
 		icon: 'SmartScreen',
 		path: '/screens',
 		subMenu: null,
+		permissionKey: 'screens_read',
 	},
 	templates: {
 		id: 'templates',
@@ -75,6 +89,7 @@ export const allRoutesObject = {
 		icon: 'ViewCompact',
 		path: '/templates',
 		subMenu: null,
+		permissionKey: 'templates_read',
 	},
 	usermanagement: {
 		id: 'usermanagement',
@@ -82,6 +97,7 @@ export const allRoutesObject = {
 		icon: 'Person',
 		path: '/users',
 		subMenu: null,
+		permissionKey: 'users_read',
 	},
 	scheduledetails: {
 		id: 'scheduledetails',
@@ -89,6 +105,7 @@ export const allRoutesObject = {
 		icon: 'Calendar',
 		path: '/queue-management/schedules/:scheduleId',
 		subMenu: null,
+		permissionKey: 'schedules_read',
 	},
 	scheduleslist: {
 		id: 'scheduleslist',
@@ -96,23 +113,30 @@ export const allRoutesObject = {
 		icon: 'Event',
 		path: '/schedules',
 		subMenu: null,
+		permissionKey: 'schedules_read',
+	},
+	settings: {
+		id: 'settings',
+		text: 'Settings',
+		icon: 'Settings',
+		path: '/settings',
+		subMenu: null,
+		permissionKey: 'settings_read',
 	},
 };
 
-export const AdminRoutes = {
+/**
+ * Sidebar-visible routes (excludes detail/sub-pages that don't appear in the nav).
+ * Each entry has a permissionKey so the sidebar can filter by the user's permissions.
+ */
+export const AdminRoutes: Record<string, RouteMenuItem> = {
 	dashboard: {
 		id: 'dashboard',
 		text: 'Dashboard',
 		path: '/',
 		icon: 'Dashboard',
 		subMenu: null,
-	},
-	mediafiles: {
-		id: 'mediafiles',
-		text: 'Media Files',
-		icon: 'Folder',
-		path: '/media-files',
-		subMenu: null,
+		permissionKey: 'dashboard_read',
 	},
 	queuemanagement: {
 		id: 'queuemanagement',
@@ -120,6 +144,7 @@ export const AdminRoutes = {
 		icon: 'Queue',
 		path: '/queue-management',
 		subMenu: null,
+		permissionKey: 'queue_management_read',
 	},
 	servingpoints: {
 		id: 'servingpoints',
@@ -127,6 +152,7 @@ export const AdminRoutes = {
 		icon: 'Monitor',
 		path: '/serving-points',
 		subMenu: null,
+		permissionKey: 'serving_point_read',
 	},
 	tokenusers: {
 		id: 'tokenusers',
@@ -134,6 +160,7 @@ export const AdminRoutes = {
 		icon: 'Person',
 		path: '/token-users',
 		subMenu: null,
+		permissionKey: 'token_users_read',
 	},
 	schedules: {
 		id: 'schedules',
@@ -141,6 +168,7 @@ export const AdminRoutes = {
 		icon: 'Event',
 		path: '/schedules',
 		subMenu: null,
+		permissionKey: 'schedules_read',
 	},
 	screens: {
 		id: 'screens',
@@ -148,6 +176,7 @@ export const AdminRoutes = {
 		icon: 'SmartScreen',
 		path: '/screens',
 		subMenu: null,
+		permissionKey: 'screens_read',
 	},
 	templates: {
 		id: 'templates',
@@ -155,6 +184,7 @@ export const AdminRoutes = {
 		icon: 'ViewCompact',
 		path: '/templates',
 		subMenu: null,
+		permissionKey: 'templates_read',
 	},
 	usermanagement: {
 		id: 'usermanagement',
@@ -162,6 +192,15 @@ export const AdminRoutes = {
 		icon: 'Person',
 		path: '/users',
 		subMenu: null,
+		permissionKey: 'users_read',
+	},
+	settings: {
+		id: 'settings',
+		text: 'Settings',
+		icon: 'Settings',
+		path: '/settings',
+		subMenu: null,
+		permissionKey: 'settings_read',
 	},
 };
 
@@ -172,7 +211,6 @@ export const pagesNotInSideBar = {
 		path: 'profile',
 		icon: 'Login',
 	},
-
 	login: {
 		id: 'login',
 		text: 'Login',
@@ -191,14 +229,12 @@ export const pagesNotInSideBar = {
 		path: 'public/forgotpassword',
 		icon: 'Login',
 	},
-
 	PrivacyPolicy: {
 		id: 'Privacy Policy',
 		text: 'Privacy Policy',
 		path: 'public/privacypolicy',
 		icon: 'Login',
 	},
-
 	TermsAndConditions: {
 		id: 'Terms & Conditions',
 		text: 'Terms & Conditions',

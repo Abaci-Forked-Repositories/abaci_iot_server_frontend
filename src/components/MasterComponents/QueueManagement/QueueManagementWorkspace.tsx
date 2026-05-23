@@ -14,8 +14,12 @@ import QueueFormModal from '../../PageComponents/QueueManagement/QueueFormModal'
 import QueueGroupFormModal from '../../PageComponents/QueueManagement/QueueGroupFormModal';
 import QueuesTabContent from './QueuesTabContent';
 import QueueGroupTabContent from './QueueGroupTabContent';
+import usePermissions from '../../../hooks/usePermissions';
 
 const QueueManagementWorkspace: React.FC = () => {
+	const { can } = usePermissions();
+	const canWrite = can('queue_management_write');
+
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
@@ -157,26 +161,28 @@ const QueueManagementWorkspace: React.FC = () => {
 							}}
 							onBlur={runQueueHeaderSearch}
 						/>
-						{queueDisplayMode === 'groups' ? (
-							<Button
-								color='primary'
-								icon='Add'
-								onClick={() => {
-									setEditGroupId(null);
-									setShowGroupModal(true);
-								}}>
-								Add Group
-							</Button>
-						) : (
-							<Button
-								color='primary'
-								icon='Add'
-								onClick={() => {
-									setEditQueueId(null);
-									setShowQueueModal(true);
-								}}>
-								Add Queue
-							</Button>
+						{canWrite && (
+							queueDisplayMode === 'groups' ? (
+								<Button
+									color='primary'
+									icon='Add'
+									onClick={() => {
+										setEditGroupId(null);
+										setShowGroupModal(true);
+									}}>
+									Add Group
+								</Button>
+							) : (
+								<Button
+									color='primary'
+									icon='Add'
+									onClick={() => {
+										setEditQueueId(null);
+										setShowQueueModal(true);
+									}}>
+									Add Queue
+								</Button>
+							)
 						)}
 					</div>
 				</CardActions>

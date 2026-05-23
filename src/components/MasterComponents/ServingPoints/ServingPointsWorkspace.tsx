@@ -9,17 +9,16 @@ import Icon from '../../icon/Icon';
 import StatusBadge from '../../BadgeWithIcon.jsx';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import usePermissions from '../../../hooks/usePermissions';
 import ServingPointModal from '../../PageComponents/ServingPoints/ServingPointModal';
 import ServingPointStatusModal from '../../PageComponents/ServingPoints/ServingPointStatusModal';
 import {
-	type Queue,
 	type ServingPoint,
 	queuesApi,
 } from '../../../services/queueManagementApi';
 import {
 	formatDate,
 	getNextAllowedServingPointStatuses,
-	servingPointQueueIds,
 } from '../QueueManagement/queueManagementUtils';
 
 const ServingPointsWorkspace: React.FC = () => {
@@ -35,33 +34,18 @@ const ServingPointsWorkspace: React.FC = () => {
 	const [modalServingPoint, setModalServingPoint] = useState<ServingPoint | null>(null);
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [statusModalPoint, setStatusModalPoint] = useState<ServingPoint | null>(null);
-	const [queues, setQueues] = useState<Queue[]>([]);
 
 	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
 	const { theme, headerStyles, rowStyles } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const { can } = usePermissions();
+	const canWrite = can('serving_point_write');
+	const canViewQueue = can('queue_management_read');
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
 
-	useEffect(() => {
-		let active = true;
-		void queuesApi
-			.list()
-			.then((res) => {
-				if (active) setQueues(res.results || []);
-			})
-			.catch((err) => {
-				if (active) showErrorRef.current(err);
-			});
-		return () => {
-			active = false;
-		};
-	}, []);
-
-	const queueNameMap = useMemo(() => new Map(queues.map((q) => [q.id, q.name])), [queues]);
-
-	const columns = useMemo(
-		() => [
+	const columns = useMemo(() => {
+		const baseColumns = [
 			{
 				title: 'Name',
 				field: 'name',
@@ -72,36 +56,53 @@ const ServingPointsWorkspace: React.FC = () => {
 				field: 'queue',
 				sorting: false,
 				render: (rowData: ServingPoint) => {
-					const ids = servingPointQueueIds(rowData);
-					if (ids.length === 0) return '—';
+					const queues = rowData.queue || [];
+
+					if (queues.length === 0) return '—';
+
+					if (!canViewQueue) {
+						return (
+							<div className='d-flex flex-wrap gap-1' onClick={(ev) => ev.stopPropagation()}>
+								{queues.map((queue) => (
+									<span
+										key={queue.id}
+										className='rounded-2 px-2 py-1 small bg-light text-body border'>
+										{queue.name}
+									</span>
+								))}
+							</div>
+						);
+					}
+
 					return (
 						<div className='d-flex flex-wrap gap-1' onClick={(ev) => ev.stopPropagation()}>
-							{ids.map((qid) => {
-								const name = queueNameMap.get(qid) || `Queue ${qid}`;
-								return (
-									<Tooltip key={qid} title='View details of queue' arrow placement='top'>
-										<span
-											role='button'
-											tabIndex={0}
-											className='rounded-2 px-2 py-1 small bg-primary bg-opacity-10 text-body border border-primary border-opacity-25'
-											style={{ cursor: 'pointer' }}
-											onClick={(ev) => {
+							{queues.map((queue) => (
+								<Tooltip
+									key={queue.id}
+									title='View details of queue'
+									arrow
+									placement='top'>
+									<span
+										role='button'
+										tabIndex={0}
+										className='rounded-2 px-2 py-1 small bg-primary bg-opacity-10 text-body border border-primary border-opacity-25'
+										style={{ cursor: 'pointer' }}
+										onClick={(ev) => {
+											ev.preventDefault();
+											ev.stopPropagation();
+											navigate(`/queue-management/${queue.id}`);
+										}}
+										onKeyDown={(ev) => {
+											if (ev.key === 'Enter' || ev.key === ' ') {
 												ev.preventDefault();
 												ev.stopPropagation();
-												navigate(`/queue-management/${qid}`);
-											}}
-											onKeyDown={(ev) => {
-												if (ev.key === 'Enter' || ev.key === ' ') {
-													ev.preventDefault();
-													ev.stopPropagation();
-													navigate(`/queue-management/${qid}`);
-												}
-											}}>
-											{name}
-										</span>
-									</Tooltip>
-								);
-							})}
+												navigate(`/queue-management/${queue.id}`);
+											}
+										}}>
+										{queue.name}
+									</span>
+								</Tooltip>
+							))}
 						</div>
 					);
 				},
@@ -131,6 +132,14 @@ const ServingPointsWorkspace: React.FC = () => {
 				field: 'created_at',
 				render: (rowData: ServingPoint) => formatDate(rowData.created_at),
 			},
+		];
+
+		if (!canWrite) {
+			return baseColumns;
+		}
+
+		return [
+			...baseColumns,
 			{
 				title: 'Actions',
 				field: 'actions',
@@ -206,9 +215,8 @@ const ServingPointsWorkspace: React.FC = () => {
 					);
 				},
 			},
-		],
-		[navigate, queueNameMap, showErrorNotification, showSuccessNotification, statusUpdatingId],
-	);
+		];
+	}, [canViewQueue, canWrite, navigate, showErrorNotification, showSuccessNotification, statusUpdatingId]);
 
 	const defaultQueueId =
 		Number.isNaN(queueIdFromQuery) || !queueIdFromQuery ? null : queueIdFromQuery;
@@ -223,18 +231,20 @@ const ServingPointsWorkspace: React.FC = () => {
 							<span>Serving Points ({totalCount})</span>
 						</div>
 					</div>
-					<CardActions>
-						<Button
-							color='primary'
-							icon='Add'
-							onClick={() => {
-								setModalMode('add');
-								setModalServingPoint(null);
-								setShowModal(true);
-							}}>
-							Add Serving Point
-						</Button>
-					</CardActions>
+					{canWrite && (
+						<CardActions>
+							<Button
+								color='primary'
+								icon='Add'
+								onClick={() => {
+									setModalMode('add');
+									setModalServingPoint(null);
+									setShowModal(true);
+								}}>
+								Add Serving Point
+							</Button>
+						</CardActions>
+					)}
 				</CardHeader>
 				<CardBody>
 					<div className='material_tabel_wrapper'>

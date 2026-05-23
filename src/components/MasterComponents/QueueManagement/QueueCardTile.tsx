@@ -3,6 +3,7 @@ import type { Queue } from '../../../services/queueManagementApi';
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown';
 import Icon from '../../icon/Icon';
 import Button from '../../bootstrap/Button';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface QueueCardTileProps {
 	queue: Queue;
@@ -23,6 +24,9 @@ const QueueCardTile: React.FC<QueueCardTileProps> = ({
 	onToggleQueue,
 	isActionLoading,
 }) => {
+	const { can } = usePermissions();
+	const canWrite = can('queue_management_write');
+
 	return (
 		<div
 			className={`queue-modern-card ${selected ? 'queue-modern-card--selected' : ''}`}
@@ -45,50 +49,52 @@ const QueueCardTile: React.FC<QueueCardTileProps> = ({
 						{queue.is_active ? 'Active' : 'Inactive'}
 						<span className='queue-modern-card__status-dot' />
 					</span>
-					<div onClick={(e) => e.stopPropagation()} role='presentation'>
-						<Dropdown>
-							<DropdownToggle hasIcon={false}>
-								<Button
-									type='button'
-									color='primary'
-									isLight
-									size='sm'
-									className='queue-modern-card__menu-btn'
-									aria-label='Queue actions'>
-									<Icon icon='MoreVert' />
-								</Button>
-							</DropdownToggle>
-							<DropdownMenu isAlignmentEnd>
-								<DropdownItem>
-									<button
+					{canWrite && (
+						<div onClick={(e) => e.stopPropagation()} role='presentation'>
+							<Dropdown>
+								<DropdownToggle hasIcon={false}>
+									<Button
 										type='button'
-										className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-body'
-										onClick={() => onEditQueue(queue)}>
-										<Icon icon='Edit' />
-										<span>Edit queue</span>
-									</button>
-								</DropdownItem>
-								<DropdownItem>
-									<button
-										type='button'
-										className={`btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 ${
-											queue.is_active ? 'text-danger' : 'text-success'
-										}`}
-										onClick={() => onToggleQueue(queue)}
-										disabled={isActionLoading}>
-										<Icon icon={queue.is_active ? 'Block' : 'CheckCircle'} />
-										<span>
-											{isActionLoading
-												? 'Updating...'
-												: queue.is_active
-													? 'Deactivate'
-													: 'Activate'}
-										</span>
-									</button>
-								</DropdownItem>
-							</DropdownMenu>
-						</Dropdown>
-					</div>
+										color='primary'
+										isLight
+										size='sm'
+										className='queue-modern-card__menu-btn'
+										aria-label='Queue actions'>
+										<Icon icon='MoreVert' />
+									</Button>
+								</DropdownToggle>
+								<DropdownMenu isAlignmentEnd>
+									<DropdownItem>
+										<button
+											type='button'
+											className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-body'
+											onClick={() => onEditQueue(queue)}>
+											<Icon icon='Edit' />
+											<span>Edit queue</span>
+										</button>
+									</DropdownItem>
+									<DropdownItem>
+										<button
+											type='button'
+											className={`btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 ${
+												queue.is_active ? 'text-danger' : 'text-success'
+											}`}
+											onClick={() => onToggleQueue(queue)}
+											disabled={isActionLoading}>
+											<Icon icon={queue.is_active ? 'Block' : 'CheckCircle'} />
+											<span>
+												{isActionLoading
+													? 'Updating...'
+													: queue.is_active
+														? 'Deactivate'
+														: 'Activate'}
+											</span>
+										</button>
+									</DropdownItem>
+								</DropdownMenu>
+							</Dropdown>
+						</div>
+					)}
 				</div>
 			</div>
 

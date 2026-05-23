@@ -291,7 +291,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 					</div>
 				</ModalBody>
 				<ModalFooter>
-					<Button color='light' isLight type='button' isDisable={isSubmitting} onClick={handleClose}>
+					<Button color='secondary' isLight type='button' isDisable={isSubmitting} onClick={handleClose}>
 						Cancel
 					</Button>
 					<Button color='primary' type='submit' isDisable={isSubmitting || optionsLoading}>

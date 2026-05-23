@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ErrorPage from '../../pages/PublicPages/ErrorPage';
 import Login from '../../pages/Auth/Login';
@@ -9,50 +9,60 @@ import AbaciLoader from '../../components/AbaciLoader/AbaciLoader';
 import RouteConfig from '../../routes/contentRoutes';
 import ProtectedRoute from './ProtectedRoute';
 import Activation from '../../pages/Auth/CreateOrganization';
-import CustomerLogin from '../../pages/Auth/Login'
 import AdminSetup from '../../pages/Auth/AdminSetup';
 import LicenceSetup from '../../pages/Auth/LicenceSetup';
 import TokenStatusPage from '../../pages/PublicPages/TokenStatusPage';
-const ContentRoutes = () => {
-	const { userData } = useContext(AuthContext);
-	const [isLoading, setIsLoading] = useState(true);
-	useEffect(() => {
-		if (userData !== null || window.location.pathname.startsWith('/public')) {
-			setIsLoading(false);
-		}
-	}, [userData]);
 
-	if (isLoading) {
+const ContentRoutes = () => {
+	const { userData, permissions } = useContext(AuthContext);
+
+	if (userData === null) {
 		return <AbaciLoader />;
 	}
 
+	const isAuthenticated = Boolean(userData && Object.keys(userData).length > 0);
+
+	const canAccessRoute = (permissionKey?: string): boolean => {
+		if (!permissionKey) return true;
+		if (!permissions) return false;
+		return (permissions as any)[permissionKey] === true;
+	};
+
 	return (
 		<Routes>
-		{/* Public Routes */}
-		<Route path='/login' element={<Login />} />
-		<Route path='/admin_setup' element={<AdminSetup />} />
-		<Route path='/customer-login' element={<CustomerLogin />} />
-		<Route path='/createsuperadmin' element={<Activation />} />
-		<Route path='/public/activation/:string' element={<Registration />} />
-		<Route path='/public/error' element={<ErrorPage />} />
-		<Route path='/public/token-status' element={<TokenStatusPage />} />
-		<Route path='/licence_setup' element={<LicenceSetup />} />
+			{/* Public Routes */}
+			<Route path='/login' element={<Login />} />
+			<Route path='/admin_setup' element={<AdminSetup />} />
+			<Route path='/customer-login' element={<Login />} />
+			<Route path='/createsuperadmin' element={<Activation />} />
+			<Route path='/public/activation/:string' element={<Registration />} />
+			<Route path='/public/error' element={<ErrorPage />} />
+			<Route path='/public/token-status' element={<TokenStatusPage />} />
+			<Route path='/licence_setup' element={<LicenceSetup />} />
+
 			{/* Protected Routes */}
-			{RouteConfig.map((page: any) => {
-				if (page.allowedTo) {
-					if (userData && page.allowedTo?.includes(userData?.role)) {
-						return (
-							<Route
-								path={page.path}
-								element={<ProtectedRoute element={page.element} />}
-								key={page.path}
-							/>
-						);
-					}
-					return <Route path={page.path} element={<Unauthorized />} key={page.path} />;
+			{RouteConfig.map((page) => {
+				if (!isAuthenticated) {
+					return (
+						<Route
+							path={page.path}
+							element={<Navigate to='/login' replace />}
+							key={page.path}
+						/>
+					);
 				}
-				return <Route path={page.path} element={page.element} key={page.path} />;
+				if (canAccessRoute(page.permissionKey)) {
+					return (
+						<Route
+							path={page.path}
+							element={<ProtectedRoute element={page.element} />}
+							key={page.path}
+						/>
+					);
+				}
+				return <Route path={page.path} element={<Unauthorized />} key={page.path} />;
 			})}
+
 			<Route path='*' element={<Navigate to='/public/error' />} />
 		</Routes>
 	);

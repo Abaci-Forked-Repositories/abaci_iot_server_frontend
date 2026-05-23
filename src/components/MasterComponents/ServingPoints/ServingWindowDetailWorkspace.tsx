@@ -35,7 +35,7 @@ import {
 	SP_STATUS_LABELS,
 	servingPointQueueIds,
 } from '../QueueManagement/queueManagementUtils';
-
+import usePermissions from '../../../hooks/usePermissions';
 export type ServingWindowNavState = {
 	from?: 'schedule' | 'serving-point';
 	queueId?: number;
@@ -241,7 +241,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		},
 		[dispatch],
 	);
-
+	const { can } = usePermissions();
+	const canReadSchedule = can('schedules_read');
 	const getAllowedActions = (row: ScheduleServingPoint) => {
 		const tokenStatus = (getWindowCurrentTokenStatusRaw(row) || '').toLowerCase().trim();
 		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
@@ -506,7 +507,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='d-flex flex-wrap gap-2 align-items-center'>
-									{windowRow?.queue_schedule != null && (
+									{windowRow?.queue_schedule != null && canReadSchedule && (
 										<Tooltip title='Open the parent schedule in queue management.' arrow>
 											<span className='d-inline-flex'>
 												<Button

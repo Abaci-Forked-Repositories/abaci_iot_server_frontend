@@ -13,6 +13,7 @@ import ScheduleFormModal, {
 	isScheduleMetadataEditable,
 	toDateTimeLocalValue,
 } from '../../../PageComponents/Schedules/ScheduleFormModal';
+import usePermissions from '../../../../hooks/usePermissions';
 
 const localizer = dayjsLocalizer(dayjs);
 
@@ -125,6 +126,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	onEventClick,
 	onSlotSelect,
 }) => {
+	const { can } = usePermissions();
+	const canWrite = can('schedules_write');
+	const canReadSchedule = can('schedules_read');
+
 	const [viewMode, setViewMode] = useState<TView>(Views.MONTH);
 	const [date, setDate] = useState<Date>(() => toLocalDate(new Date()));
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -197,6 +202,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	};
 
 	const handleSlotSelect = (slotInfo: { start: Date; end: Date }) => {
+		if (!canWrite) return;
+
 		const selectedStart = slotInfo.start;
 		if (isPastCalendarDay(selectedStart)) {
 			return;
@@ -330,21 +337,23 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 							</DropdownMenu>
 						</Dropdown>
 					</CardActions>
-					<CardActions>
-						<Button
-							color='primary'
-							icon='Add'
-							size='sm'
-							isDisable={isPastCalendarDay(date)}
-							title={
-								isPastCalendarDay(date)
-									? 'Schedules cannot be created for past dates.'
-									: undefined
-							}
-							onClick={openCreateModalForCurrentDate}>
-							Create Schedule
-						</Button>
-					</CardActions>
+					{canWrite && (
+						<CardActions>
+							<Button
+								color='primary'
+								icon='Add'
+								size='sm'
+								isDisable={isPastCalendarDay(date)}
+								title={
+									isPastCalendarDay(date)
+										? 'Schedules cannot be created for past dates.'
+										: undefined
+								}
+								onClick={openCreateModalForCurrentDate}>
+								Create Schedule
+							</Button>
+						</CardActions>
+					)}
 				</div>
 			</CardHeader>
 
@@ -415,7 +424,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
 				<div style={{ height: 480 }}>
 					<Calendar
-						selectable
+						selectable={canWrite}
 						toolbar={false}
 						localizer={localizer}
 						events={eventsForCalendar}
@@ -446,7 +455,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 								const sid = Number(ev.id);
 								const rec = scheduleRecords?.find((s) => s.id === sid);
 								const showEdit =
-									rec != null && isScheduleMetadataEditable(rec.status);
+									canWrite &&
+									rec != null &&
+									isScheduleMetadataEditable(rec.status);
 								return (
 									<ScheduleEventContent
 										event={ev}
@@ -475,7 +486,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 								);
 							},
 						}}
-						onSelectEvent={(event) => onEventClick?.(event as QueueScheduleEvent)}
+						{...(canReadSchedule && onEventClick
+							? {
+									onSelectEvent: (event: object) =>
+										onEventClick(event as QueueScheduleEvent),
+								}
+							: {})}
 						eventPropGetter={(event) => {
 							const ev = event as QueueScheduleEvent;
 							const bg = STATUS_COLOURS[ev.status ?? 'scheduled'] ?? STATUS_COLOURS['scheduled'];

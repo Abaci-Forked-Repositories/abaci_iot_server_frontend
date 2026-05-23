@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useRef, useState } from 'react';
 import { Form } from 'reactstrap';
 import { useForm } from 'react-hook-form';
 import { authAxios } from '../../../axiosInstance';
@@ -26,6 +26,9 @@ type AddUserFormValues = {
 
 const AddUser: FC<AddUserProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const showErrorRef = useRef(showErrorNotification);
+	showErrorRef.current = showErrorNotification;
+
 	const {
 		register,
 		handleSubmit,
@@ -46,6 +49,26 @@ const AddUser: FC<AddUserProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
 	});
 
 	const [waitingForAxios, setwaitingForAxios] = useState(false);
+	const [roleOptions, setRoleOptions] = useState<UserRoleSelectOption[]>([]);
+	const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		setRoleOptionsLoading(true);
+		authAxios
+			.get('api/users/roles/')
+			.then((res) => {
+				const results: any[] = res.data?.results ?? res.data ?? [];
+				setRoleOptions(
+					Array.isArray(results)
+						? results.map((r) => ({ label: r.name, value: r.id }))
+						: [],
+				);
+			})
+			.catch((err) => showErrorRef.current(err))
+			.finally(() => setRoleOptionsLoading(false));
+	}, [isOpen]);
 
 	const onSubmit = (data: AddUserFormValues) => {
 		const payload = {
@@ -63,9 +86,7 @@ const AddUser: FC<AddUserProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
 			.then((res) => {
 				setwaitingForAxios(false);
 				tableRef?.current?.onQueryChange?.();
-				showSuccessNotification(
-					res.data?.message || 'User created successfully.',
-				);
+				showSuccessNotification(res.data?.message || 'User created successfully.');
 				reset();
 				setIsOpen(false);
 			})
@@ -86,6 +107,8 @@ const AddUser: FC<AddUserProps> = ({ isOpen, setIsOpen, tableRef, title }) => {
 							getValues={getValues}
 							control={control}
 							trigger={trigger}
+							roleOptions={roleOptions}
+							roleOptionsLoading={roleOptionsLoading}
 						/>
 						<div className='row m-0'>
 							<div className='col-12 p-3'>

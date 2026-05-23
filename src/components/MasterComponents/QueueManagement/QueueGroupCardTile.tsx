@@ -4,6 +4,7 @@ import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../boot
 import Icon from '../../icon/Icon';
 import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface QueueGroupCardTileProps {
 	group: QueueGroup;
@@ -23,7 +24,11 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 	onEditGroup,
 	onDeleteGroup,
 	isDeleteLoading,
-}) => (
+}) => {
+	const { can } = usePermissions();
+	const canWrite = can('queue_management_write');
+
+	return (
 	<div
 		className={`queue-modern-card ${selected ? 'queue-modern-card--selected' : ''}`}
 		onClick={() => onSelect(group)}
@@ -39,42 +44,44 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 				<Badge color='info' isLight>
 					Group
 				</Badge>
-				<div onClick={(e) => e.stopPropagation()} role='presentation'>
-					<Dropdown>
-						<DropdownToggle hasIcon={false}>
-							<Button
-								type='button'
-								color='primary'
-								isLight
-								size='sm'
-								className='queue-modern-card__menu-btn'
-								aria-label='Group actions'>
-								<Icon icon='MoreVert' />
-							</Button>
-						</DropdownToggle>
-						<DropdownMenu isAlignmentEnd>
-							<DropdownItem>
-								<button
+				{canWrite && (
+					<div onClick={(e) => e.stopPropagation()} role='presentation'>
+						<Dropdown>
+							<DropdownToggle hasIcon={false}>
+								<Button
 									type='button'
-									className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-body'
-									onClick={() => onEditGroup(group)}>
-									<Icon icon='Edit' />
-									<span>Edit group</span>
-								</button>
-							</DropdownItem>
-							<DropdownItem>
-								<button
-									type='button'
-									className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-danger'
-									onClick={() => onDeleteGroup(group)}
-									disabled={isDeleteLoading}>
-									<Icon icon='Delete' />
-									<span>{isDeleteLoading ? 'Deleting...' : 'Delete group'}</span>
-								</button>
-							</DropdownItem>
-						</DropdownMenu>
-					</Dropdown>
-				</div>
+									color='primary'
+									isLight
+									size='sm'
+									className='queue-modern-card__menu-btn'
+									aria-label='Group actions'>
+									<Icon icon='MoreVert' />
+								</Button>
+							</DropdownToggle>
+							<DropdownMenu isAlignmentEnd>
+								<DropdownItem>
+									<button
+										type='button'
+										className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-body'
+										onClick={() => onEditGroup(group)}>
+										<Icon icon='Edit' />
+										<span>Edit group</span>
+									</button>
+								</DropdownItem>
+								<DropdownItem>
+									<button
+										type='button'
+										className='btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 text-danger'
+										onClick={() => onDeleteGroup(group)}
+										disabled={isDeleteLoading}>
+										<Icon icon='Delete' />
+										<span>{isDeleteLoading ? 'Deleting...' : 'Delete group'}</span>
+									</button>
+								</DropdownItem>
+							</DropdownMenu>
+						</Dropdown>
+					</div>
+				)}
 			</div>
 		</div>
 		<div className='queue-modern-card__desc'>
@@ -88,6 +95,7 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 			</div>
 		</div>
 	</div>
-);
+	);
+};
 
 export default QueueGroupCardTile;
