@@ -1,4 +1,5 @@
 import { authAxios } from '../axiosInstance';
+import type { ScreenTemplateAssignment } from './screenTemplatesApi';
 
 export interface PaginatedResponse<T> {
 	count: number;
@@ -21,15 +22,21 @@ export interface CreateScreenPayload {
 	name: string;
 	location?: string;
 	description?: string;
+	ip_address?: string | null;
+	ip_bind?: boolean;
 	is_active: boolean;
 }
 
 export interface Screen {
 	id: number;
+	uuid?: string;
 	name: string;
 	location?: string;
 	description?: string;
+	ip_address?: string | null;
+	ip_bind?: boolean;
 	template?: ScreenTemplate | null;
+	screen_templates?: ScreenTemplateAssignment[];
 	queues?: ScreenQueueRef[];
 	enable_audio?: boolean;
 	is_active?: boolean;
@@ -54,6 +61,7 @@ export const screensApi = {
 		ordering?: string;
 	}) => unwrap<PaginatedResponse<Screen>>(authAxios.get('api/screens/', { params })),
 	get: (id: number) => unwrap<Screen>(authAxios.get(`api/screens/${id}/`)),
+	remove: (id: number) => authAxios.delete(`api/screens/${id}/`),
 	heartbeat: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/heartbeat/`)),
 	activate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/activate/`)),
 	deactivate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/deactivate/`)),

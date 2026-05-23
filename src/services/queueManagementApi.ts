@@ -80,6 +80,7 @@ export interface CurrentServingWindowResponse {
 
 export interface Queue {
 	id: number;
+	uuid?: string;
 	name: string;
 	description?: string;
 	group?: number;

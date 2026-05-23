@@ -13,6 +13,7 @@ import AdminSetup from '../../pages/Auth/AdminSetup';
 import LicenceSetup from '../../pages/Auth/LicenceSetup';
 import TokenStatusPage from '../../pages/PublicPages/TokenStatusPage';
 
+import ScreenTokenStatusPage from '../../pages/PublicPages/ScreenTokenStatusPage';
 const ContentRoutes = () => {
 	const { userData, permissions } = useContext(AuthContext);
 
@@ -38,7 +39,8 @@ const ContentRoutes = () => {
 			<Route path='/public/activation/:string' element={<Registration />} />
 			<Route path='/public/error' element={<ErrorPage />} />
 			<Route path='/public/token-status' element={<TokenStatusPage />} />
-			<Route path='/licence_setup' element={<LicenceSetup />} />
+			<Route path='/screenstokenstatus/:uuid' element={<ScreenTokenStatusPage />} />
+		<Route path='/licence_setup' element={<LicenceSetup />} />
 
 			{/* Protected Routes */}
 			{RouteConfig.map((page) => {

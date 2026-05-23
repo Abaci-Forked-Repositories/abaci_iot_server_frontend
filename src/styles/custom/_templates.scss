@@ -564,6 +564,29 @@
 	}
 }
 
+// Native <select> dropdown uses OS light popup; force readable options.
+select.tdc-prop-input {
+	background-color: rgba(#1e293b, 0.95);
+	color: #f1f5f9;
+	color-scheme: light;
+
+	option {
+		color: #0f172a;
+		background-color: #ffffff;
+	}
+
+	option:disabled {
+		color: #64748b;
+		background-color: #f8fafc;
+	}
+
+	option:checked,
+	option:hover {
+		color: #0f172a;
+		background-color: #e2e8f0;
+	}
+}
+
 .tdc-prop-input--error {
 	border-color: #ef4444 !important;
 }
@@ -572,6 +595,80 @@
 	font-size: 0.72rem;
 	color: #f87171;
 	margin-top: 3px;
+}
+
+.tdc-queue-add-row {
+	display: flex;
+	gap: 0.4rem;
+	align-items: stretch;
+}
+
+.tdc-queue-add-btn {
+	flex: 0 0 auto;
+	padding: 0.35rem 0.65rem;
+	border-radius: 0.4rem;
+	border: 1px solid rgba($primary, 0.45);
+	background: rgba($primary, 0.15);
+	color: #f8fafc;
+	font-size: 0.78rem;
+	font-weight: 600;
+	cursor: pointer;
+
+	&:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+}
+
+.tdc-zone-queue-list {
+	list-style: none;
+	margin: 0.55rem 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.tdc-zone-queue-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.35rem 0.5rem;
+	border-radius: 0.35rem;
+	background: rgba(#ffffff, 0.05);
+	border: 1px solid rgba(#ffffff, 0.08);
+}
+
+.tdc-zone-queue-name {
+	font-size: 0.8rem;
+	color: #e2e8f0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tdc-zone-queue-remove {
+	flex: 0 0 auto;
+	width: 22px;
+	height: 22px;
+	border: none;
+	border-radius: 4px;
+	background: rgba(#ef4444, 0.2);
+	color: #fca5a5;
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+
+	&:hover {
+		background: rgba(#ef4444, 0.35);
+	}
+}
+
+.tdc-zone-queue-hint {
+	margin: 0.5rem 0 0;
+	font-size: 0.75rem;
+	color: #64748b;
 }
 
 // ─── Steppers ─────────────────────────────────────────────────────────────────

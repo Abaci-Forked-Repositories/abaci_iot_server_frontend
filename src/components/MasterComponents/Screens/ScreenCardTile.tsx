@@ -1,25 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icon from '../../icon/Icon';
 import type { Screen } from '../../../services/screensManagementApi';
 
 interface ScreenCardTileProps {
 	screen: Screen;
 	onOpen: (screen: Screen) => void;
+	onDelete: (screen: Screen) => void;
+	deleting?: boolean;
 }
 
-const ScreenCardTile: React.FC<ScreenCardTileProps> = ({ screen, onOpen }) => {
+const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
+	screen,
+	onOpen,
+	onDelete,
+	deleting = false,
+}) => {
+	const [hovered, setHovered] = useState(false);
+
 	return (
 		<div
 			role='button'
 			tabIndex={0}
-			className='screen-card-tile'
-			onClick={() => onOpen(screen)}
+			className={`screen-card-tile${deleting ? ' screen-card-tile--deleting' : ''}`}
+			onClick={() => !deleting && onOpen(screen)}
 			onKeyDown={(event) => {
+				if (deleting) return;
 				if (event.key === 'Enter' || event.key === ' ') {
 					event.preventDefault();
 					onOpen(screen);
 				}
-			}}>
+			}}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}>
+			{hovered && !deleting && (
+				<div className='screen-card-actions'>
+					<button
+						type='button'
+						className='screen-card-action-btn screen-card-action-btn--delete'
+						title='Delete screen'
+						onClick={(event) => {
+							event.stopPropagation();
+							onDelete(screen);
+						}}>
+						<Icon icon='Delete' className='screen-card-action-icon' />
+					</button>
+				</div>
+			)}
 			<div className='screen-card-tile-top'>
 				<span className={`screen-card-led ${screen.is_online ? 'is-online' : 'is-offline'}`} />
 				<span className={`screen-card-status ${screen.is_online ? 'is-active' : 'is-inactive'}`}>
