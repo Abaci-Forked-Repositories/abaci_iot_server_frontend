@@ -7,6 +7,7 @@ import Modal, {
 } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
+import { getApiErrorMessage } from '../../../helpers/authSession';
 import type { CreateTemplatePayload } from '../../../services/templatesApi';
 
 const RESOLUTIONS = [
@@ -31,6 +32,8 @@ interface Props {
 const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 	const [name, setName] = useState('');
 	const [loading, setLoading] = useState(false);
+	const [submitError, setSubmitError] = useState('');
+	const [nameFieldError, setNameFieldError] = useState('');
 	const [isLandscape, setIsLandscape] = useState(true);
 	const [width, setWidth] = useState(1920);
 	const [height, setHeight] = useState(1080);
@@ -70,17 +73,25 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 		}
 	};
 
+	const clearErrors = () => {
+		setSubmitError('');
+		setNameFieldError('');
+	};
+
 	const handleClose = () => {
 		setName('');
+		setDescription('');
 		setResolution(1);
 		setWidth(1920);
 		setHeight(1080);
+		clearErrors();
 		onClose();
 	};
 
 	const handleSubmit = async () => {
 		if (!name.trim()) return;
 		setLoading(true);
+		clearErrors();
 		try {
 			await onSubmit({
 				name: name.trim(),
@@ -90,6 +101,20 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 				// resolution_height: Number(height),
 			});
 			handleClose();
+		} catch (err: unknown) {
+			const apiErr = err as { response?: { data?: Record<string, string[] | string> } };
+			const nameErrors = apiErr.response?.data?.name;
+			const nameMessage = Array.isArray(nameErrors)
+				? nameErrors[0]
+				: typeof nameErrors === 'string'
+					? nameErrors
+					: '';
+
+			if (nameMessage) {
+				setNameFieldError(nameMessage);
+			} else {
+				setSubmitError(getApiErrorMessage(err, 'Failed to create template.'));
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -110,20 +135,37 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 							</p> */}
 						</header>
 
+						{submitError && (
+							<div className='tpl-create-error' role='alert'>
+								{submitError}
+							</div>
+						)}
+
 						<div className='tpl-field-group'>
 							<label className='tpl-field-label' htmlFor='tpl-name'>
 								Template name
 							</label>
 							<input
 								id='tpl-name'
-								className='form-control'
+								className={`form-control${nameFieldError ? ' is-invalid' : ''}`}
 								type='text'
 								value={name}
-								onChange={(e) => setName(e.target.value)}
+								onChange={(e) => {
+									setName(e.target.value);
+									if (nameFieldError) setNameFieldError('');
+									if (submitError) setSubmitError('');
+								}}
 								placeholder='e.g. Main lobby display'
 								autoFocus
 								autoComplete='off'
+								aria-invalid={Boolean(nameFieldError)}
+								aria-describedby={nameFieldError ? 'tpl-name-error' : undefined}
 							/>
+							{nameFieldError && (
+								<div id='tpl-name-error' className='tpl-field-error'>
+									{nameFieldError}
+								</div>
+							)}
 						</div>
 						<div className='tpl-field-group'>
 							<label className='tpl-field-label' htmlFor='tpl-description'>
