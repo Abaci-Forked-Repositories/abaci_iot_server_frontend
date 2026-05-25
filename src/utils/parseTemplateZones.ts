@@ -108,11 +108,26 @@ export interface ZoneGeometry {
 	height: number;
 }
 
-/** Zones clipped by getBoundingRect() often save as ~50% canvas width at left:0. */
+/**
+ * Save artifact: half-width bbox anchored near horizontal center (e.g. left:959, width:961).
+ * Do NOT match intentional left columns (left:0, width:~half canvas).
+ */
 function isLikelyHalfWidthBboxArtifact(left: number, width: number, canvasW: number): boolean {
 	const halfW = canvasW / 2;
 	const tolerance = Math.max(24, Math.round(canvasW * 0.03));
-	return left <= canvasW * 0.05 && Math.abs(width - halfW) <= tolerance;
+	const startsNearCenter = Math.abs(left - halfW) <= tolerance;
+	return startsNearCenter && Math.abs(width - halfW) <= tolerance;
+}
+
+/** Intentional right column (left:~half, width:~half) — must not expand to full canvas. */
+function isIntentionalRightColumn(left: number, width: number, canvasW: number): boolean {
+	const halfW = canvasW / 2;
+	const tolerance = Math.max(24, Math.round(canvasW * 0.03));
+	return (
+		Math.abs(left - halfW) <= tolerance &&
+		Math.abs(width - halfW) <= tolerance &&
+		Math.abs(left + width - canvasW) <= tolerance
+	);
 }
 
 /**
@@ -149,14 +164,18 @@ export function normalizeZoneGeometryForCanvas(
 		left + width >= canvasW - edgeTol &&
 		left + width <= canvasW + edgeTol &&
 		left > canvasW * 0.4 &&
-		width >= canvasW * 0.55;
+		width >= canvasW * 0.85;
 	const intendedFullWidth =
 		width > canvasW ||
 		width >= canvasW * 0.75 ||
 		(spillsRight && width >= canvasW * 0.45) ||
 		pinnedToRightEdge;
 
-	if (intendedFullWidth && (spillsRight || pinnedToRightEdge || width >= canvasW * 0.75)) {
+	if (
+		!isIntentionalRightColumn(left, width, canvasW) &&
+		intendedFullWidth &&
+		(spillsRight || pinnedToRightEdge || width >= canvasW * 0.75)
+	) {
 		left = 0;
 		width = canvasW;
 	} else if (isLikelyHalfWidthBboxArtifact(left, width, canvasW)) {
@@ -271,14 +290,20 @@ export function normalizeTemplateZonesInDom(
 	});
 }
 
-/** Map logical template pixels to Fabric canvas pixels after normalization. */
+export type ZoneGeometryMode = 'normalize' | 'clamp';
+
+/** Map logical template pixels to Fabric canvas pixels. */
 export function toFabricZoneGeometry(
 	zone: ZoneGeometry,
 	canvasW: number,
 	canvasH: number,
 	sf: number,
+	mode: ZoneGeometryMode = 'normalize',
 ): ZoneGeometry {
-	const norm = normalizeZoneGeometryForCanvas(zone, canvasW, canvasH);
+	const norm =
+		mode === 'clamp'
+			? clampZoneGeometryToCanvas(zone, canvasW, canvasH)
+			: normalizeZoneGeometryForCanvas(zone, canvasW, canvasH);
 	return {
 		left: norm.left * sf,
 		top: norm.top * sf,
