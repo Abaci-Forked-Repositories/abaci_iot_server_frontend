@@ -886,6 +886,21 @@ select.tdc-prop-input {
 	}
 }
 
+.tpl-create-error {
+	padding: 0.65rem 0.85rem;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	color: #991b1b;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+}
+
+.tpl-field-error {
+	font-size: 0.8rem;
+	color: #dc3545;
+	margin-top: 0.15rem;
+}
+
 .tpl-orient-row {
 	display: flex;
 	gap: 0.6rem;

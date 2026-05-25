@@ -185,4 +185,12 @@ export const templatesApi = {
 
 	favourite: (id: number, is_favourite: boolean) =>
 		unwrap<Template>(authAxios.patch(`api/administration/templates/${id}/`, { is_favourite })),
+
+	/** Save layout HTML, configuration (zones + fabric_json), and thumbnail. */
+	saveContent: (id: number, formData: FormData) =>
+		unwrap<AdminTemplateResponse>(
+			authAxios.patch(`api/administration/templates/${id}/`, formData, {
+				headers: { 'Content-Type': 'multipart/form-data' },
+			}),
+		).then(mapAdminTemplateToTemplate),
 };

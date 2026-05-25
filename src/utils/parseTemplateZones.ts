@@ -108,11 +108,87 @@ export interface ZoneGeometry {
 	height: number;
 }
 
+/** Zones clipped by getBoundingRect() often save as ~50% canvas width at left:0. */
+function isLikelyHalfWidthBboxArtifact(left: number, width: number, canvasW: number): boolean {
+	const halfW = canvasW / 2;
+	const tolerance = Math.max(24, Math.round(canvasW * 0.03));
+	return left <= canvasW * 0.05 && Math.abs(width - halfW) <= tolerance;
+}
+
 /**
  * Clip legacy html zone rows to the canvas without changing intentional placement.
  * (Do not reset top to 0 — that stacked every column on load.)
+ *
+ * Fixes a common save artifact: zones drawn full-width but stored with a centered
+ * left offset (~canvasW/2) and/or a width taken from the visible bbox only
+ * (e.g. left:959 + width:961 on a 1920px canvas). The list thumbnail still looks
+ * correct because it is captured from Fabric; reload without this fix shows only
+ * the left half of each zone.
  */
 export function normalizeZoneGeometryForCanvas(
+	zone: ZoneGeometry,
+	canvasW: number,
+	canvasH: number,
+): ZoneGeometry {
+	let { left, top, width, height } = zone;
+	const edgeTol = 2;
+
+	if (left < 0) {
+		width += left;
+		left = 0;
+	}
+	if (top < 0) {
+		height += top;
+		top = 0;
+	}
+
+	const spillsRight = left + width > canvasW + edgeTol;
+	// Only snap when the zone is genuinely wide — not a narrow column ending at the right edge
+	// (e.g. left:1073 + width:847 on 1920px must stay as-is).
+	const pinnedToRightEdge =
+		left + width >= canvasW - edgeTol &&
+		left + width <= canvasW + edgeTol &&
+		left > canvasW * 0.4 &&
+		width >= canvasW * 0.55;
+	const intendedFullWidth =
+		width > canvasW ||
+		width >= canvasW * 0.75 ||
+		(spillsRight && width >= canvasW * 0.45) ||
+		pinnedToRightEdge;
+
+	if (intendedFullWidth && (spillsRight || pinnedToRightEdge || width >= canvasW * 0.75)) {
+		left = 0;
+		width = canvasW;
+	} else if (isLikelyHalfWidthBboxArtifact(left, width, canvasW)) {
+		left = 0;
+		width = canvasW;
+	} else if (left + width > canvasW) {
+		width = canvasW - left;
+	}
+
+	if (height > canvasH) {
+		height = canvasH;
+		top = 0;
+	} else if (height >= canvasH * 0.75 && top + height > canvasH + edgeTol) {
+		top = 0;
+		height = canvasH;
+	} else if (top + height > canvasH) {
+		height = canvasH - top;
+	}
+
+	return {
+		left: Math.max(0, left),
+		top: Math.max(0, top),
+		width: Math.max(8, width),
+		height: Math.max(8, height),
+	};
+}
+
+/**
+ * Minimal bounds clamp for editor saves — preserves deliberate multi-column layouts.
+ * Use normalizeZoneGeometryForCanvas only when loading legacy/corrupt html.
+ */
+export function clampZoneGeometryToCanvas(
 	zone: ZoneGeometry,
 	canvasW: number,
 	canvasH: number,
@@ -128,21 +204,25 @@ export function normalizeZoneGeometryForCanvas(
 		top = 0;
 	}
 
-	// Wide zones that spill past the right edge were usually meant to span the canvas.
-	if (width >= canvasW * 0.75 && left + width > canvasW) {
-		left = 0;
+	if (width > canvasW) {
 		width = canvasW;
-	} else if (left + width > canvasW) {
-		width = canvasW - left;
+		left = 0;
+	}
+	if (height > canvasH) {
+		height = canvasH;
+		top = 0;
 	}
 
+	if (left + width > canvasW) {
+		width = canvasW - left;
+	}
 	if (top + height > canvasH) {
 		height = canvasH - top;
 	}
 
 	return {
-		left,
-		top,
+		left: Math.max(0, left),
+		top: Math.max(0, top),
 		width: Math.max(8, width),
 		height: Math.max(8, height),
 	};
@@ -171,16 +251,15 @@ export function normalizeTemplateZonesInDom(
 			height += top;
 			top = 0;
 		}
-		if (width >= containerWidth * 0.75 && left + width > containerWidth) {
-			left = 0;
-			width = containerWidth;
-		} else if (left + width > containerWidth) {
-			width = containerWidth - left;
-		}
-
-		if (top + height > containerHeight) {
-			height = containerHeight - top;
-		}
+		const normalized = normalizeZoneGeometryForCanvas(
+			{ left, top, width, height },
+			containerWidth,
+			containerHeight,
+		);
+		left = normalized.left;
+		top = normalized.top;
+		width = normalized.width;
+		height = normalized.height;
 
 		width = Math.max(0, width);
 		height = Math.max(0, height);
@@ -189,6 +268,198 @@ export function normalizeTemplateZonesInDom(
 		zoneEl.style.top = `${top}px`;
 		zoneEl.style.width = `${width}px`;
 		zoneEl.style.height = `${height}px`;
+	});
+}
+
+/** Map logical template pixels to Fabric canvas pixels after normalization. */
+export function toFabricZoneGeometry(
+	zone: ZoneGeometry,
+	canvasW: number,
+	canvasH: number,
+	sf: number,
+): ZoneGeometry {
+	const norm = normalizeZoneGeometryForCanvas(zone, canvasW, canvasH);
+	return {
+		left: norm.left * sf,
+		top: norm.top * sf,
+		width: Math.max(8, norm.width * sf),
+		height: Math.max(8, norm.height * sf),
+	};
+}
+
+type FabricCoordSource = {
+	left?: number;
+	top?: number;
+	width?: number;
+	height?: number;
+	scaleX?: number;
+	scaleY?: number;
+	originX?: string;
+	originY?: string;
+	set?: (props: Record<string, unknown>) => void;
+	setCoords?: () => void;
+	aCoords?: {
+		tl?: { x: number; y: number };
+		br?: { x: number; y: number };
+	};
+	getCenterPoint?: () => { x: number; y: number };
+	setPositionByOrigin?: (
+		point: { x: number; y: number },
+		originX: string,
+		originY: string,
+	) => void;
+};
+
+/** Keep the visual box but store Fabric's reference point at the top-left corner. */
+export function ensureFabricRectLeftTopOrigin(obj: FabricCoordSource): void {
+	if (obj.originX === 'left' && obj.originY === 'top') {
+		obj.setCoords?.();
+		return;
+	}
+	if (typeof obj.getCenterPoint !== 'function' || typeof obj.setPositionByOrigin !== 'function') {
+		return;
+	}
+	const center = obj.getCenterPoint();
+	obj.set?.({ originX: 'left', originY: 'top' });
+	obj.setPositionByOrigin(center, 'center', 'center');
+	obj.setCoords?.();
+}
+
+/**
+ * Read the visible top-left box in logical (template) pixels.
+ * Uses aCoords so center-origin rects (top ≈ height/2) do not corrupt saves.
+ */
+export function readLogicalZoneGeometryFromFabric(obj: FabricCoordSource, sf: number): ZoneGeometry {
+	const scale = sf || 1;
+	obj.setCoords?.();
+
+	const tl = obj.aCoords?.tl;
+	const br = obj.aCoords?.br;
+	if (tl && br) {
+		return {
+			left: Math.round(Math.min(tl.x, br.x) / scale),
+			top: Math.round(Math.min(tl.y, br.y) / scale),
+			width: Math.round(Math.abs(br.x - tl.x) / scale),
+			height: Math.round(Math.abs(br.y - tl.y) / scale),
+		};
+	}
+
+	ensureFabricRectLeftTopOrigin(obj);
+	const scaleX = obj.scaleX ?? 1;
+	const scaleY = obj.scaleY ?? 1;
+	return {
+		left: Math.round((obj.left ?? 0) / scale),
+		top: Math.round((obj.top ?? 0) / scale),
+		width: Math.round(((obj.width ?? 0) * scaleX) / scale),
+		height: Math.round(((obj.height ?? 0) * scaleY) / scale),
+	};
+}
+
+/** Apply logical zone geometry back onto a Fabric rect (canvas pixels). */
+export function applyLogicalZoneGeometryToFabric(
+	obj: {
+		set?: (props: Record<string, number | string>) => void;
+		setCoords?: () => void;
+	},
+	geom: ZoneGeometry,
+	sf: number,
+): void {
+	const scale = sf || 1;
+	obj.set?.({
+		originX: 'left',
+		originY: 'top',
+		left: geom.left * scale,
+		top: geom.top * scale,
+		width: Math.max(8, geom.width * scale),
+		height: Math.max(8, geom.height * scale),
+		scaleX: 1,
+		scaleY: 1,
+	});
+	obj.setCoords?.();
+}
+
+/** Re-anchor rects loaded from stale fabric_json (canvas px) onto the logical grid. */
+export function normalizeFabricRectToCanvas(
+	obj: FabricCoordSource & {
+		set?: (props: Record<string, number | string>) => void;
+	},
+	sf: number,
+	canvasW: number,
+	canvasH: number,
+): void {
+	const logical = readLogicalZoneGeometryFromFabric(obj, sf);
+	const norm = normalizeZoneGeometryForCanvas(logical, canvasW, canvasH);
+	applyLogicalZoneGeometryToFabric(obj, norm, sf);
+	ensureFabricRectLeftTopOrigin(obj);
+}
+
+export interface TemplateConfigurationZone {
+	name?: string;
+	queue_uuids?: string[];
+	queue_ids?: number[];
+	queue_names?: string[];
+}
+
+export function parseTemplateConfiguration(
+	configuration?: Record<string, unknown> | string | null,
+): TemplateConfigurationZone[] {
+	if (!configuration) return [];
+	let config: Record<string, unknown>;
+	try {
+		config =
+			typeof configuration === 'string'
+				? (JSON.parse(configuration) as Record<string, unknown>)
+				: configuration;
+	} catch {
+		return [];
+	}
+	const zones = config.zones;
+	if (!Array.isArray(zones)) return [];
+
+	return zones.map((zone: Record<string, unknown>) => ({
+		name: typeof zone.name === 'string' ? zone.name : '',
+		queue_uuids: Array.isArray(zone.queue_uuids)
+			? zone.queue_uuids.filter(
+					(uuid): uuid is string =>
+						typeof uuid === 'string' && QUEUE_UUID_RE.test(uuid),
+				)
+			: [],
+		queue_ids: Array.isArray(zone.queue_ids)
+			? zone.queue_ids.filter(
+					(id): id is number => typeof id === 'number' && Number.isFinite(id) && id > 0,
+				)
+			: typeof zone.queue_id === 'number' && zone.queue_id > 0
+				? [zone.queue_id]
+				: [],
+		queue_names: Array.isArray(zone.queue_names)
+			? zone.queue_names.filter((name): name is string => typeof name === 'string')
+			: [],
+	}));
+}
+
+/** Merge queue refs from saved configuration when html zones lack data-queue-ids. */
+export function enrichParsedZonesWithConfiguration(
+	zones: ParsedTemplateZone[],
+	configuration?: Record<string, unknown> | string | null,
+): ParsedTemplateZone[] {
+	const configZones = parseTemplateConfiguration(configuration);
+	if (!configZones.length) return zones;
+
+	return zones.map((zone, index) => {
+		const configZone =
+			(configZones.find((cz) => cz.name && cz.name === zone.name) ?? configZones[index]) ??
+			null;
+		if (!configZone) return zone;
+
+		const queueUuids =
+			zone.queueUuids.length > 0 ? zone.queueUuids : (configZone.queue_uuids ?? []);
+		const queueIds = zone.queueIds.length > 0 ? zone.queueIds : (configZone.queue_ids ?? []);
+		const queueChipNames =
+			zone.queueChipNames.length > 0
+				? zone.queueChipNames
+				: (configZone.queue_names ?? []);
+
+		return { ...zone, queueUuids, queueIds, queueChipNames };
 	});
 }
 
@@ -204,5 +475,27 @@ export function collectQueueUuidsFromHtml(html?: string | null): string[] {
 			uuids.push(uuid);
 		});
 	});
+	return uuids;
+}
+
+/** Collect queue UUIDs from template html and optional saved configuration. */
+export function collectQueueUuidsFromTemplate(template: {
+	html_content?: string | null;
+	configuration?: Record<string, unknown> | string | null;
+}): string[] {
+	const seen = new Set<string>();
+	const uuids: string[] = [];
+
+	const add = (uuid: string) => {
+		if (!QUEUE_UUID_RE.test(uuid) || seen.has(uuid)) return;
+		seen.add(uuid);
+		uuids.push(uuid);
+	};
+
+	collectQueueUuidsFromHtml(template.html_content).forEach(add);
+	parseTemplateConfiguration(template.configuration).forEach((zone) => {
+		(zone.queue_uuids ?? []).forEach(add);
+	});
+
 	return uuids;
 }
