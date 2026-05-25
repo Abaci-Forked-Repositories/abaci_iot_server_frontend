@@ -8,7 +8,7 @@ import {
 	type PublicScreenInfo,
 	type PublicScreenTemplate,
 } from '../../services/publicScreenApi';
-import { collectQueueUuidsFromHtml } from '../../utils/parseTemplateZones';
+import { collectQueueUuidsFromTemplate } from '../../utils/parseTemplateZones';
 
 const CYCLE_COOKIE_PREFIX = 'screen_display_start_';
 const QUEUE_POLL_MS = 20_000;
@@ -30,6 +30,11 @@ function getOrCreateCycleStart(screenUuid: string): number {
 	return now;
 }
 
+/** interval on screen assignments is stored in minutes (see Screens admin UI). */
+function intervalToSeconds(interval: number | undefined): number {
+	return Math.max(1, interval || 1) * 60;
+}
+
 function pickActiveTemplate(
 	templates: PublicScreenTemplate[],
 	startMs: number,
@@ -39,15 +44,15 @@ function pickActiveTemplate(
 		.filter((t) => t.is_active !== false)
 		.sort((a, b) => a.order - b.order);
 	if (!active.length) return null;
+	if (active.length === 1) return active[0];
 
-	const totalSeconds = active.reduce((sum, t) => sum + Math.max(1, t.interval || 1), 0);
+	const totalSeconds = active.reduce((sum, t) => sum + intervalToSeconds(t.interval), 0);
 	if (totalSeconds <= 0) return active[0];
 
 	const elapsedSec = ((nowMs - startMs) / 1000) % totalSeconds;
 	let cursor = 0;
 	for (const template of active) {
-		const duration = Math.max(1, template.interval || 1);
-		cursor += duration;
+		cursor += intervalToSeconds(template.interval);
 		if (elapsedSec < cursor) return template;
 	}
 	return active[0];
@@ -78,7 +83,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 		const seen = new Set<string>();
 		const uuids: string[] = [];
 		sortedTemplates.forEach((template) => {
-			collectQueueUuidsFromHtml(template.html_content).forEach((uuid) => {
+			collectQueueUuidsFromTemplate(template).forEach((uuid) => {
 				if (seen.has(uuid)) return;
 				seen.add(uuid);
 				uuids.push(uuid);
@@ -86,6 +91,11 @@ const ScreenTokenStatusPage: React.FC = () => {
 		});
 		return uuids;
 	}, [sortedTemplates]);
+
+	const activeTemplateQueueUuids = useMemo(() => {
+		if (!activeTemplate) return [];
+		return collectQueueUuidsFromTemplate(activeTemplate);
+	}, [activeTemplate]);
 
 	const fetchQueueStatus = useCallback(async (queueUuids: string[]) => {
 		if (!queueUuids.length) {
@@ -120,7 +130,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 			setTemplates(sorted);
 			setCycleStartMs(getOrCreateCycleStart(screenUuid));
 
-			const queueUuids = sorted.flatMap((t) => collectQueueUuidsFromHtml(t.html_content));
+			const queueUuids = sorted.flatMap((t) => collectQueueUuidsFromTemplate(t));
 			const uniqueQueueUuids = Array.from(new Set(queueUuids));
 			await fetchQueueStatus(uniqueQueueUuids);
 		} catch (err: unknown) {
@@ -150,8 +160,13 @@ const ScreenTokenStatusPage: React.FC = () => {
 		return () => window.clearInterval(poll);
 	}, [allQueueUuids, fetchQueueStatus]);
 
+	useEffect(() => {
+		if (!activeTemplateQueueUuids.length) return;
+		void fetchQueueStatus(activeTemplateQueueUuids);
+	}, [activeTemplateQueueUuids, fetchQueueStatus]);
+
 	return (
-		<div className='screen-public-page'>
+		<div className='screen-public-page screen-public-page--fullscreen'>
 			{loading && (
 				<div className='screen-public-page-message'>Loading screen display…</div>
 			)}

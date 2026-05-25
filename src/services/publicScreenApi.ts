@@ -20,8 +20,11 @@ export interface PublicScreenTemplate {
 	name: string;
 	description?: string;
 	html_content?: string;
+	/** Zone queue assignments (queue_uuids per zone) when provided by the public screen API. */
+	configuration?: Record<string, unknown> | string | null;
 	thumbnail?: string | null;
 	is_active?: boolean;
+	/** Display duration in minutes before rotating to the next assigned template. */
 	interval: number;
 	order: number;
 	screen_template_id: number;

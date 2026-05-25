@@ -17,14 +17,17 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 	const htmlContent = template?.html_content?.trim() ?? '';
 
 	return (
-		<div className='screen-public-root'>
+		<div className='screen-public-root screen-public-root--fullscreen'>
 			{htmlContent ? (
 				<TemplateFabricPreview
+					key={template?.screen_template_id ?? template?.id ?? 'template'}
 					className='screen-public-fabric-preview'
 					htmlContent={htmlContent}
+					configuration={template?.configuration ?? null}
 					orientation='landscape'
 					queuesByUuid={queuesByUuid}
 					flicker={online}
+					fullScreen
 				/>
 			) : (
 				<div className='screen-public-fallback'>

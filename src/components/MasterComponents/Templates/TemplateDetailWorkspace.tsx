@@ -5,7 +5,16 @@ import { nanoid } from 'nanoid';
 import { SketchPicker, type ColorResult } from 'react-color';
 import { templatesApi, type Template } from '../../../services/templatesApi';
 import { queuesApi, type Queue } from '../../../services/queueManagementApi';
-import { normalizeZoneGeometryForCanvas } from '../../../utils/parseTemplateZones';
+import {
+	applyLogicalZoneGeometryToFabric,
+	clampZoneGeometryToCanvas,
+	enrichParsedZonesWithConfiguration,
+	ensureFabricRectLeftTopOrigin,
+	normalizeFabricRectToCanvas,
+	normalizeZoneGeometryForCanvas,
+	readLogicalZoneGeometryFromFabric,
+	toFabricZoneGeometry,
+} from '../../../utils/parseTemplateZones';
 import PreviewTvFrame from '../../StandardTvFrame/PreviewTvFrame';
 import Spinner from '../../bootstrap/Spinner';
 import Button from '../../bootstrap/Button';
@@ -306,19 +315,7 @@ function syncRectFromBoundingBox(obj: any) {
 }
 
 function readLogicalZoneGeometry(obj: any, sf: number) {
-	syncRectFromBoundingBox(obj);
-	const bound = obj.getBoundingRect?.() ?? {
-		left: obj.left ?? 0,
-		top: obj.top ?? 0,
-		width: obj.width ?? 0,
-		height: obj.height ?? 0,
-	};
-	return {
-		left: Math.round(bound.left / sf),
-		top: Math.round(bound.top / sf),
-		width: Math.round(bound.width / sf),
-		height: Math.round(bound.height / sf),
-	};
+	return readLogicalZoneGeometryFromFabric(obj, sf);
 }
 
 function attachZoneRectHandlers(rect: any, fc: any) {
@@ -668,6 +665,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			fc.on('object:modified', (e: any) => {
 				const target = e.target;
 				if (isZoneRect(target)) {
+					ensureFabricRectLeftTopOrigin(target);
 					constrainZoneToCanvas(target, fc);
 					const queueIds = resolveQueueIdsFromRect(target as any, queuesByUuidMulti, queuesByName);
 					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
@@ -705,6 +703,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 					.forEach((o: any) => fc.remove(o));
 
 				getZoneRects(fc).forEach((rect) => {
+					ensureFabricRectLeftTopOrigin(rect);
 					attachZoneRectHandlers(rect, fc);
 					// Do not constrain on load — fabric_json / saved zones already have
 					// correct positions; constraining here was shifting the user's design.
@@ -741,6 +740,17 @@ const TemplateDetailWorkspace: React.FC = () => {
 						const queueUuids = zone.queueUuids ?? [];
 						const queueIds = zone.queueIds ?? [];
 						const queueChipNames = zone.queueChipNames ?? [];
+						const fabricGeom = toFabricZoneGeometry(
+							{
+								left: zone.left,
+								top: zone.top,
+								width: zone.width,
+								height: zone.height,
+							},
+							width,
+							height,
+							sf,
+						);
 						const rect = new Rect({
 							id: nanoid(),
 							name: zone.name ?? '',
@@ -748,10 +758,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 							queueUuids,
 							queueChipNames,
 							queueId: queueIds[0] ?? null,
-							width: zone.width * sf,
-							height: zone.height * sf,
-							left: zone.left * sf,
-							top: zone.top * sf,
+							originX: 'left',
+							originY: 'top',
+							width: fabricGeom.width,
+							height: fabricGeom.height,
+							left: fabricGeom.left,
+							top: fabricGeom.top,
 							fill: zone.fill,
 							stroke: zone.stroke ?? 'black',
 							strokeUniform: true,
@@ -787,11 +799,54 @@ const TemplateDetailWorkspace: React.FC = () => {
 			const savedZones = configuration?.zones as SavedZoneConfig[] | undefined;
 			const parsedHtml = htmlLayout ?? parseTemplateHtml(templateDetails.html_content ?? '');
 
-			// Prefer saved zones / html (with geometry normalize) over fabric_json — stale
-			// fabric state was overriding the design with wrong scaled coordinates.
-			if (Array.isArray(savedZones) && savedZones.length > 0) {
+			const mapHtmlZonesToRects = () => {
+				const enrichedZones = enrichParsedZonesWithConfiguration(
+					(parsedHtml?.zones ?? []).map((zone) => ({
+						name: zone.name,
+						queueIds: zone.queueIds,
+						queueUuids: zone.queueUuids,
+						queueChipNames: zone.queueChipNames,
+						left: zone.left,
+						top: zone.top,
+						width: zone.width,
+						height: zone.height,
+						backgroundColor: zone.backgroundColor,
+						borderRadius: zone.borderRadius,
+						borderColor: zone.borderColor,
+						border: zone.border,
+					})),
+					configuration,
+				);
+
 				loadZoneRects(
-					savedZones.map((zone) => {
+					enrichedZones.map((zone) => {
+						const geom = normalizeZoneGeometryForCanvas(
+							{
+								left: zone.left,
+								top: zone.top,
+								width: zone.width,
+								height: zone.height,
+							},
+							width,
+							height,
+						);
+						return {
+							name: zone.name,
+							queueIds: zone.queueIds.slice(0, 1),
+							queueUuids: zone.queueUuids.slice(0, 1),
+							queueChipNames: zone.queueChipNames.slice(0, 1),
+							...geom,
+							fill: zone.backgroundColor,
+							stroke: zone.border ? zone.borderColor : null,
+							rx: zone.borderRadius,
+						};
+					}),
+				);
+			};
+
+			const mapSavedZonesToRects = () =>
+				loadZoneRects(
+					(savedZones ?? []).map((zone) => {
 						const geom = normalizeZoneGeometryForCanvas(
 							{
 								left: zone.left ?? 0,
@@ -816,43 +871,33 @@ const TemplateDetailWorkspace: React.FC = () => {
 						};
 					}),
 				);
+
+			// html_content is the display source of truth. Never load fabric_json when html
+			// has zones — stale fabric_json (from screens preview / old saves) caused mismatch
+			// with list thumbnails.
+			const hasHtmlZones = (parsedHtml?.zones.length ?? 0) > 0;
+
+			if (hasHtmlZones) {
+				mapHtmlZonesToRects();
 				return;
 			}
 
-			if (parsedHtml?.zones.length) {
-				loadZoneRects(
-					parsedHtml.zones.map((zone) => {
-						const geom = normalizeZoneGeometryForCanvas(
-							{
-								left: zone.left,
-								top: zone.top,
-								width: zone.width,
-								height: zone.height,
-							},
-							width,
-							height,
-						);
-						return {
-							name: zone.name,
-							queueIds: zone.queueIds.slice(0, 1),
-							queueUuids: zone.queueUuids.slice(0, 1),
-							queueChipNames: zone.queueChipNames.slice(0, 1),
-							...geom,
-							fill: zone.backgroundColor,
-							stroke: zone.border ? zone.borderColor : null,
-							rx: zone.borderRadius,
-						};
-					}),
-				);
+			if (Array.isArray(savedZones) && savedZones.length > 0) {
+				mapSavedZonesToRects();
 				return;
 			}
 
 			if (fabricJson) {
 				fc.loadFromJSON(fabricJson, () => {
-					getZoneRects(fc).forEach((obj) => syncRectFromBoundingBox(obj));
+					getZoneRects(fc).forEach((obj) => {
+						normalizeFabricRectToCanvas(obj, sf, width, height);
+					});
 					finishLoad();
 				});
+				return;
 			}
+
+			finishLoad();
 		});
 
 		return () => {
@@ -868,14 +913,15 @@ const TemplateDetailWorkspace: React.FC = () => {
 		if (!selectedObject) return;
 		setNameError(false);
 		setFillColor(selectedObject.fill ?? 'white');
+		const geom = readLogicalZoneGeometryFromFabric(selectedObject, scalingFactor);
 		setZoneProps({
 			containerName: selectedObject.name ?? '',
 			queueIds: resolveQueueIdsFromRect(selectedObject as any, queuesByUuidMulti, queuesByName),
 			containerZIndex: canvasObjects.indexOf(selectedObject),
-			width: Math.round(selectedObject.width / scalingFactor),
-			height: Math.round(selectedObject.height / scalingFactor),
-			left: Math.round(selectedObject.left / scalingFactor),
-			top: Math.round(selectedObject.top / scalingFactor),
+			width: geom.width,
+			height: geom.height,
+			left: geom.left,
+			top: geom.top,
 			color: selectedObject.fill ?? 'white',
 			radius: Math.round((selectedObject.rx ?? 0) / scalingFactor),
 			borderColor: selectedObject.stroke ?? 'rgba(255,255,255,0)',
@@ -1049,6 +1095,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 				queueIds: [],
 				queueUuids: [],
 				queueId: null,
+				originX: 'left',
+				originY: 'top',
 				width: zoneCanvasSize,
 				height: zoneCanvasSize,
 				left: startLeft,
@@ -1229,11 +1277,20 @@ const TemplateDetailWorkspace: React.FC = () => {
 			// CLEAN ZONES DATA
 			// ----------------------------------------
 
-			getZoneRects(fc).forEach((obj) => syncRectFromBoundingBox(obj));
-			fc.renderAll();
+			const templateWidth = templateDetails.resolution_width ?? 1920;
+			const templateHeight = templateDetails.resolution_height ?? 1080;
+
+			getZoneRects(fc).forEach((obj) => ensureFabricRectLeftTopOrigin(obj));
 
 			const zones = getZoneRects(fc).map((obj: any, idx: number) => {
-				const geom = readLogicalZoneGeometry(obj, sf);
+				const rawGeom = readLogicalZoneGeometry(obj, sf);
+				// Clamp only — do not run legacy full-width normalize on save (it was
+				// turning right columns like left:1073+width:847 into full-screen overlays).
+				const geom = clampZoneGeometryToCanvas(
+					rawGeom,
+					templateWidth,
+					templateHeight,
+				);
 				const queueIds = resolveQueueIdsFromRect(obj as any, queuesByUuidMulti, queuesByName);
 				const queueUuids = queueIdsToUuids(queueIds, queuesById);
 
@@ -1270,6 +1327,24 @@ const TemplateDetailWorkspace: React.FC = () => {
 					zIndex: idx,
 				};
 			});
+
+			// Sync canvas + fabric_json to normalized logical geometry (avoids half-width bbox saves).
+			const zoneRects = getZoneRects(fc);
+			zoneRects.forEach((obj, idx) => {
+				const zone = zones[idx];
+				if (!zone) return;
+				applyLogicalZoneGeometryToFabric(
+					obj,
+					{
+						left: zone.left,
+						top: zone.top,
+						width: zone.width,
+						height: zone.height,
+					},
+					sf,
+				);
+			});
+			fc.renderAll();
 
 			// ----------------------------------------
 			// SAVE FABRIC JSON
@@ -1347,11 +1422,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 	`;
 			};
 
-			const htmlContent = generateTemplateHtml(
-				zones,
-				templateDetails.resolution_width,
-				templateDetails.resolution_height,
-			);
+			const htmlContent = generateTemplateHtml(zones, templateWidth, templateHeight);
 
 			// ----------------------------------------
 			// GENERATE THUMBNAIL
@@ -1393,17 +1464,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 			// API CALL
 			// ----------------------------------------
 
-			const { authAxios } = await import('../../../axiosInstance');
-
-			await authAxios.patch(
-				`api/administration/templates/${templateDetails.id}/`,
-				formData,
-				{
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				},
-			);
+			// New templates: POST creates the record; first "Save" (and later saves) use PATCH.
+			await templatesApi.saveContent(templateDetails.id, formData);
 
 			// ----------------------------------------
 			// SUCCESS
