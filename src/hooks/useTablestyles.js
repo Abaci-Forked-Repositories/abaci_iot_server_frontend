@@ -35,21 +35,15 @@ const useTablestyle = () => {
 			MuiInputBase: {
 				styleOverrides: {
 					root: {
-						backgroundColor: themeStatus !== 'dark' ? '#ffffff' : '#333333',
 						fontFamily: 'inherit',
-						'&:hover': {
-							borderColor: '#cfd6e4 !important',
-						},
-						'&.Mui-focused': {
-							borderColor: 'var(--bs-primary) !important',
-						},
 						'&::before': {
 							border: '0 !important',
-						  },
-						  '&::after': {
+							display: 'none',
+						},
+						'&::after': {
 							border: '0 !important',
-						  },
-
+							display: 'none',
+						},
 					},
 				},
 			},
@@ -104,18 +98,13 @@ const useTablestyle = () => {
 		return {};
 	};
 
-	const searchFieldStyle = () => ({
-		borderRadius: '10px',
-		backgroundColor: themeStatus !== 'dark' ? '#F8F9FD' : '',
-		padding: ' 4px 10px',
-		fontFamily: 'inherit',
-		fontSize: '0.95rem',
-		border: '2px solid #d7deea',
-		width:'220px',
-		transition: 'border-color 0.3s ease',
-	})
+	/** @returns {import('react').CSSProperties} */
+	const searchFieldStyle = () =>
+		/** @type {import('react').CSSProperties} */ ({
+			outline: 'none',
+		});
 
-	return { theme, headerStyles, rowStyles,searchFieldStyle,headerStylesForSelection };
+	return { theme, headerStyles, rowStyles, searchFieldStyle, headerStylesForSelection };
 };
 
 export default useTablestyle;

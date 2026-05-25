@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
-import TokenUserDetailWorkspace from '../../components/MasterComponents/TokenUsers/TokenUserDetailWorkspace';
+import TokenUserDetailWorkspace from '../../components/MasterComponents/TokenUsers/TokenUserDetails/TokenUserDetailWorkspace';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 
 const TokenUserDetailPage: React.FC = () => {
@@ -29,7 +29,7 @@ const TokenUserDetailPage: React.FC = () => {
 
 	return (
 		<PageWrapper title='Token User Detail'>
-			<Page container='fluid'>
+			<Page container='fluid' className='d-flex flex-column flex-fill'>
 				<TokenUserDetailWorkspace onTokenUserNameChange={setTokenUserName} />
 			</Page>
 		</PageWrapper>

@@ -767,6 +767,70 @@ border:1px solid #ee511e !important;
 	}
 }
 
+// MaterialTable toolbar search — match app-search-modern (shared across all material tables)
+.material_tabel_wrapper .MuiToolbar-root .MuiInputBase-root {
+	align-items: center;
+	font-family: inherit;
+	padding: 0.35rem 0.55rem !important;
+	border: 1px solid rgba(203, 213, 225, 0.55) !important;
+	border-radius: 0.55rem !important;
+	background: rgba(255, 255, 255, 0.65) !important;
+	height: 38px;
+	min-height: 38px;
+	width: 220px;
+	max-width: 100%;
+	box-shadow: none !important;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+	&::before,
+	&::after {
+		display: none !important;
+		border: 0 !important;
+	}
+
+	&:hover {
+		border-color: rgba(148, 163, 184, 0.75) !important;
+	}
+
+	&.Mui-focused {
+		border-color: rgba($primary, 0.85) !important;
+		box-shadow: 0 0 0 0.12rem rgba($primary, 0.2) !important;
+		background: rgba(255, 255, 255, 0.95) !important;
+	}
+
+	.MuiInputBase-input {
+		font-size: 0.875rem;
+		padding: 0 !important;
+	}
+}
+
+[theme='dark'] .material_tabel_wrapper .MuiToolbar-root .MuiInputBase-root {
+	border-color: rgba(71, 85, 105, 0.8) !important;
+	background: rgba(15, 23, 42, 0.72) !important;
+
+	&:hover {
+		border-color: rgba(100, 116, 139, 0.9) !important;
+	}
+
+	&.Mui-focused {
+		border-color: rgba($primary-soft, 0.95) !important;
+		box-shadow: 0 0 0 0.12rem rgba($primary-soft, 0.3) !important;
+		background: rgba(15, 23, 42, 0.9) !important;
+	}
+}
+
+// Keep pagination row-size select on default MUI styling
+.material_tabel_wrapper .MuiTablePagination-root .MuiInputBase-root {
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	width: auto !important;
+	height: auto !important;
+	min-height: 0 !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+}
+
 .app-header-controls .btn,
 .app-control-btn {
 	height: 38px;
@@ -1257,4 +1321,10 @@ border:1px solid #ee511e !important;
     height: 200px;
     min-width: 200px;
   }
+
+.token-user-detail-tokens-card {
+	.material_tabel_wrapper .MuiPaper-root {
+		box-shadow: none !important;
+	}
+}
 

@@ -24,7 +24,7 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 	urlBackup,
 }) => {
 	const [pageSize, setPageSize] = useState(5);
-	const { theme, rowStyles, headerStyles } = useTablestyle();
+	const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 	const [itemToBeEdited, setItemToBeEdited] = useState(null);
 	const [editModalShow, setEditModalShow] = useState(false);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
@@ -222,10 +222,15 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 							options={{
 								headerStyle: headerStyles(),
 								rowStyle: rowStyles(),
+								searchFieldStyle: searchFieldStyle(),
 								actionsColumnIndex: -1,
-								debounceInterval: 500,
 								search: true,
+								filtering: false,
+								sorting: false,
+								debounceInterval: 400,
 								pageSize,
+								pageSizeOptions: [5, 10, 25, 50],
+								emptyRowsWhenPaging: false,
 							}}
 
 							localization={{
