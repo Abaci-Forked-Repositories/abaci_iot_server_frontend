@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import ScreenPublicDisplay from '../../components/PublicPages/ScreenPublicDisplay';
 import {
+	buildQueuesByUuidMap,
 	publicScreenApi,
 	type PublicQueueStatus,
 	type PublicScreenInfo,
@@ -104,11 +105,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 		}
 		try {
 			const response = await publicScreenApi.getQueueStatus(queueUuids);
-			const map: Record<string, PublicQueueStatus> = {};
-			for (const queue of response.queues ?? []) {
-				map[queue.uuid] = queue;
-			}
-			setQueuesByUuid(map);
+			setQueuesByUuid(buildQueuesByUuidMap(response.queues ?? []));
 		} catch {
 			// Keep last known queue data on transient failures.
 		}

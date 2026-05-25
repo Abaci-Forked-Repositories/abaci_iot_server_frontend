@@ -7,12 +7,14 @@ import {
 	enrichParsedZonesWithConfiguration,
 	ensureFabricRectLeftTopOrigin,
 	normalizeFabricRectToCanvas,
-	normalizeZoneGeometryForCanvas,
 	parseQueueRefsFromAttribute,
 	parseTemplateLayoutFromHtml,
 	toFabricZoneGeometry,
 } from '../../../utils/parseTemplateZones';
-import type { PublicQueueStatus } from '../../../services/publicScreenApi';
+import {
+	getPublicQueueZoneDisplay,
+	type PublicQueueStatus,
+} from '../../../services/publicScreenApi';
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
@@ -63,7 +65,9 @@ function resolveQueueForRect(
 
 	const chipName = Array.isArray(rect.queueChipNames) ? rect.queueChipNames[0]?.trim() : '';
 	if (chipName) {
-		const byName = allQueues.find((q) => q.name === chipName);
+		const byName = allQueues.find(
+			(q) => q.name === chipName || q.queue_name === chipName,
+		);
 		if (byName) return byName;
 	}
 
@@ -93,7 +97,9 @@ function resolveQueueForParsedZone(
 
 	const chipName = zone.queueChipNames[0]?.trim();
 	if (chipName) {
-		const byName = allQueues.find((q) => q.name === chipName);
+		const byName = allQueues.find(
+			(q) => q.name === chipName || q.queue_name === chipName,
+		);
 		if (byName) return byName;
 	}
 
@@ -166,25 +172,26 @@ function syncLiveZoneOverlay(
 		const { left, top, width, height, cx, cy } = getZoneCanvasBounds(rect);
 
 		const queue = resolveQueueForRect(rect, queuesByUuid);
-		const queueName =
-			queue?.name ??
-			(Array.isArray(rect.queueChipNames) ? rect.queueChipNames[0] : undefined) ??
-			rect.name ??
-			'Queue';
-		const statusLabel = queue?.status ?? 'inactive';
-		const tokenDisplay = queue?.current_token?.token_display ?? '—';
+		const chipFallback = Array.isArray(rect.queueChipNames)
+			? rect.queueChipNames[0]
+			: undefined;
+		const display = getPublicQueueZoneDisplay(queue, {
+			queueName: chipFallback ?? rect.name,
+		});
 
 		const minSide = Math.min(width, height);
 
 		const nameSize = Math.max(14, Math.min(56, Math.round(minSide * 0.1)));
-		const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
+		const servingSize = Math.max(11, Math.min(28, Math.round(minSide * 0.055)));
 		const tokenSize = Math.max(18, Math.min(96, Math.round(minSide * 0.18)));
+		const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
 		const gap = Math.max(6, Math.round(minSide * 0.03));
 
 		const lines: { text: string; fontSize: number; fontWeight?: string }[] = [
-			{ text: String(queueName), fontSize: nameSize, fontWeight: 'bold' },
-			{ text: String(statusLabel), fontSize: statusSize },
-			{ text: String(tokenDisplay), fontSize: tokenSize, fontWeight: 'bold' },
+			{ text: display.queueName, fontSize: nameSize, fontWeight: 'bold' },
+			{ text: display.servingPointName, fontSize: servingSize },
+			{ text: display.tokenDisplay, fontSize: tokenSize, fontWeight: 'bold' },
+			{ text: display.tokenStatus, fontSize: statusSize },
 		];
 
 		const blockHeight =
@@ -374,6 +381,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 						logicalW,
 						logicalH,
 						sf,
+						fullScreen ? 'clamp' : 'normalize',
 					);
 					const rect = new Rect({
 						id: nanoid(),
@@ -405,7 +413,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 			const mapSavedZones = () =>
 				loadZoneRects(
 					(savedZones as any[]).map((zone: any) => {
-						const geom = normalizeZoneGeometryForCanvas(
+						const geom = clampZoneGeometryToCanvas(
 							{
 								left: zone.left ?? 0,
 								top: zone.top ?? 0,
@@ -438,27 +446,16 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 							zone.queueUuids.length > 0
 								? zone.queueUuids.join(',')
 								: zone.queueIds.join(',');
-						const geom = fullScreen
-							? clampZoneGeometryToCanvas(
-									{
-										left: zone.left,
-										top: zone.top,
-										width: zone.width,
-										height: zone.height,
-									},
-									logicalW,
-									logicalH,
-								)
-							: normalizeZoneGeometryForCanvas(
-									{
-										left: zone.left,
-										top: zone.top,
-										width: zone.width,
-										height: zone.height,
-									},
-									logicalW,
-									logicalH,
-								);
+						const geom = clampZoneGeometryToCanvas(
+							{
+								left: zone.left,
+								top: zone.top,
+								width: zone.width,
+								height: zone.height,
+							},
+							logicalW,
+							logicalH,
+						);
 						return {
 							name: zone.name,
 							queueUuids: zone.queueUuids.slice(0, 1),
@@ -531,19 +528,16 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 					<canvas id={canvasId} ref={canvasRef} />
 					{overlayZones.map((zone, index) => {
 						const queue = resolveQueueForParsedZone(zone, queuesByUuid);
-						const queueLabel =
-							queue?.name ??
-							zone.queueChipNames[0] ??
-							zone.name ??
-							'Queue';
-						const statusLabel = queue?.status ?? 'inactive';
-						const tokenDisplay = queue?.current_token?.token_display ?? '—';
+						const display = getPublicQueueZoneDisplay(queue, {
+							queueName: zone.queueChipNames[0] ?? zone.name,
+						});
 						const overlayW = Math.max(1, Math.round(zone.width * sf));
 						const overlayH = Math.max(1, Math.round(zone.height * sf));
 						const minSide = Math.min(overlayW, overlayH);
 						const nameSize = Math.max(14, Math.min(56, Math.round(minSide * 0.1)));
-						const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
+						const servingSize = Math.max(11, Math.min(28, Math.round(minSide * 0.055)));
 						const tokenSize = Math.max(18, Math.min(96, Math.round(minSide * 0.18)));
+						const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
 
 						return (
 							<div
@@ -559,9 +553,14 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 									<div
 										className='screen-zone-live-overlay__queue'
 										style={{ fontSize: nameSize }}>
-										{queueLabel}
+										{display.queueName}
 									</div>
-									{tokenDisplay === '—' ? (
+									<div
+										className='screen-zone-live-overlay__serving-point'
+										style={{ fontSize: servingSize }}>
+										{display.servingPointName}
+									</div>
+									{display.tokenDisplay === '—' ? (
 										<span
 											className='screen-zone-live-overlay__token-bar'
 											style={{ width: Math.max(24, Math.round(minSide * 0.2)) }}
@@ -570,13 +569,13 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 										<div
 											className='screen-zone-live-overlay__token'
 											style={{ fontSize: tokenSize }}>
-											{tokenDisplay}
+											{display.tokenDisplay}
 										</div>
 									)}
 									<div
 										className='screen-zone-live-overlay__status'
 										style={{ fontSize: statusSize }}>
-										{statusLabel}
+										{display.tokenStatus}
 									</div>
 								</div>
 							</div>

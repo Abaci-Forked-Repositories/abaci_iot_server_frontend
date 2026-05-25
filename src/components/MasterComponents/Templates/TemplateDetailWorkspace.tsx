@@ -11,7 +11,6 @@ import {
 	enrichParsedZonesWithConfiguration,
 	ensureFabricRectLeftTopOrigin,
 	normalizeFabricRectToCanvas,
-	normalizeZoneGeometryForCanvas,
 	readLogicalZoneGeometryFromFabric,
 	toFabricZoneGeometry,
 } from '../../../utils/parseTemplateZones';
@@ -348,6 +347,27 @@ function escapeHtml(value: string): string {
 		.replace(/"/g, '&quot;');
 }
 
+/** Visual center from Fabric aCoords — reliable for any origin/scale. */
+function getZoneRectCenter(rect: any): { x: number; y: number } {
+	rect.setCoords?.();
+	const tl = rect.aCoords?.tl;
+	const br = rect.aCoords?.br;
+	if (tl && br) {
+		return {
+			x: (tl.x + br.x) / 2,
+			y: (tl.y + br.y) / 2,
+		};
+	}
+	const scaleX = rect.scaleX ?? 1;
+	const scaleY = rect.scaleY ?? 1;
+	const width = (rect.width ?? 0) * scaleX;
+	const height = (rect.height ?? 0) * scaleY;
+	return {
+		x: (rect.left ?? 0) + width / 2,
+		y: (rect.top ?? 0) + height / 2,
+	};
+}
+
 function syncZoneQueueLabel(
 	fc: any,
 	rect: any,
@@ -369,13 +389,22 @@ function syncZoneQueueLabel(
 			.map((id) => queuesById.get(id)?.name ?? `Queue #${id}`)
 			.join('\n');
 
-		const fontSize = Math.max(10, Math.min(18, Math.round(12 * sf)));
+		const scaleX = rect.scaleX ?? 1;
+		const scaleY = rect.scaleY ?? 1;
+		const minSide = Math.min((rect.width ?? 0) * scaleX, (rect.height ?? 0) * scaleY);
+		const fontSize = Math.max(14, Math.min(48, Math.round(minSide * 0.08)));
+		const { x, y } = getZoneRectCenter(rect);
+
 		const text = new Text(labels, {
-			left: (rect.left ?? 0) + 6,
-			top: (rect.top ?? 0) + 6,
+			left: x,
+			top: y,
+			originX: 'center',
+			originY: 'center',
+			textAlign: 'center',
 			fontSize,
 			fill: '#ffffff',
 			fontFamily: 'system-ui, sans-serif',
+			fontWeight: 'bold',
 			lineHeight: 1.2,
 			selectable: false,
 			evented: false,
@@ -678,15 +707,30 @@ const TemplateDetailWorkspace: React.FC = () => {
 				const target = e.target;
 				if (isZoneRect(target)) {
 					constrainZoneToCanvas(target, fc);
+					const queueIds = resolveQueueIdsFromRect(
+						target as any,
+						queuesByUuidMulti,
+						queuesByName,
+					);
+					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
 				}
 			});
 			fc.on('object:scaling', (e: any) => {
 				const target = e.target;
 				if (isZoneRect(target)) {
 					constrainZoneToCanvas(target, fc);
+					const queueIds = resolveQueueIdsFromRect(
+						target as any,
+						queuesByUuidMulti,
+						queuesByName,
+					);
+					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
 				}
 			});
-			fc.on('object:removed', () => setCanvasObjects(getZoneRects(fc)));
+			fc.on('object:removed', () => {
+				setCanvasObjects(getZoneRects(fc));
+				refreshZoneQueueLabels();
+			});
 
 			fabricRef.current = fc;
 
@@ -696,6 +740,19 @@ const TemplateDetailWorkspace: React.FC = () => {
 					: templateDetails.configuration;
 
 			const fabricJson = configuration?.fabric_json;
+
+			const refreshZoneQueueLabels = () => {
+				if (queuesById.size === 0) return;
+				getZoneRects(fc).forEach((rect) => {
+					const queueIds = resolveQueueIdsFromRect(
+						rect as any,
+						queuesByUuidMulti,
+						queuesByName,
+					);
+					applyQueueRefsToRect(rect, queueIds, queuesById);
+					syncZoneQueueLabel(fc, rect, queueIds, queuesById, sf);
+				});
+			};
 
 			const finishLoad = () => {
 				(fc.getObjects?.() ?? [])
@@ -709,15 +766,9 @@ const TemplateDetailWorkspace: React.FC = () => {
 					// correct positions; constraining here was shifting the user's design.
 				});
 
+				refreshZoneQueueLabels();
 				fc.renderAll();
 				setCanvasObjects(getZoneRects(fc));
-				if (queuesById.size > 0) {
-					getZoneRects(fc).forEach((rect) => {
-						const queueIds = resolveQueueIdsFromRect(rect as any, queuesByUuidMulti, queuesByName);
-						applyQueueRefsToRect(rect, queueIds, queuesById);
-						syncZoneQueueLabel(fc, rect, queueIds, queuesById, sf);
-					});
-				}
 			};
 
 			const loadZoneRects = (
@@ -750,6 +801,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 							width,
 							height,
 							sf,
+							'clamp',
 						);
 						const rect = new Rect({
 							id: nanoid(),
@@ -778,19 +830,6 @@ const TemplateDetailWorkspace: React.FC = () => {
 							setZoneProps(BLANK_PROPS);
 						});
 						fc.add(rect);
-						if (queuesById.size > 0) {
-							const resolvedIds = resolveQueueIdsFromRect(
-								{
-									queueIds,
-									queueUuids,
-									queueChipNames,
-								},
-								queuesByUuidMulti,
-								queuesByName,
-							);
-							applyQueueRefsToRect(rect, resolvedIds, queuesById);
-							syncZoneQueueLabel(fc, rect, resolvedIds, queuesById, sf);
-						}
 					});
 					finishLoad();
 				});
@@ -820,7 +859,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 				loadZoneRects(
 					enrichedZones.map((zone) => {
-						const geom = normalizeZoneGeometryForCanvas(
+						const geom = clampZoneGeometryToCanvas(
 							{
 								left: zone.left,
 								top: zone.top,
@@ -847,7 +886,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			const mapSavedZonesToRects = () =>
 				loadZoneRects(
 					(savedZones ?? []).map((zone) => {
-						const geom = normalizeZoneGeometryForCanvas(
+						const geom = clampZoneGeometryToCanvas(
 							{
 								left: zone.left ?? 0,
 								top: zone.top ?? 0,
@@ -950,6 +989,14 @@ const TemplateDetailWorkspace: React.FC = () => {
 				setSelectedObject(null);
 				setZoneProps(BLANK_PROPS);
 				setCanvasObjects(getZoneRects(fc));
+				getZoneRects(fc).forEach((rect) => {
+					const queueIds = resolveQueueIdsFromRect(
+						rect as any,
+						queuesByUuidMulti,
+						queuesByName,
+					);
+					syncZoneQueueLabel(fc, rect, queueIds, queuesById, scalingFactor);
+				});
 			}
 		};
 		document.addEventListener('keydown', handler);
@@ -1399,7 +1446,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			overflow:hidden;
 		"
 	>
-		<div class="queue-zone-queues" style="position:absolute;inset:0;padding:8px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:2px;pointer-events:none;overflow:hidden;">
+		<div class="queue-zone-queues" style="position:absolute;inset:0;padding:8px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:2px;pointer-events:none;overflow:hidden;">
 			${chips}
 		</div>
 	</div>`;
