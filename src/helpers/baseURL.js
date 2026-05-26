@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://trademarks-inkjet-ind-sizes.trycloudflare.com';
+		return 'https://gasoline-seats-worm-ranges.trycloudflare.com';
 	}
 	return url;
 };

@@ -476,6 +476,52 @@
 	max-height: 100%;
 }
 
+.tdc-canvas-wrap {
+	position: relative;
+	overflow: hidden;
+
+	canvas {
+		display: block;
+	}
+}
+
+.tdc-zone-overlays {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.tdc-zone-theme-overlay {
+	position: absolute;
+	overflow: hidden;
+	pointer-events: none;
+	box-sizing: border-box;
+
+	.tdc {
+		width: 100%;
+		height: 100%;
+	}
+}
+
+// Zone appearance picker inside dark properties panel
+.tdc-panel .zone-appearance-picker {
+	.zone-appearance-picker__label,
+	.zone-appearance-picker__mode-option {
+		color: #cbd5e1;
+	}
+
+	.zone-appearance-picker__theme-name {
+		color: #e2e8f0;
+	}
+
+	.form-control.zone-appearance-picker__hex {
+		background: #0f1117;
+		border-color: rgba(#fff, 0.12);
+		color: #f1f5f9;
+	}
+}
+
 // Properties panel
 .tdc-panel {
 	width: 280px;

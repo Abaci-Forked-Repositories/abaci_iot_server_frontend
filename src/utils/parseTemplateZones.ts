@@ -11,6 +11,8 @@ export interface ParsedTemplateZone {
 	width: number;
 	height: number;
 	backgroundColor: string;
+	/** Token display theme slug when zone uses theme mode (not fill). */
+	displayTheme: string | null;
 	borderRadius: number;
 	borderColor: string;
 	border: boolean;
@@ -79,6 +81,11 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			.map((chip) => chip.textContent?.trim() ?? '')
 			.filter(Boolean);
 
+		const displayThemeAttr =
+			el.getAttribute('data-theme-id')?.trim() ||
+			el.getAttribute('data-display-theme')?.trim() ||
+			null;
+
 		zones.push({
 			name: el.getAttribute('data-zone-name') ?? '',
 			queueIds,
@@ -92,6 +99,7 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 				parseStyleValue(style, 'background') ??
 				parseStyleValue(style, 'background-color') ??
 				'#ffffff',
+			displayTheme: displayThemeAttr || null,
 			borderRadius: parsePx(parseStyleValue(style, 'border-radius')),
 			borderColor: borderMatch?.[1]?.trim() ?? 'black',
 			border: borderRaw !== '' && borderRaw !== 'none' && !/^0(?:px)?$/i.test(borderRaw),
@@ -423,6 +431,10 @@ export interface TemplateConfigurationZone {
 	queue_uuids?: string[];
 	queue_ids?: number[];
 	queue_names?: string[];
+	theme_id?: string | null;
+	/** @deprecated Use theme_id */
+	display_theme?: string | null;
+	background_color?: string | null;
 }
 
 export function parseTemplateConfiguration(
@@ -443,6 +455,28 @@ export function parseTemplateConfiguration(
 
 	return zones.map((zone: Record<string, unknown>) => ({
 		name: typeof zone.name === 'string' ? zone.name : '',
+		theme_id:
+			typeof zone.theme_id === 'string'
+				? zone.theme_id
+				: typeof zone.themeId === 'string'
+					? zone.themeId
+					: typeof zone.display_theme === 'string'
+						? zone.display_theme
+						: typeof zone.displayTheme === 'string'
+							? zone.displayTheme
+							: null,
+		display_theme:
+			typeof zone.display_theme === 'string'
+				? zone.display_theme
+				: typeof zone.displayTheme === 'string'
+					? zone.displayTheme
+					: null,
+		background_color:
+			typeof zone.background_color === 'string'
+				? zone.background_color
+				: typeof zone.backgroundColor === 'string'
+					? zone.backgroundColor
+					: null,
 		queue_uuids: Array.isArray(zone.queue_uuids)
 			? zone.queue_uuids.filter(
 					(uuid): uuid is string =>
@@ -484,7 +518,22 @@ export function enrichParsedZonesWithConfiguration(
 				? zone.queueChipNames
 				: (configZone.queue_names ?? []);
 
-		return { ...zone, queueUuids, queueIds, queueChipNames };
+		const displayTheme =
+			zone.displayTheme?.trim() ||
+			configZone.theme_id?.trim() ||
+			configZone.display_theme?.trim() ||
+			null;
+		const backgroundColor =
+			configZone.background_color?.trim() || zone.backgroundColor || '#ffffff';
+
+		return {
+			...zone,
+			queueUuids,
+			queueIds,
+			queueChipNames,
+			displayTheme: displayTheme || null,
+			backgroundColor,
+		};
 	});
 }
 

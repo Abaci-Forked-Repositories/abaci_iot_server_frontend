@@ -15,6 +15,8 @@ import {
 	getPublicQueueZoneDisplay,
 	type PublicQueueStatus,
 } from '../../../services/publicScreenApi';
+import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
+import { getZoneAppearanceFromParsedZone } from '../../../utils/zoneAppearanceFabric';
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
@@ -436,6 +438,13 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 				);
 
 			if (htmlLayout.zones.length > 0) {
+				// Public fullscreen display: HTML overlays only (TokenDisplayThemeCard).
+				// Fabric zone rects would paint flat fallback colors over themed UI.
+				if (fullScreen) {
+					finishLoad();
+					return;
+				}
+
 				const enrichedZones = enrichParsedZonesWithConfiguration(
 					htmlLayout.zones,
 					configuration,
@@ -472,6 +481,10 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 			}
 
 			if (Array.isArray(savedZones) && savedZones.length > 0) {
+				if (fullScreen) {
+					finishLoad();
+					return;
+				}
 				mapSavedZones();
 				return;
 			}
@@ -533,6 +546,36 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 						});
 						const overlayW = Math.max(1, Math.round(zone.width * sf));
 						const overlayH = Math.max(1, Math.round(zone.height * sf));
+						const overlayLeft = Math.round(zone.left * sf);
+						const overlayTop = Math.round(zone.top * sf);
+						const borderRadius = Math.round(zone.borderRadius * sf);
+
+						const appearance = getZoneAppearanceFromParsedZone(zone);
+
+						if (appearance.mode === 'theme' && appearance.displayTheme) {
+							return (
+								<div
+									key={`${zone.name}-${index}`}
+									className='screen-zone-live-overlay screen-zone-live-overlay--theme'
+									style={{
+										left: overlayLeft,
+										top: overlayTop,
+										width: overlayW,
+										height: overlayH,
+										borderRadius,
+									}}>
+									<TokenDisplayThemeCard
+										appearance={appearance}
+										queueName={display.queueName}
+										subtitle={display.servingPointName}
+										tokenDisplay={display.tokenDisplay}
+										status={display.tokenStatus}
+										fillContainer
+									/>
+								</div>
+							);
+						}
+
 						const minSide = Math.min(overlayW, overlayH);
 						const nameSize = Math.max(14, Math.min(56, Math.round(minSide * 0.1)));
 						const servingSize = Math.max(11, Math.min(28, Math.round(minSide * 0.055)));
@@ -544,10 +587,12 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 								key={`${zone.name}-${index}`}
 								className='screen-zone-live-overlay'
 								style={{
-									left: Math.round(zone.left * sf),
-									top: Math.round(zone.top * sf),
+									left: overlayLeft,
+									top: overlayTop,
 									width: overlayW,
 									height: overlayH,
+									background: zone.backgroundColor,
+									borderRadius,
 								}}>
 								<div className='screen-zone-live-overlay__content'>
 									<div

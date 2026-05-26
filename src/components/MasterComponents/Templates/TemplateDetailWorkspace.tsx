@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { nanoid } from 'nanoid';
-import { SketchPicker, type ColorResult } from 'react-color';
 import { templatesApi, type Template } from '../../../services/templatesApi';
 import { queuesApi, type Queue } from '../../../services/queueManagementApi';
 import {
@@ -14,16 +13,39 @@ import {
 	readLogicalZoneGeometryFromFabric,
 	toFabricZoneGeometry,
 } from '../../../utils/parseTemplateZones';
+import {
+	FABRIC_ZONE_APPEARANCE_PROPS,
+	applyZoneAppearanceToRect,
+	captureTemplateThumbnailFromFabric,
+	getZoneAppearanceFromRect,
+	getZoneAppearanceFromSavedZone,
+	themeFallbackBackgroundColor,
+} from '../../../utils/zoneAppearanceFabric';
+import {
+	ZoneDisplayThemePicker,
+	getZoneAppearanceFromSaved,
+	parseDisplayThemeId,
+	serializeZoneAppearance,
+	type ZoneDisplayAppearance,
+} from '../TokenDisplayThemes';
 import PreviewTvFrame from '../../StandardTvFrame/PreviewTvFrame';
 import Spinner from '../../bootstrap/Spinner';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
+import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
-const FABRIC_CUSTOM_PROPS = ['name', 'queueId', 'queueIds', 'queueUuids', 'queueChipNames'];
+const FABRIC_CUSTOM_PROPS = [
+	'name',
+	'queueId',
+	'queueIds',
+	'queueUuids',
+	'queueChipNames',
+	...FABRIC_ZONE_APPEARANCE_PROPS,
+];
 const QUEUE_UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -380,6 +402,11 @@ function syncZoneQueueLabel(
 			.filter((o: any) => o[ZONE_LABEL_FOR_KEY] === rect.id)
 			.forEach((o: any) => fc.remove(o));
 
+		if (getZoneAppearanceFromRect(rect).mode === 'theme') {
+			fc.renderAll();
+			return;
+		}
+
 		if (!queueIds.length) {
 			fc.renderAll();
 			return;
@@ -446,6 +473,7 @@ interface ParsedHtmlZone {
 	width: number;
 	height: number;
 	backgroundColor: string;
+	displayTheme: string | null;
 	borderRadius: number;
 	borderColor: string;
 	border: boolean;
@@ -490,6 +518,7 @@ function parseTemplateHtml(html: string): {
 				parseStyleValue(style, 'background') ??
 				parseStyleValue(style, 'background-color') ??
 				'#ffffff',
+			displayTheme: el.getAttribute('data-display-theme')?.trim() || null,
 			borderRadius: parsePx(parseStyleValue(style, 'border-radius')),
 			borderColor: borderMatch?.[1]?.trim() ?? 'black',
 			border: borderRaw !== '' && borderRaw !== 'none' && !/^0(?:px)?$/i.test(borderRaw),
@@ -510,6 +539,9 @@ interface SavedZoneConfig {
 	width?: number;
 	height?: number;
 	backgroundColor?: string;
+	theme_id?: string | null;
+	display_theme?: string | null;
+	background_color?: string | null;
 	border?: number;
 	borderRadius?: number;
 	borderColor?: string;
@@ -538,8 +570,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 	// Zone properties panel
 	const [zoneProps, setZoneProps] = useState<ZoneProps>(BLANK_PROPS);
-	const [fillColor, setFillColor] = useState('white');
-	const [showFillPicker, setShowFillPicker] = useState(false);
+	const [zoneAppearance, setZoneAppearance] = useState<ZoneDisplayAppearance>({
+		mode: 'fill',
+		displayTheme: null,
+		backgroundColor: '#ffffff',
+	});
+	const [overlayRevision, setOverlayRevision] = useState(0);
+	const bumpOverlayRevision = useCallback(() => setOverlayRevision((n) => n + 1), []);
 	const [nameError, setNameError] = useState(false);
 	const [queues, setQueues] = useState<Queue[]>([]);
 	const [queuesLoading, setQueuesLoading] = useState(false);
@@ -575,31 +612,48 @@ const TemplateDetailWorkspace: React.FC = () => {
 		refreshAllZoneLabels();
 	}, [refreshAllZoneLabels, templateDetails]);
 
-	const applyFillColor = useCallback(
-		(nextColor: string) => {
-			setFillColor(nextColor);
+	const applyZoneAppearance = useCallback(
+		(next: ZoneDisplayAppearance) => {
+			setZoneAppearance(next);
 			if (!fabricRef.current) return;
 			const fc = fabricRef.current;
 			const active = fc.getActiveObject?.();
 			const target = active ?? selectedObject;
 			if (!target || !isZoneRect(target)) return;
-			if (target.type === 'activeSelection' && Array.isArray(target._objects)) {
-				target._objects.forEach((obj: any) => obj.set('fill', nextColor));
+
+			const stroke = target.stroke ?? null;
+			applyZoneAppearanceToRect(target, next, stroke);
+
+			const fillColor =
+				next.mode === 'fill' ? (next.backgroundColor ?? '#ffffff') : 'theme';
+			setZoneProps((s) => ({ ...s, color: fillColor }));
+
+			if (next.mode === 'theme') {
+				(fc.getObjects?.() ?? [])
+					.filter((o: any) => o[ZONE_LABEL_FOR_KEY] === target.id)
+					.forEach((o: any) => fc.remove(o));
 			} else {
-				target.set('fill', nextColor);
+				const queueIds = resolveQueueIdsFromRect(
+					target as any,
+					queuesByUuidMulti,
+					queuesByName,
+				);
+				syncZoneQueueLabel(fc, target, queueIds, queuesById, scalingFactor);
 			}
-			setZoneProps((s) => ({ ...s, color: nextColor }));
+
+			bumpOverlayRevision();
 			fc.requestRenderAll?.();
 			fc.renderAll();
 		},
-		[selectedObject],
+		[
+			selectedObject,
+			queuesById,
+			queuesByUuidMulti,
+			queuesByName,
+			scalingFactor,
+			bumpOverlayRevision,
+		],
 	);
-
-	const getPickerColorString = (color: ColorResult) => {
-		const rawAlpha = color.rgb.a ?? 1;
-		const alpha = rawAlpha > 1 ? rawAlpha / 100 : rawAlpha;
-		return alpha >= 1 ? color.hex : `rgba(${color.rgb.r},${color.rgb.g},${color.rgb.b},${alpha})`;
-	};
 
 	// ─── Load template ───────────────────────────────────────────────────────
 	// If the list page already passed the template via router state we skip the
@@ -688,7 +742,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			fc.on('selection:cleared', () => {
 				setSelectedObject(null);
 				setZoneProps(BLANK_PROPS);
-				setFillColor('white');
+				setZoneAppearance({ mode: 'fill', displayTheme: null, backgroundColor: '#ffffff' });
 			});
 			fc.on('object:added', () => setCanvasObjects(getZoneRects(fc)));
 			fc.on('object:modified', (e: any) => {
@@ -698,6 +752,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 					constrainZoneToCanvas(target, fc);
 					const queueIds = resolveQueueIdsFromRect(target as any, queuesByUuidMulti, queuesByName);
 					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
+					setOverlayRevision((n) => n + 1);
 				}
 				setSelectedObject(null);
 				setSelectedObject(isZoneRect(target) ? target : null);
@@ -713,6 +768,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						queuesByName,
 					);
 					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
+					setOverlayRevision((n) => n + 1);
 				}
 			});
 			fc.on('object:scaling', (e: any) => {
@@ -725,6 +781,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						queuesByName,
 					);
 					syncZoneQueueLabel(fc, target, queueIds, queuesById, sf);
+					setOverlayRevision((n) => n + 1);
 				}
 			});
 			fc.on('object:removed', () => {
@@ -762,6 +819,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 				getZoneRects(fc).forEach((rect) => {
 					ensureFabricRectLeftTopOrigin(rect);
 					attachZoneRectHandlers(rect, fc);
+					const appearance = getZoneAppearanceFromRect(rect);
+					applyZoneAppearanceToRect(rect, appearance, rect.stroke ?? 'black');
 					// Do not constrain on load — fabric_json / saved zones already have
 					// correct positions; constraining here was shifting the user's design.
 				});
@@ -769,6 +828,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 				refreshZoneQueueLabels();
 				fc.renderAll();
 				setCanvasObjects(getZoneRects(fc));
+				setOverlayRevision((n) => n + 1);
 			};
 
 			const loadZoneRects = (
@@ -781,7 +841,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 					top: number;
 					width: number;
 					height: number;
-					fill: string;
+					appearance: ZoneDisplayAppearance;
 					stroke?: string | null;
 					rx?: number;
 				}[],
@@ -816,7 +876,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 							height: fabricGeom.height,
 							left: fabricGeom.left,
 							top: fabricGeom.top,
-							fill: zone.fill,
+							fill:
+								zone.appearance.mode === 'fill'
+									? (zone.appearance.backgroundColor ?? '#ffffff')
+									: 'rgba(0,0,0,0.2)',
+							displayTheme:
+								zone.appearance.mode === 'theme' ? zone.appearance.displayTheme : null,
+							zoneFillColor: zone.appearance.backgroundColor,
 							stroke: zone.stroke ?? 'black',
 							strokeUniform: true,
 							lockScalingFlip: true,
@@ -825,6 +891,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 							rx: (zone.rx ?? 0) * sf,
 							ry: (zone.rx ?? 0) * sf,
 						});
+						applyZoneAppearanceToRect(rect, zone.appearance, zone.stroke ?? 'black');
 						rect.on('deselected', () => {
 							setSelectedObject(null);
 							setZoneProps(BLANK_PROPS);
@@ -832,6 +899,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						fc.add(rect);
 					});
 					finishLoad();
+					setOverlayRevision((n) => n + 1);
 				});
 			};
 
@@ -840,20 +908,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 			const mapHtmlZonesToRects = () => {
 				const enrichedZones = enrichParsedZonesWithConfiguration(
-					(parsedHtml?.zones ?? []).map((zone) => ({
-						name: zone.name,
-						queueIds: zone.queueIds,
-						queueUuids: zone.queueUuids,
-						queueChipNames: zone.queueChipNames,
-						left: zone.left,
-						top: zone.top,
-						width: zone.width,
-						height: zone.height,
-						backgroundColor: zone.backgroundColor,
-						borderRadius: zone.borderRadius,
-						borderColor: zone.borderColor,
-						border: zone.border,
-					})),
+					parsedHtml?.zones ?? [],
 					configuration,
 				);
 
@@ -869,13 +924,17 @@ const TemplateDetailWorkspace: React.FC = () => {
 							width,
 							height,
 						);
+						const appearance = getZoneAppearanceFromSaved({
+							display_theme: zone.displayTheme,
+							background_color: zone.displayTheme ? null : zone.backgroundColor,
+						});
 						return {
 							name: zone.name,
 							queueIds: zone.queueIds.slice(0, 1),
 							queueUuids: zone.queueUuids.slice(0, 1),
 							queueChipNames: zone.queueChipNames.slice(0, 1),
 							...geom,
-							fill: zone.backgroundColor,
+							appearance,
 							stroke: zone.border ? zone.borderColor : null,
 							rx: zone.borderRadius,
 						};
@@ -896,6 +955,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 							width,
 							height,
 						);
+						const appearance = getZoneAppearanceFromSavedZone(zone);
 						return {
 							name: zone.name,
 							queueIds:
@@ -904,7 +964,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 							queueUuids: zone.queue_uuids ?? [],
 							queueChipNames: zone.queue_names ?? [],
 							...geom,
-							fill: zone.backgroundColor ?? '#ffffff',
+							appearance,
 							stroke: zone.border ? zone.borderColor ?? 'black' : null,
 							rx: zone.borderRadius ?? 0,
 						};
@@ -951,7 +1011,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		if (!selectedObject) return;
 		setNameError(false);
-		setFillColor(selectedObject.fill ?? 'white');
+		const appearance = getZoneAppearanceFromRect(selectedObject);
+		setZoneAppearance(appearance);
 		const geom = readLogicalZoneGeometryFromFabric(selectedObject, scalingFactor);
 		setZoneProps({
 			containerName: selectedObject.name ?? '',
@@ -961,22 +1022,14 @@ const TemplateDetailWorkspace: React.FC = () => {
 			height: geom.height,
 			left: geom.left,
 			top: geom.top,
-			color: selectedObject.fill ?? 'white',
+			color:
+				appearance.mode === 'fill'
+					? (appearance.backgroundColor ?? '#ffffff')
+					: 'theme',
 			radius: Math.round((selectedObject.rx ?? 0) / scalingFactor),
 			borderColor: selectedObject.stroke ?? 'rgba(255,255,255,0)',
 		});
 	}, [selectedObject, scalingFactor, canvasObjects, queuesByUuidMulti, queuesByName]);
-
-	// ─── Sync fill colour back to canvas ─────────────────────────────────────
-
-	useEffect(() => {
-		if (!selectedObject || !fabricRef.current || !isZoneRect(selectedObject)) return;
-		selectedObject.set({ fill: fillColor });
-		setZoneProps((s) => ({ ...s, color: fillColor }));
-		fabricRef.current.requestRenderAll?.();
-		fabricRef.current.renderAll();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fillColor]);
 
 	// ─── Delete key handler ───────────────────────────────────────────────────
 
@@ -1037,8 +1090,9 @@ const TemplateDetailWorkspace: React.FC = () => {
 			constrainZoneToCanvas(selectedObject, fc);
 			fc.renderAll();
 			setZoneProps((s) => ({ ...s, [type]: (s[type] as number) + delta }));
+			bumpOverlayRevision();
 		},
-		[selectedObject, scalingFactor, zoneProps.radius],
+		[selectedObject, scalingFactor, zoneProps.radius, bumpOverlayRevision],
 	);
 
 	const arrangeLayer = useCallback(
@@ -1108,9 +1162,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 			applyQueueRefsToRect(selectedObject, uniqueIds, queuesById);
 			setZoneProps((s) => ({ ...s, queueIds: uniqueIds }));
 			syncZoneQueueLabel(fc, selectedObject, uniqueIds, queuesById, scalingFactor);
+			bumpOverlayRevision();
 			fc.renderAll();
 		},
-		[selectedObject, queuesById, scalingFactor],
+		[selectedObject, queuesById, scalingFactor, bumpOverlayRevision],
 	);
 
 	const handleZoneQueueChange = (value: string) => {
@@ -1136,6 +1191,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			const startLeft = Math.max(0, (fc.width - zoneCanvasSize) / 2);
 			const startTop = Math.max(0, (fc.height - zoneCanvasSize) / 2);
 
+			const initialFill = randomHex();
 			const rect = new Rect({
 				id: nanoid(),
 				name: '',
@@ -1148,7 +1204,9 @@ const TemplateDetailWorkspace: React.FC = () => {
 				height: zoneCanvasSize,
 				left: startLeft,
 				top: startTop,
-				fill: randomHex(),
+				fill: initialFill,
+				displayTheme: null,
+				zoneFillColor: initialFill,
 				stroke: 'black',
 				strokeUniform: true,
 				lockScalingFlip: true,
@@ -1164,6 +1222,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			constrainZoneToCanvas(rect, fc);
 			fc.setActiveObject(rect);
 			fc.renderAll();
+			setOverlayRevision((n) => n + 1);
 		});
 	}, [templateDetails, scalingFactor]);
 
@@ -1340,6 +1399,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 				);
 				const queueIds = resolveQueueIdsFromRect(obj as any, queuesByUuidMulti, queuesByName);
 				const queueUuids = queueIdsToUuids(queueIds, queuesById);
+				const appearance = getZoneAppearanceFromRect(obj);
+				const { theme_id, background_color } = serializeZoneAppearance(appearance);
+				const themeId = parseDisplayThemeId(theme_id);
+				const htmlBackground =
+					themeId != null
+						? themeFallbackBackgroundColor(themeId)
+						: background_color || obj.zoneFillColor || obj.fill || '#ffffff';
 
 				return {
 					id: idx + 1,
@@ -1363,7 +1429,9 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 					height: geom.height,
 
-					backgroundColor: obj.fill || '#ffffff',
+					theme_id,
+					background_color,
+					backgroundColor: htmlBackground,
 
 					border: obj.stroke ? 1 : 0,
 
@@ -1423,6 +1491,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 					.map((zone) => {
 						const queueUuids: string[] = (zone.queue_uuids ?? []).slice(0, 1);
 						const queueName: string = (zone.queue_names ?? [])[0] ?? '';
+						const themeSlug =
+							typeof zone.theme_id === 'string' && zone.theme_id.trim()
+								? zone.theme_id.trim()
+								: '';
+						const themeAttr = themeSlug
+							? ` data-theme-id="${escapeHtml(themeSlug)}"`
+							: '';
 						const chips = queueName
 							? `<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(queueName)}</span>`
 							: '';
@@ -1431,7 +1506,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 	<div
 		class="queue-zone"
 		data-queue-ids="${queueUuids.join(',')}"
-		data-zone-name="${escapeHtml(zone.name ?? '')}"
+		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}
 		style="
 			position:absolute;
 			left:${zone.left}px;
@@ -1473,12 +1548,11 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 			// ----------------------------------------
 			// GENERATE THUMBNAIL
+			// Theme zones render via HTML overlays — paint real colors on Fabric
+			// rects briefly so the list thumbnail matches saved html_content.
 			// ----------------------------------------
 
-			const png = fc.toDataURL({
-				format: 'png',
-				quality: 1,
-			});
+			const png = captureTemplateThumbnailFromFabric(fc, zoneRects, zones);
 
 			const blob = await (await fetch(png)).blob();
 
@@ -1622,7 +1696,16 @@ const TemplateDetailWorkspace: React.FC = () => {
 							screenHeight={canvasHeight}
 							portrait={isPortrait}
 							flicker>
-							<canvas id='tpl-detail-canvas' ref={canvasRef} />
+							<div
+								className='tdc-canvas-wrap'
+								style={{ width: canvasWidth, height: canvasHeight }}>
+								<canvas id='tpl-detail-canvas' ref={canvasRef} />
+								<TemplateZoneThemeOverlays
+									zones={canvasObjects}
+									queuesById={queuesById}
+									revision={overlayRevision}
+								/>
+							</div>
 						</PreviewTvFrame>
 					</div>
 
@@ -1680,33 +1763,19 @@ const TemplateDetailWorkspace: React.FC = () => {
 								{/* Appearance */}
 								<div className='tdc-prop-section'>
 									<div className='tdc-prop-section-label'>Appearance</div>
-									<div className='tdc-color-row'>
-										<span className='tdc-color-label'>Fill Color</span>
-										<button
-											type='button'
-											className='tdc-color-toggle'
-											onClick={() => setShowFillPicker((p) => !p)}>
-											<span
-												className='tdc-color-swatch'
-												style={{ background: zoneProps.color }}
-											/>
-										</button>
-									</div>
-									{showFillPicker && (
-										<div className='tdc-picker-popover'>
-											<div
-												className='tdc-picker-overlay'
-												onClick={() => setShowFillPicker(false)}
-											/>
-											<div className='tdc-picker-panel'>
-												<SketchPicker
-													color={fillColor}
-													onChange={(c) => applyFillColor(getPickerColorString(c))}
-													onChangeComplete={(c) => applyFillColor(getPickerColorString(c))}
-												/>
-											</div>
-										</div>
-									)}
+									<ZoneDisplayThemePicker
+										value={zoneAppearance}
+										onChange={applyZoneAppearance}
+										previewQueueName={
+											zoneProps.queueIds[0] != null
+												? (queuesById.get(zoneProps.queueIds[0])?.name ??
+													`Queue #${zoneProps.queueIds[0]}`)
+												: zoneProps.containerName || 'Queue'
+										}
+										previewSubtitle=''
+										previewTokenDisplay='05'
+										previewStatus='waiting'
+									/>
 
 									<div className='tdc-stepper-group' style={{ marginTop: '0.6rem' }}>
 										<span className='tdc-stepper-label'>Border Radius</span>

@@ -2,8 +2,9 @@
  * Zone display appearance — fill color OR a named token display theme.
  *
  * Backend (per zone, when integrated):
- *   - `display_theme`: string slug e.g. `"deep-blue"` | null
+ *   - `theme_id`: string slug e.g. `"deep-blue"` | null
  *   - `background_color`: CSS color when using fill mode | null
+ *   - `display_theme` / `data-display-theme` — legacy, still read
  *
  * Rules: exactly one visual mode. Theme mode clears fill; fill mode clears theme id.
  */
@@ -26,7 +27,7 @@ export type ZoneAppearanceMode = 'fill' | 'theme';
 
 export interface ZoneDisplayAppearance {
 	mode: ZoneAppearanceMode;
-	/** Set when mode === 'theme'. Persisted as `display_theme`. */
+	/** Set when mode === 'theme'. Persisted as `theme_id`. */
 	displayTheme: ZoneDisplayThemeId | null;
 	/** Set when mode === 'fill'. Persisted as `background_color`. */
 	backgroundColor: string | null;
@@ -129,9 +130,11 @@ export function isDisplayThemeId(
 
 /** Build appearance from saved zone fields (API / configuration.zones). */
 export function getZoneAppearanceFromSaved(saved: {
+	theme_id?: string | null;
+	themeId?: string | null;
 	display_theme?: string | null;
 	displayTheme?: string | null;
-	/** @deprecated Use display_theme — still read for older saves */
+	/** @deprecated Use theme_id — still read for older saves */
 	display_template?: string | null;
 	/** @deprecated Use displayTheme */
 	displayTemplate?: string | null;
@@ -139,6 +142,8 @@ export function getZoneAppearanceFromSaved(saved: {
 	backgroundColor?: string | null;
 }): ZoneDisplayAppearance {
 	const themeRaw =
+		saved.theme_id ??
+		saved.themeId ??
 		saved.display_theme ??
 		saved.displayTheme ??
 		saved.display_template ??
@@ -163,17 +168,17 @@ export function getZoneAppearanceFromSaved(saved: {
 
 /** Payload shape for saving a zone (snake_case for Django-style APIs). */
 export function serializeZoneAppearance(appearance: ZoneDisplayAppearance): {
-	display_theme: string | null;
+	theme_id: string | null;
 	background_color: string | null;
 } {
 	if (appearance.mode === 'theme' && appearance.displayTheme) {
 		return {
-			display_theme: appearance.displayTheme,
+			theme_id: appearance.displayTheme,
 			background_color: null,
 		};
 	}
 	return {
-		display_theme: null,
+		theme_id: null,
 		background_color: appearance.backgroundColor?.trim() || null,
 	};
 }
