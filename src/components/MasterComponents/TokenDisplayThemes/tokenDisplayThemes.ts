@@ -9,16 +9,26 @@
  * Rules: exactly one visual mode. Theme mode clears fill; fill mode clears theme id.
  */
 
-/** Built-in theme ids — stable slugs stored in the database. */
+/**
+ * Built-in theme ids — stable slugs stored in the database.
+ *
+ * Each slug maps to a genuinely different visual design in _token-display-theme.scss:
+ *   digital-crimson  — dark crimson + sweep animation + split token/status layout
+ *   onyx-gold        — pure black + liquid-gold top rule + gold token
+ *   crimson-banner   — two-tone crimson header band / deep-navy body
+ *   imperial-court   — emerald stripes + gold rules framing royal magenta
+ *   arctic-white     — clean bright white + cobalt token + dark text
+ *
+ * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
+ * midnight, royal-purple, slate) are no longer active. Saved zones that still
+ * reference them fall back to fill mode gracefully.
+ */
 export const ZONE_DISPLAY_THEME_IDS = [
-	'deep-blue',
-	'high-contrast',
-	'amber',
-	'emerald',
-	'crimson',
-	'midnight',
-	'royal-purple',
-	'slate',
+	'digital-crimson',
+	'onyx-gold',
+	'crimson-banner',
+	'imperial-court',
+	'arctic-white',
 ] as const;
 
 export type ZoneDisplayThemeId = (typeof ZONE_DISPLAY_THEME_IDS)[number];
@@ -34,7 +44,7 @@ export interface ZoneDisplayAppearance {
 }
 
 /** Default theme when neither fill nor theme is configured. */
-export const DEFAULT_ZONE_DISPLAY_THEME: ZoneDisplayThemeId = 'deep-blue';
+export const DEFAULT_ZONE_DISPLAY_THEME: ZoneDisplayThemeId = 'digital-crimson';
 
 export type ZoneDisplayTextColor = 'light' | 'dark';
 
@@ -50,61 +60,41 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 	ZoneDisplayThemeId,
 	ZoneDisplayThemeConfig
 > = {
-	'deep-blue': {
-		id: 'deep-blue',
-		label: 'Deep Blue',
-		description: 'Dark navy gradient — elegant and professional',
+	'digital-crimson': {
+		id: 'digital-crimson',
+		label: 'Digital Crimson',
+		description: 'Dark crimson with scan-line animation and split token/status layout',
 		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #1e3a5f 0%, #0d1b3e 60%, #080f20 100%)',
+		previewGradient: 'linear-gradient(145deg, #6d0b0b 0%, #3a0404 55%, #180000 100%)',
 	},
-	'high-contrast': {
-		id: 'high-contrast',
-		label: 'High Contrast',
-		description: 'Platinum silver — maximum readability',
+	'onyx-gold': {
+		id: 'onyx-gold',
+		label: 'Onyx Gold',
+		description: 'Pure black with liquid-gold token — luxury premium',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(160deg, #1a1200 0%, #000000 50%)',
+	},
+	'crimson-banner': {
+		id: 'crimson-banner',
+		label: 'Crimson Banner',
+		description: 'Bold crimson header band over deep navy — authoritative',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(180deg, #D90429 0% 45%, #112233 45% 100%)',
+	},
+	'imperial-court': {
+		id: 'imperial-court',
+		label: 'Imperial Court',
+		description: 'Emerald & gold stripes framing royal magenta — premium',
+		textColor: 'light',
+		previewGradient:
+			'linear-gradient(to bottom, #004b23 0% 14%, #d4af37 14% 17%, #7209b7 17% 83%, #d4af37 83% 86%, #004b23 86% 100%)',
+	},
+	'arctic-white': {
+		id: 'arctic-white',
+		label: 'Arctic White',
+		description: 'Clean white with cobalt-blue token — maximum readability',
 		textColor: 'dark',
-		previewGradient: 'linear-gradient(145deg, #e8edf2 0%, #c8d0da 55%, #a8b5c2 100%)',
-	},
-	amber: {
-		id: 'amber',
-		label: 'Amber',
-		description: 'Dark copper/amber — warm and distinctive',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #4a2200 0%, #2a1000 60%, #140800 100%)',
-	},
-	emerald: {
-		id: 'emerald',
-		label: 'Emerald',
-		description: 'Deep forest green — calm and natural',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #0d3320 0%, #061a10 60%, #030d08 100%)',
-	},
-	crimson: {
-		id: 'crimson',
-		label: 'Crimson',
-		description: 'Deep crimson — bold and urgent',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #4a0a0a 0%, #2a0505 60%, #140202 100%)',
-	},
-	midnight: {
-		id: 'midnight',
-		label: 'Midnight',
-		description: 'Pure dark — minimal and bold',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #1a1a2e 0%, #0f0f1e 60%, #06060e 100%)',
-	},
-	'royal-purple': {
-		id: 'royal-purple',
-		label: 'Royal Purple',
-		description: 'Deep violet — modern and premium',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #2e0d4a 0%, #170625 60%, #0a0212 100%)',
-	},
-	slate: {
-		id: 'slate',
-		label: 'Slate',
-		description: 'Charcoal slate — neutral and versatile',
-		textColor: 'light',
-		previewGradient: 'linear-gradient(145deg, #2d3748 0%, #1a202c 60%, #0d1117 100%)',
+		previewGradient: 'linear-gradient(160deg, #ffffff 0%, #e8f0fb 100%)',
 	},
 };
 
@@ -347,6 +337,43 @@ export function computeTokenDisplayFillBaseFontSize(
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, 48);
 
+	return Math.round(Math.max(5, base));
+}
+
+/**
+ * Base font-size (px) for the `digital-crimson` fill layout which uses CSS Grid:
+ *   - Row 1: full-width header (queue name)
+ *   - Row 2 left (58%): serving-point subtitle + token number
+ *   - Row 2 right (42%): status badge (flex-column: icon stacked above label)
+ *
+ * The formula accounts for each column's effective width so the token never
+ * overflows the left column and the status badge never overflows the right column.
+ */
+export function computeDigitalCrimsonFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	// Grid header (~1.5em) + two-column body row (~4em) ≈ 5.5em total
+	const LAYOUT_EM = 5.5;
+	// Effective left-column fraction after column padding (58% - padding ≈ 55%)
+	const TOKEN_COL = 0.55;
+	// Empirical divisor so the widest status word ("Postponed", 9 chars) fits
+	// in the 42% right column with badge padding (factor verified numerically)
+	const STATUS_FACTOR = 4.8;
+
+	const fromHeight = h / LAYOUT_EM;
+	const fromMinSide = Math.min(w, h) / LAYOUT_EM;
+	const fromTokenWidth =
+		(w * TOKEN_COL) / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.62 + 1.6);
+	// Status column: badge font is 0.66em of root, label is 0.88em of badge
+	const fromStatusWidth = (w * 0.42) / STATUS_FACTOR;
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, fromStatusWidth, 48);
 	return Math.round(Math.max(5, base));
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
+	computeDigitalCrimsonFillBaseFontSize,
 	computeTokenDisplayFillBaseFontSize,
 	getStatusConfig,
 	getZoneAppearanceFromSaved,
@@ -89,12 +90,17 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		const el = rootRef.current;
 		if (!el) return;
 
+		const isDigitalCrimson = resolved.themeClass === 'tdc--digital-crimson';
+
 		const applyScale = () => {
 			const width = el.clientWidth;
 			const height = el.clientHeight;
 			if (width < 1 || height < 1) return;
 			const tokenLen = displayToken.length;
-			el.style.fontSize = `${computeTokenDisplayFillBaseFontSize(width, height, tokenLen)}px`;
+			const fontSize = isDigitalCrimson
+				? computeDigitalCrimsonFillBaseFontSize(width, height, tokenLen)
+				: computeTokenDisplayFillBaseFontSize(width, height, tokenLen);
+			el.style.fontSize = `${fontSize}px`;
 		};
 
 		applyScale();
@@ -110,7 +116,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			observer.disconnect();
 			el.style.fontSize = '';
 		};
-	}, [fillContainer, displayToken]);
+	}, [fillContainer, displayToken, resolved.themeClass]);
 
 	return (
 		<div ref={rootRef} className={rootClasses} style={{ ...inlineStyle, ...style }}>

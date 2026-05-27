@@ -50,17 +50,14 @@ export function getZoneAppearanceFromRect(rect: {
 
 /** Representative solid color for HTML thumbnail / list when zone uses a theme. */
 export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): string {
-	const gradients: Record<ZoneDisplayThemeId, string> = {
-		'deep-blue': '#1e3a5f',
-		'high-contrast': '#c8d0da',
-		amber: '#4a2200',
-		emerald: '#0d3320',
-		crimson: '#4a0a0a',
-		midnight: '#1a1a2e',
-		'royal-purple': '#2e0d4a',
-		slate: '#2d3748',
+	const fallbacks: Record<ZoneDisplayThemeId, string> = {
+		'digital-crimson': '#3a0404',
+		'onyx-gold': '#000000',
+		'crimson-banner': '#112233',
+		'imperial-court': '#1a0530',
+		'arctic-white': '#ffffff',
 	};
-	return gradients[themeId];
+	return fallbacks[themeId];
 }
 
 export function applyZoneAppearanceToRect(
