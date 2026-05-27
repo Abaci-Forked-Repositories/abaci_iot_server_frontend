@@ -201,6 +201,11 @@ export function createThemeAppearance(
 	};
 }
 
+/** Theme mode requires a chosen swatch before save. */
+export function isZoneThemeSelectionComplete(appearance: ZoneDisplayAppearance): boolean {
+	return appearance.mode !== 'theme' || appearance.displayTheme != null;
+}
+
 // ─── Resolved card rendering (theme class vs fill background) ─────────────────
 
 export interface ResolvedZoneCardStyle {
@@ -309,5 +314,55 @@ export function getStatusConfig(status?: string | null): TokenStatusDisplayConfi
 	);
 }
 
-export const TOKEN_DISPLAY_DEFAULT_SERVING_LABEL = 'CURRENT VISITOR';
 export const TOKEN_DISPLAY_NO_TOKEN = '—';
+
+/**
+ * Token size in fill-container mode (see `.tdc--fill .tdc__token` in SCSS).
+ * Keep in sync with TOKEN_DISPLAY_FILL_LAYOUT_EM.
+ */
+export const TOKEN_DISPLAY_FILL_TOKEN_EM = 3;
+
+/** Header + token + footer + gaps ≈ this many `em` vertically in fill mode. */
+export const TOKEN_DISPLAY_FILL_LAYOUT_EM = 7;
+
+/**
+ * Base font-size (px) for `.tdc--fill` so queue/token/badge fit inside the zone box.
+ * Uses height, width, and token length so shrinking either dimension reduces text.
+ */
+export function computeTokenDisplayFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const fromHeight = h / TOKEN_DISPLAY_FILL_LAYOUT_EM;
+	// Shrink when either width or height gets smaller (not only the shorter axis at the end).
+	const fromMinSide = Math.min(w, h) / TOKEN_DISPLAY_FILL_LAYOUT_EM;
+	// Bold digits ≈ 0.62 × (token em) × char count.
+	const fromTokenWidth =
+		w / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.62 + 1.6);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, 48);
+
+	return Math.round(Math.max(5, base));
+}
+
+/** Pixel font sizes for fill-color zone overlays (Fabric canvas fallback). */
+export function computeFillZoneTextSizes(
+	width: number,
+	height: number,
+	tokenLength = 2,
+) {
+	const base = computeTokenDisplayFillBaseFontSize(width, height, tokenLength);
+	return {
+		base,
+		queueName: Math.round(base),
+		subtitle: Math.round(base * 0.9),
+		token: Math.round(base * TOKEN_DISPLAY_FILL_TOKEN_EM),
+		status: Math.round(base * 0.75),
+		gap: Math.max(4, Math.round(base * 0.12)),
+	};
+}

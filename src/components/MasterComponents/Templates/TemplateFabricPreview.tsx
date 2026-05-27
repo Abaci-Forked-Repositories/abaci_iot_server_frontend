@@ -16,7 +16,11 @@ import {
 	type PublicQueueStatus,
 } from '../../../services/publicScreenApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
-import { getZoneAppearanceFromParsedZone } from '../../../utils/zoneAppearanceFabric';
+import { computeFillZoneTextSizes } from '../TokenDisplayThemes/tokenDisplayThemes';
+import {
+	getZoneAppearanceFromParsedZone,
+	getZoneAppearanceFromRect,
+} from '../../../utils/zoneAppearanceFabric';
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
@@ -30,6 +34,26 @@ export interface TemplateFabricPreviewProps {
 	className?: string;
 	/** Public signage view: fill the host, no TV bezel frame. Default keeps PreviewTvFrame. */
 	fullScreen?: boolean;
+}
+
+/** Map template logical coords → % of viewport (responsive to width and height). */
+function toViewportPercentZoneStyle(
+	zone: { left: number; top: number; width: number; height: number; borderRadius: number },
+	logicalW: number,
+	logicalH: number,
+): React.CSSProperties {
+	const w = Math.max(1, logicalW);
+	const h = Math.max(1, logicalH);
+	return {
+		left: `${(zone.left / w) * 100}%`,
+		top: `${(zone.top / h) * 100}%`,
+		width: `${(zone.width / w) * 100}%`,
+		height: `${(zone.height / h) * 100}%`,
+		borderRadius:
+			zone.borderRadius > 0
+				? `${(zone.borderRadius / Math.min(w, h)) * 100}vmin`
+				: undefined,
+	};
 }
 
 function isZoneRect(obj: any): boolean {
@@ -171,7 +195,13 @@ function syncLiveZoneOverlay(
 	import('fabric').then(({ Text }) => {
 		removeLiveOverlay(fc, rect.id);
 
-		const { left, top, width, height, cx, cy } = getZoneCanvasBounds(rect);
+		const appearance = getZoneAppearanceFromRect(rect);
+		if (appearance.mode === 'theme' && appearance.displayTheme) {
+			fc.renderAll();
+			return;
+		}
+
+		const { width, height, cx, cy } = getZoneCanvasBounds(rect);
 
 		const queue = resolveQueueForRect(rect, queuesByUuid);
 		const chipFallback = Array.isArray(rect.queueChipNames)
@@ -181,13 +211,13 @@ function syncLiveZoneOverlay(
 			queueName: chipFallback ?? rect.name,
 		});
 
-		const minSide = Math.min(width, height);
-
-		const nameSize = Math.max(14, Math.min(56, Math.round(minSide * 0.1)));
-		const servingSize = Math.max(11, Math.min(28, Math.round(minSide * 0.055)));
-		const tokenSize = Math.max(18, Math.min(96, Math.round(minSide * 0.18)));
-		const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
-		const gap = Math.max(6, Math.round(minSide * 0.03));
+		const tokenLen = Math.max(1, display.tokenDisplay.length);
+		const sizes = computeFillZoneTextSizes(width, height, tokenLen);
+		const nameSize = sizes.queueName;
+		const servingSize = sizes.subtitle;
+		const tokenSize = sizes.token;
+		const statusSize = sizes.status;
+		const gap = sizes.gap;
 
 		const lines: { text: string; fontSize: number; fontWeight?: string }[] = [
 			{ text: display.queueName, fontSize: nameSize, fontWeight: 'bold' },
@@ -290,14 +320,14 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	}, [htmlLayout, configuration, logicalW, logicalH]);
 
 	useLayoutEffect(() => {
+		if (fullScreen) return undefined;
+
 		const host = hostRef.current;
 		if (!host) return undefined;
 
 		const update = () => {
-			const bezelPadW = fullScreen ? 0 : 18;
-			const bezelPadH = fullScreen ? 0 : 35;
-			const availW = Math.max(200, host.clientWidth - bezelPadW);
-			const availH = Math.max(120, host.clientHeight - bezelPadH);
+			const availW = Math.max(200, host.clientWidth - 18);
+			const availH = Math.max(120, host.clientHeight - 35);
 			const sf = Math.min(availW / logicalW, availH / logicalH);
 			setCanvasSize({
 				sf,
@@ -313,6 +343,12 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	}, [logicalW, logicalH, fullScreen]);
 
 	useEffect(() => {
+		if (fullScreen) {
+			fabricRef.current?.dispose();
+			fabricRef.current = null;
+			return undefined;
+		}
+
 		if (!canvasRef.current || !htmlLayout?.zones.length) return undefined;
 
 		let cancelled = false;
@@ -531,100 +567,53 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 		.join(' ');
 
 	if (fullScreen) {
-		const sf = canvasSize.sf || 1;
-
 		return (
-			<div ref={hostRef} className={hostClassName}>
-				<div
-					className={`template-fabric-preview-canvas-wrap${flicker ? ' template-fabric-preview-canvas-wrap--live' : ''}`}
-					style={{ width: canvasSize.cw, height: canvasSize.ch }}>
-					<canvas id={canvasId} ref={canvasRef} />
+			<div
+				ref={hostRef}
+				className={`${hostClassName}${flicker ? ' template-fabric-preview-host--live' : ''}`}>
+				<div className='screen-public-zone-layer'>
 					{overlayZones.map((zone, index) => {
 						const queue = resolveQueueForParsedZone(zone, queuesByUuid);
 						const display = getPublicQueueZoneDisplay(queue, {
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
-						const overlayW = Math.max(1, Math.round(zone.width * sf));
-						const overlayH = Math.max(1, Math.round(zone.height * sf));
-						const overlayLeft = Math.round(zone.left * sf);
-						const overlayTop = Math.round(zone.top * sf);
-						const borderRadius = Math.round(zone.borderRadius * sf);
-
 						const appearance = getZoneAppearanceFromParsedZone(zone);
+						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
 
-						if (appearance.mode === 'theme' && appearance.displayTheme) {
-							return (
-								<div
-									key={`${zone.name}-${index}`}
-									className='screen-zone-live-overlay screen-zone-live-overlay--theme'
-									style={{
-										left: overlayLeft,
-										top: overlayTop,
-										width: overlayW,
-										height: overlayH,
-										borderRadius,
-									}}>
-									<TokenDisplayThemeCard
-										appearance={appearance}
-										queueName={display.queueName}
-										subtitle={display.servingPointName}
-										tokenDisplay={display.tokenDisplay}
-										status={display.tokenStatus}
-										fillContainer
-									/>
-								</div>
-							);
-						}
+				const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
 
-						const minSide = Math.min(overlayW, overlayH);
-						const nameSize = Math.max(14, Math.min(56, Math.round(minSide * 0.1)));
-						const servingSize = Math.max(11, Math.min(28, Math.round(minSide * 0.055)));
-						const tokenSize = Math.max(18, Math.min(96, Math.round(minSide * 0.18)));
-						const statusSize = Math.max(11, Math.min(32, Math.round(minSide * 0.065)));
-
+					if (
+						(appearance.mode === 'theme' && appearance.displayTheme) ||
+						appearance.mode === 'fill'
+					) {
 						return (
 							<div
 								key={`${zone.name}-${index}`}
-								className='screen-zone-live-overlay'
-								style={{
-									left: overlayLeft,
-									top: overlayTop,
-									width: overlayW,
-									height: overlayH,
-									background: zone.backgroundColor,
-									borderRadius,
-								}}>
-								<div className='screen-zone-live-overlay__content'>
-									<div
-										className='screen-zone-live-overlay__queue'
-										style={{ fontSize: nameSize }}>
-										{display.queueName}
-									</div>
-									<div
-										className='screen-zone-live-overlay__serving-point'
-										style={{ fontSize: servingSize }}>
-										{display.servingPointName}
-									</div>
-									{display.tokenDisplay === '—' ? (
-										<span
-											className='screen-zone-live-overlay__token-bar'
-											style={{ width: Math.max(24, Math.round(minSide * 0.2)) }}
-										/>
-									) : (
-										<div
-											className='screen-zone-live-overlay__token'
-											style={{ fontSize: tokenSize }}>
-											{display.tokenDisplay}
-										</div>
-									)}
-									<div
-										className='screen-zone-live-overlay__status'
-										style={{ fontSize: statusSize }}>
-										{display.tokenStatus}
-									</div>
-								</div>
+								className='screen-zone-live-overlay screen-zone-live-overlay--theme'
+								style={{ ...zoneStyle, opacity: zoneOpacity }}>
+								<TokenDisplayThemeCard
+									appearance={appearance}
+									queueName={display.queueName}
+									subtitle={display.servingPointName}
+									tokenDisplay={display.tokenDisplay}
+									status={display.tokenStatus}
+									fillContainer
+								/>
 							</div>
 						);
+					}
+
+					return (
+						<div
+							key={`${zone.name}-${index}-fill`}
+							className='screen-zone-live-overlay screen-zone-live-overlay--plain'
+							style={{
+								...zoneStyle,
+								background: zone.backgroundColor,
+								opacity: zoneOpacity,
+							}}
+						/>
+					);
 					})}
 				</div>
 			</div>

@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import ScreenPublicDisplay from '../../components/PublicPages/ScreenPublicDisplay';
 import {
 	buildQueuesByUuidMap,
+	pickPublicScreenTemplateForCycle,
 	publicScreenApi,
 	type PublicQueueStatus,
 	type PublicScreenInfo,
@@ -12,7 +13,7 @@ import {
 import { collectQueueUuidsFromTemplate } from '../../utils/parseTemplateZones';
 
 const CYCLE_COOKIE_PREFIX = 'screen_display_start_';
-const QUEUE_POLL_MS = 20_000;
+const QUEUE_POLL_MS = 5000;
 const TICK_MS = 1_000;
 
 function cycleCookieKey(screenUuid: string) {
@@ -31,34 +32,6 @@ function getOrCreateCycleStart(screenUuid: string): number {
 	return now;
 }
 
-/** interval on screen assignments is stored in minutes (see Screens admin UI). */
-function intervalToSeconds(interval: number | undefined): number {
-	return Math.max(1, interval || 1) * 60;
-}
-
-function pickActiveTemplate(
-	templates: PublicScreenTemplate[],
-	startMs: number,
-	nowMs: number,
-): PublicScreenTemplate | null {
-	const active = templates
-		.filter((t) => t.is_active !== false)
-		.sort((a, b) => a.order - b.order);
-	if (!active.length) return null;
-	if (active.length === 1) return active[0];
-
-	const totalSeconds = active.reduce((sum, t) => sum + intervalToSeconds(t.interval), 0);
-	if (totalSeconds <= 0) return active[0];
-
-	const elapsedSec = ((nowMs - startMs) / 1000) % totalSeconds;
-	let cursor = 0;
-	for (const template of active) {
-		cursor += intervalToSeconds(template.interval);
-		if (elapsedSec < cursor) return template;
-	}
-	return active[0];
-}
-
 const ScreenTokenStatusPage: React.FC = () => {
 	const { uuid: screenUuid = '' } = useParams<{ uuid: string }>();
 
@@ -70,20 +43,16 @@ const ScreenTokenStatusPage: React.FC = () => {
 	const [nowMs, setNowMs] = useState(Date.now());
 	const [cycleStartMs, setCycleStartMs] = useState<number | null>(null);
 
-	const sortedTemplates = useMemo(
-		() => [...templates].sort((a, b) => a.order - b.order),
-		[templates],
-	);
-
+	// Already sorted by assignment order when loaded from publicScreenApi.getScreen.
 	const activeTemplate = useMemo(() => {
-		if (!cycleStartMs || !sortedTemplates.length) return null;
-		return pickActiveTemplate(sortedTemplates, cycleStartMs, nowMs);
-	}, [cycleStartMs, sortedTemplates, nowMs]);
+		if (!cycleStartMs || !templates.length) return null;
+		return pickPublicScreenTemplateForCycle(templates, cycleStartMs, nowMs);
+	}, [cycleStartMs, templates, nowMs]);
 
 	const allQueueUuids = useMemo(() => {
 		const seen = new Set<string>();
 		const uuids: string[] = [];
-		sortedTemplates.forEach((template) => {
+		templates.forEach((template) => {
 			collectQueueUuidsFromTemplate(template).forEach((uuid) => {
 				if (seen.has(uuid)) return;
 				seen.add(uuid);
@@ -91,7 +60,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 			});
 		});
 		return uuids;
-	}, [sortedTemplates]);
+	}, [templates]);
 
 	const activeTemplateQueueUuids = useMemo(() => {
 		if (!activeTemplate) return [];
@@ -122,12 +91,11 @@ const ScreenTokenStatusPage: React.FC = () => {
 		setError(null);
 		try {
 			const response = await publicScreenApi.getScreen(screenUuid);
-			const sorted = [...(response.templates ?? [])].sort((a, b) => a.order - b.order);
 			setScreen(response.screen);
-			setTemplates(sorted);
+			setTemplates(response.templates);
 			setCycleStartMs(getOrCreateCycleStart(screenUuid));
 
-			const queueUuids = sorted.flatMap((t) => collectQueueUuidsFromTemplate(t));
+			const queueUuids = response.templates.flatMap((t) => collectQueueUuidsFromTemplate(t));
 			const uniqueQueueUuids = Array.from(new Set(queueUuids));
 			await fetchQueueStatus(uniqueQueueUuids);
 		} catch (err: unknown) {

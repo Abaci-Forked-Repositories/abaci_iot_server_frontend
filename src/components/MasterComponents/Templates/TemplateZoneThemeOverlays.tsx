@@ -22,10 +22,12 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 	void revision;
 
 	return (
-		<div className='tdc-zone-overlays' aria-hidden>
+		<div
+			className='tdc-zone-overlays'
+			aria-hidden>
 			{zones.map((rect) => {
 				const appearance = getZoneAppearanceFromRect(rect);
-				if (appearance.mode !== 'theme' || !appearance.displayTheme) return null;
+				if (appearance.mode === 'theme' && !appearance.displayTheme) return null;
 
 				const bounds = getZoneOverlayBounds(rect);
 				const queueIds = Array.isArray(rect.queueIds) ? rect.queueIds : [];
@@ -34,6 +36,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					(Array.isArray(rect.queueChipNames) ? rect.queueChipNames[0] : null) ??
 					rect.name ??
 					'Queue';
+				const zoneOpacity = typeof (rect as any).opacity === 'number' ? (rect as any).opacity : 1;
 
 				return (
 					<div
@@ -45,6 +48,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 							width: bounds.width,
 							height: bounds.height,
 							borderRadius: bounds.borderRadius,
+							opacity: zoneOpacity,
 						}}>
 						<TokenDisplayThemeCard
 							appearance={appearance}

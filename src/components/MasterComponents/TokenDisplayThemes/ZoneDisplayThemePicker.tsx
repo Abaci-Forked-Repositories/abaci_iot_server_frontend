@@ -22,6 +22,8 @@ export interface ZoneDisplayThemePickerProps {
 	previewTokenDisplay?: string;
 	previewStatus?: string;
 	disabled?: boolean;
+	/** Set when save validation fails — theme mode without a swatch selected. */
+	showThemeError?: boolean;
 }
 
 const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
@@ -32,7 +34,10 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 	previewTokenDisplay = '05',
 	previewStatus = 'waiting',
 	disabled = false,
+	showThemeError = false,
 }) => {
+	const themeSelectionMissing = value.mode === 'theme' && !value.displayTheme;
+	const showThemeErrorMessage = showThemeError && themeSelectionMissing;
 	const [localFill, setLocalFill] = useState(value.backgroundColor ?? '#22499e');
 
 	useEffect(() => {
@@ -65,6 +70,23 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 	return (
 		<div className='zone-appearance-picker'>
 			<div className='zone-appearance-picker__modes'>
+				
+				<label className='zone-appearance-picker__mode-option'>
+					<input
+						type='radio'
+						name='zone-appearance-mode'
+						checked={value.mode === 'theme'}
+						disabled={disabled}
+						onChange={() => {
+							onChange({
+								mode: 'theme',
+								displayTheme: value.displayTheme,
+								backgroundColor: null,
+							});
+						}}
+					/>
+					<span>Display theme</span>
+				</label>
 				<label className='zone-appearance-picker__mode-option'>
 					<input
 						type='radio'
@@ -74,19 +96,6 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 						onChange={setModeFill}
 					/>
 					<span>Fill color</span>
-				</label>
-				<label className='zone-appearance-picker__mode-option'>
-					<input
-						type='radio'
-						name='zone-appearance-mode'
-						checked={value.mode === 'theme'}
-						disabled={disabled}
-						onChange={() => {
-							const first = value.displayTheme ?? ZONE_DISPLAY_THEME_IDS[0];
-							onChange(createThemeAppearance(first));
-						}}
-					/>
-					<span>Display theme</span>
 				</label>
 			</div>
 
@@ -109,7 +118,8 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 					/>
 				</div>
 			) : (
-				<div className='zone-appearance-picker__themes'>
+				<div
+					className={`zone-appearance-picker__themes${showThemeErrorMessage ? ' zone-appearance-picker__themes--error' : ''}`}>
 					<span className='zone-appearance-picker__label'>Theme</span>
 					<div className='zone-appearance-picker__swatches'>
 						{ZONE_DISPLAY_THEME_IDS.map((id) => {
@@ -134,21 +144,26 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							{ZONE_DISPLAY_THEME_CONFIGS[value.displayTheme].label}
 						</div>
 					)}
+					{showThemeErrorMessage && (
+						<div className='tdc-name-error'>Please select a display theme.</div>
+					)}
 				</div>
 			)}
 
-			<div className='zone-appearance-picker__preview'>
-				<span className='zone-appearance-picker__label'>Preview</span>
-				<div className='zone-appearance-picker__preview-card'>
-					<TokenDisplayThemeCard
-						appearance={value}
-						queueName={previewQueueName}
-						subtitle={previewSubtitle}
-						tokenDisplay={previewTokenDisplay}
-						status={previewStatus}
-					/>
+			{value.mode === 'theme' && (
+				<div className='zone-appearance-picker__preview'>
+					<span className='zone-appearance-picker__label'>Preview</span>
+					<div className='zone-appearance-picker__preview-card'>
+						<TokenDisplayThemeCard
+							appearance={value}
+							queueName={previewQueueName}
+							subtitle={previewSubtitle}
+							tokenDisplay={previewTokenDisplay}
+							status={previewStatus}
+						/>
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 };

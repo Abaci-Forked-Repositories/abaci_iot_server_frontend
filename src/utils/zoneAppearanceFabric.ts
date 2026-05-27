@@ -20,6 +20,8 @@ export type FabricZoneOverlayRect = {
 	displayTheme?: string | null;
 	zoneFillColor?: string | null;
 	fill?: string | null;
+	/** Fabric built-in opacity (0–1). Used for per-zone opacity. */
+	opacity?: number;
 	setCoords?: () => void;
 	aCoords?: { tl?: { x: number; y: number }; br?: { x: number; y: number } };
 	getBoundingRect?: () => { left: number; top: number; width: number; height: number };

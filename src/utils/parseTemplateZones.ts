@@ -16,6 +16,8 @@ export interface ParsedTemplateZone {
 	borderRadius: number;
 	borderColor: string;
 	border: boolean;
+	/** Zone-level opacity (0–1). Defaults to 1 when not saved. */
+	opacity: number;
 }
 
 export interface ParsedTemplateLayout {
@@ -86,6 +88,8 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			el.getAttribute('data-display-theme')?.trim() ||
 			null;
 
+		const opacityRaw = parseStyleValue(style, 'opacity');
+		const opacityParsed = opacityRaw != null ? parseFloat(opacityRaw) : NaN;
 		zones.push({
 			name: el.getAttribute('data-zone-name') ?? '',
 			queueIds,
@@ -103,6 +107,7 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			borderRadius: parsePx(parseStyleValue(style, 'border-radius')),
 			borderColor: borderMatch?.[1]?.trim() ?? 'black',
 			border: borderRaw !== '' && borderRaw !== 'none' && !/^0(?:px)?$/i.test(borderRaw),
+			opacity: Number.isFinite(opacityParsed) ? Math.min(1, Math.max(0, opacityParsed)) : 1,
 		});
 	});
 
@@ -526,6 +531,13 @@ export function enrichParsedZonesWithConfiguration(
 		const backgroundColor =
 			configZone.background_color?.trim() || zone.backgroundColor || '#ffffff';
 
+		const configZoneOpacity =
+			typeof (configZone as any).zone_opacity === 'number'
+				? (configZone as any).zone_opacity
+				: null;
+		const opacity =
+			configZoneOpacity != null ? configZoneOpacity : zone.opacity ?? 1;
+
 		return {
 			...zone,
 			queueUuids,
@@ -533,6 +545,7 @@ export function enrichParsedZonesWithConfiguration(
 			queueChipNames,
 			displayTheme: displayTheme || null,
 			backgroundColor,
+			opacity,
 		};
 	});
 }

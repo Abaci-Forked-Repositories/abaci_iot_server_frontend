@@ -1,4 +1,4 @@
-import { authAxios } from '../axiosInstance';
+import { authAxios, authAxiosFileUpload } from '../axiosInstance';
 import type { ScreenTemplateAssignment } from './screenTemplatesApi';
 
 export interface PaginatedResponse<T> {
@@ -41,6 +41,7 @@ export interface Screen {
 	enable_audio?: boolean;
 	is_active?: boolean;
 	is_online?: boolean;
+	background_image?: string | null;
 	last_heartbeat?: string | null;
 	created_at?: string;
 	updated_at?: string;
@@ -48,9 +49,31 @@ export interface Screen {
 
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
 
+/** Build multipart body for POST `api/screens/` (includes optional `background_image` file). */
+export function buildCreateScreenFormData(payload: CreateScreenPayload, backgroundImage?: File | null) {
+	const formData = new FormData();
+	formData.append('name', payload.name);
+	formData.append('location', payload.location ?? '');
+	formData.append('description', payload.description ?? '');
+	if (payload.ip_address) {
+		formData.append('ip_address', payload.ip_address);
+	}
+	formData.append('ip_bind', String(Boolean(payload.ip_bind)));
+	formData.append('is_active', String(Boolean(payload.is_active)));
+	if (backgroundImage) {
+		formData.append('background_image', backgroundImage);
+	}
+	return formData;
+}
+
 export const screensApi = {
-	create: (payload: CreateScreenPayload) =>
-		unwrap<Screen>(authAxios.post('api/screens/', payload)),
+	create: (payload: CreateScreenPayload, backgroundImage?: File | null) =>
+		unwrap<Screen>(
+			authAxiosFileUpload.post(
+				'api/screens/',
+				buildCreateScreenFormData(payload, backgroundImage),
+			),
+		),
 	list: (params?: {
 		location?: string;
 		search?: string;

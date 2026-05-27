@@ -259,6 +259,13 @@
 	}
 }
 
+.screen-card-thumb-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
 .screen-card-icon {
 	color: rgba($primary, 0.65);
 
@@ -655,6 +662,13 @@
 
 // ─── Public screen display (TV link page) ─────────────────────────────────────
 
+// TV link route: drop app chrome padding so the canvas can use the full viewport.
+.content:has(.screen-public-page--fullscreen) {
+	padding: 0;
+	display: block;
+	min-height: 100dvh;
+}
+
 .screen-public-page {
 	min-height: 100vh;
 	width: 100%;
@@ -668,7 +682,11 @@
 	&--fullscreen {
 		min-height: 100dvh;
 		height: 100dvh;
+		width: 100%;
+		max-width: 100%;
 		padding: 0;
+		margin: 0;
+		overflow: hidden;
 		background: #000;
 		align-items: stretch;
 		justify-content: stretch;
@@ -698,7 +716,30 @@
 		height: 100%;
 		max-width: none;
 		max-height: none;
+		overflow: hidden;
 	}
+}
+
+.screen-public-background {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.screen-public-template-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	width: 100%;
+	height: 100%;
+}
+
+.screen-public-fallback--over-bg {
+	position: relative;
+	z-index: 1;
 }
 
 .screen-public-fabric-preview,
@@ -711,7 +752,20 @@
 }
 
 .template-fabric-preview-host--fullscreen {
-	background: #fff;
+	position: relative;
+	display: block;
+	overflow: hidden;
+	background: transparent;
+
+	&.template-fabric-preview-host--live {
+		box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.45);
+	}
+}
+
+.screen-public-zone-layer {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
 }
 
 .template-fabric-preview-canvas-wrap {
@@ -738,6 +792,7 @@
 .screen-zone-live-overlay--theme {
 	overflow: hidden;
 	padding: 0;
+	container-type: size;
 
 	.tdc {
 		width: 100%;
