@@ -476,6 +476,54 @@
 	max-height: 100%;
 }
 
+.tdc-canvas-wrap {
+	position: relative;
+	overflow: hidden;
+
+	canvas {
+		display: block;
+	}
+}
+
+.tdc-zone-overlays {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.tdc-zone-theme-overlay {
+	position: absolute;
+	overflow: hidden;
+	pointer-events: none;
+	box-sizing: border-box;
+	// Size container so theme card text scales with zone width/height.
+	container-type: size;
+
+	.tdc {
+		width: 100%;
+		height: 100%;
+	}
+}
+
+// Zone appearance picker inside dark properties panel
+.tdc-panel .zone-appearance-picker {
+	.zone-appearance-picker__label,
+	.zone-appearance-picker__mode-option {
+		color: #cbd5e1;
+	}
+
+	.zone-appearance-picker__theme-name {
+		color: #e2e8f0;
+	}
+
+	.form-control.zone-appearance-picker__hex {
+		background: #0f1117;
+		border-color: rgba(#fff, 0.12);
+		color: #f1f5f9;
+	}
+}
+
 // Properties panel
 .tdc-panel {
 	width: 280px;
@@ -536,6 +584,31 @@
 	text-transform: uppercase;
 	letter-spacing: 0.07em;
 	margin-bottom: 0.5rem;
+}
+
+.tdc-prop-section--template-opacity {
+	border-bottom: none;
+	padding-bottom: 0.25rem;
+}
+
+.tdc-template-opacity-hint {
+	font-size: 0.75rem;
+	color: #94a3b8;
+	line-height: 1.45;
+	margin: 0 0 0.65rem;
+}
+
+.tdc-template-opacity-label {
+	display: block;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #e2e8f0;
+	margin-bottom: 0.35rem;
+}
+
+.tdc-template-opacity-range {
+	width: 100%;
+	accent-color: $primary;
 }
 
 .tdc-prop-row2 {

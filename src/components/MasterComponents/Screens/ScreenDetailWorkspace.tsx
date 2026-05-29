@@ -34,6 +34,26 @@ const ScreenDetailWorkspace: React.FC = () => {
 	const [showAssignTemplateModal, setShowAssignTemplateModal] = useState(false);
 	const [editingAssignment, setEditingAssignment] = useState<ScreenTemplateAssignment | null>(null);
 	const [templateById, setTemplateById] = useState<Record<number, Template>>({});
+	const [linkCopied, setLinkCopied] = useState(false);
+
+	const getScreenPublicUrl = (uuid: string) =>
+		`${window.location.origin}/screenstokenstatus/${uuid}`;
+
+	const handleCopyScreenLink = async (uuid: string) => {
+		const url = getScreenPublicUrl(uuid);
+		try {
+			await navigator.clipboard.writeText(url);
+		} catch {
+			const el = document.createElement('textarea');
+			el.value = url;
+			document.body.appendChild(el);
+			el.select();
+			document.execCommand('copy');
+			document.body.removeChild(el);
+		}
+		setLinkCopied(true);
+		setTimeout(() => setLinkCopied(false), 2500);
+	};
 
 	const loadScreen = useCallback(async () => {
 		if (!Number.isFinite(screenId)) return;
@@ -221,16 +241,28 @@ const ScreenDetailWorkspace: React.FC = () => {
 						Back to Screens
 					</Button>
 					{screen?.uuid && (
-						<Button
-							color='info'
-							isLight
-							icon='Link'
-							onClick={() => {
-								const url = `${window.location.origin}/screenstokenstatus/${screen.uuid}`;
-								window.open(url, '_blank', 'noopener,noreferrer');
-							}}>
-							Link
-						</Button>
+						<>
+							<Button
+								color='info'
+								isLight
+								icon='Link'
+								onClick={() => {
+									window.open(
+										getScreenPublicUrl(screen.uuid),
+										'_blank',
+										'noopener,noreferrer',
+									);
+								}}>
+								Link
+							</Button>
+							<Button
+								color={linkCopied ? 'success' : 'info'}
+								isLight
+								icon={linkCopied ? 'Check' : 'ContentCopy'}
+								onClick={() => void handleCopyScreenLink(screen.uuid)}>
+								{linkCopied ? 'Copied!' : ''}
+							</Button>
+						</>
 					)}
 					{screen && (
 						<Button

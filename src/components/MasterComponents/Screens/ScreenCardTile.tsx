@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from '../../icon/Icon';
 import type { Screen } from '../../../services/screensManagementApi';
 
@@ -16,6 +16,12 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 	deleting = false,
 }) => {
 	const [hovered, setHovered] = useState(false);
+	const [thumbFailed, setThumbFailed] = useState(false);
+	const backgroundImage = screen.background_image?.trim() || null;
+
+	useEffect(() => {
+		setThumbFailed(false);
+	}, [screen.id, backgroundImage]);
 
 	return (
 		<div
@@ -53,7 +59,17 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 				</span>
 			</div>
 			<div className='screen-card-thumb'>
-				<Icon icon='Tv' size='3x' className='screen-card-icon' />
+				{backgroundImage && !thumbFailed ? (
+					<img
+						className='screen-card-thumb-img'
+						src={backgroundImage}
+						alt={`${screen.name} background`}
+						draggable={false}
+						onError={() => setThumbFailed(true)}
+					/>
+				) : (
+					<Icon icon='Tv' size='3x' className='screen-card-icon' />
+				)}
 			</div>
 			<div className='screen-card-title' title={screen.name}>
 				{screen.name}

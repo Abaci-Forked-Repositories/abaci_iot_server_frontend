@@ -63,9 +63,12 @@ const ScreensWorkspace: React.FC = () => {
 		loadScreens();
 	}, [loadScreens]);
 
-	const handleCreateScreen = async (payload: CreateScreenPayload) => {
+	const handleCreateScreen = async (
+		payload: CreateScreenPayload,
+		backgroundImage?: File | null,
+	) => {
 		try {
-			await screensApi.create(payload);
+			await screensApi.create(payload, backgroundImage);
 			setMessage('');
 			await loadScreens();
 		} catch (error) {

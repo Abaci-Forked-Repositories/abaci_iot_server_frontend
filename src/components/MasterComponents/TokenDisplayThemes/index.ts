@@ -11,7 +11,6 @@ export {
 	ZONE_DISPLAY_THEME_IDS,
 	ZONE_DISPLAY_THEME_CONFIGS,
 	TOKEN_STATUS_DISPLAY,
-	TOKEN_DISPLAY_DEFAULT_SERVING_LABEL,
 	TOKEN_DISPLAY_NO_TOKEN,
 	DEFAULT_ZONE_DISPLAY_THEME,
 	parseDisplayThemeId,
@@ -20,9 +19,12 @@ export {
 	serializeZoneAppearance,
 	createFillAppearance,
 	createThemeAppearance,
+	isZoneThemeSelectionComplete,
 	resolveZoneCardStyle,
 	getContrastTextColorForBackground,
 	getStatusConfig,
+	computeTokenDisplayFillBaseFontSize,
+	computeFillZoneTextSizes,
 } from './tokenDisplayThemes';
 
 export type {

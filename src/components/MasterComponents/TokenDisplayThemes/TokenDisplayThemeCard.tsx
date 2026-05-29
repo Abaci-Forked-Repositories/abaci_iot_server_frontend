@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
+	computeDigitalCrimsonFillBaseFontSize,
+	computeTokenDisplayFillBaseFontSize,
 	getStatusConfig,
 	getZoneAppearanceFromSaved,
 	resolveZoneCardStyle,
-	TOKEN_DISPLAY_DEFAULT_SERVING_LABEL,
 	TOKEN_DISPLAY_NO_TOKEN,
 	type ZoneDisplayAppearance,
 } from './tokenDisplayThemes';
@@ -13,7 +14,6 @@ export interface TokenDisplayThemeCardProps {
 	subtitle?: string;
 	tokenDisplay?: string | null;
 	status?: string | null;
-	servingLabel?: string;
 	fillContainer?: boolean;
 	className?: string;
 	style?: React.CSSProperties;
@@ -42,7 +42,6 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	subtitle,
 	tokenDisplay,
 	status,
-	servingLabel = TOKEN_DISPLAY_DEFAULT_SERVING_LABEL,
 	fillContainer = false,
 	className = '',
 	style,
@@ -50,6 +49,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	displayTheme,
 	backgroundColor,
 }) => {
+	const rootRef = useRef<HTMLDivElement>(null);
+
 	const appearance = useMemo(
 		() =>
 			appearanceProp ??
@@ -83,8 +84,42 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const displayToken =
 		tokenDisplay != null && tokenDisplay !== '' ? tokenDisplay : TOKEN_DISPLAY_NO_TOKEN;
 
+	useEffect(() => {
+		if (!fillContainer) return;
+
+		const el = rootRef.current;
+		if (!el) return;
+
+		const isDigitalCrimson = resolved.themeClass === 'tdc--digital-crimson';
+
+		const applyScale = () => {
+			const width = el.clientWidth;
+			const height = el.clientHeight;
+			if (width < 1 || height < 1) return;
+			const tokenLen = displayToken.length;
+			const fontSize = isDigitalCrimson
+				? computeDigitalCrimsonFillBaseFontSize(width, height, tokenLen)
+				: computeTokenDisplayFillBaseFontSize(width, height, tokenLen);
+			el.style.fontSize = `${fontSize}px`;
+		};
+
+		applyScale();
+		const raf = requestAnimationFrame(applyScale);
+
+		const observer = new ResizeObserver(() => {
+			applyScale();
+		});
+		observer.observe(el);
+
+		return () => {
+			cancelAnimationFrame(raf);
+			observer.disconnect();
+			el.style.fontSize = '';
+		};
+	}, [fillContainer, displayToken, resolved.themeClass]);
+
 	return (
-		<div className={rootClasses} style={{ ...inlineStyle, ...style }}>
+		<div ref={rootRef} className={rootClasses} style={{ ...inlineStyle, ...style }}>
 			<div className='tdc__glow' aria-hidden='true' />
 
 			<div className='tdc__header'>
@@ -97,7 +132,6 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 
 			<div className='tdc__body'>
 				{subtitle && <div className='tdc__subtitle'>{subtitle}</div>}
-				<div className='tdc__serving-label'>{servingLabel}</div>
 				<div className='tdc__token' aria-label={`Token ${displayToken}`}>
 					{displayToken}
 				</div>

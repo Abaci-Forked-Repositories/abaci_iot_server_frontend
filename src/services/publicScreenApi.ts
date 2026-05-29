@@ -11,6 +11,7 @@ export interface PublicScreenInfo {
 	enable_audio?: boolean;
 	is_active?: boolean;
 	is_online?: boolean;
+	background_image?: string | null;
 	last_heartbeat?: string | null;
 }
 
@@ -34,6 +35,91 @@ export interface PublicScreenResponse {
 	screen: PublicScreenInfo;
 	templates: PublicScreenTemplate[];
 	template_count: number;
+}
+
+function parseAssignmentNumber(value: unknown, fallback: number): number {
+	if (value == null || value === '') return fallback;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+/** Normalize one public screen template; coerces order/interval from API variants. */
+export function normalizePublicScreenTemplate(
+	raw: PublicScreenTemplate | Record<string, unknown>,
+	fallbackOrder: number,
+): PublicScreenTemplate {
+	const r = raw as Record<string, unknown>;
+	const nested =
+		r.screen_template && typeof r.screen_template === 'object'
+			? (r.screen_template as Record<string, unknown>)
+			: null;
+
+	const screenTemplateId =
+		Number(r.screen_template_id ?? nested?.id ?? r.id) || 0;
+
+	return {
+		id: Number(r.id) || screenTemplateId,
+		uuid: typeof r.uuid === 'string' ? r.uuid : undefined,
+		name: String(r.name ?? r.template_name ?? '').trim(),
+		description: typeof r.description === 'string' ? r.description : undefined,
+		html_content: typeof r.html_content === 'string' ? r.html_content : undefined,
+		configuration: (r.configuration ?? null) as PublicScreenTemplate['configuration'],
+		thumbnail:
+			typeof r.thumbnail === 'string' ? r.thumbnail : (r.thumbnail as null) ?? null,
+		is_active: r.is_active !== false,
+		interval: parseAssignmentNumber(r.interval ?? nested?.interval, 1),
+		order: parseAssignmentNumber(
+			r.order ?? nested?.order ?? r.display_order,
+			fallbackOrder,
+		),
+		screen_template_id: screenTemplateId,
+	};
+}
+
+/** Same ordering as Screens admin (Order 1, 2, 3…). */
+export function sortPublicScreenTemplatesByOrder(
+	templates: (PublicScreenTemplate | Record<string, unknown>)[],
+): PublicScreenTemplate[] {
+	return templates
+		.map((item, index) => normalizePublicScreenTemplate(item, index + 1))
+		.sort((a, b) => {
+			const byOrder = a.order - b.order;
+			if (byOrder !== 0) return byOrder;
+			return a.screen_template_id - b.screen_template_id;
+		});
+}
+
+/** interval on screen assignments is stored in minutes (Screens admin UI). */
+export function publicScreenIntervalToSeconds(interval: number | undefined): number {
+	return Math.max(1, interval || 1) * 60;
+}
+
+/**
+ * Pick which assigned template should display now.
+ * `templates` must already be sorted by `sortPublicScreenTemplatesByOrder`.
+ */
+export function pickPublicScreenTemplateForCycle(
+	templates: PublicScreenTemplate[],
+	startMs: number,
+	nowMs: number,
+): PublicScreenTemplate | null {
+	const active = templates.filter((t) => t.is_active !== false);
+	if (!active.length) return null;
+	if (active.length === 1) return active[0];
+
+	const totalSeconds = active.reduce(
+		(sum, t) => sum + publicScreenIntervalToSeconds(t.interval),
+		0,
+	);
+	if (totalSeconds <= 0) return active[0];
+
+	const elapsedSec = ((nowMs - startMs) / 1000) % totalSeconds;
+	let cursor = 0;
+	for (const template of active) {
+		cursor += publicScreenIntervalToSeconds(template.interval);
+		if (elapsedSec < cursor) return template;
+	}
+	return active[0];
 }
 
 export interface PublicQueueToken {
@@ -155,10 +241,17 @@ export interface PublicQueueStatusResponse {
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
 
 export const publicScreenApi = {
-	getScreen: (screenUuid: string) =>
-		unwrap<PublicScreenResponse>(
+	getScreen: async (screenUuid: string): Promise<PublicScreenResponse> => {
+		const data = await unwrap<PublicScreenResponse>(
 			publicAxios.post('api/public/screen/', { screen_uuid: screenUuid }),
-		),
+		);
+		const templates = sortPublicScreenTemplatesByOrder(data.templates ?? []);
+		return {
+			...data,
+			templates,
+			template_count: templates.length,
+		};
+	},
 	getQueueStatus: (queueUuids: string[]) =>
 		unwrap<PublicQueueStatusResponse>(
 			publicAxios.post('api/public/queue-status/', { queue_uuids: queueUuids }),
