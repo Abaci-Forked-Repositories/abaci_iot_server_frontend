@@ -61,8 +61,22 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					<span>{screen.location || '-'}</span>
 				</div>
 				<div className='screen-detail-row'>
+					<span>Groups</span>
+					<span>
+						{screen.screen_groups?.length
+							? screen.screen_groups.map((g) => g.name).join(', ')
+							: '—'}
+					</span>
+				</div>
+				<div className='screen-detail-row'>
 					<span>Online</span>
-					<span>{screen.is_online ? 'Yes' : 'No'}</span>
+					<span>
+						{screen.is_active
+							? screen.is_online
+								? 'Yes'
+								: 'No'
+							: '—'}
+					</span>
 				</div>
 				<div className='screen-detail-row'>
 					<span>Audio</span>

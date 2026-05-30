@@ -6,6 +6,15 @@ import {
 	getZoneAppearanceFromRect,
 	getZoneOverlayBounds,
 } from '../../../utils/zoneAppearanceFabric';
+import type { RecentQueueToken } from '../../../services/publicScreenApi';
+
+// Mock history lets template designers preview the full zone layout in the editor.
+const MOCK_RECENT_TOKENS: RecentQueueToken[] = [
+	{ token_display: 'B026', serving_point_name: 'Counter 03' },
+	{ token_display: 'B025', serving_point_name: 'Counter 02' },
+	{ token_display: 'B024', serving_point_name: 'Counter 01' },
+	{ token_display: 'B023', serving_point_name: 'Counter 04' },
+];
 
 export interface TemplateZoneThemeOverlaysProps {
 	zones: FabricZoneOverlayRect[];
@@ -50,13 +59,15 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 							borderRadius: bounds.borderRadius,
 							opacity: zoneOpacity,
 						}}>
-						<TokenDisplayThemeCard
-							appearance={appearance}
-							queueName={queueName}
-							tokenDisplay='05'
-							status='waiting'
-							fillContainer
-						/>
+					<TokenDisplayThemeCard
+						appearance={appearance}
+						queueName={queueName}
+						tokenDisplay='05'
+						status='waiting'
+						recentTokens={MOCK_RECENT_TOKENS}
+						fillContainer
+						showHistoryTime={false}
+					/>
 					</div>
 				);
 			})}

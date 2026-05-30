@@ -1,22 +1,24 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Player } from '@lottiefiles/react-lottie-player';
 import Card, { CardActions, CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import ThumbnailSizeControl from '../../CustomComponent/ThumbnailSizeControl';
+import SearchComponent from '../../SearchComponent';
 import { templatesApi, type CreateTemplatePayload, type Template } from '../../../services/templatesApi';
 import { swalFire } from '../../../helpers/swalHelper';
 import TemplateCardTile from './TemplateCardTile';
 import TemplateCreateModal from './TemplateCreateModal';
-import { Player } from '@lottiefiles/react-lottie-player';
 import pendingLottie from '../../../assets/Lottie/No-Data.json';
+import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
+
+const PAGE_LIMIT = 12;
 
 const THUMB_KEY = 'templateThumbSize';
 const THUMB_DEFAULT = 138;
 const THUMB_MIN = 115;
 const THUMB_MAX = 250;
 const THUMB_STEP = 12;
-
-
 
 const getStoredThumb = () => {
 	const saved = Number(localStorage.getItem(THUMB_KEY));
@@ -31,8 +33,13 @@ const mockDeleteTemplatesApi = async (_ids: number[]) =>
 const TemplatesWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const [templates, setTemplates] = useState<Template[]>([]);
-	const [loading, setLoading] = useState(false);
+	const [initialLoading, setInitialLoading] = useState(true);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
+	const offsetRef = useRef(0);
+
 	const [search, setSearch] = useState('');
+	const [searchApplied, setSearchApplied] = useState('');
 	const [error, setError] = useState('');
 	const [thumbSize, setThumbSize] = useState(getStoredThumb);
 	const [showCreateModal, setShowCreateModal] = useState(false);
@@ -45,32 +52,69 @@ const TemplatesWorkspace: React.FC = () => {
 		localStorage.setItem(THUMB_KEY, String(clamped));
 	};
 
-	const loadTemplates = useCallback(async () => {
-		setLoading(true);
-		setError('');
-		try {
-			const res = await templatesApi.list({ search: search || undefined, limit: 60 });
-			const fetched = res.results || [];
-			setTemplates(fetched.length ? fetched : []);
-		} catch {
-			setTemplates([]);
-			setError('No API templates found. Showing dummy templates.');
-		} finally {
-			setLoading(false);
-		}
-	}, [search]);
+	const loadTemplates = useCallback(
+		async (reset = true) => {
+			const offset = reset ? 0 : offsetRef.current;
+			try {
+				if (!reset) setIsLoadingMore(true);
+				setError('');
+				const res = await templatesApi.list({
+					limit: PAGE_LIMIT,
+					offset,
+					search: searchApplied || undefined,
+				});
+				const pageRows = res.results || [];
+				const nextOffset = offset + pageRows.length;
+				setTemplates((prev) => (reset ? pageRows : [...prev, ...pageRows]));
+				offsetRef.current = nextOffset;
+				setHasMore(nextOffset < (res.count ?? nextOffset));
+			} catch {
+				if (reset) setTemplates([]);
+				setError('Failed to load templates.');
+			} finally {
+				if (!reset) setIsLoadingMore(false);
+			}
+		},
+		[searchApplied],
+	);
 
 	useEffect(() => {
-		void loadTemplates();
+		let isMounted = true;
+		const run = async () => {
+			offsetRef.current = 0;
+			setInitialLoading(true);
+			await loadTemplates(true);
+			if (isMounted) setInitialLoading(false);
+		};
+		void run();
+		return () => {
+			isMounted = false;
+		};
 	}, [loadTemplates]);
 
 	useEffect(() => {
 		setSelectedIds((prev) => prev.filter((id) => templates.some((tpl) => tpl.id === id)));
 	}, [templates]);
 
+	const handleScroll = useCallback(
+		(event: React.UIEvent<HTMLDivElement>) => {
+			if (initialLoading || isLoadingMore || !hasMore) return;
+			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+			if (scrollTop + clientHeight >= scrollHeight - 100) {
+				void loadTemplates(false);
+			}
+		},
+		[hasMore, initialLoading, isLoadingMore, loadTemplates],
+	);
+
+	const runSearch = useCallback(() => {
+		setSearchApplied(search.trim());
+	}, [search]);
+
 	const handleCreate = async (payload: CreateTemplatePayload) => {
 		const created = await templatesApi.create(payload);
-		setTemplates((prev) => [created, ...prev]);
+		offsetRef.current = 0;
+		await loadTemplates(true);
 		navigate(`/templates/${created.id}`, { state: created });
 	};
 
@@ -87,8 +131,9 @@ const TemplatesWorkspace: React.FC = () => {
 		if (!result.isConfirmed) return;
 		try {
 			await templatesApi.delete(tpl.id);
-			setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
 			setSelectedIds((prev) => prev.filter((id) => id !== tpl.id));
+			offsetRef.current = 0;
+			await loadTemplates(true);
 		} catch {
 			setError('Failed to delete template.');
 		}
@@ -114,9 +159,6 @@ const TemplatesWorkspace: React.FC = () => {
 		}
 	};
 
-	const displayed = templates.filter((t) =>
-		!search || t.template_name.toLowerCase().includes(search.toLowerCase()),
-	);
 	const selectedCount = selectedIds.length;
 
 	const toggleSelected = (tpl: Template) => {
@@ -141,8 +183,9 @@ const TemplatesWorkspace: React.FC = () => {
 		try {
 			const idsToDelete = [...selectedIds];
 			await mockDeleteTemplatesApi(idsToDelete);
-			setTemplates((prev) => prev.filter((tpl) => !idsToDelete.includes(tpl.id)));
 			setSelectedIds([]);
+			offsetRef.current = 0;
+			await loadTemplates(true);
 		} catch {
 			setError('Failed to delete selected templates.');
 		} finally {
@@ -158,10 +201,10 @@ const TemplatesWorkspace: React.FC = () => {
 				onSubmit={handleCreate}
 			/>
 
-			<Card stretch className='tpl-workspace-card'>
+			<Card stretch>
 				<CardHeader>
 					<CardLabel icon='ViewCompact'>
-						<CardTitle tag='h4'>Templates</CardTitle>
+						<CardTitle className='text-primary' tag='h4'>Templates</CardTitle>
 					</CardLabel>
 					<CardActions>
 						<div className='d-flex align-items-center gap-2 flex-wrap'>
@@ -193,15 +236,20 @@ const TemplatesWorkspace: React.FC = () => {
 								onDecrease={() => saveThumb(thumbSize - THUMB_STEP)}
 								onChange={(value) => saveThumb(value)}
 							/>
-							<input
-								className='form-control form-control-sm tpl-search'
-								placeholder='Search templates…'
+							<SearchComponent
+								handleChange={setSearch}
 								value={search}
-								onChange={(e) => setSearch(e.target.value)}
+								placeholder='Search templates'
+								className='tpl-search app-search-modern me-0'
+								inputClassName='app-search-modern__input'
+								iconColor='primary'
+								iconSize='2x'
+								withDefaultMargin={false}
+								onKeyDown={(ev) => {
+									if (ev.key === 'Enter') runSearch();
+								}}
+								onBlur={runSearch}
 							/>
-							{/* <Button color='light' icon='Refresh' isDisable={loading} onClick={loadTemplates}>
-								Refresh
-							</Button> */}
 							{selectedCount === 0 && (
 								<Button color='primary' icon='Add' onClick={() => setShowCreateModal(true)}>
 									New Template
@@ -211,32 +259,37 @@ const TemplatesWorkspace: React.FC = () => {
 					</CardActions>
 				</CardHeader>
 
-				<CardBody className='tpl-body'>
-					<div className='tpl-content'>
-						{loading ? (
-							<div className='tpl-empty'>
-								<span className='text-muted'>Loading templates…</span>
+				<CardBody>
+					{error && <div className='alert alert-warning mb-3'>{error}</div>}
+
+					{initialLoading ? (
+						<ThumbnailCardGridSkeleton
+							count={12}
+							layout='flex'
+							tileWidth={thumbSize + 10}
+							tileMinHeight={thumbSize + 10}
+						/>
+					) : !templates.length ? (
+						<div className='tpl-empty'>
+							<div className='tpl-empty-icon'>
+								<svg width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.2'>
+									<rect x='3' y='3' width='18' height='18' rx='2' />
+									<path d='M3 9h18M9 21V9' />
+								</svg>
 							</div>
-						) : displayed.length === 0 ? (
-							<div className='tpl-empty'>
-								<div className='tpl-empty-icon'>
-									<svg width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.2'>
-										<rect x='3' y='3' width='18' height='18' rx='2' />
-										<path d='M3 9h18M9 21V9' />
-									</svg>
-								</div>
-								<Player
-									src={pendingLottie}
-									autoplay
-									loop
-									style={{ width: 360, height: 200 }}
-								/>
-								<h6 className='tpl-empty-title'>No templates found</h6>
-								<p className='tpl-empty-sub'>Try a different search term.</p>
-							</div>
-						) : (
-							<div className='tpl-grid'>
-								{displayed.map((tpl) => (
+							<Player
+								src={pendingLottie}
+								autoplay
+								loop
+								style={{ width: 360, height: 200 }}
+							/>
+							<h6 className='tpl-empty-title'>No templates found</h6>
+							<p className='tpl-empty-sub'>Try a different search term.</p>
+						</div>
+					) : (
+						<div className='queue-cards-scroll' onScroll={handleScroll}>
+							<div className='tpl-grid pt-1'>
+								{templates.map((tpl) => (
 									<TemplateCardTile
 										key={tpl.id}
 										template={tpl}
@@ -249,8 +302,18 @@ const TemplatesWorkspace: React.FC = () => {
 									/>
 								))}
 							</div>
-						)}
-					</div>
+							{isLoadingMore && (
+								<div className='py-3'>
+									<ThumbnailCardGridSkeleton
+										count={4}
+										layout='flex'
+										tileWidth={thumbSize + 10}
+										tileMinHeight={thumbSize + 10}
+									/>
+								</div>
+							)}
+						</div>
+					)}
 				</CardBody>
 			</Card>
 		</>

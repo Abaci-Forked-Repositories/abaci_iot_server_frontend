@@ -152,8 +152,7 @@ export const templatesApi = {
 		is_active?: boolean;
 		limit?: number;
 		offset?: number;
-		ordering?: string;
-	}	) =>
+	}) =>
 		unwrap<PaginatedResponse<AdminTemplateResponse>>(
 			authAxios.get('api/administration/templates/', { params }),
 		).then((res) => ({

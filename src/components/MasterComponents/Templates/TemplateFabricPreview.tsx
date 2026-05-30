@@ -14,6 +14,7 @@ import {
 import {
 	getPublicQueueZoneDisplay,
 	type PublicQueueStatus,
+	type RecentQueueToken,
 } from '../../../services/publicScreenApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
 import { computeFillZoneTextSizes } from '../TokenDisplayThemes/tokenDisplayThemes';
@@ -30,6 +31,8 @@ export interface TemplateFabricPreviewProps {
 	configuration?: Record<string, unknown> | string | null;
 	orientation?: 'landscape' | 'portrait';
 	queuesByUuid?: Record<string, PublicQueueStatus>;
+	/** Recently-called tokens keyed by queue UUID; forwarded to each zone's TokenDisplayThemeCard. */
+	recentByQueue?: Record<string, RecentQueueToken[]>;
 	flicker?: boolean;
 	className?: string;
 	/** Public signage view: fill the host, no TV bezel frame. Default keeps PreviewTvFrame. */
@@ -280,6 +283,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	configuration = null,
 	orientation = 'landscape',
 	queuesByUuid = {},
+	recentByQueue = {},
 	flicker = false,
 	className = '',
 	fullScreen = false,
@@ -582,26 +586,33 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 
 				const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
 
-					if (
-						(appearance.mode === 'theme' && appearance.displayTheme) ||
-						appearance.mode === 'fill'
-					) {
-						return (
-							<div
-								key={`${zone.name}-${index}`}
-								className='screen-zone-live-overlay screen-zone-live-overlay--theme'
-								style={{ ...zoneStyle, opacity: zoneOpacity }}>
-								<TokenDisplayThemeCard
-									appearance={appearance}
-									queueName={display.queueName}
-									subtitle={display.servingPointName}
-									tokenDisplay={display.tokenDisplay}
-									status={display.tokenStatus}
-									fillContainer
-								/>
-							</div>
-						);
-					}
+				if (
+					(appearance.mode === 'theme' && appearance.displayTheme) ||
+					appearance.mode === 'fill'
+				) {
+					// Primary: live `other_current_tokens` returned by the API each poll.
+					// Fallback: frontend-tracked history keyed by queue UUID.
+					const zoneRecentTokens =
+						queue?.other_tokens?.length
+							? queue.other_tokens
+							: (queue?.uuid ? (recentByQueue[queue.uuid] ?? []) : []);
+					return (
+						<div
+							key={`${zone.name}-${index}`}
+							className='screen-zone-live-overlay screen-zone-live-overlay--theme'
+							style={{ ...zoneStyle, opacity: zoneOpacity }}>
+							<TokenDisplayThemeCard
+								appearance={appearance}
+								queueName={display.queueName}
+								subtitle={display.servingPointName}
+								tokenDisplay={display.tokenDisplay}
+								status={display.tokenStatus}
+								recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
+								fillContainer
+							/>
+						</div>
+					);
+				}
 
 					return (
 						<div

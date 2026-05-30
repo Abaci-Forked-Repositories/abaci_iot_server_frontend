@@ -64,10 +64,14 @@
 
 .screens-grid {
 	padding: 0.8rem;
-	overflow-y: auto;
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(175px, 175px));
 	gap: 0.9rem;
+}
+
+.queue-cards-scroll .screens-grid {
+	overflow: visible;
+	padding-top: 0;
 }
 
 // ─── Card tile ───────────────────────────────────────────────────────────────
@@ -191,6 +195,14 @@
 	background: #ef4444;
 }
 
+.screen-card-led.is-disabled {
+	background: #9ca3af;
+
+	@include dark-mode {
+		background: #6b7280;
+	}
+}
+
 .screen-card-status {
 	max-width: calc(100% - 22px);
 	display: inline-flex;
@@ -222,7 +234,8 @@
 	}
 }
 
-.screen-card-status.is-inactive {
+.screen-card-status.is-inactive,
+.screen-card-status.is-offline {
 	color: #b91c1c;
 	background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%);
 	border-color: rgba(#dc2626, 0.32);
@@ -231,6 +244,30 @@
 		color: #fca5a5;
 		background: rgba(#ef4444, 0.22);
 		border-color: rgba(#ef4444, 0.35);
+	}
+}
+
+.screen-card-status.is-online {
+	color: #15803d;
+	background: linear-gradient(145deg, #dcfce7 0%, #bbf7d0 100%);
+	border-color: rgba(#16a34a, 0.35);
+
+	@include dark-mode {
+		color: #86efac;
+		background: rgba(#16a34a, 0.22);
+		border-color: rgba(#22c55e, 0.35);
+	}
+}
+
+.screen-card-status.is-disabled {
+	color: #6b7280;
+	background: linear-gradient(145deg, #f3f4f6 0%, #e5e7eb 100%);
+	border-color: rgba(#9ca3af, 0.4);
+
+	@include dark-mode {
+		color: #9ca3af;
+		background: rgba(#6b7280, 0.25);
+		border-color: rgba(#9ca3af, 0.35);
 	}
 }
 
@@ -883,4 +920,147 @@
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	color: #94a3b8;
+}
+
+// ─── Previously-Called Ticker ─────────────────────────────────────────────────
+// Horizontally scrolling bar that appears at the bottom of the fullscreen
+// public display and (in mock mode) inside template editor previews.
+
+@keyframes pct-marquee {
+	0%   { transform: translateX(0); }
+	100% { transform: translateX(-50%); }
+}
+
+// Base bar — absolute overlay at the bottom of .screen-public-root--fullscreen
+// or inside tdc-canvas-wrap for the template detail preview.
+.pct-bar {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+	background: rgba(8, 14, 30, 0.82);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	height: clamp(72px, 18vh, 130px);
+	overflow: hidden;
+	pointer-events: none;
+	user-select: none;
+}
+
+// Left label column
+.pct-label {
+	flex: 0 0 auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0 clamp(12px, 2vw, 28px);
+	gap: 8px;
+	border-right: 1px solid rgba(255, 255, 255, 0.10);
+	background: rgba(0, 0, 0, 0.18);
+}
+
+.pct-label-text {
+	font-size: clamp(8px, 1.1vw, 13px);
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.55);
+	white-space: nowrap;
+	writing-mode: vertical-rl;
+	text-orientation: mixed;
+	transform: rotate(180deg);
+}
+
+.pct-label-divider {
+	display: block;
+	flex: 1;
+	width: 1px;
+	background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+// Scrolling track — clips the marquee
+.pct-track {
+	flex: 1;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+// Inner strip — animated marquee (list is doubled for seamless loop)
+.pct-scroll {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 16px);
+	padding: 0 clamp(8px, 1.5vw, 16px);
+	// Duration: 2.8 s per card so 6 cards take ~17 s.
+	animation: pct-marquee calc(var(--pct-count, 6) * 2.8s) linear infinite;
+	will-change: transform;
+}
+
+// Individual token mini-card
+.pct-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	padding: clamp(6px, 1.2vh, 10px) clamp(10px, 1.6vw, 18px);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 10px;
+	background:
+		linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+	backdrop-filter: blur(4px);
+	flex-shrink: 0;
+	min-width: clamp(64px, 9vw, 110px);
+	transition: border-color 0.2s ease;
+}
+
+.pct-card-token {
+	font-size: clamp(14px, 2.2vw, 24px);
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	color: #ffffff;
+	line-height: 1.1;
+}
+
+.pct-card-counter-label {
+	font-size: clamp(7px, 0.85vw, 10px);
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.50);
+	line-height: 1;
+}
+
+.pct-card-counter-num {
+	font-size: clamp(11px, 1.5vw, 18px);
+	font-weight: 700;
+	color: #f59e0b;
+	line-height: 1;
+}
+
+.pct-card-time {
+	font-size: clamp(7px, 0.82vw, 10px);
+	color: rgba(255, 255, 255, 0.38);
+	letter-spacing: 0.04em;
+	margin-top: 1px;
+}
+
+// ── Compact mode for fixed-size canvas previews ───────────────────────────────
+.pct-bar--compact {
+	height: 22%;
+
+	.pct-card-token  { font-size: 11px; }
+	.pct-card-counter-label { font-size: 6px; }
+	.pct-card-counter-num   { font-size: 9px; }
+	.pct-card-time   { font-size: 6px; }
+	.pct-label-text  { font-size: 7px; }
+	.pct-card        { padding: 4px 8px; min-width: 52px; border-radius: 6px; }
 }

@@ -70,7 +70,7 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={handleClose} size='lg' isCentered>
+		<Modal isOpen={isOpen} setIsOpen={handleClose} size='lg' isCentered isAnimation={false}>
 			<ModalHeader setIsOpen={handleClose}>
 				<ModalTitle id='new-screen-modal'>Add screen</ModalTitle>
 			</ModalHeader>
@@ -164,11 +164,11 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 				/>
 			</ModalBody>
 			<ModalFooter>
+				<Button color='secondary' onClick={handleClose}>
+					Cancel
+				</Button>
 				<Button color='primary' isDisable={!name.trim() || loading} onClick={handleSubmit}>
 					{loading ? <Spinner isSmall /> : 'Create screen'}
-				</Button>
-				<Button color='light' onClick={handleClose}>
-					Cancel
 				</Button>
 			</ModalFooter>
 		</Modal>

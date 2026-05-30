@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://xhtml-forum-closed-studio.trycloudflare.com';
+		return 'https://know-nearby-stack-aids.trycloudflare.com';
 	}
 	return url;
 };

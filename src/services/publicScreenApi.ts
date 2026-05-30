@@ -130,6 +130,15 @@ export interface PublicQueueToken {
 	created_at: string;
 }
 
+/** A previously-called token entry (flat shape used in the ticker bar). */
+export interface RecentQueueToken {
+	token_display: string;
+	serving_point_name?: string;
+	queue_name?: string;
+	/** ISO string or human-readable time returned by the API. */
+	called_at?: string;
+}
+
 export interface PublicQueueStatus {
 	uuid: string;
 	id: number;
@@ -143,6 +152,14 @@ export interface PublicQueueStatus {
 	serving_point_name?: string;
 	token_display?: string;
 	token_status?: string;
+	/** Recently-called tokens for this queue, if the API returns them. */
+	recent_tokens?: RecentQueueToken[];
+	/**
+	 * Other tokens currently being served at other counters for this queue.
+	 * Mapped from the `other_current_tokens` array in the API response.
+	 * These are shown live in the history strip at the bottom of the zone card.
+	 */
+	other_tokens?: RecentQueueToken[];
 }
 
 export interface PublicQueueZoneDisplay {
@@ -183,6 +200,30 @@ export function normalizePublicQueueStatus(
 		};
 	}
 
+	function mapToRecentToken(raw: unknown): RecentQueueToken {
+		const t = raw as Record<string, unknown>;
+		return {
+			token_display: String(t.token_display ?? ''),
+			serving_point_name:
+				typeof t.serving_point_name === 'string' ? t.serving_point_name : undefined,
+			queue_name:
+				typeof t.queue_name === 'string' ? t.queue_name : undefined,
+			called_at:
+				typeof t.called_at === 'string' ? t.called_at : undefined,
+		};
+	}
+
+	const recentTokens = Array.isArray(r.recent_tokens)
+		? (r.recent_tokens as unknown[]).map(mapToRecentToken)
+		: undefined;
+
+	// `other_current_tokens` — other tokens being served at other counters right now.
+	const otherTokens = Array.isArray(r.other_current_tokens)
+		? (r.other_current_tokens as unknown[])
+				.map(mapToRecentToken)
+				.filter((t) => Boolean(t.token_display))
+		: undefined;
+
 	return {
 		uuid: String(r.uuid ?? ''),
 		id: Number(r.id) || 0,
@@ -195,6 +236,8 @@ export function normalizePublicQueueStatus(
 		serving_point_name: servingPointName || undefined,
 		token_display: tokenDisplay || undefined,
 		token_status: tokenStatus || undefined,
+		recent_tokens: recentTokens,
+		other_tokens: otherTokens,
 	};
 }
 
@@ -236,6 +279,8 @@ export function getPublicQueueZoneDisplay(
 export interface PublicQueueStatusResponse {
 	count: number;
 	queues: PublicQueueStatus[];
+	/** Flat list of recently-served tokens across all queues (if returned by API). */
+	recent_tokens?: RecentQueueToken[];
 }
 
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
@@ -252,8 +297,11 @@ export const publicScreenApi = {
 			template_count: templates.length,
 		};
 	},
-	getQueueStatus: (queueUuids: string[]) =>
+	getQueueStatus: (screenUuid: string, queueUuids: string[]) =>
 		unwrap<PublicQueueStatusResponse>(
-			publicAxios.post('api/public/queue-status/', { queue_uuids: queueUuids }),
+			publicAxios.post('api/public/queue-status/', {
+				screen_uuid: screenUuid,
+				queue_uuids: queueUuids,
+			}),
 		),
 };

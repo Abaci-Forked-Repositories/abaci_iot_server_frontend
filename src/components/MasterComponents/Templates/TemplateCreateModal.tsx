@@ -121,20 +121,13 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={handleClose} size='xl' isCentered>
+		<Modal isOpen={isOpen} setIsOpen={handleClose} size='lg' isCentered isAnimation={false}>
 			<ModalHeader setIsOpen={handleClose}>
 				<ModalTitle id='new-template-modal'>New Template</ModalTitle>
 			</ModalHeader>
 			<ModalBody>
 				<div className='tpl-modal-body'>
 					<div className='tpl-modal-form'>
-						<header className='tpl-modal-intro'>
-							{/* <h5 className='tpl-modal-intro-title'>Template setup</h5> */}
-							{/* <p className='tpl-modal-intro-sub'>
-								Name your layout, pick orientation and resolution, then refine zones in the editor.
-							</p> */}
-						</header>
-
 						{submitError && (
 							<div className='tpl-create-error' role='alert'>
 								{submitError}
@@ -179,43 +172,6 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 								placeholder='Optional notes'
 							/>
 						</div>
-
-						{/* <div className='tpl-field-group'>
-							<label className='tpl-field-label'>Screen orientation</label>
-							<div className='tpl-orient-row'>
-								<button
-									type='button'
-									className={`tpl-orient-btn${isLandscape ? ' tpl-orient-btn--active' : ''}`}
-									onClick={() => switchOrientation(true)}>
-									<span className='tpl-orient-icon tpl-orient-icon--landscape' />
-									Landscape
-								</button>
-								<button
-									type='button'
-									className={`tpl-orient-btn${!isLandscape ? ' tpl-orient-btn--active' : ''}`}
-									onClick={() => switchOrientation(false)}>
-									<span className='tpl-orient-icon tpl-orient-icon--portrait' />
-									Portrait
-								</button>
-							</div>
-						</div> */}
-
-						{/* <div className='tpl-field-group'>
-							<label className='tpl-field-label'>Screen resolution</label>
-							<div className='tpl-res-list'>
-								{RESOLUTIONS.map(({ val, getLabel, tag }) => (
-									<button
-										key={val}
-										type='button'
-										className={`tpl-res-btn${resolution === val ? ' tpl-res-btn--active' : ''}`}
-										onClick={() => pickResolution(val)}>
-										<span>{getLabel(isLandscape)}</span>
-										{tag && <span className='tpl-res-tag'>{tag}</span>}
-									</button>
-								))}
-							</div>
-						</div> */}
-
 						{resolution === 3 && (
 							<div className='tpl-field-group'>
 								<label className='tpl-field-label'>Custom size (px)</label>
@@ -247,48 +203,17 @@ const TemplateCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => 
 							</div>
 						)}
 					</div>
-
-					{/* <div className='tpl-modal-preview'>
-						<div className='tpl-preview-inner'>
-							<div
-								className='tpl-screen'
-								style={{
-									width: previewW + border,
-									height: previewH + border,
-									borderRadius: radius,
-								}}>
-								<div
-									className='tpl-screen-content'
-									style={{ width: previewW, height: previewH, borderWidth: border }}>
-									{ZONE_GRADIENTS.map((grad, i) => (
-										<div key={i} className={`tpl-zone-${i}`}>
-											<div className='tpl-zone-fill' style={{ background: grad }}>
-												<span className='tpl-zone-label'>Zone {i + 1}</span>
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-							<div className='tpl-screen-badge'>
-								<span className='tpl-screen-badge-dot' />
-								<span className='tpl-screen-badge-text'>
-									{isLandscape ? 'Landscape' : 'Portrait'}&nbsp;·&nbsp;
-									{width} × {height}
-								</span>
-							</div>
-						</div>
-					</div> */}
 				</div>
 			</ModalBody>
 			<ModalFooter>
+				<Button color='secondary' onClick={handleClose}>
+					Cancel
+				</Button>
 				<Button
 					color='primary'
 					isDisable={!name.trim() || loading}
 					onClick={handleSubmit}>
 					{loading ? <Spinner isSmall /> : 'Create Template'}
-				</Button>
-				<Button color='light' onClick={handleClose}>
-					Cancel
 				</Button>
 			</ModalFooter>
 		</Modal>

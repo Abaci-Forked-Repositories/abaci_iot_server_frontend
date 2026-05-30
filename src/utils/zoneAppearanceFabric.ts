@@ -53,9 +53,9 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 	const fallbacks: Record<ZoneDisplayThemeId, string> = {
 		'digital-crimson': '#3a0404',
 		'onyx-gold': '#000000',
-		'crimson-banner': '#112233',
-		'imperial-court': '#1a0530',
-		'arctic-white': '#ffffff',
+		'crimson-banner': '#020817',
+		'imperial-court': '#02140f',
+		'arctic-white': '#0a0b0d',
 	};
 	return fallbacks[themeId];
 }

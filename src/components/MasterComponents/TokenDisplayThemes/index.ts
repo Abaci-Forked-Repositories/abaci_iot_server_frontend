@@ -12,6 +12,7 @@ export {
 	ZONE_DISPLAY_THEME_CONFIGS,
 	TOKEN_STATUS_DISPLAY,
 	TOKEN_DISPLAY_NO_TOKEN,
+	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	DEFAULT_ZONE_DISPLAY_THEME,
 	parseDisplayThemeId,
 	isDisplayThemeId,
@@ -24,6 +25,8 @@ export {
 	getContrastTextColorForBackground,
 	getStatusConfig,
 	computeTokenDisplayFillBaseFontSize,
+	computeFillZoneSplitBaseFontSize,
+	computeDigitalCrimsonFillBaseFontSize,
 	computeFillZoneTextSizes,
 } from './tokenDisplayThemes';
 

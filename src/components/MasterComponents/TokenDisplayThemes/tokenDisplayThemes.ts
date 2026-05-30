@@ -15,9 +15,9 @@
  * Each slug maps to a genuinely different visual design in _token-display-theme.scss:
  *   digital-crimson  — dark crimson + sweep animation + split token/status layout
  *   onyx-gold        — pure black + liquid-gold top rule + gold token
- *   crimson-banner   — two-tone crimson header band / deep-navy body
- *   imperial-court   — emerald stripes + gold rules framing royal magenta
- *   arctic-white     — clean bright white + cobalt token + dark text
+ *   crimson-banner   — modern queue board (dark navy, rotating rings, glass status card)
+ *   imperial-court   — dark luxury broadcast UI with wireframe + gold separators
+ *   arctic-white     — premium glassmorphism panel with flowing border energy
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -76,25 +76,25 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 	},
 	'crimson-banner': {
 		id: 'crimson-banner',
-		label: 'Crimson Banner',
-		description: 'Bold crimson header band over deep navy — authoritative',
+		label: 'Modern Queue',
+		description: 'Dark cyber board with live indicator, rotating rings, and glass status card',
 		textColor: 'light',
-		previewGradient: 'linear-gradient(180deg, #D90429 0% 45%, #112233 45% 100%)',
+		previewGradient:
+			'radial-gradient(circle at 50% 40%, rgba(0, 132, 255, 0.2) 0%, #031122 45%, #020817 100%)',
 	},
 	'imperial-court': {
 		id: 'imperial-court',
-		label: 'Imperial Court',
-		description: 'Emerald & gold stripes framing royal magenta — premium',
+		label: 'Regal Court',
+		description: 'Dark luxury broadcast board with wireframe grid, ambient particles, and gold accents',
 		textColor: 'light',
-		previewGradient:
-			'linear-gradient(to bottom, #004b23 0% 14%, #d4af37 14% 17%, #7209b7 17% 83%, #d4af37 83% 86%, #004b23 86% 100%)',
+		previewGradient: 'linear-gradient(165deg, #02140f 0%, #000000 100%)',
 	},
 	'arctic-white': {
 		id: 'arctic-white',
-		label: 'Arctic White',
-		description: 'Clean white with cobalt-blue token — maximum readability',
-		textColor: 'dark',
-		previewGradient: 'linear-gradient(160deg, #ffffff 0%, #e8f0fb 100%)',
+		label: 'Glass Panel',
+		description: 'Premium glassmorphism with graphite backdrop, frosted panels, and flowing white border energy',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(155deg, #141618 0%, #000000 100%)',
 	},
 };
 
@@ -306,19 +306,56 @@ export function getStatusConfig(status?: string | null): TokenStatusDisplayConfi
 
 export const TOKEN_DISPLAY_NO_TOKEN = '—';
 
+/** Below this count, active-token strip is static and left-aligned (no marquee duplicate). */
+export const ACTIVE_TOKENS_MARQUEE_MIN_COUNT = 5;
+
 /**
  * Token size in fill-container mode (see `.tdc--fill .tdc__token` in SCSS).
  * Keep in sync with TOKEN_DISPLAY_FILL_LAYOUT_EM.
  */
-export const TOKEN_DISPLAY_FILL_TOKEN_EM = 3;
+/** Token size multiplier in fill mode (see `.tdc--fill .tdc__token` in SCSS). */
+export const TOKEN_DISPLAY_FILL_TOKEN_EM = 3.35;
 
-/** Header + token + footer + gaps ≈ this many `em` vertically in fill mode. */
+/** Split layout: header row + body/status row (matches grid fill zones). */
+export const TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM = 5.2;
+
+/** Legacy centered layout (non-split). */
 export const TOKEN_DISPLAY_FILL_LAYOUT_EM = 7;
 
 /**
  * Base font-size (px) for `.tdc--fill` so queue/token/badge fit inside the zone box.
  * Uses height, width, and token length so shrinking either dimension reduces text.
  */
+/** Boost root font-size on large zones (TV / fullscreen signage). */
+export function applyFillZoneFontSizeBoost(
+	base: number,
+	width: number,
+	height: number,
+): number {
+	const minSide = Math.min(Math.max(1, width), Math.max(1, height));
+	let boost = 1;
+	let maxCap = 52;
+
+	if (minSide >= 320) {
+		boost = 1.06;
+		maxCap = 58;
+	}
+	if (minSide >= 480) {
+		boost = 1.12;
+		maxCap = 68;
+	}
+	if (minSide >= 720) {
+		boost = 1.18;
+		maxCap = 80;
+	}
+	if (minSide >= 1080) {
+		boost = 1.24;
+		maxCap = 96;
+	}
+
+	return Math.max(5, Math.round(Math.min(base * boost, maxCap)));
+}
+
 export function computeTokenDisplayFillBaseFontSize(
 	width: number,
 	height: number,
@@ -329,53 +366,46 @@ export function computeTokenDisplayFillBaseFontSize(
 	const chars = Math.max(1, tokenLength);
 
 	const fromHeight = h / TOKEN_DISPLAY_FILL_LAYOUT_EM;
-	// Shrink when either width or height gets smaller (not only the shorter axis at the end).
 	const fromMinSide = Math.min(w, h) / TOKEN_DISPLAY_FILL_LAYOUT_EM;
-	// Bold digits ≈ 0.62 × (token em) × char count.
 	const fromTokenWidth =
-		w / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.62 + 1.6);
+		w / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.58 + 1.4);
 
-	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, 48);
-
-	return Math.round(Math.max(5, base));
+	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
 }
 
 /**
- * Base font-size (px) for the `digital-crimson` fill layout which uses CSS Grid:
- *   - Row 1: full-width header (queue name)
- *   - Row 2 left (58%): serving-point subtitle + token number
- *   - Row 2 right (42%): status badge (flex-column: icon stacked above label)
- *
- * The formula accounts for each column's effective width so the token never
- * overflows the left column and the status badge never overflows the right column.
+ * Fill layout with status on the right (all themes in `.tdc--fill`):
+ * header full-width | token left | status right [ | history row ].
  */
-export function computeDigitalCrimsonFillBaseFontSize(
+export function computeFillZoneSplitBaseFontSize(
 	width: number,
 	height: number,
 	tokenLength = 2,
+	hasHistoryStrip = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
 
-	// Grid header (~1.5em) + two-column body row (~4em) ≈ 5.5em total
-	const LAYOUT_EM = 5.5;
-	// Effective left-column fraction after column padding (58% - padding ≈ 55%)
-	const TOKEN_COL = 0.55;
-	// Empirical divisor so the widest status word ("Postponed", 9 chars) fits
-	// in the 42% right column with badge padding (factor verified numerically)
-	const STATUS_FACTOR = 4.8;
+	const layoutEm = hasHistoryStrip
+		? TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM + 1.4
+		: TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM;
+	const TOKEN_COL = 0.56;
+	const STATUS_FACTOR = 4.6;
 
-	const fromHeight = h / LAYOUT_EM;
-	const fromMinSide = Math.min(w, h) / LAYOUT_EM;
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
 	const fromTokenWidth =
-		(w * TOKEN_COL) / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.62 + 1.6);
-	// Status column: badge font is 0.66em of root, label is 0.88em of badge
+		(w * TOKEN_COL) / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.58 + 1.2);
 	const fromStatusWidth = (w * 0.42) / STATUS_FACTOR;
 
-	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, fromStatusWidth, 48);
-	return Math.round(Math.max(5, base));
+	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, fromStatusWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
 }
+
+/** @deprecated Use computeFillZoneSplitBaseFontSize */
+export const computeDigitalCrimsonFillBaseFontSize = computeFillZoneSplitBaseFontSize;
 
 /** Pixel font sizes for fill-color zone overlays (Fabric canvas fallback). */
 export function computeFillZoneTextSizes(

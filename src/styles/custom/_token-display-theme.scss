@@ -22,11 +22,22 @@
 
 // ─── Digital Crimson animations ──────────────────────────────────────────────
 
-// Flash-line: pseudo-element fills the zone (inset:0).
-// translateX ±130% of its own width (= zone width) sweeps the line edge-to-edge.
+// Flash-line: background overlay sweep (behind content via ::before + z-index).
 @keyframes tdc-flashline {
-	0%   { transform: translateX(-130%); }
-	100% { transform: translateX(130%);  }
+	0% {
+		transform: translateX(-135%);
+		opacity: 0.35;
+	}
+	12% {
+		opacity: 0.85;
+	}
+	88% {
+		opacity: 0.85;
+	}
+	100% {
+		transform: translateX(135%);
+		opacity: 0.35;
+	}
 }
 
 // Heading slide: queue-name text bounces left ↔ right inside the header.
@@ -77,28 +88,41 @@
 		0 2px 8px rgba(100, 0, 0, 0.30),
 		inset 0 1px 0 rgba(255, 100, 100, 0.08);
 
-	// Sharp white flash line — sweeps left-to-right in an infinite loop.
-	// inset:0 makes the element exactly zone-sized, so translateX ±130%
-	// guarantees the line is completely off-screen at both ends.
-	&::after {
+	isolation: isolate;
+
+	// ::before paints before children — reliable background overlay on template + live.
+	&::before {
 		content: '';
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(
-			100deg,
-			transparent               46.5%,
-			rgba(255, 210, 190, 0.06) 48.2%,
-			rgba(255, 240, 220, 0.30) 49.4%,
-			rgba(255, 255, 255, 0.88) 49.85%, /* thin bright core */
-			rgba(255, 255, 255, 0.88) 50.15%,
-			rgba(255, 240, 220, 0.30) 50.6%,
-			rgba(255, 210, 190, 0.06) 51.8%,
-			transparent               53.5%
-		);
-		/* alternate = forward then backward = bounces between left and right edges */
-		animation: tdc-flashline 2.0s linear infinite alternate;
+		z-index: 1;
 		pointer-events: none;
-		z-index: 5;
+		border-radius: inherit;
+		background: linear-gradient(
+			105deg,
+			transparent 43%,
+			rgba(255, 200, 180, 0.05) 46.5%,
+			rgba(255, 230, 210, 0.14) 48.8%,
+			rgba(255, 255, 255, 0.42) 49.75%,
+			rgba(255, 255, 255, 0.42) 50.25%,
+			rgba(255, 230, 210, 0.14) 51.2%,
+			rgba(255, 200, 180, 0.05) 53.5%,
+			transparent 57%
+		);
+		animation: tdc-flashline 6.5s ease-in-out infinite alternate;
+		will-change: transform, opacity;
+	}
+
+	.tdc__glow {
+		z-index: 0;
+	}
+
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc__history {
+		position: relative;
+		z-index: 2;
 	}
 }
 
@@ -152,149 +176,14 @@
 	}
 }
 
-// ─── Theme 3 · Crimson Banner ────────────────────────────────────────────────
-// Vivid Crimson (#D90429) header band · Deep Anchor Blue (#112233) body
-// Bleached Sail White (#F8F9FA) text — bold, authoritative, official
-// DISTINCTIVE LAYOUT: hard two-tone split via CSS gradient (no HTML change)
+// ─── Theme 3 · Modern Queue Board (slug: crimson-banner) ─────────────────────
+@import 'modern-queue-board';
 
-.tdc--crimson-banner {
-	// Hard-stop gradient: crimson covers top ~32%, deep navy covers rest
-	--tdc-bg: linear-gradient(to bottom, #d90429 0%, #d90429 32%, #112233 32%, #112233 100%);
-	--tdc-glow-color: rgba(217, 4, 41, 0.12);
-	--tdc-text: rgba(248, 249, 250, 0.97);
-	--tdc-text-sub: rgba(200, 220, 240, 0.82);
-	--tdc-text-label: rgba(170, 200, 230, 0.65);
-	--tdc-token-color: #f8f9fa;
-	--tdc-token-shadow: 0 4px 32px rgba(248, 249, 250, 0.25), 0 0 60px rgba(248, 249, 250, 0.08);
-	--tdc-border: rgba(217, 4, 41, 0.40);
-	--tdc-badge-bg: rgba(217, 4, 41, 0.18);
-	--tdc-badge-text: rgba(255, 210, 210, 0.95);
-	--tdc-badge-border: rgba(217, 4, 41, 0.45);
+// ─── Theme 4 · Regal Court (slug: imperial-court) ────────────────────────────
+@import 'imperial-court';
 
-	box-shadow:
-		0 8px 32px rgba(0, 0, 0, 0.50),
-		0 2px 8px rgba(0, 0, 0, 0.28),
-		inset 0 1px 0 rgba(255, 255, 255, 0.08);
-
-	// Queue name sits inside the crimson band — give it strong white weight
-	.tdc__queue-name {
-		font-size: 0.85em;
-		font-weight: 800;
-		letter-spacing: 0.14em;
-		color: #f8f9fa;
-		opacity: 1;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-	}
-
-	// In fill mode the header area covers the crimson zone exactly
-	&.tdc--fill .tdc__header {
-		padding-top: 0.45em;
-		padding-bottom: 0.45em;
-	}
-}
-
-// ─── Theme 4 · Imperial Court ────────────────────────────────────────────────
-// Exact palette: Emerald Velvet (#004B23) · Liquid Gold (#D4AF37) · Royal Magenta (#7209B7)
-// DISTINCTIVE LAYOUT: horizontal stripe design via hard-stop gradient
-//   Top ~14%  → Emerald Velvet green band  (queue name sits here)
-//   ~14-16%   → Liquid Gold stripe
-//   ~16-84%   → Royal Magenta/Burgundy     (token number sits here)
-//   ~84-86%   → Liquid Gold stripe
-//   ~86-100%  → Emerald Velvet green band  (status badge sits here)
-
-.tdc--imperial-court {
-	--tdc-bg: linear-gradient(
-		to bottom,
-		#004b23 0%,   #004b23 14%,
-		#c9972a 14%,  #d4af37 15.5%, #c9972a 17%,
-		#7209b7 17%,  #7209b7 83%,
-		#c9972a 83%,  #d4af37 84.5%, #c9972a 86%,
-		#004b23 86%,  #004b23 100%
-	);
-	--tdc-glow-color: rgba(114, 9, 183, 0.15);
-	// Token and body text sit on magenta — use white
-	--tdc-text: rgba(255, 255, 255, 0.97);
-	--tdc-text-sub: rgba(230, 200, 255, 0.85);
-	--tdc-text-label: rgba(210, 175, 255, 0.70);
-	--tdc-token-color: #ffffff;
-	--tdc-token-shadow: 0 4px 36px rgba(255, 255, 255, 0.30), 0 0 60px rgba(114, 9, 183, 0.30);
-	// Gold frame border matching the stripe color
-	--tdc-border: rgba(212, 175, 55, 0.60);
-	--tdc-badge-bg: rgba(0, 0, 0, 0.25);
-	--tdc-badge-text: rgba(255, 255, 255, 0.95);
-	--tdc-badge-border: rgba(255, 255, 255, 0.30);
-
-	border: 1px solid rgba(212, 175, 55, 0.55);
-	box-shadow:
-		0 8px 36px rgba(0, 0, 0, 0.55),
-		0 2px 8px rgba(0, 0, 0, 0.30),
-		inset 0 1px 0 rgba(212, 175, 55, 0.15);
-
-	// Queue name sits on the top green band — keep it white and tight
-	.tdc__queue-name {
-		font-weight: 800;
-		letter-spacing: 0.12em;
-		color: #ffffff;
-		opacity: 1;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.40);
-	}
-
-	// Status badge sits on the bottom green band
-	.tdc__status-badge {
-		background: rgba(0, 0, 0, 0.30);
-		border-color: rgba(255, 255, 255, 0.28);
-		color: #ffffff;
-	}
-
-	// In fill mode, tighten the header/footer so they sit flush in their bands
-	&.tdc--fill .tdc__header {
-		padding-top: 0.38em;
-		padding-bottom: 0.38em;
-	}
-
-	&.tdc--fill .tdc__footer {
-		padding-bottom: 0.38em;
-	}
-}
-
-// ─── Theme 5 · Arctic White ───────────────────────────────────────────────────
-// Pure White (#FFFFFF) with Midnight Navy (#0A1128) text
-// Cobalt Blue (#0047AB) token — clinical, clean, maximum readability
-// DISTINCTIVE: only fully bright theme — opposite contrast to all others
-
-.tdc--arctic-white {
-	--tdc-bg: linear-gradient(160deg, #ffffff 0%, #eef3fb 100%);
-	--tdc-glow-color: rgba(0, 71, 171, 0.07);
-	--tdc-text: rgba(10, 17, 40, 0.92);
-	--tdc-text-sub: rgba(30, 50, 80, 0.72);
-	--tdc-text-label: rgba(50, 75, 120, 0.60);
-	--tdc-token-color: #0047ab;
-	--tdc-token-shadow: 0 4px 28px rgba(0, 71, 171, 0.30);
-	--tdc-border: rgba(0, 71, 171, 0.18);
-	--tdc-badge-bg: rgba(0, 71, 171, 0.08);
-	--tdc-badge-text: rgba(10, 17, 40, 0.90);
-	--tdc-badge-border: rgba(0, 71, 171, 0.22);
-
-	// Lighter shadow to match bright background
-	border: 1px solid rgba(0, 71, 171, 0.18);
-	box-shadow:
-		0 4px 24px rgba(0, 0, 0, 0.10),
-		0 1px 6px rgba(0, 0, 0, 0.06),
-		inset 0 1px 0 rgba(255, 255, 255, 0.80);
-
-	// Cobalt top accent
-	&::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 3px;
-		background: #0047AB;
-		z-index: 2;
-		pointer-events: none;
-	}
-}
+// ─── Theme 5 · Glass Panel (slug: arctic-white) ───────────────────────────────
+@import 'arctic-glass';
 
 // Fill-only zone (no named theme) — background from inline style
 .tdc--fill-mode {
@@ -446,33 +335,38 @@
 	white-space: nowrap;
 }
 
-// Zone fill mode: base font-size set by ResizeObserver on TokenDisplayThemeCard (fillContainer).
-//
-// CENTERING STRATEGY: header and footer are positioned absolutely so they float
-// at the top/bottom without consuming any flex space. The body therefore always
-// fills the full card height, keeping the token number perfectly centered in
-// the zone regardless of queue name length or theme header size.
+// Zone fill mode: CSS grid — header full width | token left | status right.
+// Root font-size from ResizeObserver (computeFillZoneSplitBaseFontSize).
 .tdc--fill {
-	// Root already has position: relative (from .tdc base)
+	container-type: size;
+	display: grid;
+	grid-template-columns: 58% 42%;
+	grid-template-rows: auto 1fr;
+	grid-template-areas:
+		'head  head'
+		'body  foot';
+	align-items: stretch;
+	min-height: 0;
+	min-width: 0;
 
-	// ── Header floats at the top — does NOT push the body down ───────────────
 	.tdc__header {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
+		grid-area: head;
+		position: relative;
 		z-index: 3;
-		padding: 0.30em 0.80em 0.15em;
+		padding: 0.28em 0.75em 0.22em;
 		flex-shrink: 0;
-		// Semi-transparent fade so overlapping token stays readable
-		background: transparent;
+		background: rgba(0, 0, 0, 0.22);
+		border-bottom: 1px solid var(--tdc-border);
+		overflow: hidden;
+		min-width: 0;
 	}
 
 	.tdc__queue-name {
-		font-size: 0.72em;
-		letter-spacing: 0.10em;
-		opacity: 0.92;
-		// Truncate long names before they clip outside header area
+		font-size: 0.76em;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		opacity: 0.95;
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -484,61 +378,89 @@
 		display: none;
 	}
 
-	.tdc__subtitle {
-		font-size: 0.72em;
-		flex-shrink: 0;
-	}
-
-	// ── Body fills the FULL card height — token always centered ──────────────
 	.tdc__body {
-		flex: 1;
-		min-height: 0;
-		// Inset padding so the large token doesn't clip behind the header/footer
-		padding: 1.6em 0.65em 1.4em;
-		gap: 0.1em;
-		overflow: hidden;
+		grid-area: body;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		padding: 0.28em 0.35em;
+		gap: 0.08em;
+		min-height: 0;
+		min-width: 0;
+		overflow: hidden;
+		border-right: 1px solid var(--tdc-border);
+	}
+
+	.tdc__subtitle {
+		font-size: 0.58em;
+		flex-shrink: 0;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+		margin-bottom: 0.06em;
 	}
 
 	.tdc__token {
-		// Default safe size — computeTokenDisplayFillBaseFontSize targets exactly 3em.
-		// Do NOT exceed 3em in any per-theme fill override — wider zones can tolerate
-		// up to ~3em before the text overflows horizontally.
-		font-size: 3em;
+		font-size: 3.35em;
 		flex-shrink: 1;
 		min-height: 0;
 		max-width: 100%;
 		width: 100%;
-		line-height: 0.92;
+		line-height: 0.94;
 		overflow: hidden;
 		text-overflow: clip;
 		text-align: center;
 	}
 
-	// ── Footer floats at the bottom — does NOT push the body up ──────────────
 	.tdc__footer {
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
+		grid-area: foot;
+		position: relative;
 		z-index: 3;
-		padding: 0 0.65em 0.35em;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		flex-shrink: 0;
+		padding: 0.35em 0.28em;
+		min-width: 0;
+		min-height: 0;
 	}
 
 	.tdc__status-badge {
-		font-size: 0.72em;
-		padding: 0.25em 0.70em;
-		max-width: 90%;
+		flex-direction: column;
+		gap: 0.22em;
+		padding: 0.38em 0.36em;
+		border-radius: 10px;
+		max-width: 100%;
+		width: 100%;
+		box-sizing: border-box;
+		text-align: center;
+		white-space: normal;
+		font-size: 0.66em;
+		overflow: visible;
+	}
+
+	.tdc__status-icon {
+		font-size: 1.35em;
+		display: block;
+		text-align: center;
+		line-height: 1.1;
+	}
+
+	.tdc__status-label {
+		font-size: 0.86em;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		display: block;
+		text-align: center;
+		line-height: 1.25;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		max-width: 100%;
 	}
 }
 
@@ -588,129 +510,42 @@
 	}
 }
 
-// ── Digital Crimson fill mode ── CSS Grid: header full-width | body left | footer right
+// ── Digital Crimson fill — theme accents on shared split grid ─────────────────
 .tdc--fill.tdc--digital-crimson {
-	// Override the flex column from .tdc--fill with a CSS grid
-	display: grid;
-	grid-template-columns: 58% 42%;
-	grid-template-rows: auto 1fr;
-	grid-template-areas:
-		'head  head'
-		'body  foot';
-	align-items: stretch;
-
-	// Reset the absolute positioning applied by .tdc--fill to header/footer
 	.tdc__header {
-		grid-area: head;
-		position: relative;
-		top: unset;
-		left: unset;
-		right: unset;
-		padding: 0.30em 0.75em 0.26em;
 		background: rgba(0, 0, 0, 0.28);
-		border-bottom: 1px solid rgba(220, 40, 40, 0.30);
-		z-index: 2;
-		overflow: hidden; // clip sliding queue name at header edges
+		border-bottom-color: rgba(220, 40, 40, 0.30);
 	}
 
 	.tdc__queue-name {
-		font-size: 0.78em;
+		font-size: 0.80em;
 		font-weight: 800;
 		letter-spacing: 0.13em;
-		text-transform: uppercase;
 		color: #ffffff;
-		opacity: 1;
 		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.40);
 	}
 
-	// Left column: serving-point name (subtitle) stacked above the big token
 	.tdc__body {
-		grid-area: body;
-		flex: unset;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 0.3em 0.35em;
-		border-right: 1px solid rgba(220, 30, 30, 0.18);
-		min-height: 0;
-		min-width: 0; // REQUIRED: prevents grid cell blowout
-		overflow: hidden;
+		border-right-color: rgba(220, 30, 30, 0.18);
 	}
 
 	.tdc__subtitle {
 		font-size: 0.60em;
 		color: rgba(255, 190, 170, 0.78);
-		letter-spacing: 0.07em;
-		text-transform: uppercase;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
-		margin-bottom: 0.08em;
 	}
 
 	.tdc__token {
-		font-size: 3em;
+		font-size: 3.35em;
 		color: #fff5d0;
-		line-height: 0.92;
-		text-align: center;
-		width: 100%;
-		max-width: 100%;
-		// animation inherited from .tdc--digital-crimson .tdc__token above
-	}
-
-	// Right column: status displayed as a centred block
-	.tdc__footer {
-		grid-area: foot;
-		position: relative;
-		bottom: unset;
-		left: unset;
-		right: unset;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 0.4em 0.25em;
-		z-index: 2;
-		min-width: 0; // REQUIRED: prevents grid cell blowout
-		// No overflow:hidden here — that clips text descenders (g, j, y, p, q)
 	}
 
 	.tdc__status-badge {
-		flex-direction: column;
-		gap: 0.25em;
-		padding: 0.40em 0.40em;
-		border-radius: 10px;
-		max-width: 100%;
-		width: 100%;
-		box-sizing: border-box;
-		text-align: center;
-		white-space: normal;
 		background: rgba(0, 0, 0, 0.38);
 		border-color: rgba(220, 30, 30, 0.40);
-		overflow: visible; // allow descenders to render outside the tight line-box
-	}
-
-	.tdc__status-icon {
-		font-size: 1.4em;
-		display: block;
-		text-align: center;
-		line-height: 1.1;
 	}
 
 	.tdc__status-label {
-		font-size: 0.88em;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		display: block;
-		text-align: center;
 		color: rgba(255, 220, 200, 0.95);
-		line-height: 1.3; // room for descenders (g, j, y, p, q)
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: 100%;
 	}
 }
 
@@ -754,113 +589,223 @@
 	.tdc__queue-name { font-size: 0.58em; letter-spacing: 0.22em; }
 }
 
-// ── Crimson Banner ── Queue name BIG & bold in crimson band, strong contrast ───
-.tdc--crimson-banner {
-	.tdc__queue-name {
-		font-size: 1.0em;
-		font-weight: 900;
-		letter-spacing: 0.16em;
-		color: #ffffff;
-		opacity: 1;
-		text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-		text-transform: uppercase;
+// Regal Court — one divider only (backdrop); suppress generic fill column border
+.tdc--fill.tdc--imperial-court .tdc__body {
+	border-right: none;
+}
+
+// ── Glass Panel (arctic-white) — see _arctic-glass.scss ───────────────────────
+
+// ─── Active tokens strip ─────────────────────────────────────────────────────
+// Shown at the bottom of fill-mode zones when recentTokens are supplied.
+// ALL colours come from the active theme's CSS variables so it matches
+// every theme automatically (digital-crimson, onyx-gold, …).
+
+@keyframes tdc-history-marquee {
+	0%   { transform: translateX(0); }
+	100% { transform: translateX(-50%); }
+}
+
+// Hidden everywhere by default; the fill + has-history combo enables it.
+.tdc__history {
+	display: none;
+}
+
+// ── Layout: third grid row for other active tokens ────────────────────────────
+.tdc--fill.tdc--has-history {
+	grid-template-rows: auto 1fr minmax(clamp(1.85em, 17%, 24%), 26%);
+	grid-template-areas:
+		'head head'
+		'body foot'
+		'hist hist';
+
+	.tdc__history {
+		grid-area: hist;
+		display: flex;
+		align-items: stretch;
+		position: relative;
+		height: auto;
+		min-height: 0;
+		z-index: 4;
+		overflow: hidden;
+		border-top: 1px solid var(--tdc-border);
+		background: rgba(0, 0, 0, 0.28);
+		pointer-events: none;
 	}
-	.tdc__token {
-		font-size: 3.2em;
-		font-weight: 900;
-		letter-spacing: -0.01em;
+
+	.tdc__footer {
+		grid-area: foot;
+		position: relative;
+		bottom: unset;
+		left: unset;
+		right: unset;
 	}
-	.tdc__status-badge {
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		padding: 0.30em 0.90em;
+
+	.tdc__body {
+		padding-bottom: 0.28em;
 	}
 }
 
-.tdc--fill.tdc--crimson-banner {
-	// Queue name compact in fill mode — crimson band color already gives context
-	.tdc__queue-name {
-		font-size: 0.76em;
-		font-weight: 800;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.40);
+// ── Label column ─────────────────────────────────────────────────────────────
+.tdc__history-label {
+	flex: 0 0 clamp(1.65em, 11cqw, 2.35em);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0.12em 0.32em;
+	gap: 0.15em;
+	min-width: 0;
+	border-right: 1px solid var(--tdc-border);
+	background: rgba(0, 0, 0, 0.15);
+}
+
+.tdc__history-label-text {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45em;
+	font-size: clamp(0.26em, 3.2cqh, 0.4em);
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--tdc-text-label);
+	writing-mode: vertical-rl;
+	text-orientation: mixed;
+	transform: rotate(180deg);
+	max-height: 100%;
+	overflow: hidden;
+}
+
+.tdc__history-label-word {
+	display: block;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+@container (max-height: 160px) {
+	.tdc--fill.tdc--has-history {
+		grid-template-rows: auto 1fr minmax(clamp(1.65em, 16%, 22%), 24%);
+	}
+
+	.tdc__history-label {
+		flex: 0 0 clamp(1.45em, 10cqw, 2em);
+		padding: 0.08em 0.22em;
+	}
+
+	.tdc__history-label-text {
+		gap: 0.3em;
+		font-size: clamp(0.22em, 2.8cqh, 0.34em);
+		letter-spacing: 0.07em;
 	}
 }
 
-// ── Imperial Court ── Elegant stripe layout: each band has its own text role ───
-.tdc--imperial-court {
-	.tdc__queue-name {
-		font-size: 0.80em;
-		font-weight: 800;
-		letter-spacing: 0.18em;
-		color: #ffffff;
-		opacity: 1;
-		text-shadow: 0 1px 6px rgba(0, 0, 0, 0.50);
-		text-transform: uppercase;
-	}
-	.tdc__token {
-		font-size: 3.6em;
-		font-weight: 900;
-		color: #ffffff;
-		text-shadow: 0 4px 30px rgba(255, 255, 255, 0.28);
-	}
-	.tdc__subtitle {
-		color: rgba(230, 200, 255, 0.80);
-		font-size: 0.68em;
-		letter-spacing: 0.10em;
-	}
-	.tdc__status-label { font-weight: 700; letter-spacing: 0.08em; }
+.tdc__history-label-divider {
+	display: block;
+	flex: 1;
+	width: 1px;
+	background: linear-gradient(to bottom, transparent, var(--tdc-border), transparent);
 }
 
-.tdc--fill.tdc--imperial-court {
-	// Queue name stays compact — the green/gold/purple gradient already signals the zone structure
-	.tdc__queue-name {
-		font-size: 0.74em;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.50);
+// ── Scrolling track ───────────────────────────────────────────────────────────
+.tdc__history-track {
+	flex: 1;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.tdc__history-scroll {
+	display: flex;
+	align-items: center;
+	gap: 0.35em;
+	padding: 0 0.4em;
+	// Duration proportional to token count; each card gets ~2.8 s of screen time.
+	animation: tdc-history-marquee calc(var(--tdc-history-count, 4) * 2.8s) linear infinite;
+	will-change: transform;
+}
+
+// Fewer than ACTIVE_TOKENS_MARQUEE_MIN_COUNT: no duplicate list, no scroll — align start.
+.tdc--history-static .tdc__history-track,
+.tdc__history--static .tdc__history-track {
+	justify-content: flex-start;
+}
+
+.tdc--history-static .tdc__history-scroll,
+.tdc__history--static .tdc__history-scroll {
+	animation: none;
+	transform: none;
+	will-change: auto;
+	justify-content: flex-start;
+	width: max-content;
+	max-width: 100%;
+}
+
+// ── Mini token card ───────────────────────────────────────────────────────────
+.tdc__history-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.04em;
+	padding: 0.12em 0.42em 0.14em;
+	border: 1px solid var(--tdc-border);
+	border-radius: 0.5em;
+	background: rgba(0, 0, 0, 0.2);
+	flex-shrink: 0;
+	min-width: 2.6em;
+}
+
+.tdc__history-token {
+	font-size: 0.62em;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	color: var(--tdc-text);
+	line-height: 1;
+}
+
+.tdc__history-counter-label {
+	font-size: 0.32em;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--tdc-text-label);
+	line-height: 1;
+}
+
+.tdc__history-counter-num {
+	font-size: 0.5em;
+	font-weight: 700;
+	color: var(--tdc-token-color);
+	line-height: 1;
+}
+
+@container (max-height: 160px) {
+	.tdc__history-card {
+		padding: 0.1em 0.34em 0.12em;
+		min-width: 2.35em;
+	}
+
+	.tdc__history-token {
+		font-size: 0.56em;
+	}
+
+	.tdc__history-counter-label {
+		font-size: 0.28em;
+	}
+
+	.tdc__history-counter-num {
+		font-size: 0.44em;
 	}
 }
 
-// ── Arctic White ── Queue name with cobalt separator rule, cobalt token ─────────
-.tdc--arctic-white {
-	.tdc__queue-name {
-		font-size: 0.74em;
-		font-weight: 700;
-		letter-spacing: 0.10em;
-		color: rgba(10, 17, 40, 0.80);
-		text-transform: uppercase;
-		opacity: 1;
-		// Cobalt underline separator
-		border-bottom: 2px solid rgba(0, 71, 171, 0.30);
-		padding-bottom: 0.22em;
-	}
-	.tdc__subtitle {
-		color: rgba(30, 50, 80, 0.60);
-		font-weight: 500;
-		letter-spacing: 0.06em;
-	}
-	.tdc__token {
-		font-size: 3.6em;
-		font-weight: 900;
-		color: #0047ab;
-		text-shadow: 0 3px 20px rgba(0, 71, 171, 0.22);
-		letter-spacing: -0.01em;
-	}
-	.tdc__status-badge {
-		border-width: 1.5px;
-		color: rgba(10, 17, 40, 0.82);
-		letter-spacing: 0.06em;
-	}
-}
-
-.tdc--fill.tdc--arctic-white {
-	// Cobalt token color preserved; queue name compact
-	.tdc__token { color: #0047ab; }
-	.tdc__queue-name {
-		font-size: 0.72em;
-		color: rgba(10, 17, 40, 0.75);
-		// Underline separator only when queue name is present
-		border-bottom: 1.5px solid rgba(0, 71, 171, 0.28);
-		padding-bottom: 0.15em;
-	}
+.tdc__history-time {
+	font-size: 0.33em;
+	color: var(--tdc-text-sub);
+	letter-spacing: 0.04em;
+	opacity: 0.72;
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -914,21 +859,10 @@
 	color: #a0ffe8;
 }
 
-// arctic-white overrides for status badges (dark background needed for legibility)
-.tdc--arctic-white .tdc__status-badge--serving {
-	border-color: rgba(0, 120, 100, 0.4);
-	background: rgba(0, 120, 100, 0.12);
-	color: #004030;
-}
-
 .tdc__status-badge--completed {
 	border-color: rgba(70, 200, 100, 0.4);
 	background: rgba(70, 200, 100, 0.15);
 	color: #a0ffb8;
-}
-
-.tdc--arctic-white .tdc__status-badge--completed {
-	color: #004018;
 }
 
 .tdc__status-badge--cancelled,
@@ -938,29 +872,16 @@
 	color: #ffb8a0;
 }
 
-.tdc--arctic-white .tdc__status-badge--cancelled,
-.tdc--arctic-white .tdc__status-badge--no-show {
-	color: #401000;
-}
-
 .tdc__status-badge--postponed {
 	border-color: rgba(255, 207, 82, 0.4);
 	background: rgba(255, 207, 82, 0.15);
 	color: #ffe8a0;
 }
 
-.tdc--arctic-white .tdc__status-badge--postponed {
-	color: #403000;
-}
-
 .tdc__status-badge--waiting {
 	border-color: rgba(255, 165, 40, 0.45);
 	background: rgba(255, 140, 10, 0.18);
 	color: #ffd090;
-}
-
-.tdc--arctic-white .tdc__status-badge--waiting {
-	color: #402400;
 }
 
 // ─── Showcase / picker layout ─────────────────────────────────────────────────

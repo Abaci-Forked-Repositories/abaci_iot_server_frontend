@@ -7,6 +7,26 @@ interface ScreenCardTileProps {
 	onOpen: (screen: Screen) => void;
 	onDelete: (screen: Screen) => void;
 	deleting?: boolean;
+	allowDelete?: boolean;
+}
+
+/** Inactive → badge only. Active → online/offline via LED only (no badge). */
+function getScreenCardStatus(screen: Screen) {
+	const isActive = Boolean(screen.is_active);
+	if (!isActive) {
+		return {
+			showLed: false,
+			showBadge: true,
+			statusClass: 'is-disabled',
+			label: 'INACTIVE',
+		};
+	}
+	const isOnline = Boolean(screen.is_online);
+	return {
+		showLed: true,
+		showBadge: false,
+		ledClass: isOnline ? 'is-online' : 'is-offline',
+	};
 }
 
 const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
@@ -14,10 +34,12 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 	onOpen,
 	onDelete,
 	deleting = false,
+	allowDelete = true,
 }) => {
 	const [hovered, setHovered] = useState(false);
 	const [thumbFailed, setThumbFailed] = useState(false);
 	const backgroundImage = screen.background_image?.trim() || null;
+	const cardStatus = getScreenCardStatus(screen);
 
 	useEffect(() => {
 		setThumbFailed(false);
@@ -38,7 +60,7 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 			}}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}>
-			{hovered && !deleting && (
+			{allowDelete && hovered && !deleting && (
 				<div className='screen-card-actions'>
 					<button
 						type='button'
@@ -52,11 +74,16 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 					</button>
 				</div>
 			)}
-			<div className='screen-card-tile-top'>
-				<span className={`screen-card-led ${screen.is_online ? 'is-online' : 'is-offline'}`} />
-				<span className={`screen-card-status ${screen.is_online ? 'is-active' : 'is-inactive'}`}>
-					{screen.is_online ? 'ACTIVE' : 'INACTIVE'}
-				</span>
+			<div
+				className={`screen-card-tile-top${cardStatus.showBadge && !cardStatus.showLed ? ' screen-card-tile-top--badge-only' : ''}`}>
+				{cardStatus.showLed && (
+					<span className={`screen-card-led ${cardStatus.ledClass}`} aria-hidden />
+				)}
+				{cardStatus.showBadge && (
+					<span className={`screen-card-status ${cardStatus.statusClass}`}>
+						{cardStatus.label}
+					</span>
+				)}
 			</div>
 			<div className='screen-card-thumb'>
 				{backgroundImage && !thumbFailed ? (

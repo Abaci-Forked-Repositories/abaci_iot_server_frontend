@@ -15,6 +15,7 @@ const MAINROUTE = {
 	SchedulesList: lazy(() => import('../pages/Schedules/List')),
 	Screens: lazy(() => import('../pages/Screens/index')),
 	ScreenDetail: lazy(() => import('../pages/Screens/Detail')),
+	ScreenGroupDetail: lazy(() => import('../pages/Screens/GroupDetail')),
 	Templates: lazy(() => import('../pages/Templates/index')),
 	TemplateDetail: lazy(() => import('../pages/Templates/Detail')),
 	Profile: lazy(() => import('../pages/Profile/Index')),
@@ -83,6 +84,11 @@ const RouteConfig: CustomRouteConfig[] = [
 	{
 		path: allRoutesObject.screens.path,
 		element: <MAINROUTE.Screens />,
+		permissionKey: 'screens_read',
+	},
+	{
+		path: '/screens/groups/:id',
+		element: <MAINROUTE.ScreenGroupDetail />,
 		permissionKey: 'screens_read',
 	},
 	{

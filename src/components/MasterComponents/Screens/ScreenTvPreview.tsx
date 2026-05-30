@@ -11,7 +11,8 @@ interface ScreenTvPreviewProps {
 }
 
 const ScreenTvPreview: React.FC<ScreenTvPreviewProps> = ({ screen, templateById = {} }) => {
-	const online = Boolean(screen?.is_online);
+	const isActive = Boolean(screen?.is_active);
+	const online = isActive && Boolean(screen?.is_online);
 	const assignments = [...(screen?.screen_templates ?? [])].sort((a, b) => a.order - b.order);
 	const firstAssignment = assignments[0];
 	const nowPlaying = firstAssignment
@@ -31,9 +32,10 @@ const ScreenTvPreview: React.FC<ScreenTvPreviewProps> = ({ screen, templateById 
 					</>
 				}>
 				<div className='screen-tv-content'>
-					<span className={`screen-tv-chip ${online ? 'is-online' : 'is-offline'}`}
+					<span
+						className={`screen-tv-chip ${!isActive ? 'is-offline' : online ? 'is-online' : 'is-offline'}`}
 						style={{ position: 'absolute', top: 8, right: 8 }}>
-						{online ? 'Live' : 'Offline'}
+						{!isActive ? 'Inactive' : online ? 'Live' : 'Offline'}
 					</span>
 					<Icon icon='Tv' size='3x' className='screen-tv-icon' />
 					<div className='screen-tv-title'>{screen?.name || 'Select a screen'}</div>

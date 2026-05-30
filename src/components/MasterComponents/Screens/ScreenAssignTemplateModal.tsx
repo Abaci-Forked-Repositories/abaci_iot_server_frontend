@@ -40,7 +40,7 @@ const ScreenAssignTemplateModal: React.FC<Props> = ({
 		setOrder(defaultOrder);
 		setTemplatesLoading(true);
 		templatesApi
-			.list({ limit: 200, ordering: 'name' })
+			.list({ limit: 200 })
 			.then((res) => setTemplates(res.results ?? []))
 			.catch(() => setTemplates([]))
 			.finally(() => setTemplatesLoading(false));

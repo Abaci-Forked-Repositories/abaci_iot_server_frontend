@@ -571,9 +571,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 		// const cw = templateDetails.resolution_width * sf;
 		// const ch = templateDetails.resolution_height * sf;
 
+		// Smaller divisors → larger on-canvas TV preview in the editor.
 		const sf = isLandscape
-			? window.innerWidth / width / 2.3
-			: window.innerWidth / height / 4;
+			? window.innerWidth / width / 1.75
+			: window.innerWidth / height / 3.0;
 
 		const cw = width * sf;
 		const ch = height * sf;
@@ -1597,16 +1598,16 @@ const TemplateDetailWorkspace: React.FC = () => {
 							screenHeight={canvasHeight}
 							portrait={isPortrait}
 							flicker>
-							<div
-								className='tdc-canvas-wrap'
-								style={{ width: canvasWidth, height: canvasHeight }}>
-								<canvas id='tpl-detail-canvas' ref={canvasRef} />
+						<div
+							className='tdc-canvas-wrap'
+							style={{ width: canvasWidth, height: canvasHeight }}>
+							<canvas id='tpl-detail-canvas' ref={canvasRef} />
 							<TemplateZoneThemeOverlays
 								zones={canvasObjects}
 								queuesById={queuesById}
 								revision={overlayRevision}
 							/>
-							</div>
+						</div>
 						</PreviewTvFrame>
 					</div>
 

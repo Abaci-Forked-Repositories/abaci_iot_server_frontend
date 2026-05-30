@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card, { CardActions, CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
@@ -7,7 +7,7 @@ import ScreenTvPreview from './ScreenTvPreview';
 import ScreenDetailPanel from './ScreenDetailPanel';
 import ScreenAssignTemplateModal from './ScreenAssignTemplateModal';
 import ScreenEditTemplateModal from './ScreenEditTemplateModal';
-import { FALLBACK_SCREENS } from './screensFallbackData';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	screenTemplatesApi,
 	type ScreenTemplateAssignment,
@@ -16,21 +16,18 @@ import {
 import { templatesApi, type Template } from '../../../services/templatesApi';
 import { swalFire } from '../../../helpers/swalHelper';
 
-const toMessage = (error: unknown) => {
-	const typed = error as { response?: { data?: { detail?: string } } };
-	return typed.response?.data?.detail || 'Failed to fetch screen detail.';
-};
-
 const ScreenDetailWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const { id } = useParams();
 	const screenId = Number(id);
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const showErrorNotificationRef = useRef(showErrorNotification);
+	showErrorNotificationRef.current = showErrorNotification;
 
 	const [screen, setScreen] = useState<Screen | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [loadFailed, setLoadFailed] = useState(false);
 	const [actionLoadingKey, setActionLoadingKey] = useState<string | null>(null);
-	const [offlineMode, setOfflineMode] = useState(false);
-	const [message, setMessage] = useState('');
 	const [showAssignTemplateModal, setShowAssignTemplateModal] = useState(false);
 	const [editingAssignment, setEditingAssignment] = useState<ScreenTemplateAssignment | null>(null);
 	const [templateById, setTemplateById] = useState<Record<number, Template>>({});
@@ -58,15 +55,14 @@ const ScreenDetailWorkspace: React.FC = () => {
 	const loadScreen = useCallback(async () => {
 		if (!Number.isFinite(screenId)) return;
 		setLoading(true);
-		setMessage('');
+		setLoadFailed(false);
 		try {
 			const response = await screensApi.get(screenId);
 			setScreen(response);
-			setOfflineMode(false);
 		} catch (error) {
-			setScreen(FALLBACK_SCREENS.find((item) => item.id === screenId) || FALLBACK_SCREENS[0] || null);
-			setOfflineMode(true);
-			setMessage(toMessage(error));
+			setScreen(null);
+			setLoadFailed(true);
+			showErrorNotificationRef.current(error);
 		} finally {
 			setLoading(false);
 		}
@@ -79,7 +75,7 @@ const ScreenDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		let cancelled = false;
 		templatesApi
-			.list({ limit: 200, ordering: 'name' })
+			.list({ limit: 200 })
 			.then((res) => {
 				if (cancelled) return;
 				const map: Record<number, Template> = {};
@@ -96,23 +92,14 @@ const ScreenDetailWorkspace: React.FC = () => {
 		};
 	}, []);
 
-	const runAction = async (
-		key: string,
-		action: () => Promise<unknown>,
-		fallbackUpdater?: (current: Screen) => Screen,
-	) => {
+	const runAction = async (key: string, action: () => Promise<unknown>) => {
 		if (!screen) return;
 		setActionLoadingKey(key);
-		setMessage('');
 		try {
 			await action();
 			await loadScreen();
 		} catch (error) {
-			if (fallbackUpdater) {
-				setScreen((current) => (current ? fallbackUpdater(current) : current));
-				setOfflineMode(true);
-			}
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 		} finally {
 			setActionLoadingKey(null);
 		}
@@ -122,33 +109,25 @@ const ScreenDetailWorkspace: React.FC = () => {
 		const key = `screen-active-${target.id}`;
 		const apiAction = () =>
 			target.is_active ? screensApi.deactivate(target.id) : screensApi.activate(target.id);
-		runAction(key, apiAction, (current) => ({ ...current, is_active: !Boolean(current.is_active) }));
+		runAction(key, apiAction);
 	};
 
 	const handleAudioToggle = (target: Screen) => {
 		const key = `screen-audio-${target.id}`;
-		runAction(key, () => screensApi.toggleAudio(target.id), (current) => ({
-			...current,
-			enable_audio: !Boolean(current.enable_audio),
-		}));
+		runAction(key, () => screensApi.toggleAudio(target.id));
 	};
 
 	const handleHeartbeat = (target: Screen) => {
 		const key = `screen-heartbeat-${target.id}`;
-		runAction(key, () => screensApi.heartbeat(target.id), (current) => ({
-			...current,
-			is_online: true,
-			last_heartbeat: new Date().toISOString(),
-		}));
+		runAction(key, () => screensApi.heartbeat(target.id));
 	};
 
 	const handleAssignTemplate = async (payload: Parameters<typeof screenTemplatesApi.create>[0]) => {
 		try {
 			await screenTemplatesApi.create(payload);
-			setMessage('');
 			await loadScreen();
 		} catch (error) {
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 			throw error;
 		}
 	};
@@ -164,13 +143,12 @@ const ScreenDetailWorkspace: React.FC = () => {
 	) => {
 		const key = `screen-template-edit-${assignmentId}`;
 		setActionLoadingKey(key);
-		setMessage('');
 		try {
 			await screenTemplatesApi.patch(assignmentId, payload);
 			setEditingAssignment(null);
 			await loadScreen();
 		} catch (error) {
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 			throw error;
 		} finally {
 			setActionLoadingKey(null);
@@ -191,12 +169,12 @@ const ScreenDetailWorkspace: React.FC = () => {
 		if (!result.isConfirmed) return;
 
 		setActionLoadingKey(`screen-delete-${screen.id}`);
-		setMessage('');
 		try {
 			await screensApi.remove(screen.id);
+			showSuccessNotification('Screen deleted successfully.');
 			navigate('/screens');
 		} catch (error) {
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 		} finally {
 			setActionLoadingKey(null);
 		}
@@ -277,9 +255,15 @@ const ScreenDetailWorkspace: React.FC = () => {
 			</CardHeader>
 			<CardBody className='screens-body'>
 		
-				{message && <div className='alert alert-warning mb-3'>{message}</div>}
 				{loading ? (
 					<div className='text-center text-muted py-5'>Loading screen detail...</div>
+				) : loadFailed ? (
+					<div className='text-center py-5'>
+						<p className='text-muted mb-3'>Could not load screen details.</p>
+						<Button color='primary' icon='Refresh' onClick={() => void loadScreen()}>
+							Retry
+						</Button>
+					</div>
 				) : (
 					<div className='screens-layout-detail-only'>
 						<ScreenTvPreview screen={screen} templateById={templateById} />

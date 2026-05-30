@@ -1,67 +1,135 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card, { CardActions, CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
+import SearchComponent from '../../SearchComponent';
 import ScreenCardTile from './ScreenCardTile';
 import ScreenCreateModal from './ScreenCreateModal';
-import { screensApi, type CreateScreenPayload, type Screen } from '../../../services/screensManagementApi';
-import { FALLBACK_SCREENS } from './screensFallbackData';
+import ScreenGroupFormModal from './ScreenGroupFormModal';
+import ScreenGroupTabContent from './ScreenGroupTabContent';
+import {
+	screensApi,
+	type CreateScreenPayload,
+	type Screen,
+	type ScreenGroup,
+} from '../../../services/screensManagementApi';
 import { swalFire } from '../../../helpers/swalHelper';
+import useToasterNotification from '../../../hooks/useToasterNotification';
+import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
 
-const toMessage = (error: unknown) => {
-	const typed = error as { response?: { data?: { detail?: string } } };
-	return typed.response?.data?.detail || 'Failed to fetch screens.';
-};
+const PAGE_LIMIT = 12;
+
+function isOnlineFilterParam(
+	statusFilter: 'all' | 'online' | 'offline',
+): boolean | undefined {
+	if (statusFilter === 'online') return true;
+	if (statusFilter === 'offline') return false;
+	return undefined;
+}
 
 const ScreensWorkspace: React.FC = () => {
 	const navigate = useNavigate();
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+
 	const [screens, setScreens] = useState<Screen[]>([]);
-	const [loading, setLoading] = useState(false);
-	const [offlineMode, setOfflineMode] = useState(false);
+	const [initialLoading, setInitialLoading] = useState(true);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
+	const [totalCount, setTotalCount] = useState(0);
+	const [loadFailed, setLoadFailed] = useState(false);
+	const offsetRef = useRef(0);
+
 	const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
-	const [screenDisplayMode, setScreenDisplayMode] = useState<'grouped' | 'ungrouped'>('ungrouped');
+	const [screenDisplayMode, setScreenDisplayMode] = useState<'screens' | 'groups'>('screens');
 	const [search, setSearch] = useState('');
-	const [message, setMessage] = useState('');
+	const [searchApplied, setSearchApplied] = useState('');
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [showGroupModal, setShowGroupModal] = useState(false);
+	const [editGroupId, setEditGroupId] = useState<number | null>(null);
+	const [groupsRefreshKey, setGroupsRefreshKey] = useState(0);
+	const [groupActionLoading, setGroupActionLoading] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<number | null>(null);
 
-	const displayedScreens = useMemo(() => {
-		return screens.filter((item) => {
-			const statusMatch =
-				statusFilter === 'all' ||
-				(statusFilter === 'online' ? Boolean(item.is_online) : !Boolean(item.is_online));
+	const showErrorNotificationRef = useRef(showErrorNotification);
+	showErrorNotificationRef.current = showErrorNotification;
 
-			const searchMatch =
-				search.trim() === '' ||
-				item.name.toLowerCase().includes(search.toLowerCase()) ||
-				(item.location || '').toLowerCase().includes(search.toLowerCase());
-
-			return statusMatch && searchMatch;
-		});
-	}, [screens, statusFilter, search]);
-
-	const loadScreens = useCallback(async () => {
-		setLoading(true);
-		setMessage('');
-		try {
-			const response = await screensApi.list({ page_size: 100, ordering: 'name' });
-			const data = response.results || [];
-			setScreens(data);
-			setOfflineMode(false);
-		} catch (error) {
-			setScreens(FALLBACK_SCREENS);
-			setOfflineMode(true);
-			setMessage(toMessage(error));
-		} finally {
-			setLoading(false);
-		}
-	}, []);
+	const loadScreens = useCallback(
+		async (reset = true) => {
+			const offset = reset ? 0 : offsetRef.current;
+			try {
+				if (!reset) setIsLoadingMore(true);
+				if (reset) setLoadFailed(false);
+				const response = await screensApi.list({
+					limit: PAGE_LIMIT,
+					offset,
+					search: searchApplied || undefined,
+					is_online: isOnlineFilterParam(statusFilter),
+				});
+				const pageRows = response.results || [];
+				const nextOffset = offset + pageRows.length;
+				setScreens((prev) => (reset ? pageRows : [...prev, ...pageRows]));
+				setTotalCount(response.count ?? nextOffset);
+				offsetRef.current = nextOffset;
+				setHasMore(nextOffset < (response.count ?? nextOffset));
+			} catch (error) {
+				if (reset) {
+					setScreens([]);
+					setTotalCount(0);
+					setHasMore(false);
+					setLoadFailed(true);
+					showErrorNotificationRef.current(error);
+				} else {
+					showErrorNotificationRef.current(error);
+				}
+			} finally {
+				if (!reset) setIsLoadingMore(false);
+			}
+		},
+		[searchApplied, statusFilter],
+	);
 
 	useEffect(() => {
-		loadScreens();
-	}, [loadScreens]);
+		if (screenDisplayMode !== 'screens') return undefined;
+		let isMounted = true;
+		const run = async () => {
+			offsetRef.current = 0;
+			setInitialLoading(true);
+			await loadScreens(true);
+			if (isMounted) setInitialLoading(false);
+		};
+		void run();
+		return () => {
+			isMounted = false;
+		};
+	}, [loadScreens, screenDisplayMode]);
+
+	const handleScroll = useCallback(
+		(event: React.UIEvent<HTMLDivElement>) => {
+			if (initialLoading || isLoadingMore || !hasMore || loadFailed) return;
+			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+			// Avoid pagination when content does not overflow (empty list still sits at "bottom").
+			if (scrollHeight <= clientHeight + 1) return;
+			if (scrollTop + clientHeight >= scrollHeight - 100) {
+				void loadScreens(false);
+			}
+		},
+		[hasMore, initialLoading, isLoadingMore, loadFailed, loadScreens],
+	);
+
+	const runSearch = useCallback(() => {
+		setSearchApplied(search.trim());
+		if (screenDisplayMode === 'groups') {
+			setGroupsRefreshKey((v) => v + 1);
+		}
+	}, [search, screenDisplayMode]);
+
+	const handleRetryScreens = () => {
+		offsetRef.current = 0;
+		setInitialLoading(true);
+		void loadScreens(true).finally(() => setInitialLoading(false));
+	};
 
 	const handleCreateScreen = async (
 		payload: CreateScreenPayload,
@@ -69,10 +137,11 @@ const ScreensWorkspace: React.FC = () => {
 	) => {
 		try {
 			await screensApi.create(payload, backgroundImage);
-			setMessage('');
-			await loadScreens();
+			offsetRef.current = 0;
+			await loadScreens(true);
+			showSuccessNotification('Screen created successfully.');
 		} catch (error) {
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 			throw error;
 		}
 	};
@@ -90,14 +159,52 @@ const ScreensWorkspace: React.FC = () => {
 		if (!result.isConfirmed) return;
 
 		setDeletingId(screen.id);
-		setMessage('');
 		try {
 			await screensApi.remove(screen.id);
-			setScreens((prev) => prev.filter((item) => item.id !== screen.id));
+			offsetRef.current = 0;
+			await loadScreens(true);
+			showSuccessNotification('Screen deleted successfully.');
 		} catch (error) {
-			setMessage(toMessage(error));
+			showErrorNotification(error);
 		} finally {
 			setDeletingId(null);
+		}
+	};
+
+	const handleOpenGroupDetail = (group: ScreenGroup) => {
+		navigate(`/screens/groups/${group.id}`);
+	};
+
+	const handleOpenEditGroup = (group: ScreenGroup) => {
+		setEditGroupId(group.id);
+		setShowGroupModal(true);
+	};
+
+	const handleDeleteGroup = async (group: ScreenGroup) => {
+		const result = await swalFire({
+			title: 'Delete screen group?',
+			text: `Delete "${group.name}"? Screens are not deleted; only the group is removed.`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'Delete',
+			cancelButtonText: 'Cancel',
+			reverseButtons: true,
+		});
+		if (!result.isConfirmed) return;
+
+		setGroupActionLoading(`group-${group.id}`);
+		try {
+			await screensApi.deleteGroup(group.id);
+			showSuccessNotification('Screen group deleted successfully.');
+			setGroupsRefreshKey((v) => v + 1);
+			if (screenDisplayMode === 'screens') {
+				offsetRef.current = 0;
+				await loadScreens(true);
+			}
+		} catch (error) {
+			showErrorNotification(error);
+		} finally {
+			setGroupActionLoading(null);
 		}
 	};
 
@@ -108,117 +215,175 @@ const ScreensWorkspace: React.FC = () => {
 				onClose={() => setShowCreateModal(false)}
 				onSubmit={handleCreateScreen}
 			/>
-			<Card stretch className='screens-workspace-card'>
-			<CardHeader>
-				<CardLabel icon='SmartScreen'>
-					<CardTitle tag='h4'>Screen Management</CardTitle>
-				</CardLabel>
-				<CardActions>
-					<div className='d-flex align-items-center gap-2 flex-wrap'>
-						<DropDownFilter
-							options={[
-								{ label: 'All', value: 'all' as const },
-								{ label: 'Online', value: 'online' as const },
-								{ label: 'Offline', value: 'offline' as const },
-							]}
-							onChange={(option: { value: 'all' | 'online' | 'offline' }) =>
-								setStatusFilter(option.value)
-							}
-							selectedOption={
-								statusFilter === 'online'
-									? { label: 'Online', value: 'online' as const }
-									: statusFilter === 'offline'
-										? { label: 'Offline', value: 'offline' as const }
-										: { label: 'All', value: 'all' as const }
-							}
-							color='primary'
-							labelField='label'
-							direction='down'
-							icon='FilterAlt'
-							buttonClassName='app-control-btn'
-						/>
-						<input
-							className='form-control form-control-sm screens-search'
-							placeholder='Search screens'
-							value={search}
-							onChange={(event) => setSearch(event.target.value)}
-						/>
-						<DropDownFilter
-							options={[
-								{ label: 'Grouped Screens', value: 'grouped' as const },
-								{ label: 'Ungrouped Screens', value: 'ungrouped' as const },
-							]}
-							onChange={(option: { value: 'grouped' | 'ungrouped' }) =>
-								setScreenDisplayMode(option.value)
-							}
-							selectedOption={
-								screenDisplayMode === 'grouped'
-									? { label: 'Grouped Screens', value: 'grouped' as const }
-									: { label: 'Ungrouped Screens', value: 'ungrouped' as const }
-							}
-							color='primary'
-							labelField='label'
-							direction='down'
-							icon='FilterAlt'
-							buttonClassName='app-control-btn'
-						/>
-						<Button
-							color='primary'
-							icon='Add'
-							onClick={() => {
-								setMessage('');
-								setShowCreateModal(true);
-							}}>
-							Add Screen
-						</Button>
-					</div>
-				</CardActions>
-			</CardHeader>
-			<CardBody className='screens-body'>
-				{message && <div className='alert alert-warning mb-3'>{message}</div>}
-
-				<div className='screens-layout-list-only'>
-					{screenDisplayMode === 'grouped' && (
-						<div className='screens-grid-panel'>
-							<div className='screens-grid-header'>
-								<span className='fw-semibold'>Grouped Screens</span>
-								<Badge color='secondary' isLight>
-									0
-								</Badge>
-							</div>
-							<p className='screens-empty-groups'>
-								No grouped screens yet. Create groups once grouping is configured.
-							</p>
-						</div>
-					)}
-					{screenDisplayMode === 'ungrouped' && (
-						<div className='screens-grid-panel'>
-							<div className='screens-grid-header'>
-								<span className='fw-semibold'>Ungrouped Screens</span>
-								<Badge color='secondary' isLight>
-									{displayedScreens.length}
-								</Badge>
-							</div>
-							{loading ? (
-								<div className='text-center text-muted py-5'>Loading screens...</div>
+			<ScreenGroupFormModal
+				isOpen={showGroupModal}
+				setIsOpen={(open) => {
+					setShowGroupModal(open);
+					if (!open) setEditGroupId(null);
+				}}
+				mode={editGroupId != null ? 'edit' : 'add'}
+				editGroupId={editGroupId}
+				onSaved={() => {
+					setGroupsRefreshKey((v) => v + 1);
+					if (screenDisplayMode === 'screens') {
+						offsetRef.current = 0;
+						void loadScreens(true);
+					}
+				}}
+			/>
+			<Card stretch>
+				<CardHeader>
+					<CardLabel icon='SmartScreen'>
+						<CardTitle tag='h4' className='text-primary'>Screen Management</CardTitle>
+					</CardLabel>
+					<CardActions>
+						<div className='d-flex align-items-center gap-2 flex-wrap'>
+							<DropDownFilter
+								options={[
+									{ label: 'All', value: 'all' as const },
+									{ label: 'Online', value: 'online' as const },
+									{ label: 'Offline', value: 'offline' as const },
+								]}
+								onChange={(option: { value: 'all' | 'online' | 'offline' }) =>
+									setStatusFilter(option.value)
+								}
+								selectedOption={
+									statusFilter === 'online'
+										? { label: 'Online', value: 'online' as const }
+										: statusFilter === 'offline'
+											? { label: 'Offline', value: 'offline' as const }
+											: { label: 'All', value: 'all' as const }
+								}
+								color='primary'
+								labelField='label'
+								direction='down'
+								icon='FilterAlt'
+								buttonClassName='app-control-btn'
+							/>
+							<SearchComponent
+								handleChange={setSearch}
+								value={search}
+								placeholder={
+									screenDisplayMode === 'groups'
+										? 'Search screen groups'
+										: 'Search screens'
+								}
+								className='screens-search app-search-modern me-0'
+								inputClassName='app-search-modern__input'
+								iconColor='primary'
+								iconSize='2x'
+								withDefaultMargin={false}
+								onKeyDown={(ev) => {
+									if (ev.key === 'Enter') runSearch();
+								}}
+								onBlur={runSearch}
+							/>
+							<DropDownFilter
+								options={[
+									{ label: 'All Screens', value: 'screens' as const },
+									{ label: 'Screen Groups', value: 'groups' as const },
+								]}
+								onChange={(option: { value: 'screens' | 'groups' }) => {
+									setScreenDisplayMode(option.value);
+									if (option.value === 'groups') {
+										setGroupsRefreshKey((v) => v + 1);
+									}
+								}}
+								selectedOption={
+									screenDisplayMode === 'groups'
+										? { label: 'Screen Groups', value: 'groups' as const }
+										: { label: 'All Screens', value: 'screens' as const }
+								}
+								color='primary'
+								labelField='label'
+								direction='down'
+								icon='FilterAlt'
+								buttonClassName='app-control-btn'
+							/>
+							{screenDisplayMode === 'groups' ? (
+								<Button
+									color='primary'
+									icon='Add'
+									onClick={() => {
+										setEditGroupId(null);
+										setShowGroupModal(true);
+									}}>
+									Add Screen Group
+								</Button>
 							) : (
-								<div className='screens-grid'>
-									{displayedScreens.map((screen) => (
-										<ScreenCardTile
-											key={screen.id}
-											screen={screen}
-											deleting={deletingId === screen.id}
-											onOpen={(item) => navigate(`/screens/${item.id}`)}
-											onDelete={handleDeleteScreen}
-										/>
-									))}
-								</div>
+								<Button
+									color='primary'
+									icon='Add'
+									onClick={() => setShowCreateModal(true)}>
+									Add Screen
+								</Button>
 							)}
 						</div>
+					</CardActions>
+				</CardHeader>
+				<CardBody>
+					{screenDisplayMode === 'groups' && (
+						<>
+							<div className='d-flex justify-content-between align-items-center mb-2'>
+								<span className='fw-semibold'>Screen Groups</span>
+							</div>
+							<ScreenGroupTabContent
+								searchTerm={searchApplied}
+								refreshKey={groupsRefreshKey}
+								onOpenGroup={handleOpenGroupDetail}
+								onEditGroup={handleOpenEditGroup}
+								onDeleteGroup={handleDeleteGroup}
+								isGroupDeleteLoading={(id) => groupActionLoading === `group-${id}`}
+							/>
+						</>
 					)}
-				</div>
-			</CardBody>
-		</Card>
+
+					{screenDisplayMode === 'screens' && (
+						<>
+							<div className='d-flex justify-content-between align-items-center mb-2'>
+								<span className='fw-semibold'>All Screens</span>
+								<Badge color='secondary' isLight>
+									{totalCount}
+								</Badge>
+							</div>
+							{initialLoading ? (
+								<ThumbnailCardGridSkeleton count={12} layout='grid' tileWidth={175} tileMinHeight={230} />
+							) : loadFailed ? (
+								<div className='text-center py-5'>
+									<p className='text-muted mb-3'>Could not load screens.</p>
+									<Button color='primary' icon='Refresh' onClick={handleRetryScreens}>
+										Retry
+									</Button>
+								</div>
+							) : (
+								<div className='queue-cards-scroll' onScroll={handleScroll}>
+									<div className='screens-grid pt-1'>
+										{screens.map((screen) => (
+											<ScreenCardTile
+												key={screen.id}
+												screen={screen}
+												deleting={deletingId === screen.id}
+												onOpen={(item) => navigate(`/screens/${item.id}`)}
+												onDelete={handleDeleteScreen}
+											/>
+										))}
+										{!screens.length && (
+											<div className='text-center text-muted py-4 w-100'>
+												No screens found.
+											</div>
+										)}
+									</div>
+									{isLoadingMore && (
+										<div className='py-3'>
+											<ThumbnailCardGridSkeleton count={4} layout='grid' tileWidth={175} tileMinHeight={230} />
+										</div>
+									)}
+								</div>
+							)}
+						</>
+					)}
+				</CardBody>
+			</Card>
 		</>
 	);
 };
