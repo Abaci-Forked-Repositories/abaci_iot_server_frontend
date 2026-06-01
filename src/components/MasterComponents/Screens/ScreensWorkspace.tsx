@@ -18,6 +18,7 @@ import {
 import { swalFire } from '../../../helpers/swalHelper';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
+import usePermissions from '../../../hooks/usePermissions';
 
 const PAGE_LIMIT = 12;
 
@@ -208,6 +209,9 @@ const ScreensWorkspace: React.FC = () => {
 		}
 	};
 
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
+
 	return (
 		<>
 			<ScreenCreateModal
@@ -300,23 +304,27 @@ const ScreensWorkspace: React.FC = () => {
 								icon='FilterAlt'
 								buttonClassName='app-control-btn'
 							/>
-							{screenDisplayMode === 'groups' ? (
-								<Button
-									color='primary'
-									icon='Add'
-									onClick={() => {
-										setEditGroupId(null);
-										setShowGroupModal(true);
-									}}>
-									Add Screen Group
-								</Button>
-							) : (
-								<Button
-									color='primary'
-									icon='Add'
-									onClick={() => setShowCreateModal(true)}>
-									Add Screen
-								</Button>
+							{canWrite && (
+								<>
+									{screenDisplayMode === 'groups' ? (
+										<Button
+											color='primary'
+											icon='Add'
+											onClick={() => {
+												setEditGroupId(null);
+												setShowGroupModal(true);
+											}}>
+											Add Screen Group
+										</Button>
+									) : (
+										<Button
+											color='primary'
+											icon='Add'
+											onClick={() => setShowCreateModal(true)}>
+											Add Screen
+										</Button>
+									)}
+								</>
 							)}
 						</div>
 					</CardActions>

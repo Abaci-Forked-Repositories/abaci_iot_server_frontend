@@ -64,6 +64,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [showScheduleEditModal, setShowScheduleEditModal] = useState(false);
 	const { can } = usePermissions();
 	const canWrite = can('schedules_write');
+	// can create token
+	const canCreateToken = can('token_users_write');
 
 	const refreshTokensTableRef = useRef<() => void>(() => {});
 
@@ -416,6 +418,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									<Icon icon='Insights' color='warning' />
 									Quick Stats
 								</div>
+								{canCreateToken && (
 								<Button
 									color='primary'
 									size='sm'
@@ -423,6 +426,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									onClick={openCreateTokenModal}>
 									Create Token
 								</Button>
+								)}
 							</div>
 							<div className='row g-3'>
 								<div className='col-6'>

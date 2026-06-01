@@ -15,6 +15,7 @@ import {
 } from '../../../services/screenTemplatesApi';
 import { templatesApi, type Template } from '../../../services/templatesApi';
 import { swalFire } from '../../../helpers/swalHelper';
+import usePermissions from '../../../hooks/usePermissions';
 
 const ScreenDetailWorkspace: React.FC = () => {
 	const navigate = useNavigate();
@@ -32,6 +33,8 @@ const ScreenDetailWorkspace: React.FC = () => {
 	const [editingAssignment, setEditingAssignment] = useState<ScreenTemplateAssignment | null>(null);
 	const [templateById, setTemplateById] = useState<Record<number, Template>>({});
 	const [linkCopied, setLinkCopied] = useState(false);
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
 
 	const getScreenPublicUrl = (uuid: string) =>
 		`${window.location.origin}/screenstokenstatus/${uuid}`;
@@ -242,7 +245,7 @@ const ScreenDetailWorkspace: React.FC = () => {
 							</Button>
 						</>
 					)}
-					{screen && (
+					{screen && canWrite && (
 						<Button
 							color='danger'
 							icon='Delete'
