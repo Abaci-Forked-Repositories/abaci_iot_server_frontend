@@ -4,6 +4,7 @@ import Button from '../../bootstrap/Button';
 import type { ScreenTemplateAssignment } from '../../../services/screenTemplatesApi';
 import { getScreenTemplateId, getScreenTemplateName } from '../../../services/screenTemplatesApi';
 import type { Template } from '../../../services/templatesApi';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface Props {
 	assignment: ScreenTemplateAssignment;
@@ -28,6 +29,9 @@ const ScreenAssignedTemplateCard: React.FC<Props> = ({
 	useEffect(() => {
 		setThumbFailed(false);
 	}, [templateId, thumbnail]);
+
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
 
 	return (
 		<div className='screen-assigned-template-card'>
@@ -54,6 +58,7 @@ const ScreenAssignedTemplateCard: React.FC<Props> = ({
 				</div>
 			</div>
 			<div className='screen-assigned-template-card__actions'>
+				{canWrite && (
 				<Button
 					size='sm'
 					color='primary'
@@ -65,6 +70,8 @@ const ScreenAssignedTemplateCard: React.FC<Props> = ({
 					onClick={() => onEdit(assignment)}>
 					Edit
 				</Button>
+				)}
+				{canWrite && (
 				<Button
 					size='sm'
 					color='danger'
@@ -73,6 +80,7 @@ const ScreenAssignedTemplateCard: React.FC<Props> = ({
 					onClick={() => onRemove(assignment.id)}>
 					Remove
 				</Button>
+				)}
 			</div>
 		</div>
 	);

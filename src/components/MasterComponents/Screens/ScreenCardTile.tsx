@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Icon from '../../icon/Icon';
 import type { Screen } from '../../../services/screensManagementApi';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface ScreenCardTileProps {
 	screen: Screen;
@@ -45,6 +46,9 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 		setThumbFailed(false);
 	}, [screen.id, backgroundImage]);
 
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
+
 	return (
 		<div
 			role='button'
@@ -60,7 +64,7 @@ const ScreenCardTile: React.FC<ScreenCardTileProps> = ({
 			}}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}>
-			{allowDelete && hovered && !deleting && (
+			{allowDelete && hovered && !deleting && canWrite && (
 				<div className='screen-card-actions'>
 					<button
 						type='button'
