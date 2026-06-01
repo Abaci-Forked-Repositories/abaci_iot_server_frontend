@@ -1,6 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../../bootstrap/Card';
 import Button from '../../../bootstrap/Button';
@@ -9,9 +18,17 @@ import Icon from '../../../icon/Icon';
 import StatusBadge from '../../../BadgeWithIcon';
 import useTablestyle from '../../../../hooks/useTablestyles';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
-import { type Token, type TokenUser, tokensApi } from '../../../../services/queueManagementApi';
-import { formatDate } from '../../QueueManagement/queueManagementUtils';
+import {
+	type Token,
+	type TokenQueueRef,
+	type TokenUser,
+	schedulesApi,
+	tokensApi,
+} from '../../../../services/queueManagementApi';
+import { formatDate, getTokenDisplay } from '../../QueueManagement/queueManagementUtils';
 import usePermissions from '../../../../hooks/usePermissions';
+
+const ShareTokenModal = lazy(() => import('../../../PageComponents/ServingPoints/ShareTokenModal'));
 import EditTokenUserModal from './EditTokenUserModal';
 import TokenDetailModal from './TokenDetailModal';
 type TokenUserDetailWorkspaceProps = {
@@ -25,6 +42,18 @@ const tokenQueueName = (token: Token): string => {
 	if (token.queue_name) return token.queue_name;
 	if (typeof token.queue === 'number') return `Queue ${token.queue}`;
 	return '—';
+};
+
+/** Queue id when the list/detail payload includes `queue`; list-by-user often omits it. */
+const tokenQueueIdFromPayload = (token: Token): number => {
+	if (typeof token.queue === 'number') return token.queue;
+	return (token.queue as TokenQueueRef | undefined)?.id ?? 0;
+};
+
+const canShareTokenStatus = (token: Token, userUuid?: string | null): boolean => {
+	const uuid = token.token_user?.uuid ?? userUuid ?? '';
+	if (!uuid) return false;
+	return tokenQueueIdFromPayload(token) > 0 || token.schedule != null;
 };
 
 type StatusRuleKey = 'registred' | 'waiting';
@@ -92,6 +121,10 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	const [statusActionsMenuTokenId, setStatusActionsMenuTokenId] = useState<number | null>(null);
 	const [prioritizingTokenId, setPrioritizingTokenId] = useState<number | null>(null);
 	const [editUserOpen, setEditUserOpen] = useState(false);
+	const [shareToken, setShareToken] = useState<Token | null>(null);
+	const [shareQueueId, setShareQueueId] = useState<number | null>(null);
+	const [shareResolving, setShareResolving] = useState(false);
+	const scheduleQueueCacheRef = useRef<Map<number, number>>(new Map());
 	const [pageSize] = useState(5);
 	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
 
@@ -153,6 +186,70 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	useEffect(() => {
 		tableRef.current?.onQueryChange?.();
 	}, [tokens]);
+
+	const resolveTokenQueueId = useCallback(async (token: Token): Promise<number> => {
+		const direct = tokenQueueIdFromPayload(token);
+		if (direct > 0) return direct;
+
+		const scheduleId = token.schedule;
+		if (scheduleId == null) return 0;
+
+		const cached = scheduleQueueCacheRef.current.get(scheduleId);
+		if (cached != null) return cached;
+
+		const schedule = await schedulesApi.get(scheduleId);
+		const queueId = schedule.queue;
+		scheduleQueueCacheRef.current.set(scheduleId, queueId);
+		return queueId;
+	}, []);
+
+	useEffect(() => {
+		const scheduleIds = Array.from(
+			new Set(
+				tokens
+					.filter((t) => t.schedule != null && tokenQueueIdFromPayload(t) === 0)
+					.map((t) => t.schedule as number),
+			),
+		);
+		for (const scheduleId of scheduleIds) {
+			if (scheduleQueueCacheRef.current.has(scheduleId)) continue;
+			void schedulesApi
+				.get(scheduleId)
+				.then((schedule) => {
+					scheduleQueueCacheRef.current.set(scheduleId, schedule.queue);
+				})
+				.catch(() => {
+					/* share flow will retry on click */
+				});
+		}
+	}, [tokens]);
+
+	const closeShareModal = useCallback(() => {
+		setShareToken(null);
+		setShareQueueId(null);
+	}, []);
+
+	const openShareTokenModal = useCallback(
+		async (row: Token) => {
+			setShareResolving(true);
+			try {
+				const queueId = await resolveTokenQueueId(row);
+				if (!queueId) {
+					showErrorNotification(
+						'Could not determine the queue for this token. Try again from the schedule page.',
+					);
+					return;
+				}
+				setShareQueueId(queueId);
+				setShareToken(row);
+			} catch (err) {
+				showErrorNotification(err);
+			} finally {
+				setShareResolving(false);
+			}
+		},
+		[resolveTokenQueueId, showErrorNotification],
+	);
 
 	const openTokenDetail = useCallback((row: Token) => {
 		setDetailViewTokenId(row.id);
@@ -275,8 +372,30 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 				filtering: false,
 				cellStyle: { whiteSpace: 'nowrap', verticalAlign: 'middle' },
 				headerStyle: { whiteSpace: 'nowrap' },
-				render: (rowData: Token) => (
+				render: (rowData: Token) => {
+					const canShare = canShareTokenStatus(rowData, tokenUser?.uuid);
+					const shareBusy = shareResolving && shareToken?.id === rowData.id;
+					return (
 					<div className='d-flex flex-row flex-nowrap align-items-center gap-1'>
+						{canShare && (
+							<Tooltip title='Share token status link'>
+								<span className='d-inline-flex'>
+									<Button
+										color='info'
+										isLight
+										size='sm'
+										icon='QrCode2'
+										aria-label='Share token status link'
+										isDisable={shareBusy}
+										onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+											e.preventDefault();
+											e.stopPropagation();
+											void openShareTokenModal(rowData);
+										}}
+									/>
+								</span>
+							</Tooltip>
+						)}
 						{rowData.is_priority_queued ? (
 							<Button
 								color='secondary'
@@ -410,9 +529,9 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								</>
 							);
 						})()}
-						
 					</div>
-				),
+					);
+				},
 			},
 		],
 		[
@@ -423,6 +542,10 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 			prioritizingTokenId,
 			statusTransitionTokenId,
 			statusActionsMenuTokenId,
+			tokenUser?.uuid,
+			openShareTokenModal,
+			shareResolving,
+			shareToken?.id,
 		],
 	);
 
@@ -586,6 +709,26 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 				tokenUser={tokenUser}
 				onSaved={handleTokenUserSaved}
 			/>
+
+			{shareToken && shareQueueId != null &&
+				(() => {
+					const uuid = shareToken.token_user?.uuid ?? tokenUser?.uuid ?? '';
+					if (!uuid) return null;
+					return (
+						<Suspense fallback={null}>
+							<ShareTokenModal
+								isOpen
+								setIsOpen={(open) => {
+									if (!open) closeShareModal();
+								}}
+								tokenUserUuid={uuid}
+								queueId={shareQueueId}
+								tokenDisplay={getTokenDisplay(shareToken)}
+								customerName={shareToken.token_user?.name ?? tokenUser?.name ?? null}
+							/>
+						</Suspense>
+					);
+				})()}
 		</>
 	);
 };

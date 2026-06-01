@@ -39,6 +39,13 @@ interface IAuthContextProviderProps {
 
 const PROFILE_URL = 'api/users/profile/';
 
+/** Routes that must work without a logged-in user (no profile fetch on boot). */
+function shouldSkipAuthBoot(pathname: string): boolean {
+	return (
+		pathname.includes('public') || pathname.startsWith('/screenstokenstatus')
+	);
+}
+
 export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children }) => {
 	const [loading, setLoading] = useState(true);
 	const [user, setUser] = useState<string>('');
@@ -116,7 +123,9 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 				setUserData({});
 				setPermissions(null);
 				clearAuthSession();
-				navigate('/login');
+				if (!shouldSkipAuthBoot(location.pathname)) {
+					navigate('/login');
+				}
 			} finally {
 				setLoading(false);
 			}

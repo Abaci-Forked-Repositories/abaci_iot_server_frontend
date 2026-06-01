@@ -6,6 +6,7 @@ import type { ScreenTemplateAssignment } from '../../../services/screenTemplates
 import type { Template } from '../../../services/templatesApi';
 import { getScreenTemplateId } from '../../../services/screenTemplatesApi';
 import ScreenAssignedTemplateCard from './ScreenAssignedTemplateCard';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface ScreenDetailPanelProps {
 	screen: Screen | null;
@@ -42,6 +43,9 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 	}
 
 	const assignments = sortAssignments(screen.screen_templates ?? []);
+
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
 
 	return (
 		<div className='screen-detail-panel'>
@@ -93,9 +97,11 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					<span className='fw-semibold'>
 						Templates{assignments.length > 0 ? ` (${assignments.length})` : ''}
 					</span>
+					{canWrite && (
 					<Button size='sm' color='primary' isLight onClick={onAssignTemplate}>
 						Assign template
 					</Button>
+					)}
 				</div>
 				{assignments.length === 0 ? (
 					<div className='screen-detail-templates-empty text-muted'>No templates assigned</div>

@@ -4,6 +4,7 @@ import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../boot
 import Icon from '../../icon/Icon';
 import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface ScreenGroupCardTileProps {
 	group: ScreenGroup;
@@ -21,7 +22,11 @@ const ScreenGroupCardTile: React.FC<ScreenGroupCardTileProps> = ({
 	onEditGroup,
 	onDeleteGroup,
 	isDeleteLoading,
-}) => (
+}) => {
+	const { can } = usePermissions();
+	const canWrite = can('screens_write');
+
+	return (
 	<div
 		className='queue-modern-card'
 		role='button'
@@ -44,6 +49,7 @@ const ScreenGroupCardTile: React.FC<ScreenGroupCardTileProps> = ({
 				<Badge color='info' isLight>
 					Group
 				</Badge>
+				{canWrite && (
 				<div onClick={(e) => e.stopPropagation()} role='presentation'>
 					<Dropdown>
 						<DropdownToggle hasIcon={false}>
@@ -98,6 +104,7 @@ const ScreenGroupCardTile: React.FC<ScreenGroupCardTileProps> = ({
 						</DropdownMenu>
 					</Dropdown>
 				</div>
+				)}
 			</div>
 		</div>
 		<div className='queue-modern-card__desc'>
@@ -112,5 +119,6 @@ const ScreenGroupCardTile: React.FC<ScreenGroupCardTileProps> = ({
 		</div>
 	</div>
 );
+};
 
 export default ScreenGroupCardTile;
