@@ -123,6 +123,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 
 	const fetchAssignModalChunk = useCallback(
 		async (offset: number, search: string, append: boolean) => {
+			if (!canReadServingPoint) {
+				return { incoming: [], hasMore: false, total: 0 };
+			}
 			const res = await queuesApi.servingPoints({
 				limit: MODAL_PAGE_SIZE,
 				offset,
@@ -137,11 +140,16 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 			setModalHasMore(hasMore);
 			return { incoming, hasMore, total };
 		},
-		[],
+		[canReadServingPoint],
 	);
 
 	const loadAssignModalList = useCallback(
 		async (search: string) => {
+			if (!canReadServingPoint) {
+				setModalServingPoints([]);
+				setModalHasMore(false);
+				return;
+			}
 			setModalLoading(true);
 			try {
 				const assigned = assignedServingPointIdsRef.current;
@@ -190,7 +198,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 				setModalLoading(false);
 			}
 		},
-		[],
+		[canReadServingPoint],
 	);
 
 	const loadMoreAssignModal = useCallback(async () => {
@@ -224,7 +232,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	);
 
 	useEffect(() => {
-		if (!showAssignServingPointModal) return;
+		if (!showAssignServingPointModal || !canReadServingPoint) return;
 		const search = assignServingPointSearch.trim();
 		// Debounce search only; load immediately when the modal opens.
 		const delay = search ? 400 : 0;
@@ -232,7 +240,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 			void loadAssignModalList(search);
 		}, delay);
 		return () => window.clearTimeout(timer);
-	}, [assignServingPointSearch, loadAssignModalList, showAssignServingPointModal]);
+	}, [assignServingPointSearch, canReadServingPoint, loadAssignModalList, showAssignServingPointModal]);
 
 	const availableServingPoints = useMemo(() => {
 		const assigned = new Set(assignedServingPointIds);
@@ -340,7 +348,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 			search?: string;
 		}): Promise<{ data: ServingPoint[]; page: number; totalCount: number }> =>
 			new Promise((resolve) => {
-				if (!queueId || Number.isNaN(queueId)) {
+				if (!canReadServingPoint || !queueId || Number.isNaN(queueId)) {
 					setTotalCount(0);
 					resolve({ data: [], page: query.page, totalCount: 0 });
 					return;
@@ -373,7 +381,7 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 						resolve({ data: [], page: query.page, totalCount: 0 });
 					});
 			}),
-		[queueId],
+		[canReadServingPoint, queueId],
 	);
 
 	// ── Table columns ────────────────────────────────────────────────────────
@@ -486,6 +494,10 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	);
 
 	// ── Render ───────────────────────────────────────────────────────────────
+
+	if (!canReadServingPoint) {
+		return null;
+	}
 
 	return (
 		<>

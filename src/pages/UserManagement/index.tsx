@@ -10,6 +10,7 @@ import AddUser from '../../components/MasterComponents/Usermanagement/AddUserOff
 import ButtonWithPopover from '../../components/CustomComponent/Buttons/ButtonWithPopover';
 import BulkUpload from '../../components/MasterComponents/Usermanagement/BulkUpload';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
+import usePermissions from '../../hooks/usePermissions';
 
 const index: React.FC = () => {
 	const dispatch = useDispatch();
@@ -18,7 +19,8 @@ const index: React.FC = () => {
 	const tableRef = useRef(null);
 	const urlBackup = useRef(null);
 	const [addUploadModalShow, setAddUploadModalShow] = useState(false);
-
+	const { can } = usePermissions();
+	const canWrite = can('users_write');
 	useEffect(() => {
 		dispatch(setHeaderTitle({ name: 'User Management', isEditable: false }));
 		dispatch(
@@ -60,11 +62,13 @@ const index: React.FC = () => {
 								</div>
 							</div>
 							<CardActions>
+								{canWrite && (
 								<ButtonWithPopover
 									addBulkModalShow={setAddUploadModalShow}
-									addModalShow={setAddModalShow}
-									buttonName='Add User'
-								/>
+										addModalShow={setAddModalShow}
+										buttonName='Add User'
+									/>
+								)}
 							</CardActions>
 						</CardHeader>
 						<CardBody className='table-responsive'>

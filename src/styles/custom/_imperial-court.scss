@@ -2,7 +2,59 @@
 // Dark luxury broadcast UI with layered live motion
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
 
+@property --tdc-ic-angle {
+	syntax: '<angle>';
+	initial-value: 0deg;
+	inherits: false;
+}
+
 // ─── Motion (15–25s loops, subtle broadcast feel) ───────────────────────────
+@keyframes tdc-ic-border-spin {
+	to {
+		--tdc-ic-angle: 360deg;
+	}
+}
+
+@keyframes tdc-ic-header-flow {
+	0% {
+		transform: translateX(-120%);
+		opacity: 0.35;
+	}
+	15% {
+		opacity: 0.95;
+	}
+	85% {
+		opacity: 0.95;
+	}
+	100% {
+		transform: translateX(420%);
+		opacity: 0.35;
+	}
+}
+
+@keyframes tdc-ic-divider-trace {
+	0% {
+		top: 0;
+		opacity: 0.35;
+	}
+	50% {
+		opacity: 0.9;
+	}
+	100% {
+		top: calc(100% - 22%);
+		opacity: 0.35;
+	}
+}
+
+@keyframes tdc-ic-card-energy {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
 @keyframes tdc-ic-grid-drift {
 	0% {
 		transform: translateX(0);
@@ -137,6 +189,32 @@
 	overflow: hidden;
 	isolation: isolate;
 
+	// Outer border — gold / emerald energy sweep (matches Glass Panel theme)
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		border-radius: inherit;
+		padding: 1px;
+		background: conic-gradient(
+			from var(--tdc-ic-angle, 0deg),
+			transparent 0deg,
+			rgba(255, 215, 0, 0.05) 58deg,
+			rgba(255, 215, 0, 0.5) 76deg,
+			rgba(100, 210, 155, 0.38) 84deg,
+			rgba(255, 215, 0, 0.06) 98deg,
+			transparent 180deg
+		);
+		-webkit-mask:
+			linear-gradient(#fff 0 0) content-box,
+			linear-gradient(#fff 0 0);
+		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+		animation: tdc-ic-border-spin 10s linear infinite;
+	}
+
 	.tdc__glow {
 		display: none;
 	}
@@ -144,7 +222,8 @@
 	.tdc__header,
 	.tdc__body,
 	.tdc__footer,
-	.tdc__history {
+	.tdc__history,
+	.tdc-ic-separators {
 		position: relative;
 		z-index: 4;
 	}
@@ -317,6 +396,24 @@
 		transparent 100%
 	);
 	box-shadow: 0 0 6px rgba(255, 215, 0, 0.12);
+
+	> span {
+		position: absolute;
+		left: 50%;
+		width: 4px;
+		height: 22%;
+		transform: translateX(-50%);
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(255, 215, 0, 0.85) 45%,
+			rgba(140, 220, 175, 0.75) 55%,
+			transparent 100%
+		);
+		filter: blur(0.5px);
+		box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+		animation: tdc-ic-divider-trace 10s ease-in-out infinite alternate;
+	}
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────
@@ -326,6 +423,38 @@
 	justify-content: center;
 	border-bottom: 1px solid rgba(255, 215, 0, 0.18);
 	background: rgba(0, 0, 0, 0.35);
+	overflow: hidden;
+}
+
+.tdc--imperial-court .tdc-ic-header-beam {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 2;
+	background: rgba(255, 215, 0, 0.12);
+
+	&::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 22%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 215, 0, 0.35) 35%,
+			rgba(255, 215, 0, 0.9) 50%,
+			rgba(140, 220, 175, 0.45) 58%,
+			rgba(255, 215, 0, 0.35) 65%,
+			transparent 100%
+		);
+		animation: tdc-ic-header-flow 10s linear infinite;
+	}
 }
 
 .tdc--imperial-court .tdc__queue-name {
@@ -485,6 +614,45 @@
 		border-top: 1px solid rgba(255, 215, 0, 0.16);
 		background: rgba(0, 0, 0, 0.42);
 		z-index: 4;
+	}
+}
+
+// Active tokens — circulating gold border energy
+.tdc--imperial-court .tdc__history-card {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	border: none;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.45);
+	padding: 0.14em 0.5em 0.16em;
+	box-shadow: inset 0 1px 0 rgba(255, 215, 0, 0.08);
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: -120%;
+		background: conic-gradient(
+			from 0deg,
+			transparent 0deg,
+			rgba(255, 215, 0, 0.08) 40deg,
+			rgba(255, 215, 0, 0.55) 52deg,
+			rgba(100, 200, 150, 0.35) 58deg,
+			rgba(255, 215, 0, 0.08) 64deg,
+			transparent 120deg
+		);
+		animation: tdc-ic-card-energy 10s linear infinite;
+		z-index: -2;
+	}
+
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 1px;
+		border-radius: inherit;
+		background: rgba(2, 12, 9, 0.88);
+		z-index: -1;
+		box-shadow: inset 0 1px 0 rgba(255, 215, 0, 0.06);
 	}
 }
 

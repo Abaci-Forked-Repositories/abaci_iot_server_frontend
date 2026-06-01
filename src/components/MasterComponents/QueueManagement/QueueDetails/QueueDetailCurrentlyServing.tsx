@@ -11,8 +11,8 @@ import useToasterNotification from '../../../../hooks/useToasterNotification';
 
 export interface QueueDetailCurrentlyServingProps {
 	queueId: number;
-	/** Increment when parent finishes a full queue reload so this panel refetches. */
 	refreshVersion: number;
+	fullWidth?: boolean;
 }
 
 function normalizeCurrentlyServingResponse(
@@ -89,7 +89,11 @@ function entryToRow(entry: CurrentlyServingEntry, index: number): CurrentlyServi
 	};
 }
 
-const QueueDetailCurrentlyServing: React.FC<QueueDetailCurrentlyServingProps> = ({ queueId, refreshVersion }) => {
+const QueueDetailCurrentlyServing: React.FC<QueueDetailCurrentlyServingProps> = ({
+	queueId,
+	refreshVersion,
+	fullWidth = false,
+}) => {
 	const { theme, headerStyles, rowStyles } = useTablestyle();
 	const { showErrorNotification } = useToasterNotification();
 	const showErrorNotificationRef = useRef(showErrorNotification);
@@ -136,7 +140,7 @@ const QueueDetailCurrentlyServing: React.FC<QueueDetailCurrentlyServingProps> = 
 	);
 
 	return (
-		<div className='col-12 col-xl-6'>
+		<div className={fullWidth ? 'col-12' : 'col-12 col-xl-6'}>
 			<Card stretch>
 				<CardHeader>
 					<CardLabel icon='Group'>

@@ -243,6 +243,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	);
 	const { can } = usePermissions();
 	const canReadSchedule = can('schedules_read');
+	const canWrite = can('serving_point_write');
 	const getAllowedActions = (row: ScheduleServingPoint) => {
 		const tokenStatus = (getWindowCurrentTokenStatusRaw(row) || '').toLowerCase().trim();
 		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
@@ -387,7 +388,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	};
 
 	const visibleTokenActions = useMemo(() => {
-		if (!windowRow) return [];
+		if (!canWrite || !windowRow) return [];
 		const allowed = getAllowedActions(windowRow);
 		const rows: Array<{
 			key: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone';
@@ -440,7 +441,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			},
 		];
 		return rows.filter((r) => r.show);
-	}, [windowRow, schedule?.allow_postpone]);
+	}, [canWrite, windowRow, schedule?.allow_postpone]);
 
 	if (!windowNumericId || Number.isNaN(windowNumericId)) {
 		return <div className='alert alert-warning'>Invalid serving window.</div>;
@@ -448,6 +449,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 
 	const windowSpStatus = windowRow ? getWindowServingPointStatus(windowRow) : undefined;
 	const canEditServingPointStatus =
+		canWrite &&
 		Boolean(windowRow) &&
 		isServingWindowEndInFuture(windowRow!) &&
 		getNextAllowedServingPointStatuses(windowSpStatus).length > 0;
@@ -605,7 +607,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 
 				const spStatusMenuChoices = ['on_hold', 'completed', 'cancelled'] as const;
 				const allowedSpTransitions = getNextAllowedServingPointStatuses(windowSpStatus);
-				const showCounterStatusMenu = normalizeServingPointStatus(windowSpStatus) === 'running';
+				const showCounterStatusMenu =
+					canWrite && normalizeServingPointStatus(windowSpStatus) === 'running';
 
 				const skipMenuItems = showCounterStatusMenu
 					? spStatusMenuChoices
@@ -678,7 +681,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 										)}
 									</div>
 									<div className='row g-4 align-items-start'>
-										<div className='col-12 col-lg-4'>
+										<div className={canWrite ? 'col-12 col-lg-4' : 'col-12'}>
 											<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
 											{user?.name?.trim() ? (
 												<div className='fs-4 fw-semibold text-body-emphasis mb-3'>{user.name.trim()}</div>
@@ -701,6 +704,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 												</ul>
 											)}
 										</div>
+										{canWrite ? (
 										<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 										{visibleTokenActions.map((a) => {
 											if (a.key === 'start') {
@@ -784,6 +788,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 												</p>
 											)}
 										</div>
+										) : null}
 									</div>
 								</div>
 							)}
@@ -792,16 +797,18 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				);
 			})()}
 
-			<ServingPointStatusModal
-				isOpen={showStatusModal}
-				setIsOpen={setShowStatusModal}
-				servingPoint={servingPoint}
-				helperText="This updates the counter's status everywhere it is used, not only this schedule window."
-				onSuccess={async (updated) => {
-					setServingPoint(updated);
-					await load();
-				}}
-			/>
+			{canWrite && (
+				<ServingPointStatusModal
+					isOpen={showStatusModal}
+					setIsOpen={setShowStatusModal}
+					servingPoint={servingPoint}
+					helperText="This updates the counter's status everywhere it is used, not only this schedule window."
+					onSuccess={async (updated) => {
+						setServingPoint(updated);
+						await load();
+					}}
+				/>
+			)}
 
 			<CompleteWithNextQueueModal
 				isOpen={showCompleteModal}

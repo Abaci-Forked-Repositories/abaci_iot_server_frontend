@@ -72,7 +72,8 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		label: 'Onyx Gold',
 		description: 'Pure black with liquid-gold token — luxury premium',
 		textColor: 'light',
-		previewGradient: 'linear-gradient(160deg, #1a1200 0%, #000000 50%)',
+		previewGradient:
+			'linear-gradient(180deg, #e8c96a 0%, #d4af37 12%, #4a3d12 32%, #1a1200 58%, #0a0800 100%)',
 	},
 	'crimson-banner': {
 		id: 'crimson-banner',
@@ -87,14 +88,16 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		label: 'Regal Court',
 		description: 'Dark luxury broadcast board with wireframe grid, ambient particles, and gold accents',
 		textColor: 'light',
-		previewGradient: 'linear-gradient(165deg, #02140f 0%, #000000 100%)',
+		previewGradient:
+			'radial-gradient(circle at 50% 38%, rgba(80, 200, 150, 0.5) 0%, rgba(12, 72, 52, 0.85) 38%, #02140f 72%, #010806 100%)',
 	},
 	'arctic-white': {
 		id: 'arctic-white',
 		label: 'Glass Panel',
 		description: 'Premium glassmorphism with graphite backdrop, frosted panels, and flowing white border energy',
 		textColor: 'light',
-		previewGradient: 'linear-gradient(155deg, #141618 0%, #000000 100%)',
+		previewGradient:
+			'radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.42) 0%, rgba(200, 210, 220, 0.18) 32%, #3a3f45 52%, #141618 100%)',
 	},
 };
 

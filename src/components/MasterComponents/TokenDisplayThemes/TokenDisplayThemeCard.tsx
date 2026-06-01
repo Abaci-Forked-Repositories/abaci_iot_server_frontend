@@ -92,9 +92,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 
 	const resolved = useMemo(() => resolveZoneCardStyle(appearance), [appearance]);
 	const statusConfig = getStatusConfig(status);
+	const isDigitalCrimson = resolved.themeClass === 'tdc--digital-crimson';
+	const isOnyxGold = resolved.themeClass === 'tdc--onyx-gold';
 	const isModernQueueBoard = resolved.themeClass === 'tdc--crimson-banner';
 	const isImperialCourt = resolved.themeClass === 'tdc--imperial-court';
 	const isArcticGlass = resolved.themeClass === 'tdc--arctic-white';
+	const showEnergyDivider = fillContainer && (isDigitalCrimson || isOnyxGold);
+	const showHeaderBeam =
+		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
 	const inlineStyle = useMemo<React.CSSProperties>(() => {
 		if (!resolved.useFillBackground || !resolved.backgroundColor) return {};
@@ -173,11 +178,27 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					<span />
 				</div>
 			)}
+			{showEnergyDivider && (
+				<div className='tdc-be-divider' aria-hidden='true'>
+					<span />
+				</div>
+			)}
 
 			<div className='tdc__glow' aria-hidden='true' />
 
 			<div className='tdc__header'>
-				{isArcticGlass && <div className='tdc-aw-header-beam' aria-hidden='true' />}
+				{showHeaderBeam && (
+					<div
+						className={
+							isImperialCourt
+								? 'tdc-ic-header-beam'
+								: isArcticGlass
+									? 'tdc-aw-header-beam'
+									: 'tdc-be-header-beam'
+						}
+						aria-hidden='true'
+					/>
+				)}
 				{queueName ? (
 					<span className='tdc__queue-name'>{queueName}</span>
 				) : (

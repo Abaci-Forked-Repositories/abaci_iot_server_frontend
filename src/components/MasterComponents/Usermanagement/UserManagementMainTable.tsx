@@ -9,6 +9,7 @@ import EditUser from './EditUserOffCanvas';
 import { authAxios } from '../../../axiosInstance';
 import { formatFiltersWithOptions } from '../../../helpers/functions';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import usePermissions from '../../../hooks/usePermissions';
 import CustomButtonWithNoName from '../../CustomComponent/Buttons/CustomButtonWithNoName';
 import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
@@ -28,6 +29,8 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 	const [itemToBeEdited, setItemToBeEdited] = useState(null);
 	const [editModalShow, setEditModalShow] = useState(false);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const { can } = usePermissions();
+	const canWrite = can('users_write');
 	const staticColumns = [
 		{
 			title: 'Full Name',
@@ -80,38 +83,6 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 		setItemToBeEdited(item);
 		setEditModalShow(!editModalShow);
 	};
-	const actionButtons = [
-		{
-			title: 'Actions',
-			align: 'right' as 'right',
-			removable: false,
-			sorting: false,
-			grouping: false,
-			filtering: false,
-			render: (rowData: any) => (
-				<div className='d-flex gap-1 justify-content-end'>
-					{rowData.status !== 'DELETED' && (
-						<>
-							<Button
-								color='primary'
-								isLight
-								icon='Edit'
-								onClick={() => handleEdit(rowData)}
-								id={rowData.id}
-							>
-							</Button>
-							<DeleteButton
-							    color='danger'
-								tableRef={tableRef}
-								apiEndpoint={`api/users/${rowData.id}/`}
-								text='Are you sure you want to delete this User?'
-							/>
-						</>
-					)}
-				</div>
-			),
-		},
-	];
 
 	const handleBulkDelete = async (selectedRows: any[]) => {
 		if (!selectedRows.length) return;
@@ -148,8 +119,43 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 	};
 
 	const columns = useMemo(() => {
-		return [...staticColumns, ...actionButtons];
-	}, []);
+		if (!canWrite) {
+			return staticColumns;
+		}
+
+		return [
+			...staticColumns,
+			{
+				title: 'Actions',
+				align: 'right' as 'right',
+				removable: false,
+				sorting: false,
+				grouping: false,
+				filtering: false,
+				render: (rowData: any) => (
+					<div className='d-flex gap-1 justify-content-end'>
+						{rowData.status !== 'DELETED' && (
+							<>
+								<Button
+									color='primary'
+									isLight
+									icon='Edit'
+									onClick={() => handleEdit(rowData)}
+									id={rowData.id}
+								/>
+								<DeleteButton
+									color='danger'
+									tableRef={tableRef}
+									apiEndpoint={`api/users/${rowData.id}/`}
+									text='Are you sure you want to delete this User?'
+								/>
+							</>
+						)}
+					</div>
+				),
+			},
+		];
+	}, [canWrite, tableRef]);
 
 	return (
 		<>

@@ -44,6 +44,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 	const [tokenCardRefreshKey, setTokenCardRefreshKey] = useState(0);
 	const { can } = usePermissions();
 	const canWrite = can('serving_point_write');
+	const canReadSchedules = can('schedules_read');
 
 	const { showErrorNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -58,22 +59,25 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 		}
 		setLoading(true);
 		try {
-			const [pointRes, windowsRes] = await Promise.all([
-				queuesApi.getServingPoint(id),
-				scheduleServingPointsApi.list({
+			const pointRes = await queuesApi.getServingPoint(id);
+			setServingPoint(pointRes);
+
+			if (canReadSchedules) {
+				const windowsRes = await scheduleServingPointsApi.list({
 					serving_point: id,
 					ordering: '-updated_at',
 					page_size: 200,
-				}),
-			]);
-			setServingPoint(pointRes);
-			setWindows(windowsRes.results || []);
+				});
+				setWindows(windowsRes.results || []);
+			} else {
+				setWindows([]);
+			}
 		} catch (err) {
 			errorNotifierRef.current(err);
 		} finally {
 			setLoading(false);
 		}
-	}, [id]);
+	}, [canReadSchedules, id]);
 
 	useEffect(() => {
 		void load();
@@ -239,17 +243,19 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 				/>
 			)}
 
-			<QueueEventsTimelineCard
-				queryId={id}
-				loadEvents={(spId) => eventsApi.byServingPoint(spId)}
-				captionOverride={servingPoint?.name ?? null}
-				getCaptionFromEvents={(ev) =>
-					(ev[0]?.serving_point_name && String(ev[0].serving_point_name).trim()) || null
-				}
-				subtitleFallback='Timeline of queue and schedule activity for this serving point.'
-				emptyText='No events found for this serving point'
-				emptyHelpText='Status changes, tokens, and other activity involving this counter will show up here.'
-			/>
+			{canReadSchedules && (
+				<QueueEventsTimelineCard
+					queryId={id}
+					loadEvents={(spId) => eventsApi.byServingPoint(spId)}
+					captionOverride={servingPoint?.name ?? null}
+					getCaptionFromEvents={(ev) =>
+						(ev[0]?.serving_point_name && String(ev[0].serving_point_name).trim()) || null
+					}
+					subtitleFallback='Timeline of queue and schedule activity for this serving point.'
+					emptyText='No events found for this serving point'
+					emptyHelpText='Status changes, tokens, and other activity involving this counter will show up here.'
+				/>
+			)}
 
 			<ServingPointModal
 				isOpen={showEditModal}

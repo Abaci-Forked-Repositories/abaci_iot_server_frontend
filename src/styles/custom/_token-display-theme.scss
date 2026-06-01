@@ -4,6 +4,8 @@
 //
 // BEM root: .tdc
 
+@import 'tdc-border-energy';
+
 // ─── CSS custom properties (defaults — digital-crimson) ──────────────────────
 
 .tdc {
@@ -117,13 +119,69 @@
 		z-index: 0;
 	}
 
+	@include tdc-outer-border-energy(
+		rgba(255, 120, 80, 0.55),
+		rgba(220, 30, 30, 0.06),
+		rgba(255, 200, 160, 0.35)
+	);
+
+	&::after {
+		z-index: 2;
+	}
+
 	.tdc__header,
 	.tdc__body,
 	.tdc__footer,
-	.tdc__history {
+	.tdc__history,
+	.tdc-be-divider {
 		position: relative;
-		z-index: 2;
+		z-index: 4;
 	}
+}
+
+.tdc--digital-crimson .tdc-be-header-beam {
+	background: rgba(220, 30, 30, 0.15);
+
+	&::after {
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 100, 60, 0.4) 35%,
+			rgba(255, 180, 120, 0.9) 50%,
+			rgba(255, 100, 60, 0.4) 65%,
+			transparent 100%
+		);
+	}
+}
+
+.tdc--digital-crimson .tdc-be-divider {
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(220, 30, 30, 0.2) 12%,
+		rgba(255, 120, 80, 0.35) 50%,
+		rgba(220, 30, 30, 0.2) 88%,
+		transparent 100%
+	);
+
+	> span {
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(255, 140, 90, 0.85) 45%,
+			rgba(255, 200, 160, 0.75) 55%,
+			transparent 100%
+		);
+		box-shadow: 0 0 10px rgba(255, 80, 40, 0.35);
+	}
+}
+
+.tdc--digital-crimson .tdc__history-card {
+	@include tdc-history-card-border-energy(
+		rgba(255, 140, 90, 0.55),
+		rgba(220, 30, 30, 0.1),
+		rgba(24, 0, 0, 0.9)
+	);
 }
 
 // ─── Theme 2 · Onyx Gold ─────────────────────────────────────────────────────
@@ -147,34 +205,94 @@
 	box-shadow:
 		0 8px 36px rgba(0, 0, 0, 0.70),
 		0 2px 8px rgba(0, 0, 0, 0.40),
-		inset 0 1px 0 rgba(255, 255, 255, 0.04);
+		inset 0 1px 0 rgba(255, 255, 255, 0.04),
+		inset 0 -1px 0 rgba(212, 175, 55, 0.2);
+	overflow: hidden;
+	isolation: isolate;
 
-	// Gold horizontal rule at top
-	&::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 12%;
-		right: 12%;
-		height: 2px;
-		background: linear-gradient(90deg, transparent 0%, #d4af37 40%, #f0cc5a 60%, #d4af37 80%, transparent 100%);
-		z-index: 2;
-		pointer-events: none;
+	@include tdc-outer-border-energy(
+		rgba(240, 204, 90, 0.55),
+		rgba(212, 175, 55, 0.08)
+	);
+
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc__history,
+	.tdc-be-divider {
+		position: relative;
+		z-index: 4;
 	}
 
-	// Faint gold bottom rule for framing
-	&::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 20%;
-		right: 20%;
-		height: 1px;
-		background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.35), transparent);
-		z-index: 2;
-		pointer-events: none;
+	.tdc__header {
+		overflow: hidden;
+
+		&::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 12%;
+			right: 12%;
+			height: 2px;
+			background: linear-gradient(
+				90deg,
+				transparent 0%,
+				#d4af37 40%,
+				#f0cc5a 60%,
+				#d4af37 80%,
+				transparent 100%
+			);
+			z-index: 3;
+			pointer-events: none;
+		}
 	}
 }
+
+.tdc--onyx-gold .tdc-be-header-beam {
+	background: rgba(212, 175, 55, 0.12);
+
+	&::after {
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(212, 175, 55, 0.35) 35%,
+			rgba(240, 204, 90, 0.95) 50%,
+			rgba(212, 175, 55, 0.35) 65%,
+			transparent 100%
+		);
+	}
+}
+
+.tdc--onyx-gold .tdc-be-divider {
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(212, 175, 55, 0.22) 12%,
+		rgba(240, 204, 90, 0.4) 50%,
+		rgba(212, 175, 55, 0.22) 88%,
+		transparent 100%
+	);
+
+	> span {
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(240, 204, 90, 0.9) 45%,
+			rgba(212, 175, 55, 0.75) 55%,
+			transparent 100%
+		);
+		box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
+	}
+}
+
+.tdc--onyx-gold .tdc__history-card {
+	@include tdc-history-card-border-energy(
+		rgba(240, 204, 90, 0.55),
+		rgba(212, 175, 55, 0.12),
+		rgba(0, 0, 0, 0.92)
+	);
+}
+
 
 // ─── Theme 3 · Modern Queue Board (slug: crimson-banner) ─────────────────────
 @import 'modern-queue-board';

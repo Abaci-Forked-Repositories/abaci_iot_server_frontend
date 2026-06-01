@@ -32,6 +32,7 @@ import {
 	normalizeServingPointStatus,
 	SP_STATUS_LABELS,
 } from '../QueueManagement/queueManagementUtils';
+import usePermissions from '../../../hooks/usePermissions';
 
 export interface ServingPointCurrentServingCardProps {
 	servingPointId: number;
@@ -96,6 +97,8 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	} | null>(null);
 	const [showShareModal, setShowShareModal] = useState(false);
 
+	const { can } = usePermissions();
+	const canWrite = can('serving_point_write');
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
 	const onServingPointUpdatedRef = useRef(onServingPointUpdated);
@@ -286,7 +289,7 @@ const triggerSkipToken = async (
 	};
 
 	const visibleTokenActions = useMemo(() => {
-		if (!windowRow) return [];
+		if (!canWrite || !windowRow) return [];
 		const tokenStatus = (getWindowCurrentTokenStatusRaw(windowRow) || '').toLowerCase().trim();
 		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
 		const canComplete = tokenStatus === 'serving';
@@ -346,7 +349,7 @@ const triggerSkipToken = async (
 			},
 		];
 		return rows.filter((r) => r.show);
-	}, [windowRow, schedule?.allow_postpone]);
+	}, [canWrite, windowRow, schedule?.allow_postpone]);
 
 	const windowSpStatus = windowRow
 		? getWindowServingPointStatus(windowRow) ?? servingPoint?.status
@@ -430,7 +433,8 @@ const triggerSkipToken = async (
 
 						const spStatusMenuChoices = ['on_hold', 'completed', 'cancelled'] as const;
 						const allowedSpTransitions = getNextAllowedServingPointStatuses(windowSpStatus);
-						const showCounterStatusMenu = normalizeServingPointStatus(windowSpStatus) === 'running';
+						const showCounterStatusMenu =
+							canWrite && normalizeServingPointStatus(windowSpStatus) === 'running';
 
 						const skipMenuItems = showCounterStatusMenu
 							? spStatusMenuChoices
@@ -513,7 +517,7 @@ const triggerSkipToken = async (
 									</div>
 								</div>
 								<div className='row g-4 align-items-start'>
-									<div className='col-12 col-lg-4'>
+									<div className={canWrite ? 'col-12 col-lg-4' : 'col-12'}>
 										<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
 										{user?.name?.trim() ? (
 											<div className='fs-4 fw-semibold text-body-emphasis mb-3'>
@@ -543,6 +547,7 @@ const triggerSkipToken = async (
 											</ul>
 										)}
 									</div>
+									{canWrite ? (
 									<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 										{visibleTokenActions.map((a) => {
 											if (a.key === 'start') {
@@ -631,6 +636,7 @@ const triggerSkipToken = async (
 											</p>
 										)}
 									</div>
+									) : null}
 								</div>
 							</div>
 						);

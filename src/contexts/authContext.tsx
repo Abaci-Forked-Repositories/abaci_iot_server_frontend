@@ -91,7 +91,11 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 	 * outer scope to avoid stale-closure issues. The fetch is inlined directly.
 	 */
 	useEffect(() => {
-		if (location.pathname.includes('public')) {
+		if (
+			location.pathname.includes('public') ||
+			location.pathname.startsWith('/screenstokenstatus')
+		) {
+			setUserData({});
 			setLoading(false);
 			return;
 		}

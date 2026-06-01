@@ -144,6 +144,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
 	const fetchSchedulesForMonth = useCallback(
 		async (monthDate: Date) => {
+			if (!canReadSchedule) {
+				setScheduleRecords([]);
+				return;
+			}
 			const start = dayjs(monthDate).startOf('month');
 			const end = dayjs(monthDate).endOf('month');
 			try {
@@ -157,14 +161,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 				// silently ignore fetch errors for schedule calendar
 			}
 		},
-		[queueId],
+		[canReadSchedule, queueId],
 	);
 
 	// Re-fetch when the viewed month or queue changes
 	useEffect(() => {
+		if (!canReadSchedule) return;
 		void fetchSchedulesForMonth(date);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fetchSchedulesForMonth, monthKey]);
+	}, [canReadSchedule, fetchSchedulesForMonth, monthKey]);
 
 	const events = useMemo(
 		() => (scheduleRecords || []).filter(hasScheduleWindow).map(mapQueueScheduleToCalendarEvent),
@@ -274,6 +279,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 			</div>
 		);
 	};
+
+	if (!canReadSchedule) {
+		return null;
+	}
 
 	return (
 		<Card>

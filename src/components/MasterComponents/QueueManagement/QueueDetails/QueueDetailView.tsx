@@ -58,6 +58,8 @@ const QueueDetailView: React.FC = () => {
 	const { showErrorNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('queue_management_write');
+	const canReadSchedules = can('schedules_read');
+	const canReadServingPoints = can('serving_point_read');
 	const [showQueueEditModal, setShowQueueEditModal] = useState(false);
 	const [openingQueueEditModal, setOpeningQueueEditModal] = useState(false);
 	const queueEditOpenInFlightRef = useRef(false);
@@ -315,33 +317,39 @@ const QueueDetailView: React.FC = () => {
 					</Card>
 				</div>
 
-			{/* ── Schedule Calendar ── */}
-			<div className='col-12'>
-			<ScheduleCalendar
-				queueName={queueData.name}
-				queueId={id}
-				onScheduleCreated={() => void load()}
-					onEventClick={(event: QueueScheduleEvent) =>
-						navigate(`/queue-management/schedules/${event.id}`, {
-							state: {
-								queueId: id,
-								queueName: queueData.name,
-								queueDetailPath: location.pathname,
-							},
-						})
-					}
+			{canReadSchedules && (
+				<div className='col-12'>
+					<ScheduleCalendar
+						queueName={queueData.name}
+						queueId={id}
+						onScheduleCreated={() => void load()}
+						onEventClick={(event: QueueScheduleEvent) =>
+							navigate(`/queue-management/schedules/${event.id}`, {
+								state: {
+									queueId: id,
+									queueName: queueData.name,
+									queueDetailPath: location.pathname,
+								},
+							})
+						}
+					/>
+				</div>
+			)}
+
+			{canReadServingPoints && (
+				<QueueDetailServingPoints
+					queueId={id}
+					assignedServingPointIds={(queueData.serving_points ?? []).map((p) => p.id)}
+					refreshVersion={pageDataVersion}
+					onChanged={() => void load()}
 				/>
-			</div>
+			)}
 
-			{/* ── Serving Points ── */}
-			<QueueDetailServingPoints
-				queueId={id}
-				assignedServingPointIds={(queueData.serving_points ?? []).map((p) => p.id)}
-				refreshVersion={pageDataVersion}
-				onChanged={() => void load()}
-			/>
-
-				<QueueDetailCurrentlyServing queueId={id} refreshVersion={pageDataVersion} />
+				<QueueDetailCurrentlyServing
+					queueId={id}
+					refreshVersion={pageDataVersion}
+					fullWidth={!canReadSchedules && !canReadServingPoints}
+				/>
 			</div>
 
 			<QueueFormModal
