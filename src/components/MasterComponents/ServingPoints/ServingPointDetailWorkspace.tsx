@@ -62,22 +62,16 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 			const pointRes = await queuesApi.getServingPoint(id);
 			setServingPoint(pointRes);
 
-			if (canReadSchedules) {
-				const windowsRes = await scheduleServingPointsApi.list({
-					serving_point: id,
-					ordering: '-updated_at',
-					page_size: 200,
-				});
-				setWindows(windowsRes.results || []);
-			} else {
-				setWindows([]);
-			}
+			const windowsRes = await scheduleServingPointsApi.list({
+				serving_point: id,
+			});
+			setWindows(windowsRes.results ?? []);
 		} catch (err) {
 			errorNotifierRef.current(err);
 		} finally {
 			setLoading(false);
 		}
-	}, [canReadSchedules, id]);
+	}, [id]);
 
 	useEffect(() => {
 		void load();

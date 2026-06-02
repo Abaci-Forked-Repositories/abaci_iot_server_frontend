@@ -11,12 +11,10 @@ import StatusBadge from '../../BadgeWithIcon.jsx';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type Queue,
-	type QueueSchedule,
 	type ScheduleServingPoint,
 	type ServingPoint,
 	type Token,
 	queuesApi,
-	schedulesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
 import CompleteWithNextQueueModal from '../../PageComponents/ServingPoints/CompleteWithNextQueueModal';
@@ -27,6 +25,7 @@ const ShareTokenModal = lazy(
 import { setBreadcrumbs, setHeaderTitle } from '../../../store/uiSlice';
 import {
 	formatDate,
+	getErrorMessage,
 	getNextAllowedServingPointStatuses,
 	getTokenDisplay,
 	getWindowServingPointStatus,
@@ -83,6 +82,14 @@ const getWindowCurrentTokenStatusRaw = (row: ScheduleServingPoint): string => {
 };
 
 const normalizeTokenStatus = (status?: string) => (status || '').toLowerCase().trim();
+const parseScheduleAllowPostpone = (value: unknown): boolean => {
+	if (value === true || value === 1) return true;
+	if (typeof value === 'string') {
+		const normalized = value.trim().toLowerCase();
+		return normalized === 'true' || normalized === '1' || normalized === 'yes';
+	}
+	return false;
+};
 
 const ServingWindowDetailWorkspace: React.FC = () => {
 	const { servingPointId, windowId } = useParams<{ servingPointId: string; windowId: string }>();
@@ -103,7 +110,6 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
 	const [windowRow, setWindowRow] = useState<ScheduleServingPoint | null>(null);
 	const [servingPoint, setServingPoint] = useState<ServingPoint | null>(null);
-	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
 	const [currentQueue, setCurrentQueue] = useState<Queue | null>(null);
 	const [showStatusModal, setShowStatusModal] = useState(false);
 	const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -117,7 +123,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	} | null>(null);
 	const [showShareModal, setShowShareModal] = useState(false);
 
-	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const { showErrorNotification, showSuccessNotification, showNotification } =
+		useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
 	useEffect(() => {
 		errorNotifierRef.current = showErrorNotification;
@@ -138,24 +145,24 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 				});
 				return;
 			}
-			const [pointRes, scheduleRes] = await Promise.all([
-				queuesApi.getServingPoint(win.serving_point),
-				schedulesApi.get(win.queue_schedule),
-			]);
+			const pointRes = await queuesApi.getServingPoint(win.serving_point);
 			setWindowRow(win);
 			setServingPoint(pointRes);
-			setSchedule(scheduleRes);
-			try {
-				const queueRes = await queuesApi.get(scheduleRes.queue);
-				setCurrentQueue(queueRes);
-			} catch {
+			if (win.queue_schedule_queue_id != null && win.queue_schedule_queue_id > 0) {
+				try {
+					const queueRes = await queuesApi.get(win.queue_schedule_queue_id);
+					setCurrentQueue(queueRes);
+				} catch (queueErr) {
+					setCurrentQueue(null);
+					showNotification('Error', getErrorMessage(queueErr), 'danger');
+				}
+			} else {
 				setCurrentQueue(null);
 			}
 		} catch (err) {
 			errorNotifierRef.current(err);
 			setWindowRow(null);
 			setServingPoint(null);
-			setSchedule(null);
 			setCurrentQueue(null);
 		} finally {
 			setLoading(false);
@@ -190,16 +197,15 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			`Serving point ${windowRow.serving_point}`;
 
 		if (scheduleEntryPath) {
-			const qId = schedule?.queue ?? queueIdFromNav;
+			const qId = windowRow.queue_schedule_queue_id ?? queueIdFromNav;
 			const qLabel =
-				queueNameFromNav ?? schedule?.queue_name ?? (qId ? `Queue ${qId}` : 'Queue');
+				queueNameFromNav ?? currentQueue?.name ?? (qId ? `Queue ${qId}` : 'Queue');
 			const queuePath =
 				queueDetailPathFromNav ??
 				(qId != null && qId > 0 ? `/queue-management/${qId}` : '/queue-management');
-			const schedId = schedule?.id ?? nav?.scheduleId ?? windowRow.queue_schedule;
+			const schedId = nav?.scheduleId ?? windowRow.queue_schedule;
 			const schedLabel =
-				schedule?.description?.trim() ||
-				(typeof schedId === 'number' ? `Schedule #${schedId}` : 'Schedule');
+				typeof schedId === 'number' ? `Schedule #${schedId}` : 'Schedule';
 			dispatch(setHeaderTitle({ name: `${spLabel} · Serving window`, isEditable: false }));
 			dispatch(
 				setBreadcrumbs([
@@ -224,7 +230,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	}, [
 		dispatch,
 		location.pathname,
-		schedule,
+		currentQueue?.name,
 		scheduleEntryPath,
 		windowRow,
 		queueDetailPathFromNav,
@@ -251,7 +257,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		const canCancel =
 			tokenStatus === 'registred' || tokenStatus === 'waiting' || tokenStatus === 'serving';
 		const canNoShow = canCancel;
-		const canPostpone = canCancel && Boolean(schedule?.allow_postpone);
+		const canPostpone =
+			canCancel && parseScheduleAllowPostpone(getCurrentToken(row)?.schedule_allow_postpone);
 		return { canStart, canComplete, canCancel, canNoShow, canPostpone };
 	};
 
@@ -441,7 +448,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			},
 		];
 		return rows.filter((r) => r.show);
-	}, [canWrite, windowRow, schedule?.allow_postpone]);
+	}, [canWrite, windowRow]);
 
 	if (!windowNumericId || Number.isNaN(windowNumericId)) {
 		return <div className='alert alert-warning'>Invalid serving window.</div>;
@@ -519,11 +526,12 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 													onClick={() =>
 														navigate(`/queue-management/schedules/${windowRow.queue_schedule}`, {
 															state: {
-																queueId: schedule?.queue ?? queueIdFromNav,
-																queueName: schedule?.queue_name ?? queueNameFromNav,
+																queueId:
+																	windowRow.queue_schedule_queue_id ?? queueIdFromNav,
+																queueName: currentQueue?.name ?? queueNameFromNav,
 																queueDetailPath:
-																	schedule?.queue != null
-																		? `/queue-management/${schedule.queue}`
+																	windowRow.queue_schedule_queue_id != null
+																		? `/queue-management/${windowRow.queue_schedule_queue_id}`
 																		: queueDetailPathFromNav,
 															},
 														})
@@ -567,8 +575,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 								<div className='small text-muted text-uppercase fw-semibold'>Queue</div>
 								<div className='fw-semibold'>
 									{(servingPoint as (ServingPoint & { queue_name?: string }) | null)?.queue_name ||
-										(schedule?.queue_name != null
-											? schedule.queue_name
+										(currentQueue?.name != null
+											? currentQueue.name
 											: windowRow.queue_schedule_queue_id != null
 												? `Queue #${windowRow.queue_schedule_queue_id}`
 												: (() => {

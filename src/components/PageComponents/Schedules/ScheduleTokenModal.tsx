@@ -60,15 +60,29 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 }) => {
 	const [tokenForm, setTokenForm] = useState<CreateTokenPayload>(initialTokenForm);
 	const [saving, setSaving] = useState(false);
+	const [tokenNumberLoading, setTokenNumberLoading] = useState(false);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	useEffect(() => {
 		if (!isOpen) return;
 		if (mode === 'edit' && editingToken) {
 			setTokenForm(tokenToForm(editingToken, scheduleId));
-		} else {
-			setTokenForm({ ...initialTokenForm, schedule_id: scheduleId });
+			return;
 		}
+		// Create mode: reset form then fetch next token number
+		setTokenForm({ ...initialTokenForm, schedule_id: scheduleId });
+		setTokenNumberLoading(true);
+		tokensApi
+			.getNextTokenNumber(scheduleId)
+			.then((res) => {
+				setTokenForm((prev) => ({ ...prev, token_number: res.next_token_number }));
+			})
+			.catch(() => {
+				// silently ignore — user can type manually
+			})
+			.finally(() => {
+				setTokenNumberLoading(false);
+			});
 	}, [isOpen, mode, editingToken, scheduleId]);
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -87,6 +101,10 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 							: undefined,
 					place: tokenForm.place?.trim() || undefined,
 					remarks: tokenForm.remarks?.trim() || undefined,
+					token_number:
+						tokenForm.token_number != null && tokenForm.token_number !== ''
+							? Number(tokenForm.token_number)
+							: undefined,
 				});
 				showSuccessNotification('Token created successfully.');
 				setIsOpen(false);
@@ -144,21 +162,23 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 						<StatusBadge status={editingToken.status} />
 					</div>
 				)}
-				<TokenCreateForm
-					tokenForm={tokenForm}
-					setTokenForm={setTokenForm}
-					queues={queues}
-					schedules={schedules}
-					selectedQueueId={queueId}
-					onQueueChange={() => {}}
-					fixedScheduleId={scheduleId}
-					servingPoints={[]}
-					showServingPoints={false}
-					onCancel={() => setIsOpen(false)}
-					onSubmit={handleSubmit}
-					isSubmitting={saving}
-					submitLabel={submitLabel}
-				/>
+			<TokenCreateForm
+				tokenForm={tokenForm}
+				setTokenForm={setTokenForm}
+				queues={queues}
+				schedules={schedules}
+				selectedQueueId={queueId}
+				onQueueChange={() => {}}
+				fixedScheduleId={scheduleId}
+				servingPoints={[]}
+				showServingPoints={false}
+				onCancel={() => setIsOpen(false)}
+				onSubmit={handleSubmit}
+				isSubmitting={saving}
+				submitLabel={submitLabel}
+				showTokenNumber={mode === 'create'}
+				tokenNumberLoading={tokenNumberLoading}
+			/>
 			</ModalBody>
 		</Modal>
 	);

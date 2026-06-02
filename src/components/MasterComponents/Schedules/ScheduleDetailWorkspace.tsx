@@ -173,7 +173,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 			await schedulesApi.patch(scheduleRecord.id, { status: statusFormValue });
 			showSuccessNotification('Schedule status updated successfully.');
 			setShowStatusModal(false);
-			await load();
+			await reloadScheduleAndTokens();
 		} catch (err) {
 			showErrorNotification(err);
 		} finally {

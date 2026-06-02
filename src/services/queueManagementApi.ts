@@ -252,6 +252,9 @@ export interface Token {
 	complete_serving_history?: TokenServingHistory[] | null;
 	/** Older API shape; prefer `complete_serving_history` when present. */
 	serving_history?: TokenServingHistory[] | null;
+	/** Nested on current-serving-window `active_window.current_token`. */
+	schedule_allow_postpone?: boolean | string;
+	schedule_status?: string;
 }
 
 export interface QueueStatus {
@@ -274,6 +277,7 @@ export interface CreateTokenPayload {
 	remarks?: string;
 	priority?: number;
 	is_vip?: boolean;
+	token_number?: number | string;
 }
 
 /** Nested `token_user` body for PATCH — mirrors GET token response shape. */
@@ -430,6 +434,8 @@ export interface ScheduleServingPoint {
 	current_token?: number | Token | null;
 	current_token_number?: string | null;
 	current_token_status?: string | null;
+	/** Default next queue when completing (current-serving-window). */
+	next_queue?: { id: number; name: string } | null;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -680,6 +686,10 @@ export const tokensApi = {
 	cancel: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/cancel/`)),
 	postpone: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/postpone/`)),
 	markNoShow: (id: number) => unwrap<Token>(authAxios.post(`api/tokens/${id}/mark-no-show/`)),
+	getNextTokenNumber: (scheduleId: number) =>
+		unwrap<{ next_token_number: number }>(
+			authAxios.get('api/tokens/get_next_token_number/', { params: {schedule_id: scheduleId} }),
+		),
 	users: (params?: QueryParams) =>
 		unwrap<PaginatedResponse<TokenUser>>(authAxios.get('api/tokens/users/', { params })),
 	patchUser: (id: number, payload: PatchTokenUserPayload) =>

@@ -20,6 +20,10 @@ export interface TokenCreateFormProps {
 	isSubmitting: boolean;
 	/** Primary action label (default: Create Token). */
 	submitLabel?: string;
+	/** Show token number field (create mode on schedule detail). */
+	showTokenNumber?: boolean;
+	/** Loading state while fetching next token number. */
+	tokenNumberLoading?: boolean;
 }
 
 const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
@@ -36,6 +40,8 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 	onSubmit,
 	isSubmitting,
 	submitLabel = 'Create Token',
+	showTokenNumber = false,
+	tokenNumberLoading = false,
 }) => {
 	const scheduleOptions =
 		fixedScheduleId != null
@@ -43,8 +49,34 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 			: schedules.filter((s) => s.queue === selectedQueueId);
 
 	return (
-		<form onSubmit={onSubmit} className='row g-3'>
-			{fixedScheduleId == null && (
+	<form onSubmit={onSubmit} className='row g-3'>
+		{showTokenNumber && (
+			<div className='col-md-6'>
+				<label className='form-label'>Token Number</label>
+				<div className='input-group'>
+					<input
+						className='form-control'
+						type='number'
+						min='1'
+						placeholder={tokenNumberLoading ? 'Loading…' : 'Token number'}
+						disabled={tokenNumberLoading}
+						value={tokenForm.token_number ?? ''}
+						onChange={(e) =>
+							setTokenForm((p) => ({
+								...p,
+								token_number: e.target.value === '' ? undefined : Number(e.target.value),
+							}))
+						}
+					/>
+					{tokenNumberLoading && (
+						<span className='input-group-text'>
+							<span className='spinner-border spinner-border-sm' />
+						</span>
+					)}
+				</div>
+			</div>
+		)}
+		{fixedScheduleId == null && (
 				<div className='col-md-6'>
 					<label className='form-label'>Queue</label>
 					<select

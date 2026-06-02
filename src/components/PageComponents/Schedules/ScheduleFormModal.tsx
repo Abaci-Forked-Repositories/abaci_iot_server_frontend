@@ -7,7 +7,7 @@ import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bo
 import Spinner from '../../bootstrap/Spinner';
 import type { QueueSchedule } from '../../../services/queueManagementApi';
 import { schedulesApi } from '../../../services/queueManagementApi';
-import { getErrorMessage } from '../../MasterComponents/QueueManagement/queueManagementUtils';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 export function toDateTimeLocalValue(value: Date) {
 	return dayjs(value).format('YYYY-MM-DDTHH:mm');
@@ -98,15 +98,14 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 }) => {
 	const isEditMode = mode === 'edit';
 
-	const [createError, setCreateError] = useState('');
 	const [savingSchedule, setSavingSchedule] = useState(false);
 	const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => defaultCreateForm());
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	const endDateTimeMin = useMemo(() => minEndAfterStartLocal(scheduleForm.start), [scheduleForm.start]);
 
 	useEffect(() => {
 		if (!isOpen) return;
-		setCreateError('');
 		if (isEditMode && editingSchedule) {
 			setScheduleForm(queueScheduleRowToForm(editingSchedule));
 			return;
@@ -121,63 +120,61 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 
 	const closeModal = () => {
 		setIsOpen(false);
-		setCreateError('');
 	};
 
 	const handleScheduleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		setCreateError('');
 
 		const startDate = new Date(scheduleForm.start);
 		const endDate = new Date(scheduleForm.end);
 		if (Number.isNaN(startDate.getTime())) {
-			setCreateError('Start date and time is required.');
+			showErrorNotification('Start date and time is required.');
 			return;
 		}
 		if (Number.isNaN(endDate.getTime())) {
-			setCreateError('End date and time is required.');
+			showErrorNotification('End date and time is required.');
 			return;
 		}
 		if (endDate <= startDate) {
-			setCreateError('End date and time must be later than start date and time.');
+			showErrorNotification('End date and time must be later than start date and time.');
 			return;
 		}
 		if (!isEditMode && startDate.getTime() < Date.now()) {
-			setCreateError('Start date and time cannot be in the past.');
+			showErrorNotification('Start date and time cannot be in the past.');
 			return;
 		}
 
 		const tokenFromNum = scheduleForm.token_from ? Number(scheduleForm.token_from) : undefined;
 		const tokenToNum = scheduleForm.token_to ? Number(scheduleForm.token_to) : undefined;
 		if (tokenFromNum != null && Number.isNaN(tokenFromNum)) {
-			setCreateError('Token from must be a valid number.');
+			showErrorNotification('Token from must be a valid number.');
 			return;
 		}
 		if (tokenToNum != null && Number.isNaN(tokenToNum)) {
-			setCreateError('Token to must be a valid number.');
+			showErrorNotification('Token to must be a valid number.');
 			return;
 		}
 		if (tokenFromNum != null && tokenFromNum < 1) {
-			setCreateError('Token from must be 1 or greater.');
+			showErrorNotification('Token from must be 1 or greater.');
 			return;
 		}
 		if (tokenToNum != null && tokenToNum < 1) {
-			setCreateError('Token to must be 1 or greater.');
+			showErrorNotification('Token to must be 1 or greater.');
 			return;
 		}
 		if (tokenFromNum != null && tokenToNum != null && tokenFromNum > tokenToNum) {
-			setCreateError('Token from must be less than or equal to token to.');
+			showErrorNotification('Token from must be less than or equal to token to.');
 			return;
 		}
 
 		const tokenLimitRaw = scheduleForm.token_limit.trim();
 		const tokenLimitNum = tokenLimitRaw ? Number(tokenLimitRaw) : undefined;
 		if (tokenLimitRaw && Number.isNaN(tokenLimitNum!)) {
-			setCreateError('Token limit must be a valid number.');
+			showErrorNotification('Token limit must be a valid number.');
 			return;
 		}
 		if (tokenLimitNum != null && (!Number.isInteger(tokenLimitNum) || tokenLimitNum < 1)) {
-			setCreateError('Token limit must be a whole number of 1 or greater.');
+			showErrorNotification('Token limit must be a whole number of 1 or greater.');
 			return;
 		}
 
@@ -186,13 +183,14 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 		setSavingSchedule(true);
 		try {
 			if (isEditMode && scheduleId != null) {
+				const tokenPrefix = scheduleForm.token_prefix.trim();
 				await schedulesApi.patch(scheduleId, {
 					from_datetime: startDate.toISOString(),
 					to_datetime: endDate.toISOString(),
 					description: scheduleForm.description.trim() || undefined,
 					is_reporting_enabled: scheduleForm.is_reporting_enabled,
 					allow_postpone: scheduleForm.allow_postpone,
-					token_prefix: scheduleForm.token_prefix.trim() || null,
+					...(tokenPrefix ? { token_prefix: tokenPrefix } : {}),
 					...(tokenFromNum != null ? { token_from: tokenFromNum } : {}),
 					...(tokenToNum != null ? { token_to: tokenToNum } : {}),
 					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
@@ -210,10 +208,13 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 					...(tokenLimitNum != null ? { limit: tokenLimitNum } : {}),
 				});
 			}
+			showSuccessNotification(
+				isEditMode ? 'Schedule updated successfully.' : 'Schedule created successfully.',
+			);
 			closeModal();
 			await onSaved?.();
 		} catch (err) {
-			setCreateError(getErrorMessage(err));
+			showErrorNotification(err);
 		} finally {
 			setSavingSchedule(false);
 		}
@@ -226,7 +227,6 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 			</ModalHeader>
 			<form onSubmit={handleScheduleFormSubmit}>
 				<ModalBody>
-					{createError && <div className='alert alert-danger mb-3'>{createError}</div>}
 					<div className='row g-3'>
 						<div className='col-md-6'>
 							<label className='form-label fw-semibold' htmlFor='schedule-start'>
@@ -335,7 +335,7 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 									onChange={(e) =>
 										setScheduleForm((prev) => ({ ...prev, token_prefix: e.target.value }))
 									}
-									placeholder='e.g. A'
+									placeholder='Optional — e.g. A'
 									maxLength={10}
 									autoComplete='off'
 								/>

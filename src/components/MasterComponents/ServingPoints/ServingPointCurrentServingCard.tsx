@@ -11,12 +11,10 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type CurrentServingWindowResponse,
 	type Queue,
-	type QueueSchedule,
 	type ScheduleServingPoint,
 	type ServingPoint,
 	type Token,
 	queuesApi,
-	schedulesApi,
 	scheduleServingPointsApi,
 } from '../../../services/queueManagementApi';
 import CompleteWithNextQueueModal from '../../PageComponents/ServingPoints/CompleteWithNextQueueModal';
@@ -26,6 +24,7 @@ const ShareTokenModal = lazy(
 );
 import {
 	formatDate,
+	getErrorMessage,
 	getNextAllowedServingPointStatuses,
 	getTokenDisplay,
 	getWindowServingPointStatus,
@@ -75,6 +74,22 @@ const getWindowCurrentTokenStatusRaw = (row: ScheduleServingPoint): string => {
 	return '';
 };
 
+/** API may return boolean or string (e.g. `"True"`). */
+const parseScheduleAllowPostpone = (value: unknown): boolean => {
+	if (value === true || value === 1) return true;
+	if (typeof value === 'string') {
+		const normalized = value.trim().toLowerCase();
+		return normalized === 'true' || normalized === '1' || normalized === 'yes';
+	}
+	return false;
+};
+
+const getWindowAllowPostpone = (row: ScheduleServingPoint | null): boolean => {
+	if (!row) return false;
+	const token = getCurrentToken(row);
+	return parseScheduleAllowPostpone(token?.schedule_allow_postpone);
+};
+
 const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardProps> = ({
 	servingPointId,
 	refreshKey,
@@ -84,7 +99,6 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	const [loading, setLoading] = useState(true);
 	const [actionLoading, setActionLoading] = useState<string | null>(null);
 	const [payload, setPayload] = useState<CurrentServingWindowResponse | null>(null);
-	const [schedule, setSchedule] = useState<QueueSchedule | null>(null);
 	const [currentQueue, setCurrentQueue] = useState<Queue | null>(null);
 	const [showCompleteModal, setShowCompleteModal] = useState(false);
 	const [pendingCompleteOpts, setPendingCompleteOpts] = useState<
@@ -99,7 +113,8 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 
 	const { can } = usePermissions();
 	const canWrite = can('serving_point_write');
-	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
+	const { showErrorNotification, showSuccessNotification, showNotification } =
+		useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
 	const onServingPointUpdatedRef = useRef(onServingPointUpdated);
 	useEffect(() => {
@@ -112,7 +127,7 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 	const load = useCallback(async () => {
 		if (!servingPointId || Number.isNaN(servingPointId)) {
 			setPayload(null);
-			setSchedule(null);
+			setCurrentQueue(null);
 			setLoading(false);
 			return;
 		}
@@ -121,28 +136,21 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 			const res = await queuesApi.currentServingWindow(servingPointId);
 			setPayload(res);
 			onServingPointUpdatedRef.current?.(res.serving_point);
-			if (res.active_window?.queue_schedule) {
+			const queueId = res.active_window?.queue_schedule_queue_id;
+			if (queueId != null && queueId > 0) {
 				try {
-					const sched = await schedulesApi.get(res.active_window.queue_schedule);
-					setSchedule(sched);
-					try {
-						const queueRes = await queuesApi.get(sched.queue);
-						setCurrentQueue(queueRes);
-					} catch {
-						setCurrentQueue(null);
-					}
-				} catch {
-					setSchedule(null);
+					const queueRes = await queuesApi.get(queueId);
+					setCurrentQueue(queueRes);
+				} catch (queueErr) {
 					setCurrentQueue(null);
+					showNotification('Error', getErrorMessage(queueErr), 'danger');
 				}
 			} else {
-				setSchedule(null);
 				setCurrentQueue(null);
 			}
 		} catch (err) {
 			errorNotifierRef.current(err);
 			setPayload(null);
-			setSchedule(null);
 			setCurrentQueue(null);
 		} finally {
 			setLoading(false);
@@ -155,6 +163,7 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 
 	const windowRow = payload?.active_window ?? null;
 	const servingPoint = payload?.serving_point ?? null;
+	const allowPostpone = useMemo(() => getWindowAllowPostpone(windowRow), [windowRow]);
 
 	const triggerWindowAction = async (
 		row: ScheduleServingPoint,
@@ -296,7 +305,7 @@ const triggerSkipToken = async (
 		const canCancel =
 			tokenStatus === 'registred' || tokenStatus === 'waiting' || tokenStatus === 'serving';
 		const canNoShow = canCancel;
-		const canPostpone = canCancel && Boolean(schedule?.allow_postpone);
+		const canPostpone = canCancel && allowPostpone;
 		const allowed = { canStart, canComplete, canCancel, canNoShow, canPostpone };
 		const rows: Array<{
 			key: 'start' | 'complete' | 'cancel' | 'no_show' | 'postpone';
@@ -349,7 +358,7 @@ const triggerSkipToken = async (
 			},
 		];
 		return rows.filter((r) => r.show);
-	}, [canWrite, windowRow, schedule?.allow_postpone]);
+	}, [canWrite, windowRow, allowPostpone]);
 
 	const windowSpStatus = windowRow
 		? getWindowServingPointStatus(windowRow) ?? servingPoint?.status

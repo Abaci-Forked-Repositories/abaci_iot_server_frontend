@@ -10,39 +10,61 @@ import Card, {
 	CardTitle,
 } from '../../bootstrap/Card';
 import RolesTabContent from './RolesTabContent';
-// import PermissionsTabContent from './PermissionsTabContent';
 import RoleModal, { Role } from './RoleModal';
+import ApiKeysTabContent from './ApiKeysTabContent';
+import ApiKeyModal, { DeviceCredential } from './ApiKeyModal';
 import usePermissions from '../../../hooks/usePermissions';
 
-type SettingsTab = 'Roles' | 'Permissions';
+type SettingsTab = 'Roles' | 'API Keys';
 
 const tabsData: { name: SettingsTab; icon: string }[] = [
 	{ name: 'Roles', icon: 'ManageAccounts' },
-	// { name: 'Permissions', icon: 'Security' },
+	{ name: 'API Keys', icon: 'VpnKey' },
 ];
 
 const SettingsWorkspace: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<SettingsTab>('Roles');
+
+	// Roles state
 	const [showRoleModal, setShowRoleModal] = useState(false);
 	const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 	const [rolesRefreshSignal, setRolesRefreshSignal] = useState(0);
+
+	// API Keys state
+	const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+	const [editingCredential, setEditingCredential] = useState<DeviceCredential | null>(null);
+	const [apiKeysRefreshSignal, setApiKeysRefreshSignal] = useState(0);
+
 	const { can } = usePermissions();
 	const canWrite = can('settings_write');
+
+	// ── Roles handlers ────────────────────────────────────────────────────────
 
 	const handleOpenAddRole = () => {
 		setSelectedRole(null);
 		setShowRoleModal(true);
 	};
 
-	const handleCloseModal = () => {
-		setShowRoleModal(false);
-		setSelectedRole(null);
-	};
-
-	const handleModalSuccess = () => {
+	const handleRoleModalSuccess = () => {
 		setShowRoleModal(false);
 		setSelectedRole(null);
 		setRolesRefreshSignal((prev) => prev + 1);
+	};
+
+	// ── API Keys handlers ─────────────────────────────────────────────────────
+
+	const handleOpenCreateApiKey = () => {
+		setEditingCredential(null);
+		setShowApiKeyModal(true);
+	};
+
+	const handleEditApiKey = (cred: DeviceCredential) => {
+		setEditingCredential(cred);
+		setShowApiKeyModal(true);
+	};
+
+	const handleApiKeySaved = () => {
+		setApiKeysRefreshSignal((prev) => prev + 1);
 	};
 
 	const activeTabData = tabsData.find((t) => t.name === activeTab);
@@ -80,39 +102,43 @@ const SettingsWorkspace: React.FC = () => {
 						</CardBody>
 					</Card>
 				</div>
+
 				<div className='col-xxl-10 col-xl-9 col-lg-9'>
 					<Card stretch>
 						<CardHeader>
-							<div className='d-flex align-items-center gap-2'>
-								<Icon
-									icon={activeTabData?.icon || 'Settings'}
-									color='primary'
-									size='2x'
-								/>
-								<span>{activeTab}</span>
-							</div>
+							<CardLabel icon={activeTabData?.icon || 'Settings'} iconColor='primary'>
+								<CardTitle tag='div' className='h5'>{activeTab}</CardTitle>
+							</CardLabel>
 							<CardActions>
 								{activeTab === 'Roles' && canWrite && (
-									<Button
-										color='primary'
-										icon='Add'
-										onClick={handleOpenAddRole}>
+									<Button color='primary' icon='Add' onClick={handleOpenAddRole}>
 										Add Role
+									</Button>
+								)}
+								{activeTab === 'API Keys' && canWrite && (
+									<Button color='primary' icon='Add' onClick={handleOpenCreateApiKey}>
+										Create API Key
 									</Button>
 								)}
 							</CardActions>
 						</CardHeader>
+
 						<CardBody className='table-responsive'>
-						{activeTab === 'Roles' && (
-							<RolesTabContent
-								onEditRole={(role) => {
-									setSelectedRole(role);
-									setShowRoleModal(true);
-								}}
-								refreshSignal={rolesRefreshSignal}
-							/>
+							{activeTab === 'Roles' && (
+								<RolesTabContent
+									onEditRole={(role) => {
+										setSelectedRole(role);
+										setShowRoleModal(true);
+									}}
+									refreshSignal={rolesRefreshSignal}
+								/>
 							)}
-							{/* {activeTab === 'Permissions' && <PermissionsTabContent />} */}
+							{activeTab === 'API Keys' && (
+								<ApiKeysTabContent
+									onEdit={handleEditApiKey}
+									refreshSignal={apiKeysRefreshSignal}
+								/>
+							)}
 						</CardBody>
 					</Card>
 				</div>
@@ -120,9 +146,19 @@ const SettingsWorkspace: React.FC = () => {
 
 			<RoleModal
 				isOpen={showRoleModal}
-				onClose={handleCloseModal}
-				onSuccess={handleModalSuccess}
+				onClose={() => { setShowRoleModal(false); setSelectedRole(null); }}
+				onSuccess={handleRoleModalSuccess}
 				role={selectedRole}
+			/>
+
+			<ApiKeyModal
+				isOpen={showApiKeyModal}
+				setIsOpen={(open) => {
+					setShowApiKeyModal(open);
+					if (!open) setEditingCredential(null);
+				}}
+				editing={editingCredential}
+				onSaved={handleApiKeySaved}
 			/>
 		</>
 	);
