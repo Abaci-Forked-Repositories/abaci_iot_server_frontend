@@ -56,10 +56,10 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 						{screen.is_active ? 'Active' : 'Inactive'}
 					</Badge>
 				</div>
-				<div className='screen-detail-row'>
+				{/* <div className='screen-detail-row'>
 					<span>ID</span>
 					<span>{screen.id}</span>
-				</div>
+				</div> */}
 				<div className='screen-detail-row'>
 					<span>Location</span>
 					<span>{screen.location || '-'}</span>
@@ -136,7 +136,7 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					isLight
 					isDisable={actionLoadingKey === `screen-audio-${screen.id}`}
 					onClick={() => onAudioToggle(screen)}>
-					Toggle Audio
+					{screen.enable_audio ? 'Disable Audio' : 'Enable Audio'}
 				</Button>
 				<Button
 					size='sm'
