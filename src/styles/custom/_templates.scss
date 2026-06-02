@@ -462,6 +462,10 @@
 	flex: 1;
 	min-height: 0;
 	overflow: hidden;
+
+	&--readonly .tdc-canvas-area {
+		padding: 1rem 1.5rem;
+	}
 }
 
 // Canvas area

@@ -12,6 +12,7 @@ import {
 	type RecentQueueToken,
 } from '../../services/publicScreenApi';
 import { collectQueueUuidsFromTemplate } from '../../utils/parseTemplateZones';
+import { useAudioAnnouncer } from '../../hooks/useAudioAnnouncer';
 
 const CYCLE_COOKIE_PREFIX = 'screen_display_start_';
 const QUEUE_POLL_MS = 5000;
@@ -49,6 +50,9 @@ const ScreenTokenStatusPage: React.FC = () => {
 	const [recentByQueue, setRecentByQueue] = useState<Record<string, RecentQueueToken[]>>({});
 	// Tracks the last-known token per queue UUID to detect changes between polls.
 	const prevQueuesRef = useRef<Record<string, PublicQueueStatus>>({});
+
+	// Announce token changes via Text-to-Speech when the screen has audio enabled.
+	useAudioAnnouncer(queuesByUuid, screen?.enable_audio === true);
 
 	// Already sorted by assignment order when loaded from publicScreenApi.getScreen.
 	const activeTemplate = useMemo(() => {

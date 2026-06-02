@@ -11,6 +11,7 @@ import TemplateCardTile from './TemplateCardTile';
 import TemplateCreateModal from './TemplateCreateModal';
 import pendingLottie from '../../../assets/Lottie/No-Data.json';
 import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
+import usePermissions from '../../../hooks/usePermissions';
 
 const PAGE_LIMIT = 12;
 
@@ -193,6 +194,9 @@ const TemplatesWorkspace: React.FC = () => {
 		}
 	};
 
+	const { can } = usePermissions();
+	const canWrite = can('templates_write');
+
 	return (
 		<>
 			<TemplateCreateModal
@@ -250,7 +254,7 @@ const TemplatesWorkspace: React.FC = () => {
 								}}
 								onBlur={runSearch}
 							/>
-							{selectedCount === 0 && (
+							{selectedCount === 0 && canWrite && (
 								<Button color='primary' icon='Add' onClick={() => setShowCreateModal(true)}>
 									New Template
 								</Button>

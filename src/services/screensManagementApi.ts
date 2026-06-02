@@ -81,6 +81,7 @@ export interface UpdateScreenPayload {
 	ip_address?: string | null;
 	ip_bind?: boolean;
 	is_active?: boolean;
+	enable_audio?: boolean;
 }
 
 export interface Screen {
@@ -173,7 +174,8 @@ export const screensApi = {
 	heartbeat: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/heartbeat/`)),
 	activate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/activate/`)),
 	deactivate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/deactivate/`)),
-	toggleAudio: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/toggle-audio/`)),
+	toggleAudio: (id: number, enable_audio: boolean) =>
+		unwrap<Screen>(authAxios.patch(`api/screens/${id}/`, { enable_audio })),
 	onlineScreens: () => unwrap<Screen[]>(authAxios.get('api/screens/online-screens/')),
 	byLocation: (location: string) =>
 		unwrap<Screen[]>(authAxios.get('api/screens/by-location/', { params: { location } })),

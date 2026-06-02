@@ -38,6 +38,7 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 import { parseTemplateConfiguration } from '../../../utils/templateOverlayOpacity';
+import usePermissions from '../../../hooks/usePermissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -344,6 +345,22 @@ function readLogicalZoneGeometry(obj: any, sf: number) {
 	return readLogicalZoneGeometryFromFabric(obj, sf);
 }
 
+/** Enable or disable selecting / dragging / resizing zones on the Fabric canvas. */
+function setZoneRectsInteractive(fc: any, interactive: boolean) {
+	getZoneRects(fc).forEach((rect) => {
+		rect.set({
+			selectable: interactive,
+			evented: interactive,
+			hasControls: interactive,
+			lockMovementX: !interactive,
+			lockMovementY: !interactive,
+			lockScalingX: !interactive,
+			lockScalingY: !interactive,
+		});
+		rect.setCoords?.();
+	});
+}
+
 function attachZoneRectHandlers(rect: any, fc: any) {
 	if (rect.__zoneHandlersAttached) return;
 	rect.__zoneHandlersAttached = true;
@@ -412,6 +429,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
 	const location = useLocation();
 	const routeTemplate = (location.state as Template | null) ?? null;
+	const { can } = usePermissions();
+	const canWrite = can('templates_write');
+	const canWriteRef = useRef(canWrite);
+
+	useEffect(() => {
+		canWriteRef.current = canWrite;
+	}, [canWrite]);
 
 	const [templateDetails, setTemplateDetails] = useState<Template | null>(routeTemplate);
 	const [loading, setLoading] = useState(!routeTemplate);
@@ -470,6 +494,21 @@ const TemplateDetailWorkspace: React.FC = () => {
 	useEffect(() => {
 		refreshAllZoneLabels();
 	}, [refreshAllZoneLabels, templateDetails]);
+
+	/** When read-only, zones cannot be selected (no Zone Properties panel). */
+	useEffect(() => {
+		const fc = fabricRef.current;
+		if (!fc) return;
+		fc.selection = canWrite;
+		setZoneRectsInteractive(fc, canWrite);
+		if (!canWrite) {
+			fc.discardActiveObject();
+			fc.requestRenderAll?.();
+			setSelectedObject(null);
+			setZoneProps(BLANK_PROPS);
+			setZoneAppearance({ mode: 'fill', displayTheme: null, backgroundColor: '#ffffff' });
+		}
+	}, [canWrite]);
 
 	const applyZoneAppearance = useCallback(
 		(next: ZoneDisplayAppearance) => {
@@ -595,10 +634,18 @@ const TemplateDetailWorkspace: React.FC = () => {
 			});
 
 			fc.on('selection:created', (e: any) => {
+				if (!canWriteRef.current) {
+					fc.discardActiveObject();
+					return;
+				}
 				const obj = e?.selected?.[0] ?? null;
 				setSelectedObject(isZoneRect(obj) ? obj : null);
 			});
 			fc.on('selection:updated', (e: any) => {
+				if (!canWriteRef.current) {
+					fc.discardActiveObject();
+					return;
+				}
 				const obj = e?.selected?.[0] ?? e?.target ?? null;
 				setSelectedObject(isZoneRect(obj) ? obj : null);
 			});
@@ -609,6 +656,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			});
 			fc.on('object:added', () => setCanvasObjects(getZoneRects(fc)));
 			fc.on('object:modified', (e: any) => {
+				if (!canWriteRef.current) return;
 				const target = e.target;
 				if (isZoneRect(target)) {
 					ensureFabricRectLeftTopOrigin(target);
@@ -622,6 +670,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 				setCanvasObjects(getZoneRects(fc));
 			});
 			fc.on('object:moving', (e: any) => {
+				if (!canWriteRef.current) return;
 				const target = e.target;
 				if (isZoneRect(target)) {
 					constrainZoneToCanvas(target, fc);
@@ -635,6 +684,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 				}
 			});
 			fc.on('object:scaling', (e: any) => {
+				if (!canWriteRef.current) return;
 				const target = e.target;
 				if (isZoneRect(target)) {
 					constrainZoneToCanvas(target, fc);
@@ -689,6 +739,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 				});
 
 				refreshZoneQueueLabels();
+				fc.selection = canWriteRef.current;
+				setZoneRectsInteractive(fc, canWriteRef.current);
 				fc.renderAll();
 				setCanvasObjects(getZoneRects(fc));
 				setOverlayRevision((n) => n + 1);
@@ -1570,6 +1622,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						)}
 					</div>
 
+					{canWrite && (
 					<div className='tdc-toolbar-actions'>
 						<Button color='light' size='sm' icon='AddBox' onClick={addZone}>
 							Add Zone
@@ -1583,10 +1636,11 @@ const TemplateDetailWorkspace: React.FC = () => {
 							{saving ? <><Spinner size='sm' isSmall /> Saving…</> : 'Save Template'}
 						</Button>
 					</div>
+					)}
 				</div>
 
 				{/* ── Canvas stage + properties panel ── */}
-				<div className='tdc-body'>
+				<div className={`tdc-body${canWrite ? '' : ' tdc-body--readonly'}`}>
 
 					{/* Canvas area */}
 					<div className='tdc-canvas-area'>
@@ -1611,7 +1665,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						</PreviewTvFrame>
 					</div>
 
-					{/* Properties panel */}
+					{canWrite && (
 					<aside className='tdc-panel'>
 						<div className='tdc-panel-header'>
 							<span className='tdc-panel-title'>Zone Properties</span>
@@ -1775,8 +1829,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 								</div>
 								<div className='tdc-empty-desc'>
 									{canvasObjects.length === 0
-										? 'Click "Add Zone" in the toolbar to start building.'
-										: 'Click a zone on the canvas to edit its properties.'}
+										? canWrite
+											? 'Click "Add Zone" in the toolbar to start building.'
+											: 'This template has no zones.'
+										: canWrite
+											? 'Click a zone on the canvas to edit its properties.'
+											: 'You have read-only access to this template.'}
 								</div>
 							</div>
 						)}
@@ -1788,6 +1846,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 							)}
 						</div>
 					</aside>
+					)}
 				</div>
 			</div>
 		</div>
