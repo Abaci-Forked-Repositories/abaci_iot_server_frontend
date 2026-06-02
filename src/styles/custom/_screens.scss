@@ -378,9 +378,26 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	overflow: hidden;
+	position: relative;
+	isolation: isolate;
+	contain: layout paint;
 
 	.std-tv-bezel {
-		width: min(100%, 520px);
+		width: min(100%, 500px);
+		max-width: 100%;
+		flex: 0 1 auto;
+		margin: 0 auto;
+		// Keep the frame glow subtle inside detail panel so it doesn't appear to "spill".
+		box-shadow:
+			0 1px 0 rgba(#ffffff, 0.06) inset,
+			0 -1px 0 rgba(#000000, 0.5) inset,
+			0 10px 28px rgba(#000000, 0.42),
+			0 2px 8px rgba(#000000, 0.3);
+	}
+
+	.std-tv-screen {
+		max-width: 100%;
 	}
 }
 
@@ -688,12 +705,37 @@
 }
 
 @media (max-width: 1199.98px) {
+	.screens-workspace-card {
+		height: auto;
+		min-height: 0;
+	}
+
+	.screens-body {
+		height: auto;
+	}
+
 	.screens-layout {
 		grid-template-columns: 1fr;
 	}
 
 	.screens-layout-detail-only {
 		grid-template-columns: 1fr;
+		grid-template-rows: auto auto;
+	}
+
+	.screen-tv-root {
+		padding: 0.7rem;
+		height: auto;
+		min-height: clamp(240px, 40vh, 360px);
+
+		.std-tv-bezel {
+			width: min(100%, 460px);
+		}
+	}
+
+	.screen-detail-panel {
+		height: auto;
+		min-height: 0;
 	}
 }
 

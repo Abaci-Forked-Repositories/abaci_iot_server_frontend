@@ -117,7 +117,7 @@ const ScreenDetailWorkspace: React.FC = () => {
 
 	const handleAudioToggle = (target: Screen) => {
 		const key = `screen-audio-${target.id}`;
-		runAction(key, () => screensApi.toggleAudio(target.id));
+		runAction(key, () => screensApi.toggleAudio(target.id, !Boolean(target.enable_audio)));
 	};
 
 	const handleHeartbeat = (target: Screen) => {

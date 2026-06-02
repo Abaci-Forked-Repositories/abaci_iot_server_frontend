@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Icon from '../../icon/Icon';
 import type { Template } from '../../../services/templatesApi';
+import usePermissions from '../../../hooks/usePermissions';
 
 interface TemplateCardTileProps {
 	template: Template;
@@ -29,6 +30,8 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 }) => {
 	const [hovered, setHovered] = useState(false);
 	const [thumbFailed, setThumbFailed] = useState(false);
+	const { can } = usePermissions();
+	const canWrite = can('templates_write');
 
 	useEffect(() => {
 		setThumbFailed(false);
@@ -97,7 +100,7 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 				</div>
 			)}
 
-			{!pickMode && !readOnly && hovered && (
+			{!pickMode && !readOnly && hovered && canWrite && (
 				<div className='tpl-top-actions'>
 					<button
 						type='button'
