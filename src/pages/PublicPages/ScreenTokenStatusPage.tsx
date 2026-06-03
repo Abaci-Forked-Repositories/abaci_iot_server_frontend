@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import ScreenPublicDisplay from '../../components/PublicPages/ScreenPublicDisplay';
+import ScreenAudioConsentOverlay from '../../components/PublicPages/ScreenAudioConsentOverlay';
 import {
 	buildQueuesByUuidMap,
 	pickPublicScreenTemplateForCycle,
@@ -51,8 +52,11 @@ const ScreenTokenStatusPage: React.FC = () => {
 	// Tracks the last-known token per queue UUID to detect changes between polls.
 	const prevQueuesRef = useRef<Record<string, PublicQueueStatus>>({});
 
-	// Announce token changes via Text-to-Speech when the screen has audio enabled.
-	useAudioAnnouncer(queuesByUuid, screen?.enable_audio === true);
+	const { showConsent, allowAudio, declineAudio } = useAudioAnnouncer(
+		queuesByUuid,
+		screen?.enable_audio === true,
+		screenUuid,
+	);
 
 	// Already sorted by assignment order when loaded from publicScreenApi.getScreen.
 	const activeTemplate = useMemo(() => {
@@ -202,6 +206,14 @@ const ScreenTokenStatusPage: React.FC = () => {
 					template={activeTemplate}
 					queuesByUuid={queuesByUuid}
 					recentByQueue={recentByQueue}
+				/>
+			)}
+
+			{!loading && !error && screen?.enable_audio && showConsent && (
+				<ScreenAudioConsentOverlay
+					screenName={screen.name}
+					onAllow={allowAudio}
+					onDecline={declineAudio}
 				/>
 			)}
 		</div>
