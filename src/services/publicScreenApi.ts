@@ -152,6 +152,8 @@ export interface PublicQueueStatus {
 	serving_point_name?: string;
 	token_display?: string;
 	token_status?: string;
+	/** Server-generated phrase for audio announcements (POST /api/public/queue-status/). */
+	text_to_speech?: string;
 	/** Recently-called tokens for this queue, if the API returns them. */
 	recent_tokens?: RecentQueueToken[];
 	/**
@@ -188,6 +190,8 @@ export function normalizePublicQueueStatus(
 	).trim();
 	const servingPointName =
 		typeof r.serving_point_name === 'string' ? r.serving_point_name.trim() : '';
+	const textToSpeech =
+		typeof r.text_to_speech === 'string' ? r.text_to_speech.trim() : '';
 
 	let current_token: PublicQueueToken | null = nestedToken;
 	if (!current_token && (tokenDisplay || r.token_number != null)) {
@@ -236,6 +240,7 @@ export function normalizePublicQueueStatus(
 		serving_point_name: servingPointName || undefined,
 		token_display: tokenDisplay || undefined,
 		token_status: tokenStatus || undefined,
+		text_to_speech: textToSpeech || undefined,
 		recent_tokens: recentTokens,
 		other_tokens: otherTokens,
 	};

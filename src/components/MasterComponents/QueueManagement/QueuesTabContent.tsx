@@ -9,6 +9,8 @@ import QueueCardTile from './QueueCardTile';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import Button from '../../bootstrap/Button';
+import NoDataComponent from '../../CustomComponent/NoDataComponent';
+import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
 
 const QUEUE_LIST_LIMIT = 12;
 
@@ -171,24 +173,45 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 
 	const isGroupDrilldown = typeof selectedGroupFilter === 'number';
 
+	const drilldownBanner = isGroupDrilldown ? (
+		<div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 p-3 rounded border bg-light'>
+			<span className='text-body'>
+				Showing queues in <strong>{groupDrilldownName || `Group ${selectedGroupFilter}`}</strong>
+				{searchTerm.trim() ? <span className='text-muted'> (filtered by search)</span> : null}.
+			</span>
+			{onBackToGroups ? (
+				<Button color='primary' isLight icon='ArrowBack' onClick={onBackToGroups}>
+					Back
+				</Button>
+			) : null}
+		</div>
+	) : null;
+
+	if (!queues.length) {
+		return (
+			<>
+				{drilldownBanner}
+				<div className='queue-empty-state'>
+					<NoDataComponent
+						lottie={noqueuelottie}
+						description={
+							isGroupDrilldown
+								? searchTerm.trim()
+									? 'No queues found in this group for this search.'
+									: 'No queues in this group yet.'
+								: searchTerm.trim()
+									? 'No queues found for this search.'
+									: 'No queues found.'
+						}
+					/>
+				</div>
+			</>
+		);
+	}
+
 	return (
 		<div className='queue-cards-scroll' onScroll={handleScroll}>
-			{isGroupDrilldown && (
-				<div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 p-3 rounded border bg-light'>
-					<span className='text-body'>
-						Showing queues in <strong>{groupDrilldownName || `Group ${selectedGroupFilter}`}</strong>
-						{searchTerm.trim() ? (
-							<span className='text-muted'> (filtered by search)</span>
-						) : null}
-						.
-					</span>
-					{onBackToGroups ? (
-						<Button color='primary' isLight icon='ArrowBack' onClick={onBackToGroups}>
-							Back
-						</Button>
-					) : null}
-				</div>
-			)}
+			{drilldownBanner}
 			<Row className='g-3 mx-0'>
 				{queues.map((queue) => (
 					<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={queue.id}>
@@ -203,11 +226,6 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 						/>
 					</Col>
 				))}
-				{!queues.length && (
-					<Col xs={12} className='text-center text-muted py-4'>
-						No queues found for this filter.
-					</Col>
-				)}
 			</Row>
 			{isLoadingMoreQueues && (
 				<div className='py-3'>

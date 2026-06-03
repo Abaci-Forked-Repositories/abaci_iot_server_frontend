@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://pope-doctrine-hydrogen-suites.trycloudflare.com';
+		return 'https://attributes-undefined-enough-word.trycloudflare.com';
 	}
 	return url;
 };
