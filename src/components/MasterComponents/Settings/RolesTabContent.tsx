@@ -8,7 +8,7 @@ import swalFire from '../../../helpers/swalHelper';
 import Button from '../../bootstrap/Button';
 import { Role } from './RoleModal';
 import usePermissions from '../../../hooks/usePermissions';
-
+import useDarkMode from '../../../hooks/useDarkMode';
 interface RolesTabContentProps {
 	onEditRole: (role: Role) => void;
 	refreshSignal?: number;
@@ -21,7 +21,7 @@ const RolesTabContent: FC<RolesTabContentProps> = ({ onEditRole, refreshSignal }
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('settings_write');
-
+	const { themeStatus } = useDarkMode();
 	useEffect(() => {
 		if (refreshSignal) {
 			tableRef.current?.onQueryChange();
@@ -50,6 +50,7 @@ const RolesTabContent: FC<RolesTabContentProps> = ({ onEditRole, refreshSignal }
 			text: `Delete "${role?.name}"? This action cannot be undone.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Delete',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,

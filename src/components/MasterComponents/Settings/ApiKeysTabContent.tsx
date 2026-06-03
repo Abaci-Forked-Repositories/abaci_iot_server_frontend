@@ -9,10 +9,11 @@ import swalFire from '../../../helpers/swalHelper';
 import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
 import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
-import Icon from '../../icon/Icon';
 import usePermissions from '../../../hooks/usePermissions';
 import { formatDate } from '../QueueManagement/queueManagementUtils';
 import { DeviceCredential } from './ApiKeyModal';
+import JwtSecretRevealPanel from './JwtSecretRevealPanel';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 interface ApiKeysTabContentProps {
 	refreshSignal?: number;
@@ -46,11 +47,10 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('settings_write');
-
+	const { themeStatus } = useDarkMode();
 	const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
 	const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 	const [newSecret, setNewSecret] = useState<{ name: string; secret: string } | null>(null);
-	const [secretCopied, setSecretCopied] = useState(false);
 
 	const prevSignal = useRef(refreshSignal);
 	if (prevSignal.current !== refreshSignal) {
@@ -64,6 +64,7 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 			text: `Delete "${cred.name}"? Devices using this key will immediately lose access.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Delete',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,
@@ -84,6 +85,7 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 			text: `Regenerating will immediately invalidate the current secret for "${cred.name}". All devices using it must be updated.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Regenerate',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,
@@ -95,7 +97,6 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 				`/api/administration/device-credentials/${cred.id}/regenerate-secret/`,
 			);
 			showSuccessNotification('Secret regenerated. Copy it now — it will not be shown again.');
-			setSecretCopied(false);
 			setNewSecret({ name: cred.name, secret: res.data.jwt_secret });
 			tableRef.current?.onQueryChange();
 		} catch (err) {
@@ -116,6 +117,7 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 					: `Disable "${cred.name}"? Devices using this key will be blocked immediately.`,
 				icon: 'warning',
 				showCancelButton: true,
+				theme: themeStatus === 'dark' ? 'dark' : 'light',
 				confirmButtonText: actionLabel,
 				cancelButtonText: 'Cancel',
 				reverseButtons: true,
@@ -309,71 +311,27 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 			<Modal
 				isOpen={newSecret != null}
 				setIsOpen={(open) => {
-					if (!open) {
-						setNewSecret(null);
-						setSecretCopied(false);
-					}
+					if (!open) setNewSecret(null);
 				}}
 				isCentered
 				size='lg'
 				isAnimation={false}>
 				<ModalHeader
 					setIsOpen={(open) => {
-						if (!open) {
-							setNewSecret(null);
-							setSecretCopied(false);
-						}
+						if (!open) setNewSecret(null);
 					}}>
 					<ModalTitle id='api-key-secret-modal'>
 						New JWT Secret — Copy Now
 					</ModalTitle>
 				</ModalHeader>
 				<ModalBody>
-					<div className='rounded-3 border border-warning-subtle bg-warning bg-opacity-10 p-3 p-md-4 mb-4'>
-						<div className='d-flex gap-2 align-items-start mb-2'>
-							<Icon icon='Shield' color='warning' className='flex-shrink-0 mt-1' />
-							<div className='fw-semibold'>Store this secret securely</div>
-						</div>
-						<div className='text-muted small'>
-							This secret will not be shown again. Devices using the old secret for{' '}
-							<strong>{newSecret?.name}</strong> must be updated immediately.
-						</div>
-					</div>
-
-					<div className='rounded-3 border bg-light p-3 p-md-4'>
-						<div className='d-flex align-items-center justify-content-between mb-2 gap-2'>
-							<label className='form-label fw-semibold small mb-0'>JWT Secret</label>
-							{secretCopied && (
-								<span className='badge bg-success-subtle text-success border border-success-subtle'>
-									Copied
-								</span>
-							)}
-						</div>
-						<div className='input-group'>
-							<input
-								type='text'
-								className='form-control font-monospace small'
-								readOnly
-								value={newSecret?.secret ?? ''}
-							/>
-							<button
-								className={`btn ${secretCopied ? 'btn-success' : 'btn-primary'}`}
-								type='button'
-								onClick={() => {
-									if (newSecret?.secret) {
-										void navigator.clipboard.writeText(newSecret.secret);
-										setSecretCopied(true);
-										showSuccessNotification('Secret copied to clipboard.');
-									}
-								}}>
-								<Icon icon={secretCopied ? 'Check' : 'ContentCopy'} className='me-1' />
-								{secretCopied ? 'Copied' : 'Copy Secret'}
-							</button>
-						</div>
-						<div className='form-text text-muted mt-2'>
-							Keep this value private. Anyone with this secret can authenticate as this device.
-						</div>
-					</div>
+					{newSecret && (
+						<JwtSecretRevealPanel
+							secret={newSecret.secret}
+							deviceName={newSecret.name}
+							mode='regenerate'
+						/>
+					)}
 				</ModalBody>
 			</Modal>
 		</>

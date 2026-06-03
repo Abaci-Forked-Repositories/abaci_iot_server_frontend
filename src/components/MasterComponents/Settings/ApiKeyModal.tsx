@@ -3,10 +3,10 @@ import dayjs from 'dayjs';
 import { authAxios } from '../../../axiosInstance';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import Button from '../../bootstrap/Button';
-import Icon from '../../icon/Icon';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import FormGroup from '../../bootstrap/forms/FormGroup';
 import Spinner from '../../bootstrap/Spinner';
+import JwtSecretRevealPanel from './JwtSecretRevealPanel';
 
 export interface DeviceCredential {
 	id?: number;
@@ -243,35 +243,7 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 				/* ── Secret reveal screen (only after create) ── */
 				<>
 					<ModalBody>
-						<div className='alert alert-warning d-flex gap-2 align-items-start mb-4'>
-							<Icon icon='Warning' color='warning' className='flex-shrink-0 mt-1' />
-							<div>
-								<strong>This secret will not be shown again.</strong> Copy it now and store it
-								securely.
-							</div>
-						</div>
-						<FormGroup label='JWT Secret'>
-							<div className='input-group'>
-								<input
-									type='text'
-									className='form-control font-monospace'
-									readOnly
-									value={newSecret}
-								/>
-								<button
-									type='button'
-									className='btn btn-outline-secondary'
-									onClick={() => {
-										void navigator.clipboard.writeText(newSecret);
-										showSuccessNotification('Secret copied to clipboard.');
-									}}>
-									<Icon icon='ContentCopy' />
-								</button>
-							</div>
-							<div className='form-text text-muted'>
-								Use this secret to authenticate devices against the API.
-							</div>
-						</FormGroup>
+						<JwtSecretRevealPanel secret={newSecret} mode='create' />
 					</ModalBody>
 					<ModalFooter>
 						<Button color='primary' onClick={handleClose}>

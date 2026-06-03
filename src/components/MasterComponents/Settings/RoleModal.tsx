@@ -54,6 +54,13 @@ const DEFAULT_PERMISSIONS: PagePermissions = {
 	token_users_write: false,
 };
 
+/** Defaults when creating a new role (queue management enabled; user may untick). */
+const createRoleDefaultPermissions = (): PagePermissions => ({
+	...DEFAULT_PERMISSIONS,
+	queue_management_read: true,
+	queue_management_write: true,
+});
+
 interface PermissionPage {
 	label: string;
 	readKey: keyof PagePermissions;
@@ -121,7 +128,7 @@ const RoleModal: FC<RoleModalProps> = ({ isOpen, onClose, onSuccess, role }) => 
 			}
 		} else {
 			setFormData({ name: '', description: '' });
-			setPermissions({ ...DEFAULT_PERMISSIONS });
+			setPermissions(createRoleDefaultPermissions());
 			setExistingPermissionId(null);
 		}
 	}, [role, isOpen]);
