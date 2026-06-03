@@ -7,6 +7,9 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import QueueGroupCardTile from './QueueGroupCardTile';
+import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
+import NoDataComponent from '../../CustomComponent/NoDataComponent';
+import { Player } from '@lottiefiles/react-lottie-player';
 
 const GROUP_LIST_LIMIT = 12;
 
@@ -108,27 +111,43 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 		return <QueueManagementSkeleton count={8} />;
 	}
 
+	if (!sortedGroups.length) {
+		return (
+			<div className='queue-empty-state d-flex flex-column align-items-center justify-content-center'>
+				{/* <NoDataComponent
+					lottie={noqueuelottie}
+					className='h-30 w-30'
+					description='No queue groups found.'
+				/> */}
+				<Player
+					autoplay
+					loop
+					src={noqueuelottie}
+					renderer='svg'
+					style={{ width: 460, height: 260, maxWidth: '100%' ,marginBottom: '1px'}}
+				/>
+				<p className='text-muted mb-0'>No queue groups found.</p>
+			</div>
+		);
+	}
+
 	return (
 		<div className='queue-cards-scroll' onScroll={handleScroll}>
-			{!sortedGroups.length ? (
-				<p className='text-muted mb-0'>No queue groups found.</p>
-			) : (
-				<Row className='g-3 mx-0'>
-					{sortedGroups.map((group) => (
-						<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={group.id}>
-							<QueueGroupCardTile
-								group={group}
-								queueCount={group.queue_count ?? 0}
-								selected={selectedGroupFilter === group.id}
-								onSelect={(g) => onGroupSelect(g)}
-								onEditGroup={onEditGroup}
-								onDeleteGroup={onDeleteGroup}
-								isDeleteLoading={isGroupDeleteLoading(group.id)}
-							/>
-						</Col>
-					))}
-				</Row>
-			)}
+			<Row className='g-3 mx-0'>
+				{sortedGroups.map((group) => (
+					<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={group.id}>
+						<QueueGroupCardTile
+							group={group}
+							queueCount={group.queue_count ?? 0}
+							selected={selectedGroupFilter === group.id}
+							onSelect={(g) => onGroupSelect(g)}
+							onEditGroup={onEditGroup}
+							onDeleteGroup={onDeleteGroup}
+							isDeleteLoading={isGroupDeleteLoading(group.id)}
+						/>
+					</Col>
+				))}
+			</Row>
 			{isLoadingMoreGroups && (
 				<div className='py-3'>
 					<QueueManagementSkeleton count={4} />

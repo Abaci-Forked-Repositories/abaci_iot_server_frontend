@@ -2,18 +2,27 @@ import React from 'react';
 import { Player } from '@lottiefiles/react-lottie-player';
 import PropTypes from 'prop-types';
 
-const NoDataComponent = ({ lottie, description }) => {
+const NoDataComponent = ({ lottie, description, className = '' }) => {
 	return (
-		<div className='position_centered' style={{position:'relative'}}>
-			<Player autoplay loop src={lottie} style={{ height: '200px' }} />
-			<p className='position_centered' style={{marginTop:"50px", textAlign:"center"}}>{description}</p>
+		<div className={`no-data-component ${className}`.trim()}>
+			<Player
+				autoplay
+				loop
+				src={lottie}
+				renderer='svg'
+				style={{ width: 360, height: 220, maxWidth: '100%' }}
+			/>
+			<p className='no-data-component__text'>{description}</p>
 		</div>
 	);
 };
-	/* eslint-disable react/forbid-prop-types */
+
+/* eslint-disable react/forbid-prop-types */
 NoDataComponent.propTypes = {
-	lottie: PropTypes.any.isRequired, 
+	lottie: PropTypes.any.isRequired,
 	description: PropTypes.string.isRequired,
-  };
-    /* eslint-enable react/forbid-prop-types */
-export default NoDataComponent
+	className: PropTypes.string,
+};
+/* eslint-enable react/forbid-prop-types */
+
+export default NoDataComponent;

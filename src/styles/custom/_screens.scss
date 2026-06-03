@@ -782,6 +782,105 @@
 	}
 }
 
+.screen-audio-consent {
+	position: fixed;
+	inset: 0;
+	z-index: 10050;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.25rem;
+	box-sizing: border-box;
+}
+
+.screen-audio-consent__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(2, 6, 23, 0.72);
+	backdrop-filter: blur(6px);
+}
+
+.screen-audio-consent__panel {
+	position: relative;
+	z-index: 1;
+	width: min(100%, 420px);
+	padding: 1.5rem 1.35rem 1.25rem;
+	border-radius: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+	color: #f8fafc;
+	text-align: center;
+}
+
+.screen-audio-consent__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 0.85rem;
+	border-radius: 999px;
+	background: rgba(59, 130, 246, 0.16);
+	color: #93c5fd;
+}
+
+.screen-audio-consent__title {
+	margin: 0 0 0.65rem;
+	font-size: 1.2rem;
+	font-weight: 700;
+}
+
+.screen-audio-consent__text {
+	margin: 0 0 0.55rem;
+	font-size: 0.92rem;
+	line-height: 1.5;
+	color: #cbd5e1;
+}
+
+.screen-audio-consent__hint {
+	margin: 0 0 1.1rem;
+	font-size: 0.78rem;
+	line-height: 1.45;
+	color: #94a3b8;
+}
+
+.screen-audio-consent__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+}
+
+.screen-audio-consent__btn {
+	width: 100%;
+	border: 0;
+	border-radius: 0.65rem;
+	padding: 0.72rem 1rem;
+	font-size: 0.92rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.screen-audio-consent__btn--primary {
+	background: #2563eb;
+	color: #fff;
+}
+
+.screen-audio-consent__btn--primary:hover {
+	background: #1d4ed8;
+}
+
+.screen-audio-consent__btn--ghost {
+	background: transparent;
+	color: #cbd5e1;
+	border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.screen-audio-consent__btn--ghost:hover {
+	background: rgba(148, 163, 184, 0.08);
+}
+
 .screen-public-root {
 	position: relative;
 	width: min(96vw, 1100px);
