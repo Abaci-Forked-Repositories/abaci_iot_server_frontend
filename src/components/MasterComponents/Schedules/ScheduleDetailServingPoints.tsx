@@ -19,7 +19,7 @@ import swalFire from '../../../helpers/swalHelper';
 import ScheduleAddServingPointsModal from './ScheduleAddServingPointsModal';
 import { buttonColor } from '../../../helpers/constants';
 import usePermissions from '../../../hooks/usePermissions';
-
+import useDarkMode from '../../../hooks/useDarkMode';
 function formatServingPointStatusLabel(raw?: string | null): string {
 	if (raw == null || String(raw).trim() === '') return '—';
 	return String(raw)
@@ -61,7 +61,7 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 	const { can } = usePermissions();
 	const canWrite = can('serving_point_write');
 	const canReadServingPoint = can('serving_point_read');
-
+	const { themeStatus } = useDarkMode();
 	const [saving, setSaving] = useState(false);
 	const [showAddServingPointsModal, setShowAddServingPointsModal] = useState(false);
 	const [showServingPointEditModal, setShowServingPointEditModal] = useState(false);
@@ -265,6 +265,7 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 											confirmButtonText: 'Remove',
 											cancelButtonText: 'Cancel',
 											iconColor: buttonColor[0],
+											theme: themeStatus === 'dark' ? 'dark' : 'light',
 											confirmButtonColor: buttonColor[0],
 											cancelButtonColor: buttonColor[1],
 										}).then((result) => {

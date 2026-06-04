@@ -218,6 +218,30 @@ export const getErrorMessage = (error: unknown): string => {
 	return 'Something went wrong while calling the queue management API.';
 };
 
+/** True when the user is authenticated but lacks permission for the requested action (HTTP 403). */
+export const isForbiddenPermissionError = (error: unknown): boolean => {
+	const status = (error as { response?: { status?: number } })?.response?.status;
+	if (status !== 403) return false;
+	const message = getErrorMessage(error).toLowerCase();
+	return (
+		message.includes('permission') ||
+		message.includes('do not have') ||
+		message.includes('not allowed') ||
+		message.includes('access denied')
+	);
+};
+
+export const PERMISSION_DENIED_CONTACT_ADMIN =
+	'Please contact your administrator if you need access to this feature.';
+
+/** User-facing copy for permission-denied API responses. */
+export const formatPermissionDeniedMessage = (error: unknown): string => {
+	const detail = getErrorMessage(error);
+	return detail
+		? `${detail} ${PERMISSION_DENIED_CONTACT_ADMIN}`
+		: `You do not have permission to perform this action. ${PERMISSION_DENIED_CONTACT_ADMIN}`;
+};
+
 export const getQueueName = (queue: Queue | number | undefined, queues: Queue[]) => {
 	if (!queue) return '-';
 

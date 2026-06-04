@@ -35,7 +35,11 @@ const getNextAllowedStatuses = (status?: string) => {
 	return [];
 };
 
+export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail';
+
 export type ScheduleDetailNavState = {
+	/** How the user opened this page — drives breadcrumbs. */
+	from?: ScheduleDetailEntryFrom;
 	queueId?: number;
 	queueName?: string;
 	/** Exact path to return to the queue detail page (e.g. `/queue-management/24`). */
@@ -64,8 +68,20 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const [showScheduleEditModal, setShowScheduleEditModal] = useState(false);
 	const { can } = usePermissions();
 	const canWrite = can('schedules_write');
+	const canReadQueueManagement = can('queue_management_read');
+	const canReadSchedules = can('schedules_read');
 	// can create token
 	const canCreateToken = can('token_users_write');
+
+	const entryFrom = useMemo((): ScheduleDetailEntryFrom => {
+		if (navState?.from === 'schedules-list' || navState?.from === 'queue-detail') {
+			return navState.from;
+		}
+		if (navState?.queueDetailPath != null || navState?.queueId != null) {
+			return 'queue-detail';
+		}
+		return 'schedules-list';
+	}, [navState?.from, navState?.queueDetailPath, navState?.queueId]);
 
 	const refreshTokensTableRef = useRef<() => void>(() => {});
 
@@ -116,15 +132,41 @@ const ScheduleDetailWorkspace: React.FC = () => {
 			queueNameFromState ??
 			scheduleRecord.queue_name ??
 			(scheduleRecord.queue ? `Queue ${scheduleRecord.queue}` : 'Queue');
-		dispatch(setHeaderTitle({ name: `Schedule · ${qLabel}`, isEditable: false }));
-		dispatch(
-			setBreadcrumbs([
+		const scheduleDetailsCrumb = {
+			label: 'Schedule details',
+			path: location.pathname + location.search,
+		};
+
+		let breadcrumbs: { label: string; path: string }[];
+		if (entryFrom === 'schedules-list') {
+			breadcrumbs = canReadSchedules
+				? [{ label: 'Schedules', path: '/schedules' }, scheduleDetailsCrumb]
+				: [scheduleDetailsCrumb];
+		} else if (canReadQueueManagement) {
+			breadcrumbs = [
 				{ label: 'Queue Management', path: '/queue-management' },
 				{ label: qLabel, path: queueDetailPath },
-				{ label: 'Schedule details', path: location.pathname },
-			]),
-		);
-	}, [dispatch, location.pathname, queueDetailPath, queueNameFromState, scheduleRecord]);
+				scheduleDetailsCrumb,
+			];
+		} else if (canReadSchedules) {
+			breadcrumbs = [{ label: 'Schedules', path: '/schedules' }, scheduleDetailsCrumb];
+		} else {
+			breadcrumbs = [scheduleDetailsCrumb];
+		}
+
+		dispatch(setHeaderTitle({ name: `Schedule · ${qLabel}`, isEditable: false }));
+		dispatch(setBreadcrumbs(breadcrumbs));
+	}, [
+		canReadQueueManagement,
+		canReadSchedules,
+		dispatch,
+		entryFrom,
+		location.pathname,
+		location.search,
+		queueDetailPath,
+		queueNameFromState,
+		scheduleRecord,
+	]);
 
 	useEffect(
 		() => () => {

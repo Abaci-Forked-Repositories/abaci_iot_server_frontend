@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect, FC } from 'react';
+import React, { useCallback, useState, useRef, useMemo, useEffect, FC } from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
@@ -6,9 +6,14 @@ import { authAxios } from '../../../axiosInstance';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import swalFire from '../../../helpers/swalHelper';
 import Button from '../../bootstrap/Button';
+import Alert, { AlertHeading } from '../../bootstrap/Alert';
 import { Role } from './RoleModal';
 import usePermissions from '../../../hooks/usePermissions';
 import useDarkMode from '../../../hooks/useDarkMode';
+import {
+	formatPermissionDeniedMessage,
+	isForbiddenPermissionError,
+} from '../QueueManagement/queueManagementUtils';
 interface RolesTabContentProps {
 	onEditRole: (role: Role) => void;
 	refreshSignal?: number;
@@ -22,6 +27,19 @@ const RolesTabContent: FC<RolesTabContentProps> = ({ onEditRole, refreshSignal }
 	const { can } = usePermissions();
 	const canWrite = can('settings_write');
 	const { themeStatus } = useDarkMode();
+	const [listAccessDenied, setListAccessDenied] = useState<string | null>(null);
+
+	const handleMutationError = useCallback(
+		(err: unknown) => {
+			if (isForbiddenPermissionError(err)) {
+				setListAccessDenied(formatPermissionDeniedMessage(err));
+				return;
+			}
+			showErrorNotification(err);
+		},
+		[showErrorNotification],
+	);
+
 	useEffect(() => {
 		if (refreshSignal) {
 			tableRef.current?.onQueryChange();
@@ -63,7 +81,7 @@ const RolesTabContent: FC<RolesTabContentProps> = ({ onEditRole, refreshSignal }
 			showSuccessNotification('Role deleted successfully');
 			tableRef.current?.onQueryChange();
 		} catch (error) {
-			showErrorNotification(error);
+			handleMutationError(error);
 		}
 	};
 
@@ -96,55 +114,69 @@ const RolesTabContent: FC<RolesTabContentProps> = ({ onEditRole, refreshSignal }
 				),
 			},
 		],
-		[onEditRole],
+		[onEditRole, handleDelete],
 	);
 
 	return (
-		<div className='material_tabel_wrapper'>
-		<div style={{ overflow: 'hidden' }}>
-		<ThemeProvider theme={theme}>
-			<MaterialTable
-				tableRef={tableRef}
-				title=''
-				columns={canWrite ? [...staticColumns, ...actionButtons] : staticColumns}
-				data={(query) =>
-					new Promise((resolve) => {
-						const offset = query.pageSize * query.page;
-						const searchTerm = query.search ? `&search=${query.search}` : '';
-						const url = `/api/users/roles/?offset=${offset}&limit=${query.pageSize}${searchTerm}`;
+		<>
+			{listAccessDenied ? (
+				<Alert color='warning' isLight icon='Lock' className='mb-0'>
+					<AlertHeading tag='h5'>Access restricted</AlertHeading>
+					<p className='mb-0'>{listAccessDenied}</p>
+				</Alert>
+			) : (
+				<div className='material_tabel_wrapper'>
+					<div style={{ overflow: 'hidden' }}>
+						<ThemeProvider theme={theme}>
+							<MaterialTable
+								tableRef={tableRef}
+								title=''
+								columns={canWrite ? [...staticColumns, ...actionButtons] : staticColumns}
+								data={(query) =>
+									new Promise((resolve) => {
+										const offset = query.pageSize * query.page;
+										const searchTerm = query.search ? `&search=${query.search}` : '';
+										const url = `/api/users/roles/?offset=${offset}&limit=${query.pageSize}${searchTerm}`;
 
-						authAxios
-							.get(url)
-							.then((res) => {
-								resolve({
-									data: res.data.results,
-									page: query.page,
-									totalCount: res.data.count,
-								});
-							})
-							.catch((error) => {
-								showErrorNotification(error);
-								resolve({ data: [], page: query.page, totalCount: 0 });
-							});
-					})
-				}
-				options={{
-					headerStyle: headerStyles(),
-					rowStyle: rowStyles(),
-					actionsColumnIndex: -1,
-					debounceInterval: 500,
-					search: true,
-					pageSize,
-				}}
-				localization={{
-					pagination: {
-						labelRowsPerPage: '',
-					},
-				}}
-				/>
-			</ThemeProvider>
-			</div>
-		</div>
+										authAxios
+											.get(url)
+											.then((res) => {
+												setListAccessDenied(null);
+												resolve({
+													data: res.data.results,
+													page: query.page,
+													totalCount: res.data.count,
+												});
+											})
+											.catch((error) => {
+												if (isForbiddenPermissionError(error)) {
+													setListAccessDenied(formatPermissionDeniedMessage(error));
+												} else {
+													showErrorNotification(error);
+												}
+												resolve({ data: [], page: query.page, totalCount: 0 });
+											});
+									})
+								}
+								options={{
+									headerStyle: headerStyles(),
+									rowStyle: rowStyles(),
+									actionsColumnIndex: -1,
+									debounceInterval: 500,
+									search: true,
+									pageSize,
+								}}
+								localization={{
+									pagination: {
+										labelRowsPerPage: '',
+									},
+								}}
+							/>
+						</ThemeProvider>
+					</div>
+				</div>
+			)}
+		</>
 	);
 };
 

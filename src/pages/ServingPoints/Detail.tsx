@@ -5,10 +5,12 @@ import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
 import ServingPointDetailWorkspace from '../../components/MasterComponents/ServingPoints/ServingPointDetailWorkspace';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
-
+import usePermissions from '../../hooks/usePermissions';
 const ServingPointDetailPage: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
+	const { can } = usePermissions();
+	const canReadQueueManagement = can('queue_management_read');
 	const initialNameFromState =
 		(location.state as { servingPointName?: string } | null)?.servingPointName?.trim() ||
 		null;
@@ -23,19 +25,29 @@ const ServingPointDetailPage: React.FC = () => {
 		return 'Serving Point Detail';
 	}, [servingPointName]);
 
+	const breadcrumbs = useMemo(() => {
+		const servingPoints = { label: 'Serving Points', path: '/serving-points' };
+		const detail = {
+			label: detailLabel,
+			path: location.pathname + location.search,
+		};
+		if (canReadQueueManagement) {
+			return [
+				{ label: 'Queue Management', path: '/queue-management' },
+				servingPoints,
+				detail,
+			];
+		}
+		return [servingPoints, detail];
+	}, [canReadQueueManagement, detailLabel, location.pathname, location.search]);
+
 	useEffect(() => {
 		dispatch(setHeaderTitle({ name: detailLabel, isEditable: false }));
-		dispatch(
-			setBreadcrumbs([
-				{ label: 'Queue Management', path: '/queue-management' },
-				{ label: 'Serving Points', path: '/serving-points' },
-				{ label: detailLabel, path: location.pathname + location.search },
-			]),
-		);
+		dispatch(setBreadcrumbs(breadcrumbs));
 		return () => {
 			dispatch(setBreadcrumbs([]));
 		};
-	}, [detailLabel, dispatch, location.pathname, location.search]);
+	}, [breadcrumbs, detailLabel, dispatch]);
 
 	return (
 		<PageWrapper title={detailLabel}>

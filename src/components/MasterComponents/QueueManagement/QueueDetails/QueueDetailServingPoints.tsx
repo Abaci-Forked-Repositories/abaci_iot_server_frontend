@@ -22,6 +22,8 @@ const MODAL_PAGE_SIZE = 5;
 // Status helpers
 // ---------------------------------------------------------------------------
 
+import useDarkMode from '../../../../hooks/useDarkMode';
+
 const normalizeStatus = (status?: string) =>
 	(status || '').toLowerCase().trim().replace(/\s+/g, '_');
 
@@ -117,6 +119,8 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 	}, [assignedServingPointIds]);
 
 	// ── Assign modal: limit/offset chunks + scroll to load more ───────────────
+
+	const { themeStatus } = useDarkMode();
 
 	const servingPointsHasMore = (offset: number, incomingLength: number, total: number) =>
 		incomingLength > 0 && offset < total;
@@ -472,8 +476,10 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 												text: `"${row.name}" will stay in the system. Only the link to this queue will be removed.`,
 												icon: 'warning',
 												showCancelButton: true,
-												confirmButtonText: 'Remove',
+												reverseButtons: true,
 												cancelButtonText: 'Cancel',
+												confirmButtonText: 'Remove',
+												theme: themeStatus === 'dark' ? 'dark' : 'light',
 												iconColor: buttonColor[0],
 												confirmButtonColor: buttonColor[0],
 												cancelButtonColor: buttonColor[1],

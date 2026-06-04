@@ -73,7 +73,7 @@ const QueueGroupFormModal: React.FC<QueueGroupFormModalProps> = ({
 
 		setLoadingQueues(true);
 		void queuesApi
-			.list({ ordering: 'name', page: 1, page_size: 500 })
+			.list()
 			.then((res) => {
 				if (!cancelled) setQueues(res.results || []);
 			})

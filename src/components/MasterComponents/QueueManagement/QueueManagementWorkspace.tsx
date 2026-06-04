@@ -15,6 +15,7 @@ import QueueGroupFormModal from '../../PageComponents/QueueManagement/QueueGroup
 import QueuesTabContent from './QueuesTabContent';
 import QueueGroupTabContent from './QueueGroupTabContent';
 import usePermissions from '../../../hooks/usePermissions';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const QueueManagementWorkspace: React.FC = () => {
 	const { can } = usePermissions();
@@ -33,7 +34,7 @@ const QueueManagementWorkspace: React.FC = () => {
 	const [editQueueId, setEditQueueId] = useState<number | null>(null);
 	const [editGroupId, setEditGroupId] = useState<number | null>(null);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
-
+	const { themeStatus } = useDarkMode();
 	const clearMessages = () => {
 		setError('');
 		setSuccess('');
@@ -99,6 +100,7 @@ const QueueManagementWorkspace: React.FC = () => {
 			text: `Delete "${group.name}"? Queues in this group will be unassigned.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Delete',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,

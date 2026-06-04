@@ -240,7 +240,7 @@ const ServingPointDetailWorkspace: React.FC<ServingPointDetailWorkspaceProps> = 
 			{canReadSchedules && (
 				<QueueEventsTimelineCard
 					queryId={id}
-					loadEvents={(spId) => eventsApi.byServingPoint(spId)}
+					loadEvents={(spId, date) => eventsApi.byServingPoint(spId, date)}
 					captionOverride={servingPoint?.name ?? null}
 					getCaptionFromEvents={(ev) =>
 						(ev[0]?.serving_point_name && String(ev[0].serving_point_name).trim()) || null

@@ -19,6 +19,7 @@ import { swalFire } from '../../../helpers/swalHelper';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
 import usePermissions from '../../../hooks/usePermissions';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const PAGE_LIMIT = 12;
 
@@ -33,7 +34,7 @@ function isOnlineFilterParam(
 const ScreensWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
-
+	const { themeStatus } = useDarkMode();
 	const [screens, setScreens] = useState<Screen[]>([]);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -153,6 +154,7 @@ const ScreensWorkspace: React.FC = () => {
 			text: `Delete "${screen.name}"? This cannot be undone.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Delete',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,
@@ -187,6 +189,7 @@ const ScreensWorkspace: React.FC = () => {
 			text: `Delete "${group.name}"? Screens are not deleted; only the group is removed.`,
 			icon: 'warning',
 			showCancelButton: true,
+			theme: themeStatus === 'dark' ? 'dark' : 'light',
 			confirmButtonText: 'Delete',
 			cancelButtonText: 'Cancel',
 			reverseButtons: true,

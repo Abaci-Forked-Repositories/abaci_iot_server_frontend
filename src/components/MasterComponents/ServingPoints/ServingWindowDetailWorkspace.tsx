@@ -96,6 +96,10 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const dispatch = useDispatch();
+	const { can } = usePermissions();
+	const canReadQueueManagement = can('queue_management_read');
+	const canReadSchedule = can('schedules_read');
+	const canWrite = can('serving_point_write');
 	const nav = (location.state as ServingWindowNavState | null) ?? null;
 	const scheduleEntryPath = nav?.schedulePath;
 	const servingPointEntryPath = nav?.servingPointPath;
@@ -206,28 +210,52 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 			const schedId = nav?.scheduleId ?? windowRow.queue_schedule;
 			const schedLabel =
 				typeof schedId === 'number' ? `Schedule #${schedId}` : 'Schedule';
+			const scheduleAndWindow = [
+				{ label: schedLabel, path: scheduleEntryPath },
+				{ label: 'Serving window', path: currentPath },
+			];
+			const scheduleTrail = canReadQueueManagement
+				? [
+						{ label: qLabel, path: queuePath },
+						...scheduleAndWindow,
+					]
+				: canReadSchedule
+					? [{ label: 'Schedules', path: '/schedules' }, ...scheduleAndWindow]
+					: scheduleAndWindow;
+
 			dispatch(setHeaderTitle({ name: `${spLabel} · Serving window`, isEditable: false }));
 			dispatch(
-				setBreadcrumbs([
-					{ label: 'Queue Management', path: '/queue-management' },
-					{ label: qLabel, path: queuePath },
-					{ label: schedLabel, path: scheduleEntryPath },
-					{ label: 'Serving window', path: currentPath },
-				]),
+				setBreadcrumbs(
+					canReadQueueManagement
+						? [
+								{ label: 'Queue Management', path: '/queue-management' },
+								...scheduleTrail,
+							]
+						: scheduleTrail,
+				),
 			);
 			return;
 		}
 
+		const servingPointTrail = [
+			{ label: 'Serving Points', path: '/serving-points' },
+			{ label: spLabel, path: spPath },
+			{ label: 'Serving window', path: currentPath },
+		];
 		dispatch(setHeaderTitle({ name: `${spLabel} · Serving window`, isEditable: false }));
 		dispatch(
-			setBreadcrumbs([
-				{ label: 'Queue Management', path: '/queue-management' },
-				{ label: 'Serving points', path: '/serving-points' },
-				{ label: spLabel, path: spPath },
-				{ label: 'Serving window', path: currentPath },
-			]),
+			setBreadcrumbs(
+				canReadQueueManagement
+					? [
+							{ label: 'Queue Management', path: '/queue-management' },
+							...servingPointTrail,
+						]
+					: servingPointTrail,
+			),
 		);
 	}, [
+		canReadQueueManagement,
+		canReadSchedule,
 		dispatch,
 		location.pathname,
 		currentQueue?.name,
@@ -247,9 +275,6 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 		},
 		[dispatch],
 	);
-	const { can } = usePermissions();
-	const canReadSchedule = can('schedules_read');
-	const canWrite = can('serving_point_write');
 	const getAllowedActions = (row: ScheduleServingPoint) => {
 		const tokenStatus = (getWindowCurrentTokenStatusRaw(row) || '').toLowerCase().trim();
 		const canStart = tokenStatus === 'registred' || tokenStatus === 'waiting';
@@ -523,19 +548,30 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 													color='info'
 													isLight
 													icon='CalendarMonth'
-													onClick={() =>
-														navigate(`/queue-management/schedules/${windowRow.queue_schedule}`, {
-															state: {
-																queueId:
-																	windowRow.queue_schedule_queue_id ?? queueIdFromNav,
-																queueName: currentQueue?.name ?? queueNameFromNav,
-																queueDetailPath:
-																	windowRow.queue_schedule_queue_id != null
-																		? `/queue-management/${windowRow.queue_schedule_queue_id}`
-																		: queueDetailPathFromNav,
+													onClick={() => {
+														const qId =
+															windowRow.queue_schedule_queue_id ?? queueIdFromNav;
+														navigate(
+															`/queue-management/schedules/${windowRow.queue_schedule}`,
+															{
+																state: {
+																	from: scheduleEntryPath
+																		? ('schedules-list' as const)
+																		: ('queue-detail' as const),
+																	...(qId != null
+																		? {
+																				queueId: qId,
+																				queueName:
+																					currentQueue?.name ?? queueNameFromNav,
+																				queueDetailPath: scheduleEntryPath
+																					? undefined
+																					: `/queue-management/${qId}`,
+																			}
+																		: {}),
+																},
 															},
-														})
-													}>
+														);
+													}}>
 													Open schedule
 												</Button>
 											</span>

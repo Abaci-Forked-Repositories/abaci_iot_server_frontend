@@ -12,7 +12,7 @@ const ScheduleDetailEventsPanel: React.FC<ScheduleDetailEventsPanelProps> = ({ s
 		<div className='col-12'>
 			<QueueEventsTimelineCard
 				queryId={scheduleId}
-				loadEvents={(id) => eventsApi.bySchedule(id)}
+				loadEvents={(id, date) => eventsApi.bySchedule(id, date)}
 				getCaptionFromEvents={(ev: QueueEvent[]) =>
 					(ev[0]?.schedule_name && String(ev[0].schedule_name).trim()) || null
 				}

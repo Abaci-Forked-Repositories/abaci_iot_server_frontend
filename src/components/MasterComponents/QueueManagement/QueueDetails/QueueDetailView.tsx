@@ -326,6 +326,7 @@ const QueueDetailView: React.FC = () => {
 						onEventClick={(event: QueueScheduleEvent) =>
 							navigate(`/queue-management/schedules/${event.id}`, {
 								state: {
+									from: 'queue-detail' as const,
 									queueId: id,
 									queueName: queueData.name,
 									queueDetailPath: location.pathname,

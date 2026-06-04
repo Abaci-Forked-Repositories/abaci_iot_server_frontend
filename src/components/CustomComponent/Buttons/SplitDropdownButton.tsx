@@ -5,6 +5,7 @@ import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
 import type { TColor } from '../../../type/color-type';
 import type { TDropdownDirection } from '../../../type/dropdown-type';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 export interface SplitDropdownMenuItem {
 	label: string;
@@ -54,7 +55,7 @@ const SplitDropdownButton: React.FC<SplitDropdownButtonProps> = ({
 }) => {
 	const [open, setOpen] = useState(false);
 	const hasMenu = menuItems.length > 0;
-
+	const { themeStatus } = useDarkMode();
 	const handleMenuItemClick = useCallback(
 		async (item: SplitDropdownMenuItem) => {
 			setOpen(false);
@@ -74,6 +75,8 @@ const SplitDropdownButton: React.FC<SplitDropdownButtonProps> = ({
 				iconColor: buttonColor[0],
 				confirmButtonColor: buttonColor[0],
 				cancelButtonColor: buttonColor[1],
+				theme: themeStatus === 'dark' ? 'dark' : 'light',
+				reverseButtons: true,
 				confirmButtonText: 'Proceed',
 				cancelButtonText: 'Cancel',
 			});

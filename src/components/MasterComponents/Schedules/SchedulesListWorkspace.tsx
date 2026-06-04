@@ -120,14 +120,15 @@ const SchedulesListWorkspace: React.FC = () => {
 		(row: QueueSchedule) => {
 			const qid = row.queue;
 			navigate(`/queue-management/schedules/${row.id}`, {
-				state:
-					qid != null
+				state: {
+					from: 'schedules-list' as const,
+					...(qid != null
 						? {
 								queueId: qid,
 								queueName: row.queue_name,
-								queueDetailPath: `/queue-management/${qid}`,
 							}
-						: undefined,
+						: {}),
+				},
 			});
 		},
 		[navigate],

@@ -250,7 +250,7 @@ const RoleModal: FC<RoleModalProps> = ({ isOpen, onClose, onSuccess, role }) => 
 				<div className='border rounded-3 p-3'>
 					<div className='fw-semibold mb-3 d-flex align-items-center gap-2'>
 						<span>Page Permissions</span>
-						<span className='badge bg-light text-muted fw-normal small'>
+						<span className='badge bg-l10-primary text-primary fw-normal small'>
 							Dashboard read is required
 						</span>
 					</div>

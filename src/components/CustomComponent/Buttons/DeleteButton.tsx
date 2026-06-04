@@ -32,6 +32,7 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({  apiEndpoint, tableRef,text
       text:text|| "You won't be able to revert this!",
       showCancelButton: true,
       iconColor: buttonColor[0],
+      theme: darkModeStatus ? 'dark' : 'light',
       confirmButtonColor: buttonColor[0],
       cancelButtonColor: buttonColor[1],
       confirmButtonText: 'Delete',

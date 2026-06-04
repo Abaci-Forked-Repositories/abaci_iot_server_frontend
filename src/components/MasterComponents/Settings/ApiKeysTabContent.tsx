@@ -8,9 +8,15 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import swalFire from '../../../helpers/swalHelper';
 import Button from '../../bootstrap/Button';
 import Badge from '../../bootstrap/Badge';
+import Alert, { AlertHeading } from '../../bootstrap/Alert';
 import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
+import Icon from '../../icon/Icon';
 import usePermissions from '../../../hooks/usePermissions';
-import { formatDate } from '../QueueManagement/queueManagementUtils';
+import {
+	formatDate,
+	formatPermissionDeniedMessage,
+	isForbiddenPermissionError,
+} from '../QueueManagement/queueManagementUtils';
 import { DeviceCredential } from './ApiKeyModal';
 import JwtSecretRevealPanel from './JwtSecretRevealPanel';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -51,6 +57,18 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 	const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
 	const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 	const [newSecret, setNewSecret] = useState<{ name: string; secret: string } | null>(null);
+	const [listAccessDenied, setListAccessDenied] = useState<string | null>(null);
+
+	const handleMutationError = useCallback(
+		(err: unknown) => {
+			if (isForbiddenPermissionError(err)) {
+				setListAccessDenied(formatPermissionDeniedMessage(err));
+				return;
+			}
+			showErrorNotification(err);
+		},
+		[showErrorNotification],
+	);
 
 	const prevSignal = useRef(refreshSignal);
 	if (prevSignal.current !== refreshSignal) {
@@ -75,9 +93,9 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 			showSuccessNotification('API key deleted.');
 			tableRef.current?.onQueryChange();
 		} catch (err) {
-			showErrorNotification(err);
+			handleMutationError(err);
 		}
-	}, [showErrorNotification, showSuccessNotification]);
+	}, [handleMutationError, showSuccessNotification]);
 
 	const handleRegenerate = useCallback(async (cred: DeviceCredential) => {
 		const result = await swalFire({
@@ -100,11 +118,11 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 			setNewSecret({ name: cred.name, secret: res.data.jwt_secret });
 			tableRef.current?.onQueryChange();
 		} catch (err) {
-			showErrorNotification(err);
+			handleMutationError(err);
 		} finally {
 			setRegeneratingId(null);
 		}
-	}, [showErrorNotification, showSuccessNotification]);
+	}, [handleMutationError, showSuccessNotification]);
 
 	const handleToggleActive = useCallback(
 		async (cred: DeviceCredential) => {
@@ -131,12 +149,12 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 				showSuccessNotification(`API key ${nextActive ? 'enabled' : 'disabled'}.`);
 				tableRef.current?.onQueryChange();
 			} catch (err) {
-				showErrorNotification(err);
+				handleMutationError(err);
 			} finally {
 				setStatusUpdatingId(null);
 			}
 		},
-		[showErrorNotification, showSuccessNotification],
+		[handleMutationError, showSuccessNotification],
 	);
 
 	const columns = useMemo(() => {
@@ -252,6 +270,12 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 
 	return (
 		<>
+			{listAccessDenied ? (
+				<Alert color='warning' isLight icon='Lock' className='mb-0'>
+					<AlertHeading tag='h5'>Access restricted</AlertHeading>
+					<p className='mb-0'>{listAccessDenied}</p>
+				</Alert>
+			) : (
 			<div className='material_tabel_wrapper'>
 				<div style={{ overflow: 'hidden' }}>
 					<ThemeProvider theme={theme}>
@@ -268,6 +292,7 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 									authAxios
 										.get(url)
 										.then((res) => {
+											setListAccessDenied(null);
 											resolve({
 												data: res.data.results ?? [],
 												page: query.page,
@@ -275,7 +300,11 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 											});
 										})
 										.catch((err) => {
-											showErrorNotification(err);
+											if (isForbiddenPermissionError(err)) {
+												setListAccessDenied(formatPermissionDeniedMessage(err));
+											} else {
+												showErrorNotification(err);
+											}
 											resolve({ data: [], page: query.page, totalCount: 0 });
 										});
 								})
@@ -306,6 +335,7 @@ const ApiKeysTabContent: FC<ApiKeysTabContentProps> = ({ refreshSignal, onEdit }
 					</ThemeProvider>
 				</div>
 			</div>
+			)}
 
 			{/* One-time secret display after regenerate */}
 			<Modal

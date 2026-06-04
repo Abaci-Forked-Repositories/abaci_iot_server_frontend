@@ -338,7 +338,9 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 							onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 								e.preventDefault();
 								e.stopPropagation();
-								navigate(`/queue-management/schedules/${rowData.schedule}`);
+								navigate(`/queue-management/schedules/${rowData.schedule}`, {
+									state: { from: 'schedules-list' as const },
+								});
 							}}>
 							#{rowData.schedule}
 						</button>

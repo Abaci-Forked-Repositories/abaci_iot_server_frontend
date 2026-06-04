@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dayjs from 'dayjs';
+import Card, { CardActions, CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import Spinner from '../../bootstrap/Spinner';
+import DateFilter, { type DateFilterValue } from '../../CustomComponent/Filters/DateFilter';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import { formatLocalDateInputValue } from './queueManagementUtils';
 import {
 	type PaginatedResponse,
 	type QueueEvent,
@@ -319,7 +322,10 @@ const RefreshButton: React.FC<RefreshButtonProps> = ({ loading, onClick }) => (
 
 export interface QueueEventsTimelineCardProps {
 	queryId: number;
-	loadEvents: (id: number) => Promise<QueueEvent[] | PaginatedResponse<QueueEvent>>;
+	loadEvents: (
+		id: number,
+		date: string,
+	) => Promise<QueueEvent[] | PaginatedResponse<QueueEvent>>;
 	/** Shown in the header strip when non-empty; overrides `getCaptionFromEvents` when set. */
 	captionOverride?: string | null;
 	/** When `captionOverride` is empty, derive a caption from loaded events (e.g. first row schedule name). */
@@ -349,26 +355,51 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 	const loadEventsRef = useRef(loadEvents);
 	loadEventsRef.current = loadEvents;
 
+	const [selectedDate, setSelectedDate] = useState(() => formatLocalDateInputValue());
 	const [events, setEvents] = useState<QueueEvent[]>([]);
 	const [loading, setLoading] = useState(false);
 
-	const fetchEvents = useCallback(async () => {
-		if (!queryId || Number.isNaN(queryId)) return;
-		setLoading(true);
-		try {
-			const raw = await loadEventsRef.current(queryId);
-			setEvents(sortEventsNewestFirst(normalizeEvents(raw)));
-		} catch (err) {
-			showErrorRef.current(err);
-			setEvents([]);
-		} finally {
-			setLoading(false);
-		}
-	}, [queryId]);
+	const selectedDateValue = useMemo<DateFilterValue>(
+		() => ({
+			date: dayjs(selectedDate).toDate(),
+			dateFilter: selectedDate,
+		}),
+		[selectedDate],
+	);
+
+	const handleDateFilter = useCallback((value: DateFilterValue | null) => {
+		setSelectedDate(value?.dateFilter ?? formatLocalDateInputValue());
+	}, []);
+
+	const loadEventsForDate = useCallback(
+		async (date: string) => {
+			if (!queryId || Number.isNaN(queryId)) return;
+			setLoading(true);
+			try {
+				const raw = await loadEventsRef.current(queryId, date);
+				setEvents(sortEventsNewestFirst(normalizeEvents(raw)));
+			} catch (err) {
+				showErrorRef.current(err);
+				setEvents([]);
+			} finally {
+				setLoading(false);
+			}
+		},
+		[queryId],
+	);
 
 	useEffect(() => {
-		void fetchEvents();
-	}, [fetchEvents]);
+		void loadEventsForDate(selectedDate);
+	}, [selectedDate, loadEventsForDate]);
+
+	const handleRefresh = useCallback(() => {
+		const today = formatLocalDateInputValue();
+		if (selectedDate !== today) {
+			setSelectedDate(today);
+		} else {
+			void loadEventsForDate(today);
+		}
+	}, [selectedDate, loadEventsForDate]);
 
 	const trimmedOverride = captionOverride?.trim() || null;
 	const captionFromFn = getCaptionFromEvents?.(events)?.trim() || null;
@@ -396,7 +427,17 @@ const QueueEventsTimelineCard: React.FC<QueueEventsTimelineCardProps> = ({
 							)}
 						</CardTitle>
 					</CardLabel>
-					<RefreshButton loading={loading} onClick={() => void fetchEvents()} />
+					<CardActions>
+						<div className='d-flex align-items-center gap-2 flex-wrap'>
+							<DateFilter
+								placement='bottom-end'
+								selectedDate={selectedDateValue}
+								onFilter={handleDateFilter}
+								placeholder='Select date'
+							/>
+							<RefreshButton loading={loading} onClick={handleRefresh} />
+						</div>
+					</CardActions>
 				</CardHeader>
 				<CardBody
 					className='d-flex flex-column min-h-0 p-0'

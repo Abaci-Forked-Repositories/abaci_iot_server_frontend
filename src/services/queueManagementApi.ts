@@ -655,13 +655,17 @@ export interface QueueEvent {
 }
 
 export const eventsApi = {
-	bySchedule: (scheduleId: number) =>
+	bySchedule: (scheduleId: number, date?: string) =>
 		unwrap<QueueEvent[] | PaginatedResponse<QueueEvent>>(
-			authAxios.get('api/queues/events/by-schedule/', { params: { schedule_id: scheduleId } }),
+			authAxios.get('api/queues/events/by-schedule/', {
+				params: { schedule_id: scheduleId, ...(date ? { date } : {}) },
+			}),
 		),
-	byServingPoint: (servingPointId: number) =>
+	byServingPoint: (servingPointId: number, date?: string) =>
 		unwrap<QueueEvent[] | PaginatedResponse<QueueEvent>>(
-			authAxios.get('api/queues/events/by-serving-point/', { params: { serving_point_id: servingPointId } }),
+			authAxios.get('api/queues/events/by-serving-point/', {
+				params: { serving_point_id: servingPointId, ...(date ? { date } : {}) },
+			}),
 		),
 };
 
