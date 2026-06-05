@@ -87,6 +87,13 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		if (
+			mode === 'create' &&
+			tokenForm.token_number != null &&
+			Number(tokenForm.token_number) >= 1000
+		) {
+			return;
+		}
 		if (mode === 'create') {
 			setSaving(true);
 			try {
