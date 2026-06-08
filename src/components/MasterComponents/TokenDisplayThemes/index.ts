@@ -28,6 +28,8 @@ export {
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalCrimsonFillBaseFontSize,
 	computeFillZoneTextSizes,
+	getFillZoneTokenEm,
+	getFillZoneBodyColumnFraction,
 } from './tokenDisplayThemes';
 
 export type {

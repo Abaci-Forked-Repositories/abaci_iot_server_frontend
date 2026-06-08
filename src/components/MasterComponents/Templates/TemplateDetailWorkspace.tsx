@@ -39,6 +39,11 @@ import Icon from '../../icon/Icon';
 import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 import { parseTemplateConfiguration } from '../../../utils/templateOverlayOpacity';
 import usePermissions from '../../../hooks/usePermissions';
+import {
+	formatPermissionDeniedMessage,
+	getErrorMessage,
+	isForbiddenPermissionError,
+} from '../QueueManagement/queueManagementUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -463,6 +468,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 	const [themeError, setThemeError] = useState(false);
 	const [queues, setQueues] = useState<Queue[]>([]);
 	const [queuesLoading, setQueuesLoading] = useState(false);
+	const [queuesLoadError, setQueuesLoadError] = useState<string | null>(null);
 
 	const queuesById = React.useMemo(
 		() => new Map(queues.map((q) => [q.id, q])),
@@ -473,12 +479,31 @@ const TemplateDetailWorkspace: React.FC = () => {
 	const queuesByName = React.useMemo(() => buildQueuesByName(queues), [queues]);
 
 	useEffect(() => {
+		let cancelled = false;
 		setQueuesLoading(true);
+		setQueuesLoadError(null);
 		queuesApi
 			.list({ ordering: 'name', limit: 200 })
-			.then((res) => setQueues(res.results ?? []))
-			.catch(() => setQueues([]))
-			.finally(() => setQueuesLoading(false));
+			.then((res) => {
+				if (cancelled) return;
+				setQueues(res.results ?? []);
+				setQueuesLoadError(null);
+			})
+			.catch((err) => {
+				if (cancelled) return;
+				setQueues([]);
+				setQueuesLoadError(
+					isForbiddenPermissionError(err)
+						? formatPermissionDeniedMessage(err)
+						: getErrorMessage(err),
+				);
+			})
+			.finally(() => {
+				if (!cancelled) setQueuesLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
 	const refreshAllZoneLabels = useCallback(() => {
@@ -1746,25 +1771,38 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 								<div className='tdc-prop-section'>
 									<div className='tdc-prop-section-label'>Queue</div>
-									<select
-										className='tdc-prop-input'
-										value={zoneProps.queueIds[0] ?? ''}
-										disabled={queuesLoading}
-										onChange={(e) => handleZoneQueueChange(e.target.value)}>
-										<option value=''>
-											{queuesLoading ? 'Loading queues…' : 'Select queue for this zone…'}
-										</option>
-										{queues.map((queue) => (
-											<option key={queue.id} value={queue.id}>
-												{queue.name}
-											</option>
-										))}
-									</select>
-									<p className='tdc-zone-queue-hint'>
-										{zoneProps.queueIds.length > 0
-											? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
-											: 'One queue per zone. Select a queue from the list above.'}
-									</p>
+									{queuesLoadError ? (
+										<p className='tdc-zone-queue-access-denied' role='alert'>
+											{queuesLoadError}
+										</p>
+									) : (
+										<>
+											<select
+												className='tdc-prop-input'
+												value={zoneProps.queueIds[0] ?? ''}
+												disabled={queuesLoading}
+												onChange={(e) => handleZoneQueueChange(e.target.value)}>
+												<option value=''>
+													{queuesLoading ? 'Loading queues…' : 'Select queue for this zone…'}
+												</option>
+												{queues.map((queue) => (
+													<option key={queue.id} value={queue.id}>
+														{queue.name}
+													</option>
+												))}
+											</select>
+											<p className='tdc-zone-queue-hint'>
+												{zoneProps.queueIds.length > 0
+													? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
+													: 'One queue per zone. Select a queue from the list above.'}
+											</p>
+										</>
+									)}
+									{queuesLoadError && zoneProps.queueIds.length > 0 && (
+										<p className='tdc-zone-queue-hint'>
+											{`This zone already has queue #${zoneProps.queueIds[0]} assigned. You cannot change it without queue list access.`}
+										</p>
+									)}
 								</div>
 
 								{/* Zone opacity */}
