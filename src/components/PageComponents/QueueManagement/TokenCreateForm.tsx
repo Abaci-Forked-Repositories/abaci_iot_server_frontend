@@ -55,9 +55,10 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 				<label className='form-label'>Token Number</label>
 				<div className='input-group'>
 					<input
-						className='form-control'
+						className={`form-control${tokenForm.token_number != null && Number(tokenForm.token_number) >= 1000 ? ' is-invalid' : ''}`}
 						type='number'
 						min='1'
+						max='999'
 						placeholder={tokenNumberLoading ? 'Loading…' : 'Token number'}
 						disabled={tokenNumberLoading}
 						value={tokenForm.token_number ?? ''}
@@ -72,6 +73,9 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 						<span className='input-group-text'>
 							<span className='spinner-border spinner-border-sm' />
 						</span>
+					)}
+					{tokenForm.token_number != null && Number(tokenForm.token_number) >= 1000 && (
+						<div className='invalid-feedback'>Token number must be less than 1000.</div>
 					)}
 				</div>
 			</div>
