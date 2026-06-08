@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	computeFillZoneSplitBaseFontSize,
+	getFillZoneBodyColumnFraction,
+	getFillZoneTokenEm,
 	getStatusConfig,
 	getZoneAppearanceFromSaved,
 	resolveZoneCardStyle,
@@ -139,13 +141,20 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			if (width < 1 || height < 1) return;
 			const tokenLen = displayToken.length;
 			const hasHistory = el.classList.contains('tdc--has-history');
+			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
 			const fontSize = computeFillZoneSplitBaseFontSize(
 				width,
 				height,
 				tokenLen,
 				hasHistory,
+				{
+					tokenEm,
+					bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
+				},
 			);
 			el.style.fontSize = `${fontSize}px`;
+			el.style.setProperty('--tdc-token-fill-em', String(tokenEm));
+			el.style.setProperty('--tdc-token-chars', String(tokenLen));
 		};
 
 		applyScale();
@@ -160,6 +169,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			cancelAnimationFrame(raf);
 			observer.disconnect();
 			el.style.fontSize = '';
+			el.style.removeProperty('--tdc-token-fill-em');
+			el.style.removeProperty('--tdc-token-chars');
 		};
 	}, [fillContainer, displayToken, resolved.themeClass]);
 

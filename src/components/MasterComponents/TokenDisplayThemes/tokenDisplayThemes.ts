@@ -319,6 +319,35 @@ export const ACTIVE_TOKENS_MARQUEE_MIN_COUNT = 5;
 /** Token size multiplier in fill mode (see `.tdc--fill .tdc__token` in SCSS). */
 export const TOKEN_DISPLAY_FILL_TOKEN_EM = 3.35;
 
+/** Headroom for token pulse/float animations so glyphs stay inside the zone. */
+export const TOKEN_DISPLAY_FILL_ANIMATION_MARGIN = 1.06;
+
+export interface FillZoneFontSizeOptions {
+	tokenEm?: number;
+	bodyColumnFraction?: number;
+	animationMargin?: number;
+}
+
+/** Token `em` multiplier for `.tdc--fill` — must match theme SCSS overrides. */
+export function getFillZoneTokenEm(themeClass: string | null): number {
+	switch (themeClass) {
+		case 'tdc--onyx-gold':
+			return 4.4;
+		case 'tdc--arctic-white':
+			return 3.45;
+		case 'tdc--imperial-court':
+			return 3.4;
+		default:
+			return TOKEN_DISPLAY_FILL_TOKEN_EM;
+	}
+}
+
+/** Left column share of split fill grid (token column). */
+export function getFillZoneBodyColumnFraction(themeClass: string | null): number {
+	if (themeClass === 'tdc--crimson-banner') return 1.6 / 2.5;
+	return 0.58;
+}
+
 /** Split layout: header row + body/status row (matches grid fill zones). */
 export const TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM = 5.2;
 
@@ -386,22 +415,27 @@ export function computeFillZoneSplitBaseFontSize(
 	height: number,
 	tokenLength = 2,
 	hasHistoryStrip = false,
+	options: FillZoneFontSizeOptions = {},
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
 
+	const tokenEm = options.tokenEm ?? TOKEN_DISPLAY_FILL_TOKEN_EM;
+	const bodyCol = options.bodyColumnFraction ?? 0.58;
+	const statusCol = Math.max(0.28, 1 - bodyCol);
+	const animationMargin = options.animationMargin ?? TOKEN_DISPLAY_FILL_ANIMATION_MARGIN;
+
 	const layoutEm = hasHistoryStrip
 		? TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM + 1.4
 		: TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM;
-	const TOKEN_COL = 0.56;
 	const STATUS_FACTOR = 4.6;
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
 	const fromTokenWidth =
-		(w * TOKEN_COL) / (chars * TOKEN_DISPLAY_FILL_TOKEN_EM * 0.58 + 1.2);
-	const fromStatusWidth = (w * 0.42) / STATUS_FACTOR;
+		(w * bodyCol) / (chars * tokenEm * 0.58 * animationMargin + 1.2);
+	const fromStatusWidth = (w * statusCol) / STATUS_FACTOR;
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, fromStatusWidth);
 	return applyFillZoneFontSizeBoost(base, w, h);

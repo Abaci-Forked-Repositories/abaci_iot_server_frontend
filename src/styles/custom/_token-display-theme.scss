@@ -508,6 +508,7 @@
 		min-width: 0;
 		overflow: hidden;
 		border-right: 1px solid var(--tdc-border);
+		container-type: size;
 	}
 
 	.tdc__subtitle {
@@ -1147,4 +1148,13 @@
 	display: flex;
 	justify-content: center;
 	padding: 0.5rem 0;
+}
+
+// Wide TV zones: cap token by body column width/height (ResizeObserver + CSS safety net).
+.tdc--fill .tdc__body .tdc__token {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 3.35) * 1em),
+		calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
+		calc(40cqh)
+	);
 }

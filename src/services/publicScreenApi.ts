@@ -276,7 +276,7 @@ export function getPublicQueueZoneDisplay(
 		queue?.token_status?.trim() ||
 		queue?.status?.trim() ||
 		queue?.current_token?.status?.trim() ||
-		'inactive';
+		'—';
 
 	return { queueName, servingPointName, tokenDisplay, tokenStatus };
 }

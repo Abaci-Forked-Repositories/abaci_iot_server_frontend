@@ -523,6 +523,7 @@ export function enrichParsedZonesWithConfiguration(
 				? zone.queueChipNames
 				: (configZone.queue_names ?? []);
 
+
 		const displayTheme =
 			zone.displayTheme?.trim() ||
 			configZone.theme_id?.trim() ||

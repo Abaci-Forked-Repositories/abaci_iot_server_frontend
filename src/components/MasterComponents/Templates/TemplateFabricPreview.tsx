@@ -213,6 +213,9 @@ function syncLiveZoneOverlay(
 		const display = getPublicQueueZoneDisplay(queue, {
 			queueName: chipFallback ?? rect.name,
 		});
+		console.log('chipFallback', chipFallback);
+		console.log('rect.name', rect.name);
+		console.log('display', display);
 
 		const tokenLen = Math.max(1, display.tokenDisplay.length);
 		const sizes = computeFillZoneTextSizes(width, height, tokenLen);
@@ -307,7 +310,10 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	/** Overlay bounds: clamp only — normalize would expand valid half-width columns to full canvas. */
 	const overlayZones = useMemo(() => {
 		if (!htmlLayout?.zones.length) return [];
+		console.log('htmlLayout.zones', htmlLayout.zones);
+		console.log('configuration', configuration);
 		const enriched = enrichParsedZonesWithConfiguration(htmlLayout.zones, configuration);
+		console.log('enriched', enriched);
 		return enriched.map((zone) => {
 			const geom = clampZoneGeometryToCanvas(
 				{
@@ -577,10 +583,12 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 				className={`${hostClassName}${flicker ? ' template-fabric-preview-host--live' : ''}`}>
 				<div className='screen-public-zone-layer'>
 					{overlayZones.map((zone, index) => {
+						console.log('zone', zone);
 						const queue = resolveQueueForParsedZone(zone, queuesByUuid);
 						const display = getPublicQueueZoneDisplay(queue, {
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
+						console.log('display', display);
 						const appearance = getZoneAppearanceFromParsedZone(zone);
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
 
