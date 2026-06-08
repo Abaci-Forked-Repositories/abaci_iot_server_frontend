@@ -38,11 +38,9 @@ const getNextAllowedStatuses = (status?: string) => {
 export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail';
 
 export type ScheduleDetailNavState = {
-	/** How the user opened this page — drives breadcrumbs. */
 	from?: ScheduleDetailEntryFrom;
 	queueId?: number;
 	queueName?: string;
-	/** Exact path to return to the queue detail page (e.g. `/queue-management/24`). */
 	queueDetailPath?: string;
 };
 
@@ -70,7 +68,6 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const canWrite = can('schedules_write');
 	const canReadQueueManagement = can('queue_management_read');
 	const canReadSchedules = can('schedules_read');
-	// can create token
 	const canCreateToken = can('token_users_write');
 
 	const entryFrom = useMemo((): ScheduleDetailEntryFrom => {

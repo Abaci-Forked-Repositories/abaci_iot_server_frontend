@@ -6,7 +6,7 @@ import Button from '../../../bootstrap/Button';
 import Dropdown, { DropdownMenu, DropdownToggle } from '../../../bootstrap/Dropdown';
 import { CalendarTodayButton, getLabel, getUnitType } from '../../../extras/calendarHelper';
 import Icon from '../../../icon/Icon';
-import Tooltips from '../../../bootstrap/Tooltips';
+import Tooltip from '@mui/material/Tooltip';
 import type { QueueSchedule } from '../../../../services/queueManagementApi';
 import { schedulesApi } from '../../../../services/queueManagementApi';
 import ScheduleFormModal, {
@@ -30,12 +30,6 @@ export interface QueueScheduleEvent {
 	token_limit?: number;
 	queue_id?: number;
 	status?: 'scheduled' | 'running' | 'onhold' | 'completed' | 'canceled';
-	token_counts?: {
-		active?: number;
-		waiting?: number;
-		completed?: number;
-		total?: number;
-	};
 }
 
 interface ScheduleCalendarProps {
@@ -107,16 +101,149 @@ function isWithinDayRange(eventStart: Date, eventEnd: Date, selectedDate: Date) 
 	return start.isBefore(dayEnd) && end.isAfter(dayStart);
 }
 
-function formatTimeRange(start: Date, end: Date) {
-	return `${dayjs(start).format('hh:mm A')} - ${dayjs(end).format('hh:mm A')}`;
+function formatScheduleStartLabel(start: Date) {
+	return dayjs(start).format('DD MMM YYYY, hh:mm A');
+}
+
+function formatScheduleEndLabel(end: Date) {
+	return dayjs(end).format('DD MMM YYYY, hh:mm A');
 }
 
 function formatDateTimeRange(start: Date, end: Date) {
-	return `${dayjs(start).format('DD MMM YYYY, hh:mm A')} - ${dayjs(end).format('DD MMM YYYY, hh:mm A')}`;
+	return `${formatScheduleStartLabel(start)} – ${formatScheduleEndLabel(end)}`;
 }
 
-function getScheduleName(event: QueueScheduleEvent) {
-	return event.title?.trim() || event.description?.trim() || 'Schedule';
+function getScheduleEventLabels(
+	event: QueueScheduleEvent,
+	showStartLabel: boolean,
+	showEndLabel: boolean,
+): { startLabel: string; endLabel: string } {
+	const range = formatDateTimeRange(event.start, event.end);
+	if (!showStartLabel && !showEndLabel) return { startLabel: '', endLabel: '' };
+	if (showStartLabel && showEndLabel) return { startLabel: '', endLabel: range };
+	if (showStartLabel) return { startLabel: range, endLabel: '' };
+	return { startLabel: '', endLabel: range };
+}
+
+function formatScheduleStatusLabel(status?: QueueScheduleEvent['status']) {
+	if (!status) return 'unknown';
+	if (status === 'onhold') return 'on hold';
+	return status;
+}
+
+function getScheduleTooltipTitle(event: QueueScheduleEvent) {
+	return (
+		<div className='queue-schedule-tooltip-card'>
+			<div className='queue-schedule-tooltip-title'>Schedule</div>
+			<div className='queue-schedule-tooltip-time'>
+				Start: {formatScheduleStartLabel(event.start)}
+			</div>
+			<div className='queue-schedule-tooltip-time'>End: {formatScheduleEndLabel(event.end)}</div>
+			<div className='queue-schedule-tooltip-status text-capitalize'>
+				Status: {formatScheduleStatusLabel(event.status)}
+			</div>
+		</div>
+	);
+}
+
+function isDayWithinSegment(day: dayjs.Dayjs, segmentStart: dayjs.Dayjs, segmentEnd: dayjs.Dayjs) {
+	return !day.isBefore(segmentStart, 'day') && !day.isAfter(segmentEnd, 'day');
+}
+
+/**
+ * Month view: show the label at the true schedule start. For cross-month schedules that
+ * continue into a new month, repeat only on the week row containing the 1st — unless
+ * the schedule also ends in that month (then the label appears on the end row only).
+ */
+function shouldShowScheduleEventTitle(
+	event: QueueScheduleEvent,
+	continuesPrior: boolean,
+	slotStart: Date,
+	slotEnd: Date | undefined,
+	visibleMonth: Date,
+): boolean {
+	if (!continuesPrior) return true;
+
+	const monthStart = dayjs(visibleMonth).startOf('month');
+	const monthEnd = dayjs(visibleMonth).endOf('month');
+	const eventStart = dayjs(event.start).startOf('day');
+	const eventEnd = dayjs(event.end).startOf('day');
+	const segmentStart = dayjs(slotStart).startOf('day');
+	const segmentEnd = dayjs(slotEnd ?? slotStart).startOf('day');
+
+	// Row wrap within the same month (e.g. Jun 3–13 second row) — no repeat label.
+	if (!eventStart.isBefore(monthStart, 'day')) return false;
+
+	const endsInVisibleMonth =
+		!eventEnd.isBefore(monthStart, 'day') && !eventEnd.isAfter(monthEnd, 'day');
+	const spansDifferentMonths =
+		eventStart.month() !== eventEnd.month() || eventStart.year() !== eventEnd.year();
+
+	// End month: label only on the last segment, not at the 1st of the month.
+	if (endsInVisibleMonth && spansDifferentMonths) return false;
+
+	// Continues past this month — label the segment that contains the month's first day.
+	return isDayWithinSegment(monthStart, segmentStart, segmentEnd);
+}
+
+function ScheduleEventContent({
+	event,
+	startLabel,
+	endLabel,
+	actions,
+}: {
+	event: QueueScheduleEvent;
+	startLabel: string;
+	endLabel: string;
+	actions?: React.ReactNode;
+}) {
+	const tooltipProps = {
+		title: getScheduleTooltipTitle(event),
+		followCursor: true,
+		enterDelay: 150,
+		leaveDelay: 50,
+		slotProps: {
+			popper: {
+				className: 'queue-schedule-tooltip',
+				sx: { pointerEvents: 'none' },
+			},
+			tooltip: {
+				sx: {
+					p: 0,
+					m: 0,
+					bgcolor: 'transparent',
+					boxShadow: 'none',
+					maxWidth: 'none',
+				},
+			},
+		},
+	} as const;
+
+	return (
+		<Tooltip {...tooltipProps}>
+			<div
+				className='d-flex align-items-center gap-1 w-100 min-w-0'
+				style={{ minHeight: '1.25em' }}>
+				{startLabel ? (
+					<span className='queue-schedule-event-title text-truncate flex-grow-1 min-w-0 text-start'>
+						{startLabel}
+					</span>
+				) : (
+					<span className='flex-grow-1 min-w-0' />
+				)}
+				{(endLabel || actions) && (
+					<div className='d-flex align-items-center gap-1 flex-shrink-0 ms-auto min-w-0'>
+						{endLabel && (
+							<span className='queue-schedule-event-title text-truncate queue-schedule-event-end-label'>
+								{endLabel}
+							</span>
+						)}
+						{actions}
+					</div>
+				)}
+			</div>
+		</Tooltip>
+	);
 }
 
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
@@ -240,44 +367,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 		setCreateInitialStart(toDateTimeLocalValue(start));
 		setCreateInitialEnd(toDateTimeLocalValue(end));
 		setScheduleModalOpen(true);
-	};
-
-	const ScheduleEventContent = ({
-		event,
-		title,
-		actions,
-	}: {
-		event: QueueScheduleEvent;
-		title?: string;
-		actions?: React.ReactNode;
-	}) => {
-		const counts = event.token_counts || {};
-		const tooltipCard = (
-			<div className='queue-schedule-tooltip-card'>
-				<div className='queue-schedule-tooltip-title'>Schedule</div>
-				<div className='queue-schedule-tooltip-time'>{formatTimeRange(event.start, event.end)}</div>
-				<div className='queue-schedule-tooltip-status text-capitalize'>
-					Status: {event.status ?? 'unknown'}
-				</div>
-				<div className='queue-schedule-tooltip-stats'>
-					<span>Active: {counts.active ?? 0}</span>
-					<span>Waiting: {counts.waiting ?? 0}</span>
-					<span>Completed: {counts.completed ?? 0}</span>
-					<span>Total: {counts.total ?? 0}</span>
-				</div>
-			</div>
-		);
-
-		return (
-			<div className='d-flex align-items-center justify-content-between gap-1 w-100 min-w-0'>
-				<Tooltips title={tooltipCard} className='queue-schedule-tooltip flex-grow-1 min-w-0' placement='top'>
-					<span className='queue-schedule-event-title text-truncate d-block'>
-						{title || getScheduleName(event)}
-					</span>
-				</Tooltips>
-				{actions}
-			</div>
-		);
 	};
 
 	if (!canReadSchedule) {
@@ -459,20 +548,47 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 						}}
 						tooltipAccessor={() => ''}
 						components={{
-							event: ({ event, title }) => {
+							event: ({
+								event,
+								continuesPrior = false,
+								continuesAfter = false,
+								slotStart,
+								slotEnd,
+							}) => {
 								const ev = event as QueueScheduleEvent;
 								const sid = Number(ev.id);
 								const rec = scheduleRecords?.find((s) => s.id === sid);
-								const showEdit =
+								const canEditSchedule =
 									canWrite &&
 									rec != null &&
 									isScheduleMetadataEditable(rec.status);
+								const isMonthView = viewMode === Views.MONTH;
+								const showTitle =
+									!isMonthView ||
+									(slotStart != null &&
+										shouldShowScheduleEventTitle(
+											ev,
+											continuesPrior,
+											slotStart,
+											slotEnd,
+											date,
+										));
+								const isLastSegment = !isMonthView || !continuesAfter;
+								const showEndLabel = isLastSegment;
+								const showEditOnSegment = canEditSchedule && isLastSegment;
+								const { startLabel, endLabel } = getScheduleEventLabels(
+									ev,
+									showTitle,
+									showEndLabel,
+								);
+
 								return (
 									<ScheduleEventContent
 										event={ev}
-										title={String(title || '')}
+										startLabel={startLabel}
+										endLabel={endLabel}
 										actions={
-											showEdit ? (
+											showEditOnSegment ? (
 												<button
 													type='button'
 													className='btn btn-link btn-sm p-0 ms-1 flex-shrink-0 text-white shadow-none border-0 lh-1'

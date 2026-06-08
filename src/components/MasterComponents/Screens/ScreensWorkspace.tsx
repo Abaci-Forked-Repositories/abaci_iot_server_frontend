@@ -20,6 +20,7 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
 import usePermissions from '../../../hooks/usePermissions';
 import useDarkMode from '../../../hooks/useDarkMode';
+import Icon from '../../icon/Icon';
 
 const PAGE_LIMIT = 12;
 
@@ -240,9 +241,12 @@ const ScreensWorkspace: React.FC = () => {
 			/>
 			<Card stretch>
 				<CardHeader>
-					<CardLabel icon='SmartScreen'>
-						<CardTitle tag='h4' className='text-primary'>Screen Management</CardTitle>
-					</CardLabel>
+				<div className='d-flex align-items-center gap-3'>
+								<div className='media-files-title-text d-flex align-items-center gap-2'>
+									<Icon icon='SmartScreen' color='primary' size='2x' />
+									<span>Screen Management</span> 
+								</div>
+							</div>
 					<CardActions>
 						<div className='d-flex align-items-center gap-2 flex-wrap'>
 							<DropDownFilter
