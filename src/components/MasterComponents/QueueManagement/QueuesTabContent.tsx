@@ -10,7 +10,9 @@ import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import Button from '../../bootstrap/Button';
 import NoDataComponent from '../../CustomComponent/NoDataComponent';
-import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
+// import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
+import noqueue from '../../../assets/Lottie/noqueue.json';
+import { Player } from '@lottiefiles/react-lottie-player';
 
 const QUEUE_LIST_LIMIT = 12;
 
@@ -191,9 +193,9 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 		return (
 			<>
 				{drilldownBanner}
-				<div className='queue-empty-state'>
-					<NoDataComponent
-						lottie={noqueuelottie}
+				<div className='queue-empty-state d-flex flex-column align-items-center justify-content-center'>
+					{/* <NoDataComponent
+						lottie={noqueue}
 						description={
 							isGroupDrilldown
 								? searchTerm.trim()
@@ -203,7 +205,17 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 									? 'No queues found for this search.'
 									: 'No queues found.'
 						}
-					/>
+					/> */}
+
+					<Player
+					autoplay
+					loop
+					src={noqueue}
+					renderer='svg'
+					style={{ width: 560, height: 300, maxWidth: '100%' ,marginBottom: '5px'}}
+				/>
+				
+				  <p className='text-muted mb-0'>No queue found.</p>
 				</div>
 			</>
 		);

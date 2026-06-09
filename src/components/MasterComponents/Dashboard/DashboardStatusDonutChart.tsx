@@ -71,7 +71,7 @@ const DashboardStatusDonutChart: React.FC<DashboardStatusDonutChartProps> = ({
 	}, [data.labels, data.total]);
 
 	return (
-		<Card borderSize={1} className='h-100 shadow-sm'>
+		<Card  className='h-100 shadow-sm'>
 			<CardHeader>
 				<CardLabel icon={icon}>
 					<CardTitle tag='h5' className='mb-0'>

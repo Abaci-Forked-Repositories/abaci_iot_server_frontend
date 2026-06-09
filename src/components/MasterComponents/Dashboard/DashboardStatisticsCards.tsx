@@ -13,7 +13,7 @@ import DashboardStatusDonutChart from './DashboardStatusDonutChart';
 import DashboardSkeleton from '../../CustomComponent/Skeleton/DashboardSkeleton';
 
 const StatTile = ({ tile }: { tile: DashboardStatTile }) => (
-	<Card borderSize={1} className='h-100 w-100 shadow-sm'>
+	<Card  className='h-100 w-100 shadow-sm'>
 		<CardBody className='d-flex align-items-center gap-3 py-3 px-3'>
 			<div
 				className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
