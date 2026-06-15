@@ -578,6 +578,15 @@
 		}
 	}
 
+	// Template editor only: slight token bump (~5%) — live TV screens unchanged.
+	.tdc--fill .tdc__body .tdc__token {
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 3.35) * 1.05 * 1em),
+			calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
+			calc(44cqh)
+		);
+	}
+
 	// Template canvas: larger rings in small zones (same as live display)
 	.tdc--crimson-banner {
 		--tdc-cb-ring-scale: 1.24;
