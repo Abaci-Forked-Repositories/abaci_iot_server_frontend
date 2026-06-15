@@ -31,7 +31,6 @@ export interface Template {
 	thumbnail?: string | null;
 	html_content?: string;
 	file_type?: string;
-	is_favourite?: boolean;
 	created_at?: string;
 	updated_at?: string;
 	configuration?: Record<string, unknown> | string;
@@ -140,7 +139,6 @@ const mapAdminTemplateToTemplate = (item: AdminTemplateResponse): Template => {
 		thumbnail: resolveTemplateThumbnailUrl(item.thumbnail),
 		html_content: item.html_content,
 		configuration: config ?? item.configuration,
-		is_favourite: false,
 		created_at: item.created_at,
 		updated_at: item.updated_at,
 	};
@@ -181,9 +179,6 @@ export const templatesApi = {
 	},
 
 	delete: (id: number) => authAxios.delete(`api/administration/templates/${id}/`),
-
-	favourite: (id: number, is_favourite: boolean) =>
-		unwrap<Template>(authAxios.patch(`api/administration/templates/${id}/`, { is_favourite })),
 
 	/** Save layout HTML, configuration (zones + fabric_json), and thumbnail. */
 	saveContent: (id: number, formData: FormData) =>

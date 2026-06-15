@@ -1,6 +1,7 @@
 // Regal Court — imperial-court
 // Dark luxury broadcast UI with layered live motion
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+@import 'tdc-border-energy';
 
 @property --tdc-ic-angle {
 	syntax: '<angle>';
@@ -164,7 +165,7 @@
 
 // ─── Base card ───────────────────────────────────────────────────────────────
 .tdc--imperial-court {
-	--tdc-ic-separator-pos: 64%;
+	--tdc-col-separator-pos: 64%;
 	--tdc-ic-gold: rgba(255, 215, 0, 0.6);
 
 	--tdc-bg: linear-gradient(165deg, #02140f 0%, #010a08 55%, #000000 100%);
@@ -222,8 +223,7 @@
 	.tdc__header,
 	.tdc__body,
 	.tdc__footer,
-	.tdc__history,
-	.tdc-ic-separators {
+	.tdc__history {
 		position: relative;
 		z-index: 4;
 	}
@@ -371,21 +371,27 @@
 .tdc--imperial-court .tdc-ic-particles span:nth-child(13) { left: 30%; top: 86%; animation-delay: -7s; animation-duration: 21s; }
 .tdc--imperial-court .tdc-ic-particles span:nth-child(14) { left: 6%; top: 58%; animation-delay: -10s; animation-duration: 24s; }
 
-// Single static separator at column split (~64%)
-.tdc--imperial-court .tdc-ic-separators {
+// Column split separator (fill layout) — static gold/emerald track + trace sweep
+.tdc--imperial-court .tdc-col-separators {
+	display: none;
 	position: absolute;
 	inset: 0;
 	z-index: 3;
 	pointer-events: none;
 }
 
-.tdc--imperial-court .tdc-ic-separator {
+.tdc--fill.tdc--imperial-court .tdc-col-separators {
+	display: block;
+}
+
+.tdc--imperial-court .tdc-col-separator {
 	position: absolute;
 	top: 12%;
 	bottom: 12%;
-	left: var(--tdc-ic-separator-pos);
+	left: var(--tdc-col-separator-pos);
 	width: 2px;
 	transform: translateX(-50%);
+	overflow: hidden;
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
@@ -413,6 +419,38 @@
 		filter: blur(0.5px);
 		box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
 		animation: tdc-ic-divider-trace 10s ease-in-out infinite alternate;
+	}
+}
+
+// Active tokens top border — static line + horizontal beam overlay
+.tdc--imperial-court .tdc-ic-history-beam {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 2;
+	background: rgba(255, 215, 0, 0.12);
+
+	&::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 22%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 215, 0, 0.35) 35%,
+			rgba(255, 215, 0, 0.9) 50%,
+			rgba(140, 220, 175, 0.45) 58%,
+			rgba(255, 215, 0, 0.35) 65%,
+			transparent 100%
+		);
+		animation: tdc-ic-header-flow 10s linear infinite;
 	}
 }
 
@@ -527,6 +565,8 @@
 }
 
 .tdc--imperial-court .tdc__status-badge {
+	position: relative;
+	overflow: hidden;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
@@ -538,8 +578,33 @@
 	border-radius: 4px;
 	border: 1px solid rgba(255, 215, 0, 0.32);
 	background: rgba(0, 0, 0, 0.5);
-	animation: tdc-ic-badge-breathe 8s ease-in-out infinite;
 	transform-origin: center center;
+
+	// ::after reserved for status subtitle — border flow on ::before
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		border-radius: inherit;
+		padding: 1px;
+		background: conic-gradient(
+			from var(--tdc-be-angle, 0deg),
+			transparent 0deg,
+			rgba(255, 215, 0, 0.05) 58deg,
+			rgba(255, 215, 0, 0.5) 76deg,
+			rgba(100, 210, 155, 0.38) 84deg,
+			rgba(255, 215, 0, 0.06) 98deg,
+			transparent 180deg
+		);
+		-webkit-mask:
+			linear-gradient(#fff 0 0) content-box,
+			linear-gradient(#fff 0 0);
+		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+		animation: tdc-be-border-spin 10s linear infinite;
+	}
 }
 
 .tdc--imperial-court .tdc__status-icon {
@@ -547,6 +612,8 @@
 }
 
 .tdc--imperial-court .tdc__status-label {
+	position: relative;
+	z-index: 2;
 	font-size: 0.72em;
 	font-weight: 700;
 	letter-spacing: 0.06em;
@@ -555,6 +622,8 @@
 
 .tdc--imperial-court .tdc__status-badge::after {
 	display: block;
+	position: relative;
+	z-index: 2;
 	margin-top: 0.08em;
 	font-size: 0.28em;
 	font-weight: 500;
@@ -589,7 +658,7 @@
 // ─── Fill layout ─────────────────────────────────────────────────────────────
 .tdc--fill.tdc--imperial-court {
 	grid-template-columns: 1.6fr 0.9fr;
-	--tdc-ic-separator-pos: 64%;
+	--tdc-col-separator-pos: 64%;
 
 	.tdc__header {
 		grid-column: 1 / -1;
@@ -606,12 +675,24 @@
 }
 
 .tdc--fill.tdc--imperial-court.tdc--has-history {
-	.tdc-ic-separator {
-		bottom: 18%;
+	.tdc-col-separators {
+		clip-path: inset(0 0 calc(var(--tdc-history-row-max) + 2px) 0);
+	}
+
+	.tdc-col-separator {
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(255, 215, 0, 0.35) 8%,
+			rgba(255, 215, 0, 0.6) 50%,
+			rgba(60, 140, 95, 0.55) 50%,
+			rgba(255, 215, 0, 0.35) 72%,
+			transparent 82%
+		);
 	}
 
 	.tdc__history {
-		border-top: 1px solid rgba(255, 215, 0, 0.16);
+		border-top-color: rgba(255, 215, 0, 0.16);
 		background: rgba(0, 0, 0, 0.42);
 		z-index: 4;
 	}

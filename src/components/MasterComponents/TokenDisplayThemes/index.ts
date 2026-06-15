@@ -30,6 +30,14 @@ export {
 	computeFillZoneTextSizes,
 	getFillZoneTokenEm,
 	getFillZoneBodyColumnFraction,
+	resolvePipboyActiveTokensTickerClassOnly,
+	resolveUniformThemedActiveTokensTickerClass,
+	resolveUniformThemedActiveTokensTickerSlug,
+	templateUsesPipboyTerminal,
+	PIPBOY_ACTIVE_TOKENS_TICKER_CLASS,
+	VELVET_CROWN_ACTIVE_TOKENS_TICKER_CLASS,
+	SUN_BENTO_ACTIVE_TOKENS_TICKER_CLASS,
+	ROYAL_TICKET_ACTIVE_TOKENS_TICKER_CLASS,
 } from './tokenDisplayThemes';
 
 export type {

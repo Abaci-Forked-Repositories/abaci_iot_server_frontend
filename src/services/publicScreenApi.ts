@@ -281,6 +281,28 @@ export function getPublicQueueZoneDisplay(
 	return { queueName, servingPointName, tokenDisplay, tokenStatus };
 }
 
+/** Flatten `other_current_tokens` from all queues for the screen-level active-tokens ticker. */
+export function aggregateActiveTokensFromQueues(
+	queuesByUuid: Record<string, PublicQueueStatus> | undefined,
+): RecentQueueToken[] {
+	if (!queuesByUuid) return [];
+
+	const seen = new Set<string>();
+	const list: RecentQueueToken[] = [];
+
+	for (const queue of Object.values(queuesByUuid)) {
+		for (const token of queue.other_tokens ?? []) {
+			if (!token.token_display) continue;
+			const key = `${token.token_display}|${token.serving_point_name ?? ''}|${token.called_at ?? ''}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			list.push(token);
+		}
+	}
+
+	return list;
+}
+
 export interface PublicQueueStatusResponse {
 	count: number;
 	queues: PublicQueueStatus[];

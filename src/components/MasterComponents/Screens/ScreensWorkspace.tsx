@@ -249,6 +249,7 @@ const ScreensWorkspace: React.FC = () => {
 							</div>
 					<CardActions>
 						<div className='d-flex align-items-center gap-2 flex-wrap'>
+							{screenDisplayMode === 'screens' && (
 							<DropDownFilter
 								options={[
 									{ label: 'All', value: 'all' as const },
@@ -271,6 +272,8 @@ const ScreensWorkspace: React.FC = () => {
 								icon='FilterAlt'
 								buttonClassName='app-control-btn'
 							/>
+
+						)}
 							<SearchComponent
 								handleChange={setSearch}
 								value={search}

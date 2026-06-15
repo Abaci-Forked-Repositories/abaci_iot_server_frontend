@@ -160,6 +160,8 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							subtitle={previewSubtitle}
 							tokenDisplay={previewTokenDisplay}
 							status={previewStatus}
+							fillContainer
+							previewMode
 						/>
 					</div>
 				</div>

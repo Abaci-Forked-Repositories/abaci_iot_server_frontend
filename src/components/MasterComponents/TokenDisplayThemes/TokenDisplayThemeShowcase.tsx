@@ -104,6 +104,8 @@ const TokenDisplayThemeShowcase: React.FC<TokenDisplayThemeShowcaseProps> = ({
 									subtitle={DEMO_SUBTITLE}
 									tokenDisplay={demoToken}
 									status={demoStatus}
+									fillContainer
+									previewMode
 								/>
 							</div>
 							{showLabels && (

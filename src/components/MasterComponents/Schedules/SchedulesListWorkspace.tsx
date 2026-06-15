@@ -16,7 +16,8 @@ import {
 import QueueManagementSkeleton from '../../CustomComponent/Skeleton/QueueManagementSkeleton';
 import ScheduleCardTile from './ScheduleCardTile';
 import DateRangeFilter from '../../CustomComponent/Filters/DateRangeFilterCustom';
-
+import { Player } from '@lottiefiles/react-lottie-player';
+import pendingLottie from '../../../assets/Lottie/no-schedules.json';
 export type ScheduleListDateSelection = {
 	selection: {
 		startDate: Date;
@@ -176,18 +177,27 @@ const SchedulesListWorkspace: React.FC = () => {
 					<QueueManagementSkeleton count={8} />
 				) : (
 					<div className='queue-cards-scroll' onScroll={handleScroll}>
-						<Row className='g-3 mx-0 pt-1'>
-							{schedules.map((sch) => (
-								<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={sch.id}>
-									<ScheduleCardTile schedule={sch} onSelect={handleOpenSchedule} />
-								</Col>
-							))}
-							{!schedules.length && (
-								<Col xs={12} className='text-center text-muted py-4'>
-									No schedules found for the selected dates.
-								</Col>
-							)}
-						</Row>
+						{!schedules.length ? (
+							<div className='queue-empty-state'>
+								<div className='tpl-empty tpl-empty--compact'>
+									<Player
+										src={pendingLottie}
+										autoplay
+										loop
+										style={{ width: 460, height: 280, maxWidth: '100%' }}
+									/>
+									<h6 className='tpl-empty-title'>No schedules found</h6>
+								</div>
+							</div>
+						) : (
+							<Row className='g-3 mx-0 pt-1'>
+								{schedules.map((sch) => (
+									<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={sch.id}>
+										<ScheduleCardTile schedule={sch} onSelect={handleOpenSchedule} />
+									</Col>
+								))}
+							</Row>
+						)}
 						{isLoadingMore && (
 							<div className='py-3'>
 								<QueueManagementSkeleton count={4} />

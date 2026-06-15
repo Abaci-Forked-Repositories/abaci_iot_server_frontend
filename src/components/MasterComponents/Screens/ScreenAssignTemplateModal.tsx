@@ -102,7 +102,6 @@ const ScreenAssignTemplateModal: React.FC<Props> = ({
 										onOpen={handleToggleSelect}
 										onToggleSelect={handleToggleSelect}
 										onDelete={noop}
-										onToggleFavourite={noop}
 									/>
 								))}
 							</div>

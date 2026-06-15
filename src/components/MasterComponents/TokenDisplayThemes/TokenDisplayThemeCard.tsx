@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	computeFillZoneSplitBaseFontSize,
@@ -12,7 +12,16 @@ import {
 } from './tokenDisplayThemes';
 import type { RecentQueueToken } from '../../../services/publicScreenApi';
 import ImperialCourtBackdrop from './ImperialCourtBackdrop';
+import TokenDisplayColumnSeparator from './TokenDisplayColumnSeparator';
 import ArcticGlassBackdrop from './ArcticGlassBackdrop';
+import VelvetCrownBackdrop from './VelvetCrownBackdrop';
+import SunBentoCard from './SunBentoCard';
+import RoyalTicketCard from './RoyalTicketCard';
+import {
+	PipboyTerminalBackdropLayer,
+	PipboyTerminalClockRow,
+	PipboyTerminalToken,
+} from './PipboyTerminalCard';
 
 export interface TokenDisplayThemeCardProps {
 	queueName?: string;
@@ -49,6 +58,9 @@ export interface TokenDisplayThemeCardProps {
 
 	/** Show called-at time on mini cards (off in template editor preview). */
 	showHistoryTime?: boolean;
+
+	/** Template editor / theme picker — flat token numeral without glow panel. */
+	previewMode?: boolean;
 }
 
 /** Short counter label: "Counter 03" → "03", "COUNTER 4" → "04". */
@@ -66,6 +78,10 @@ function fmtTime(iso: string | undefined): string {
 	} catch { return iso; }
 }
 
+function historyTokenKey(t: RecentQueueToken): string {
+	return `${t.token_display}|${t.serving_point_name ?? ''}|${t.called_at ?? ''}`;
+}
+
 const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	queueName,
 	subtitle,
@@ -79,8 +95,13 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	backgroundColor,
 	recentTokens,
 	showHistoryTime = true,
+	previewMode = false,
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
+	const seenHistoryKeysRef = useRef(new Set<string>());
+	const [enteringHistoryKeys, setEnteringHistoryKeys] = useState<ReadonlySet<string>>(
+		() => new Set(),
+	);
 
 	const appearance = useMemo(
 		() =>
@@ -99,7 +120,10 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isModernQueueBoard = resolved.themeClass === 'tdc--crimson-banner';
 	const isImperialCourt = resolved.themeClass === 'tdc--imperial-court';
 	const isArcticGlass = resolved.themeClass === 'tdc--arctic-white';
-	const showEnergyDivider = fillContainer && (isDigitalCrimson || isOnyxGold);
+	const isPipboyTerminal = resolved.themeClass === 'tdc--pipboy-terminal';
+	const isVelvetCrown = resolved.themeClass === 'tdc--velvet-crown';
+	const isSunBento = resolved.themeClass === 'tdc--sun-bento';
+	const isRoyalTicket = resolved.themeClass === 'tdc--royal-ticket';
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
@@ -120,6 +144,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		fillContainer ? 'tdc--fill' : '',
 		hasHistory ? 'tdc--has-history' : '',
 		hasHistory && !useHistoryMarquee ? 'tdc--history-static' : '',
+		previewMode ? 'tdc--preview' : '',
 		`tdc--status-${statusConfig.modifier}`,
 		className,
 	]
@@ -174,6 +199,35 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		};
 	}, [fillContainer, displayToken, resolved.themeClass]);
 
+	useEffect(() => {
+		if (!recentTokens?.length) return;
+
+		const added: string[] = [];
+		for (const token of recentTokens) {
+			const key = historyTokenKey(token);
+			if (seenHistoryKeysRef.current.has(key)) continue;
+			seenHistoryKeysRef.current.add(key);
+			added.push(key);
+		}
+
+		if (!added.length) return;
+
+		setEnteringHistoryKeys((prev) => {
+			const next = new Set(prev);
+			added.forEach((key) => next.add(key));
+			return next;
+		});
+	}, [recentTokens]);
+
+	const clearHistoryEnter = useCallback((key: string) => {
+		setEnteringHistoryKeys((prev) => {
+			if (!prev.has(key)) return prev;
+			const next = new Set(prev);
+			next.delete(key);
+			return next;
+		});
+	}, []);
+
 	// Marquee: double list for seamless scroll. Fewer than 5 tokens: show once, static + left-aligned.
 	const historyDisplayTokens = useMemo(() => {
 		if (!recentTokens?.length) return [];
@@ -184,62 +238,81 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		<div ref={rootRef} className={rootClasses} style={{ ...inlineStyle, ...style }}>
 			{isImperialCourt && <ImperialCourtBackdrop />}
 			{isArcticGlass && <ArcticGlassBackdrop />}
-			{isArcticGlass && (
-				<div className='tdc-aw-divider' aria-hidden='true'>
-					<span />
-				</div>
-			)}
-			{showEnergyDivider && (
-				<div className='tdc-be-divider' aria-hidden='true'>
-					<span />
-				</div>
+			{isPipboyTerminal && <PipboyTerminalBackdropLayer />}
+			{isVelvetCrown && <VelvetCrownBackdrop />}
+			{(isOnyxGold || isArcticGlass || isImperialCourt) && fillContainer && (
+				<TokenDisplayColumnSeparator />
 			)}
 
 			<div className='tdc__glow' aria-hidden='true' />
 
-			<div className='tdc__header'>
-				{showHeaderBeam && (
-					<div
-						className={
-							isImperialCourt
-								? 'tdc-ic-header-beam'
-								: isArcticGlass
-									? 'tdc-aw-header-beam'
-									: 'tdc-be-header-beam'
-						}
-						aria-hidden='true'
-					/>
-				)}
-				{queueName ? (
-					<span className='tdc__queue-name'>{queueName}</span>
-				) : (
-					<span className='tdc__queue-name tdc__queue-name--empty' aria-hidden='true' />
-				)}
-			</div>
-
-			<div className='tdc__body'>
-				{isModernQueueBoard && (
-					<div className='tdc-cb-circles' aria-hidden='true'>
-						<div className='tdc-cb-circle tdc-cb-circle--1' />
-						<div className='tdc-cb-circle tdc-cb-circle--2' />
-						<div className='tdc-cb-circle tdc-cb-circle--3' />
-						<div className='tdc-cb-circle tdc-cb-circle--dots' />
+			{isSunBento ? (
+				<SunBentoCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+				/>
+			) : isRoyalTicket ? (
+				<RoyalTicketCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+				/>
+			) : (
+				<>
+					<div className='tdc__header'>
+						{showHeaderBeam && (
+							<div
+								className={
+									isImperialCourt
+										? 'tdc-ic-header-beam'
+										: isArcticGlass
+											? 'tdc-aw-header-beam'
+											: 'tdc-be-header-beam'
+								}
+								aria-hidden='true'
+							/>
+						)}
+						{queueName ? (
+							<span className='tdc__queue-name'>{queueName}</span>
+						) : (
+							<span className='tdc__queue-name tdc__queue-name--empty' aria-hidden='true' />
+						)}
 					</div>
-				)}
-				{subtitle && <div className='tdc__subtitle'>{subtitle}</div>}
-				<div className='tdc__token' aria-label={`Token ${displayToken}`}>
-					{displayToken}
-				</div>
-			</div>
 
-			<div className='tdc__footer'>
-				<span className={`tdc__status-badge tdc__status-badge--${statusConfig.modifier}`}>
-					<span className='tdc__status-icon' aria-hidden='true'>
-						{isImperialCourt || isArcticGlass ? null : statusConfig.icon}
-					</span>
-					<span className='tdc__status-label'>{statusConfig.label}</span>
-				</span>
-			</div>
+					{isPipboyTerminal && <PipboyTerminalClockRow fillContainer={fillContainer} />}
+
+					<div className='tdc__body'>
+						{isModernQueueBoard && (
+							<div className='tdc-cb-circles' aria-hidden='true'>
+								<div className='tdc-cb-circle tdc-cb-circle--1' />
+								<div className='tdc-cb-circle tdc-cb-circle--2' />
+								<div className='tdc-cb-circle tdc-cb-circle--3' />
+								<div className='tdc-cb-circle tdc-cb-circle--dots' />
+							</div>
+						)}
+						{subtitle && <div className='tdc__subtitle'>{subtitle}</div>}
+						<div className='tdc__token' aria-label={`Token ${displayToken}`}>
+							{isPipboyTerminal ? (
+								<PipboyTerminalToken value={displayToken} />
+							) : (
+								displayToken
+							)}
+						</div>
+					</div>
+
+					<div className='tdc__footer'>
+						<span className={`tdc__status-badge tdc__status-badge--${statusConfig.modifier}`}>
+							<span className='tdc__status-icon' aria-hidden='true'>
+								{isImperialCourt || isArcticGlass || isVelvetCrown ? null : statusConfig.icon}
+							</span>
+							<span className='tdc__status-label'>{statusConfig.label}</span>
+						</span>
+					</div>
+				</>
+			)}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
 			{hasHistory && historyDisplayTokens.length > 0 && (
@@ -247,6 +320,10 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'
 					style={{ '--tdc-history-count': activeTokenCount } as React.CSSProperties}>
+					{isDigitalCrimson && <div className='tdc-dc-history-beam' aria-hidden='true' />}
+					{isOnyxGold && <div className='tdc-og-history-beam' aria-hidden='true' />}
+					{isArcticGlass && <div className='tdc-aw-history-beam' aria-hidden='true' />}
+					{isImperialCourt && <div className='tdc-ic-history-beam' aria-hidden='true' />}
 					<div className='tdc__history-label' aria-hidden>
 						<span className='tdc__history-label-divider' />
 						<span className='tdc__history-label-text'>
@@ -259,11 +336,23 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						<div className='tdc__history-scroll'>
 							{historyDisplayTokens.map((t, i) => {
 								const counter = shortCounterLabel(t.serving_point_name);
+								const tokenKey = historyTokenKey(t);
+								const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+								const isEntering =
+									!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
 								return (
 									<div
-										key={`${t.token_display}-${t.serving_point_name ?? ''}-${i}`}
-										className='tdc__history-card'
-										aria-hidden={useHistoryMarquee && i >= activeTokenCount}>
+										key={`${tokenKey}-${i}`}
+										className={[
+											'tdc__history-card',
+											isEntering ? 'tdc__history-card--enter' : '',
+										]
+											.filter(Boolean)
+											.join(' ')}
+										aria-hidden={isMarqueeDuplicate}
+										onAnimationEnd={() => {
+											if (isEntering) clearHistoryEnter(tokenKey);
+										}}>
 										<span className='tdc__history-token'>{t.token_display}</span>
 										{counter && (
 											<>

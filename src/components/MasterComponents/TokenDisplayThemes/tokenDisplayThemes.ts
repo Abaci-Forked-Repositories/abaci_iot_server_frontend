@@ -18,6 +18,10 @@
  *   crimson-banner   — modern queue board (dark navy, rotating rings, glass status card)
  *   imperial-court   — dark luxury broadcast UI with wireframe + gold separators
  *   arctic-white     — premium glassmorphism panel with flowing border energy
+ *   pipboy-terminal  — retro CRT terminal with scanlines, flip digits, and green glow
+ *   velvet-crown     — royal burgundy lacquer with champagne gold emboss
+ *   sun-bento        — neo-brutalist cream card with bold corners and lightning accent
+ *   royal-ticket     — perforated royal ticket with gold grid and barcode stub
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -29,6 +33,10 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'crimson-banner',
 	'imperial-court',
 	'arctic-white',
+	'pipboy-terminal',
+	'velvet-crown',
+	'sun-bento',
+	'royal-ticket',
 ] as const;
 
 export type ZoneDisplayThemeId = (typeof ZONE_DISPLAY_THEME_IDS)[number];
@@ -63,14 +71,15 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 	'digital-crimson': {
 		id: 'digital-crimson',
 		label: 'Digital Crimson',
-		description: 'Dark crimson with scan-line animation and split token/status layout',
+		description:
+			'Dark crimson with scan-line animation, header beam, and split token/status layout',
 		textColor: 'light',
 		previewGradient: 'linear-gradient(145deg, #6d0b0b 0%, #3a0404 55%, #180000 100%)',
 	},
 	'onyx-gold': {
 		id: 'onyx-gold',
 		label: 'Onyx Gold',
-		description: 'Pure black with liquid-gold token — luxury premium',
+		description: 'Pure black with liquid-gold token, header beam, and animated gold column separator',
 		textColor: 'light',
 		previewGradient:
 			'linear-gradient(180deg, #e8c96a 0%, #d4af37 12%, #4a3d12 32%, #1a1200 58%, #0a0800 100%)',
@@ -86,7 +95,8 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 	'imperial-court': {
 		id: 'imperial-court',
 		label: 'Regal Court',
-		description: 'Dark luxury broadcast board with wireframe grid, ambient particles, and gold accents',
+		description:
+			'Dark luxury broadcast board with header beam, animated column separator, status border flow, and active-tokens line sweep',
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 50% 38%, rgba(80, 200, 150, 0.5) 0%, rgba(12, 72, 52, 0.85) 38%, #02140f 72%, #010806 100%)',
@@ -94,10 +104,39 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 	'arctic-white': {
 		id: 'arctic-white',
 		label: 'Glass Panel',
-		description: 'Premium glassmorphism with graphite backdrop, frosted panels, and flowing white border energy',
+		description:
+			'Premium glassmorphism with header beam, animated column separator, status border flow, and active-tokens line sweep',
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.42) 0%, rgba(200, 210, 220, 0.18) 32%, #3a3f45 52%, #141618 100%)',
+	},
+	'pipboy-terminal': {
+		id: 'pipboy-terminal',
+		label: 'Pipboy Terminal',
+		description: 'Retro futuristic fallout inspired terminal with CRT scanlines and green glow',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(135deg, #020a02 0%, #001a00 100%)',
+	},
+	'velvet-crown': {
+		id: 'velvet-crown',
+		label: 'Velvet Crown',
+		description: 'Royal burgundy lacquer with champagne gold emboss and glossy shimmer',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(155deg, #3a1228 0%, #1a0a12 55%, #0e0509 100%)',
+	},
+	'sun-bento': {
+		id: 'sun-bento',
+		label: 'Sun Bento',
+		description: 'Neo-brutalist cream card with bold corners, lightning accent, and playful hover lift',
+		textColor: 'dark',
+		previewGradient: 'linear-gradient(180deg, #fff492 0%, #ffe566 100%)',
+	},
+	'royal-ticket': {
+		id: 'royal-ticket',
+		label: 'Royal Pass',
+		description: 'Perforated royal ticket with gold grid, barcode stub, and 3D hover lift',
+		textColor: 'light',
+		previewGradient: 'linear-gradient(165deg, #1f1830 0%, #14101f 55%, #0a0812 100%)',
 	},
 };
 
@@ -119,6 +158,97 @@ export function isDisplayThemeId(
 	value: string | null | undefined,
 ): value is ZoneDisplayThemeId {
 	return parseDisplayThemeId(value) != null;
+}
+
+/** Active Tokens bar modifier — ONLY used when zone theme is pipboy-terminal. */
+export const PIPBOY_ACTIVE_TOKENS_TICKER_CLASS = 'pct-bar--pipboy';
+
+export const VELVET_CROWN_ACTIVE_TOKENS_TICKER_CLASS = 'pct-bar--velvet-crown';
+
+export const SUN_BENTO_ACTIVE_TOKENS_TICKER_CLASS = 'pct-bar--sun-bento';
+
+export const ROYAL_TICKET_ACTIVE_TOKENS_TICKER_CLASS = 'pct-bar--royal-ticket';
+
+const ACTIVE_TOKENS_TICKER_THEME_CLASSES: Partial<Record<ZoneDisplayThemeId, string>> = {
+	'pipboy-terminal': PIPBOY_ACTIVE_TOKENS_TICKER_CLASS,
+	'velvet-crown': VELVET_CROWN_ACTIVE_TOKENS_TICKER_CLASS,
+	'sun-bento': SUN_BENTO_ACTIVE_TOKENS_TICKER_CLASS,
+	'royal-ticket': ROYAL_TICKET_ACTIVE_TOKENS_TICKER_CLASS,
+};
+
+/** CSS modifier for ticker root (empty string when theme has no variant). */
+export function getActiveTokensTickerClassForTheme(
+	themeId: ZoneDisplayThemeId | null | undefined,
+): string {
+	if (!themeId) return '';
+	return ACTIVE_TOKENS_TICKER_THEME_CLASSES[themeId] ?? '';
+}
+
+/** First valid theme slug in list — used for screen-level ticker styling. */
+export function resolvePrimaryZoneDisplayTheme(
+	themeCandidates: Array<string | null | undefined>,
+): ZoneDisplayThemeId | null {
+	for (const raw of themeCandidates) {
+		const id = parseDisplayThemeId(raw);
+		if (id) return id;
+	}
+	return null;
+}
+
+/** Root CSS class(es) for ticker based on the template's primary zone theme. */
+export function resolveActiveTokensTickerClass(
+	themeCandidates: Array<string | null | undefined>,
+): string {
+	return getActiveTokensTickerClassForTheme(resolvePrimaryZoneDisplayTheme(themeCandidates));
+}
+
+/** True when any candidate resolves to the Pipboy Terminal zone theme. */
+export function templateUsesPipboyTerminal(
+	themeCandidates: Array<string | null | undefined>,
+): boolean {
+	return resolvePrimaryZoneDisplayTheme(themeCandidates) === 'pipboy-terminal';
+}
+
+export function resolvePipboyActiveTokensTickerClassOnly(
+	themeCandidates: Array<string | null | undefined>,
+): string {
+	return resolveUniformThemedActiveTokensTickerClass(themeCandidates);
+}
+
+/**
+ * When every themed zone shares one slug that has an Active Tokens bar variant, return its class.
+ * Returns '' for mixed templates or themes without a ticker variant.
+ */
+export function resolveUniformThemedActiveTokensTickerClass(
+	themeCandidates: Array<string | null | undefined>,
+): string {
+	const themes = themeCandidates
+		.map(parseDisplayThemeId)
+		.filter((t): t is ZoneDisplayThemeId => t != null);
+
+	if (!themes.length) return '';
+
+	const unique = Array.from(new Set(themes));
+	if (unique.length !== 1) return '';
+
+	return getActiveTokensTickerClassForTheme(unique[0]);
+}
+
+/** Theme slug when template uses a themed Active Tokens bar, else undefined. */
+export function resolveUniformThemedActiveTokensTickerSlug(
+	themeCandidates: Array<string | null | undefined>,
+): ZoneDisplayThemeId | undefined {
+	const themes = themeCandidates
+		.map(parseDisplayThemeId)
+		.filter((t): t is ZoneDisplayThemeId => t != null);
+
+	if (!themes.length) return undefined;
+
+	const unique = Array.from(new Set(themes));
+	if (unique.length !== 1) return undefined;
+
+	const slug = unique[0];
+	return getActiveTokensTickerClassForTheme(slug) ? slug : undefined;
 }
 
 /** Build appearance from saved zone fields (API / configuration.zones). */
@@ -337,6 +467,8 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 3.45;
 		case 'tdc--imperial-court':
 			return 3.4;
+		case 'tdc--pipboy-terminal':
+			return 3.1;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
 	}

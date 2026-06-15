@@ -8,10 +8,9 @@ interface TemplateCardTileProps {
 	thumbSize?: number;
 	onOpen: (template: Template) => void;
 	onDelete: (template: Template) => void;
-	onToggleFavourite: (template: Template) => void;
 	isSelected?: boolean;
 	onToggleSelect: (template: Template) => void;
-	/** Selection-only card (e.g. assign-to-screen modal) — no edit/delete/favourite actions */
+	/** Selection-only card (e.g. assign-to-screen modal) — no edit/delete actions */
 	pickMode?: boolean;
 	/** Display-only card (e.g. edit assignment modal) — no interactions */
 	readOnly?: boolean;
@@ -22,7 +21,6 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 	thumbSize = 138,
 	onOpen,
 	onDelete,
-	onToggleFavourite,
 	isSelected = false,
 	onToggleSelect,
 	pickMode = false,
@@ -102,19 +100,6 @@ const TemplateCardTile: React.FC<TemplateCardTileProps> = ({
 
 			{!pickMode && !readOnly && hovered && canWrite && (
 				<div className='tpl-top-actions'>
-					<button
-						type='button'
-						className='tpl-icon-btn tpl-icon-btn--favourite'
-						title={template.is_favourite ? 'Remove favourite' : 'Add favourite'}
-						onClick={(e) => {
-							e.stopPropagation();
-							onToggleFavourite(template);
-						}}>
-						<Icon
-							icon={template.is_favourite ? 'Star' : 'StarBorder'}
-							className='tpl-action-icon'
-						/>
-					</button>
 					<button
 						type='button'
 						className='tpl-icon-btn tpl-icon-btn--edit'

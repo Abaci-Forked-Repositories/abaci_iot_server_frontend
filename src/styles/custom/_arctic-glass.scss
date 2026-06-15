@@ -1,6 +1,7 @@
 // Glass Panel — theme id: arctic-white (slug preserved for DB compatibility)
 // Premium glassmorphism: graphite, silver, white illumination
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import 'tdc-border-energy';
 
 @property --tdc-aw-angle {
 	syntax: '<angle>';
@@ -139,7 +140,7 @@
 
 // ─── Base card ───────────────────────────────────────────────────────────────
 .tdc--arctic-white {
-	--tdc-aw-divider-pos: 64%;
+	--tdc-col-separator-pos: 64%;
 	--tdc-aw-glass: rgba(255, 255, 255, 0.06);
 	--tdc-aw-glass-border: rgba(255, 255, 255, 0.16);
 	--tdc-aw-silver: rgba(210, 218, 228, 0.85);
@@ -215,8 +216,7 @@
 	.tdc__header,
 	.tdc__body,
 	.tdc__footer,
-	.tdc__history,
-	.tdc-aw-divider {
+	.tdc__history {
 		position: relative;
 		z-index: 4;
 	}
@@ -302,41 +302,84 @@
 	pointer-events: none;
 }
 
-// ─── Animated vertical divider ───────────────────────────────────────────────
-.tdc--arctic-white .tdc-aw-divider {
+// ─── Column split separator (fill layout) — static track + trace sweep ─────────
+.tdc--arctic-white .tdc-col-separators {
+	display: none;
 	position: absolute;
-	top: 11%;
-	bottom: 14%;
-	left: var(--tdc-aw-divider-pos);
-	width: 1px;
-	transform: translateX(-50%);
+	inset: 0;
 	z-index: 3;
 	pointer-events: none;
+}
+
+.tdc--fill.tdc--arctic-white .tdc-col-separators {
+	display: block;
+}
+
+.tdc--arctic-white .tdc-col-separator {
+	position: absolute;
+	top: 12%;
+	bottom: 12%;
+	left: var(--tdc-col-separator-pos);
+	width: 2px;
+	transform: translateX(-50%);
+	overflow: hidden;
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
-		rgba(255, 255, 255, 0.12) 12%,
-		rgba(255, 255, 255, 0.18) 50%,
-		rgba(255, 255, 255, 0.12) 88%,
+		rgba(255, 255, 255, 0.22) 8%,
+		rgba(255, 255, 255, 0.45) 50%,
+		rgba(255, 255, 255, 0.22) 92%,
 		transparent 100%
 	);
+	box-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
 
-	span {
+	> span {
 		position: absolute;
 		left: 50%;
-		width: 3px;
+		width: 4px;
 		height: 22%;
 		transform: translateX(-50%);
 		background: linear-gradient(
 			180deg,
 			transparent 0%,
 			rgba(255, 255, 255, 0.75) 45%,
-			rgba(255, 255, 255, 0.75) 55%,
+			rgba(255, 255, 255, 0.65) 55%,
 			transparent 100%
 		);
 		filter: blur(0.5px);
-		box-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+		box-shadow: 0 0 10px rgba(255, 255, 255, 0.22);
 		animation: tdc-aw-divider-trace 10s ease-in-out infinite alternate;
+	}
+}
+
+// Active tokens top border — static line + horizontal beam overlay
+.tdc--arctic-white .tdc-aw-history-beam {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 2;
+	background: rgba(255, 255, 255, 0.08);
+
+	&::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 22%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.35) 35%,
+			rgba(255, 255, 255, 0.85) 50%,
+			rgba(255, 255, 255, 0.35) 65%,
+			transparent 100%
+		);
+		animation: tdc-aw-header-flow 10s linear infinite;
 	}
 }
 
@@ -430,6 +473,8 @@
 }
 
 .tdc--arctic-white .tdc__status-badge {
+	position: relative;
+	overflow: hidden;
 	flex-direction: column;
 	align-items: center;
 	gap: 0.2em;
@@ -438,14 +483,24 @@
 	padding: 0.52em 0.42em 0.48em;
 	border-radius: 10px;
 	background: rgba(255, 255, 255, 0.07);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	border: 1px solid rgba(255, 255, 255, 0.22);
 	backdrop-filter: blur(16px);
 	-webkit-backdrop-filter: blur(16px);
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.1),
 		0 4px 20px rgba(0, 0, 0, 0.35);
-	animation: tdc-aw-status-breathe 8s ease-in-out infinite;
 	transform-origin: center center;
+
+	@include tdc-outer-border-energy(
+		rgba(255, 255, 255, 0.42),
+		rgba(255, 255, 255, 0.04)
+	);
+}
+
+.tdc--arctic-white .tdc__status-icon,
+.tdc--arctic-white .tdc__status-label {
+	position: relative;
+	z-index: 2;
 }
 
 .tdc--arctic-white .tdc__status-icon {
@@ -590,11 +645,23 @@
 }
 
 .tdc--fill.tdc--arctic-white.tdc--has-history {
-	.tdc-aw-divider {
-		bottom: 18%;
+	.tdc-col-separators {
+		clip-path: inset(0 0 calc(var(--tdc-history-row-max) + 2px) 0);
+	}
+
+	.tdc-col-separator {
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.22) 8%,
+			rgba(255, 255, 255, 0.45) 50%,
+			rgba(255, 255, 255, 0.22) 72%,
+			transparent 82%
+		);
 	}
 
 	.tdc__history {
+		border-top-color: rgba(255, 255, 255, 0.12);
 		z-index: 4;
 	}
 }

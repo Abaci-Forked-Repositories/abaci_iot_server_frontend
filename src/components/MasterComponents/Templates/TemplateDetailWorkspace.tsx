@@ -149,31 +149,6 @@ function buildQueuesByName(queues: Queue[]): Map<string, Queue[]> {
 	return map;
 }
 
-function parseQueueRefsFromAttribute(attr: string): { ids: number[]; uuids: string[] } {
-	if (!attr?.trim()) return { ids: [], uuids: [] };
-
-	const ids: number[] = [];
-	const uuids: string[] = [];
-
-	attr
-		.split(',')
-		.map((part) => part.trim())
-		.filter(Boolean)
-		.forEach((part) => {
-			if (QUEUE_UUID_RE.test(part)) {
-				uuids.push(part);
-				return;
-			}
-			if (/^\d+$/.test(part)) {
-				const id = Number(part);
-				if (Number.isFinite(id) && id > 0) ids.push(id);
-			}
-		});
-
-	// Keep order; do not dedupe UUIDs (duplicate UUIDs can map to different queues).
-	return { ids, uuids };
-}
-
 function resolveQueueIdForUuid(
 	uuid: string,
 	chipName: string | undefined,
@@ -1685,6 +1660,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 								zones={canvasObjects}
 								queuesById={queuesById}
 								revision={overlayRevision}
+								configuration={templateDetails?.configuration ?? null}
+								htmlContent={templateDetails?.html_content ?? null}
 							/>
 						</div>
 						</PreviewTvFrame>

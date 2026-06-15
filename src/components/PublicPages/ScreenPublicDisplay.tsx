@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import TemplateFabricPreview from '../MasterComponents/Templates/TemplateFabricPreview';
+import ActiveTokensTicker from './ActiveTokensTicker';
+import { resolveUniformThemedActiveTokensTickerClass } from '../MasterComponents/TokenDisplayThemes/tokenDisplayThemes';
+import {
+	enrichParsedZonesWithConfiguration,
+	parseTemplateLayoutFromHtml,
+} from '../../utils/parseTemplateZones';
+import { resolveTemplateActiveTokensTickerSlug } from '../../utils/resolveTemplateTickerTheme';
 import type {
 	PublicQueueStatus,
 	PublicScreenInfo,
 	PublicScreenTemplate,
 	RecentQueueToken,
 } from '../../services/publicScreenApi';
+import { aggregateActiveTokensFromQueues } from '../../services/publicScreenApi';
 import { resolveMediaUrl } from '../../utils/resolveMediaUrl';
 
 interface ScreenPublicDisplayProps {
@@ -26,8 +34,42 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 	const htmlContent = template?.html_content?.trim() ?? '';
 	const backgroundUrl = resolveMediaUrl(screen.background_image);
 
+	const activeTokens = useMemo(
+		() => aggregateActiveTokensFromQueues(queuesByUuid),
+		[queuesByUuid],
+	);
+
+	const enrichedZones = useMemo(() => {
+		if (!htmlContent) return [];
+		const layout = parseTemplateLayoutFromHtml(htmlContent);
+		if (!layout?.zones.length) return [];
+		return enrichParsedZonesWithConfiguration(
+			layout.zones,
+			template?.configuration ?? null,
+		);
+	}, [htmlContent, template?.configuration]);
+
+	const tickerThemeSlug = useMemo(
+		() =>
+			resolveTemplateActiveTokensTickerSlug(
+				[],
+				template?.configuration ?? null,
+				enrichedZones,
+			),
+		[template?.configuration, enrichedZones],
+	);
+
+	const tickerThemeClass = useMemo(
+		() => resolveUniformThemedActiveTokensTickerClass(enrichedZones.map((z) => z.displayTheme)),
+		[enrichedZones],
+	);
+
+	const useThemedScreenTicker = Boolean(tickerThemeSlug);
+
 	return (
-		<div className='screen-public-root screen-public-root--fullscreen'>
+		<div
+			className='screen-public-root screen-public-root--fullscreen'
+			data-ticker-theme={useThemedScreenTicker ? tickerThemeSlug : undefined}>
 			{backgroundUrl && (
 				<div
 					className='screen-public-background'
@@ -37,17 +79,18 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 			)}
 			{htmlContent ? (
 				<div className='screen-public-template-layer'>
-			<TemplateFabricPreview
-					key={template?.screen_template_id ?? template?.id ?? 'template'}
-					className='screen-public-fabric-preview'
-					htmlContent={htmlContent}
-					configuration={template?.configuration ?? null}
-					orientation='landscape'
-					queuesByUuid={queuesByUuid}
-					recentByQueue={recentByQueue}
-					flicker={online}
-					fullScreen
-				/>
+					<TemplateFabricPreview
+						key={template?.screen_template_id ?? template?.id ?? 'template'}
+						className='screen-public-fabric-preview'
+						htmlContent={htmlContent}
+						configuration={template?.configuration ?? null}
+						orientation='landscape'
+						queuesByUuid={queuesByUuid}
+						recentByQueue={recentByQueue}
+						flicker={online}
+						fullScreen
+						suppressZoneHistory={useThemedScreenTicker}
+					/>
 				</div>
 			) : (
 				<div className='screen-public-fallback screen-public-fallback--over-bg'>
@@ -60,8 +103,11 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 					)}
 				</div>
 			)}
-	</div>
-);
+			{useThemedScreenTicker && activeTokens.length > 0 && (
+				<ActiveTokensTicker tokens={activeTokens} className={tickerThemeClass} />
+			)}
+		</div>
+	);
 };
 
 export default ScreenPublicDisplay;

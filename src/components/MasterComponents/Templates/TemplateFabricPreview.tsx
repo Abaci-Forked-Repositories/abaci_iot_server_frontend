@@ -37,6 +37,8 @@ export interface TemplateFabricPreviewProps {
 	className?: string;
 	/** Public signage view: fill the host, no TV bezel frame. Default keeps PreviewTvFrame. */
 	fullScreen?: boolean;
+	/** Hide per-zone history strip — use screen-level Active Tokens ticker instead. */
+	suppressZoneHistory?: boolean;
 }
 
 /** Map template logical coords → % of viewport (responsive to width and height). */
@@ -290,6 +292,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	flicker = false,
 	className = '',
 	fullScreen = false,
+	suppressZoneHistory = false,
 }) => {
 	const reactId = useId().replace(/:/g, '');
 	const canvasId = `tpl-fabric-preview-${reactId}`;
@@ -601,9 +604,11 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 					// Primary: live `other_current_tokens` returned by the API each poll.
 					// Fallback: frontend-tracked history keyed by queue UUID.
 					const zoneRecentTokens =
-						queue?.other_tokens?.length
+						!suppressZoneHistory && queue?.other_tokens?.length
 							? queue.other_tokens
-							: (queue?.uuid ? (recentByQueue[queue.uuid] ?? []) : []);
+							: !suppressZoneHistory && queue?.uuid
+								? (recentByQueue[queue.uuid] ?? [])
+								: [];
 					return (
 						<div
 							key={`${zone.name}-${index}`}

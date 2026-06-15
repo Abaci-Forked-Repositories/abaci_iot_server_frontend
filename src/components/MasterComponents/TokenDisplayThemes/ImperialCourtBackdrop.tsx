@@ -79,12 +79,6 @@ const ImperialCourtBackdrop: React.FC = () => (
 				<span key={i} />
 			))}
 		</div>
-
-		<div className='tdc-ic-separators'>
-			<span className='tdc-ic-separator'>
-				<span />
-			</span>
-		</div>
 	</div>
 );
 

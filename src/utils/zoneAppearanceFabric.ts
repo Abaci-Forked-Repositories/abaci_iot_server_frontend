@@ -34,12 +34,29 @@ export type FabricZoneOverlayRect = {
 	rx?: number;
 };
 
+/** Read theme slug from a Fabric zone rect (direct field or Fabric `.get()`). */
+export function readFabricRectDisplayTheme(rect: {
+	displayTheme?: string | null;
+	get?: (key: string) => unknown;
+}): string | null {
+	const direct = rect.displayTheme;
+	if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+	if (typeof rect.get === 'function') {
+		const fromGet = rect.get('displayTheme');
+		if (typeof fromGet === 'string' && fromGet.trim()) return fromGet.trim();
+	}
+
+	return null;
+}
+
 export function getZoneAppearanceFromRect(rect: {
 	displayTheme?: string | null;
 	zoneFillColor?: string | null;
 	fill?: string | null;
+	get?: (key: string) => unknown;
 }): ZoneDisplayAppearance {
-	const themeId = parseDisplayThemeId(rect.displayTheme);
+	const themeId = parseDisplayThemeId(readFabricRectDisplayTheme(rect));
 	if (themeId) return createThemeAppearance(themeId);
 
 	const fill = (rect.zoneFillColor ?? rect.fill ?? '').trim();
@@ -56,6 +73,10 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'crimson-banner': '#020817',
 		'imperial-court': '#02140f',
 		'arctic-white': '#0a0b0d',
+		'pipboy-terminal': '#020a02',
+		'velvet-crown': '#1a0a12',
+		'sun-bento': '#fff492',
+		'royal-ticket': '#14101f',
 	};
 	return fallbacks[themeId];
 }

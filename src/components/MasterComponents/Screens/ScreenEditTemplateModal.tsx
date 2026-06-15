@@ -87,7 +87,6 @@ const ScreenEditTemplateModal: React.FC<Props> = ({
 								onOpen={noop}
 								onToggleSelect={noop}
 								onDelete={noop}
-								onToggleFavourite={noop}
 							/>
 						</div>
 						<div className='screen-edit-template-fields'>

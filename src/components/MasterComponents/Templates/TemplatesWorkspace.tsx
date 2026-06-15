@@ -12,6 +12,7 @@ import TemplateCreateModal from './TemplateCreateModal';
 import pendingLottie from '../../../assets/Lottie/No-Data.json';
 import ThumbnailCardGridSkeleton from '../../CustomComponent/Skeleton/ThumbnailCardGridSkeleton';
 import usePermissions from '../../../hooks/usePermissions';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 const PAGE_LIMIT = 12;
 
@@ -33,15 +34,19 @@ const mockDeleteTemplatesApi = async (_ids: number[]) =>
 
 const TemplatesWorkspace: React.FC = () => {
 	const navigate = useNavigate();
+	const { showErrorNotification } = useToasterNotification();
 	const [templates, setTemplates] = useState<Template[]>([]);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const [hasMore, setHasMore] = useState(true);
+	const [loadFailed, setLoadFailed] = useState(false);
 	const offsetRef = useRef(0);
 
 	const [search, setSearch] = useState('');
 	const [searchApplied, setSearchApplied] = useState('');
-	const [error, setError] = useState('');
+
+	const showErrorNotificationRef = useRef(showErrorNotification);
+	showErrorNotificationRef.current = showErrorNotification;
 	const [thumbSize, setThumbSize] = useState(getStoredThumb);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -58,7 +63,7 @@ const TemplatesWorkspace: React.FC = () => {
 			const offset = reset ? 0 : offsetRef.current;
 			try {
 				if (!reset) setIsLoadingMore(true);
-				setError('');
+				if (reset) setLoadFailed(false);
 				const res = await templatesApi.list({
 					limit: PAGE_LIMIT,
 					offset,
@@ -69,9 +74,13 @@ const TemplatesWorkspace: React.FC = () => {
 				setTemplates((prev) => (reset ? pageRows : [...prev, ...pageRows]));
 				offsetRef.current = nextOffset;
 				setHasMore(nextOffset < (res.count ?? nextOffset));
-			} catch {
-				if (reset) setTemplates([]);
-				setError('Failed to load templates.');
+			} catch (error) {
+				if (reset) {
+					setTemplates([]);
+					setHasMore(false);
+					setLoadFailed(true);
+				}
+				showErrorNotificationRef.current(error);
 			} finally {
 				if (!reset) setIsLoadingMore(false);
 			}
@@ -99,13 +108,13 @@ const TemplatesWorkspace: React.FC = () => {
 
 	const handleScroll = useCallback(
 		(event: React.UIEvent<HTMLDivElement>) => {
-			if (initialLoading || isLoadingMore || !hasMore) return;
+			if (initialLoading || isLoadingMore || !hasMore || loadFailed) return;
 			const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
 			if (scrollTop + clientHeight >= scrollHeight - 100) {
 				void loadTemplates(false);
 			}
 		},
-		[hasMore, initialLoading, isLoadingMore, loadTemplates],
+		[hasMore, initialLoading, isLoadingMore, loadFailed, loadTemplates],
 	);
 
 	const runSearch = useCallback(() => {
@@ -135,28 +144,8 @@ const TemplatesWorkspace: React.FC = () => {
 			setSelectedIds((prev) => prev.filter((id) => id !== tpl.id));
 			offsetRef.current = 0;
 			await loadTemplates(true);
-		} catch {
-			setError('Failed to delete template.');
-		}
-	};
-
-	const handleToggleFavourite = async (tpl: Template) => {
-		const nextFavourite = !tpl.is_favourite;
-		setTemplates((prev) =>
-			prev.map((item) => (item.id === tpl.id ? { ...item, is_favourite: nextFavourite } : item)),
-		);
-		try {
-			const updated = await templatesApi.favourite(tpl.id, nextFavourite);
-			setTemplates((prev) =>
-				prev.map((item) => (item.id === tpl.id ? { ...item, ...updated } : item)),
-			);
-		} catch {
-			setTemplates((prev) =>
-				prev.map((item) =>
-					item.id === tpl.id ? { ...item, is_favourite: tpl.is_favourite } : item,
-				),
-			);
-			setError('Failed to update favourite.');
+		} catch (error) {
+			showErrorNotification(error);
 		}
 	};
 
@@ -187,8 +176,8 @@ const TemplatesWorkspace: React.FC = () => {
 			setSelectedIds([]);
 			offsetRef.current = 0;
 			await loadTemplates(true);
-		} catch {
-			setError('Failed to delete selected templates.');
+		} catch (error) {
+			showErrorNotification(error);
 		} finally {
 			setBulkDeleting(false);
 		}
@@ -264,8 +253,6 @@ const TemplatesWorkspace: React.FC = () => {
 				</CardHeader>
 
 				<CardBody>
-					{error && <div className='alert alert-warning mb-3'>{error}</div>}
-
 					{initialLoading ? (
 						<ThumbnailCardGridSkeleton
 							count={12}
@@ -275,12 +262,6 @@ const TemplatesWorkspace: React.FC = () => {
 						/>
 					) : !templates.length ? (
 						<div className='tpl-empty'>
-							<div className='tpl-empty-icon'>
-								<svg width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.2'>
-									<rect x='3' y='3' width='18' height='18' rx='2' />
-									<path d='M3 9h18M9 21V9' />
-								</svg>
-							</div>
 							<Player
 								src={pendingLottie}
 								autoplay
@@ -288,7 +269,6 @@ const TemplatesWorkspace: React.FC = () => {
 								style={{ width: 360, height: 200 }}
 							/>
 							<h6 className='tpl-empty-title'>No templates found</h6>
-							<p className='tpl-empty-sub'>Try a different search term.</p>
 						</div>
 					) : (
 						<div className='queue-cards-scroll' onScroll={handleScroll}>
@@ -300,7 +280,6 @@ const TemplatesWorkspace: React.FC = () => {
 										thumbSize={thumbSize}
 										onOpen={(t) => navigate(`/templates/${t.id}`, { state: t })}
 										onDelete={handleDelete}
-										onToggleFavourite={handleToggleFavourite}
 										isSelected={selectedIds.includes(tpl.id)}
 										onToggleSelect={toggleSelected}
 									/>
