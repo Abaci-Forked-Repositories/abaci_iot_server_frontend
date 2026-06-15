@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Queue } from '../../../services/queueManagementApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
+import {
+	zoneUsesScreenLevelActiveTokensTicker,
+	type ZoneDisplayThemeId,
+} from '../TokenDisplayThemes/tokenDisplayThemes';
 import ActiveTokensTicker from '../../PublicPages/ActiveTokensTicker';
 import {
 	type FabricZoneOverlayRect,
+	getThemedActiveTokensTickerHeight,
 	getZoneAppearanceFromRect,
 	getZoneOverlayBounds,
+	getZonesUnionBounds,
 } from '../../../utils/zoneAppearanceFabric';
-import {
-	resolveTemplateActiveTokensTickerClass,
-	resolveTemplateActiveTokensTickerSlug,
-} from '../../../utils/resolveTemplateTickerTheme';
+import { resolveTemplateActiveTokensTickerClass } from '../../../utils/resolveTemplateTickerTheme';
 import { parseTemplateLayoutFromHtml } from '../../../utils/parseTemplateZones';
 import type { RecentQueueToken } from '../../../services/publicScreenApi';
 
@@ -63,6 +66,43 @@ const MOCK_ACTIVE_TOKEN_POOL: Omit<RecentQueueToken, 'called_at'>[] = [
 	{ token_display: 'B007', serving_point_name: 'Counter 02' },
 ];
 
+function resolveEditorScreenTickerSlug(
+	zones: FabricZoneOverlayRect[],
+): ZoneDisplayThemeId | undefined {
+	const themeIds = zones
+		.map((rect) => getZoneAppearanceFromRect(rect).displayTheme)
+		.filter((themeId): themeId is ZoneDisplayThemeId => themeId != null);
+
+	if (!themeIds.length) return undefined;
+
+	const unique = Array.from(new Set(themeIds));
+	if (unique.length !== 1) return undefined;
+
+	const slug = unique[0];
+	return zoneUsesScreenLevelActiveTokensTicker(slug) ? slug : undefined;
+}
+
+function getZoneOpacity(rect: FabricZoneOverlayRect): number {
+	return typeof (rect as { opacity?: number }).opacity === 'number'
+		? (rect as { opacity: number }).opacity
+		: 1;
+}
+
+/** Opacity + border radius for the unified zone shell (themes 6–9). */
+function resolveZoneShellChrome(zones: FabricZoneOverlayRect[]): {
+	opacity: number;
+	borderRadius: number;
+} {
+	if (!zones.length) return { opacity: 1, borderRadius: 0 };
+	const opacities = zones.map(getZoneOpacity);
+	const opacity = opacities.every((o) => o === opacities[0]) ? opacities[0] : opacities[0];
+	const borderRadius = Math.max(
+		0,
+		...zones.map((rect) => getZoneOverlayBounds(rect).borderRadius),
+	);
+	return { opacity, borderRadius };
+}
+
 export interface TemplateZoneThemeOverlaysProps {
 	zones: FabricZoneOverlayRect[];
 	queuesById: Map<number, Queue>;
@@ -85,11 +125,24 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 	);
 
 	const tickerThemeSlug = useMemo(
-		() => resolveTemplateActiveTokensTickerSlug(zones, configuration, parsedHtmlZones),
-		[zones, configuration, parsedHtmlZones, revision],
+		() => resolveEditorScreenTickerSlug(zones),
+		[zones, revision],
 	);
 
 	const useThemedScreenTicker = Boolean(tickerThemeSlug);
+
+	const zonesUnion = useMemo(
+		() => getZonesUnionBounds(zones),
+		[zones, revision],
+	);
+
+	const tickerHeightPx = useMemo(
+		() =>
+			zonesUnion
+				? getThemedActiveTokensTickerHeight(zonesUnion.height, zonesUnion.width)
+				: 0,
+		[zonesUnion],
+	);
 
 	const tickerClassName = useMemo(() => {
 		if (!useThemedScreenTicker) return '';
@@ -141,6 +194,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		const appearance = getZoneAppearanceFromRect(rect);
 		if (appearance.mode === 'theme' && !appearance.displayTheme) return null;
 
+		const usesScreenTicker = zoneUsesScreenLevelActiveTokensTicker(appearance.displayTheme);
 		const bounds = getZoneOverlayBounds(rect);
 		const queueIds = Array.isArray(rect.queueIds) ? rect.queueIds : [];
 		const queueName =
@@ -148,26 +202,47 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			(Array.isArray(rect.queueChipNames) ? rect.queueChipNames[0] : null) ??
 			rect.name ??
 			'Queue';
-		const zoneOpacity = typeof (rect as any).opacity === 'number' ? (rect as any).opacity : 1;
 
 		return (
 			<div
 				key={rect.id ?? `${bounds.left}-${bounds.top}`}
-				className='tdc-zone-theme-overlay'
-				style={{
-					left: bounds.left,
-					top: bounds.top,
-					width: bounds.width,
-					height: bounds.height,
-					borderRadius: bounds.borderRadius,
-					opacity: zoneOpacity,
-				}}>
+				className={[
+					'tdc-zone-theme-overlay',
+					usesScreenTicker ? 'tdc-zone-theme-overlay--with-ticker' : '',
+					usesScreenTicker ? 'tdc-zone-theme-overlay--in-shell' : '',
+				]
+					.filter(Boolean)
+					.join(' ')}
+				style={
+					usesScreenTicker
+						? {
+								left: zonesUnion
+									? bounds.left - zonesUnion.left
+									: bounds.left,
+								top: zonesUnion ? bounds.top - zonesUnion.top : bounds.top,
+								width: bounds.width,
+								height: bounds.height,
+								boxSizing: 'border-box',
+								paddingBottom:
+									zones.length > 1 && tickerHeightPx > 0
+										? tickerHeightPx
+										: undefined,
+							}
+						: {
+								left: bounds.left,
+								top: bounds.top,
+								width: bounds.width,
+								height: bounds.height,
+								borderRadius: bounds.borderRadius,
+								opacity: getZoneOpacity(rect),
+							}
+				}>
 				<TokenDisplayThemeCard
 					appearance={appearance}
 					queueName={queueName}
-					tokenDisplay={useThemedScreenTicker ? previewToken : '05'}
+					tokenDisplay={usesScreenTicker ? previewToken : '05'}
 					status='waiting'
-					recentTokens={useThemedScreenTicker ? undefined : MOCK_RECENT_TOKENS}
+					recentTokens={usesScreenTicker ? undefined : MOCK_RECENT_TOKENS}
 					fillContainer
 					showHistoryTime={false}
 					previewMode
@@ -175,6 +250,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			</div>
 		);
 	});
+
+	const shellChrome = resolveZoneShellChrome(zones);
 
 	// Themes 1–5: in-zone active tokens + full canvas overlays (column separator, history beams).
 	if (!useThemedScreenTicker) {
@@ -185,22 +262,44 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		);
 	}
 
-	// Themes 6–9: screen-level themed Active Tokens bar; history lives in the bottom ticker.
+	// Themes 6–9: card + animated ticker inside one shell (opacity + border-radius apply to both).
 	return (
-		<div
-			className={[
-				'tdc-canvas-preview-stack',
-				`tdc-canvas-preview-stack--${tickerThemeSlug}-ticker`,
-			].join(' ')}
-			data-ticker-theme={tickerThemeSlug}>
-			<div className='tdc-zone-overlays' aria-hidden>
-				{zoneCards}
-			</div>
-			<ActiveTokensTicker
-				mockMode={false}
-				tokens={activeTokens}
-				className={tickerClassName}
-			/>
+		<div className='tdc-zone-overlays' aria-hidden>
+			{zonesUnion && (
+				<div
+					className={[
+						'tdc-zone-theme-shell',
+						zones.length === 1 ? 'tdc-zone-theme-shell--single' : 'tdc-zone-theme-shell--multi',
+						`tdc-zone-theme-shell--${tickerThemeSlug}`,
+					].join(' ')}
+					data-ticker-theme={tickerThemeSlug}
+					style={{
+						left: zonesUnion.left,
+						top: zonesUnion.top,
+						width: zonesUnion.width,
+						height: zonesUnion.height,
+						borderRadius: shellChrome.borderRadius,
+						opacity: shellChrome.opacity,
+					}}>
+					{zoneCards}
+					{tickerHeightPx > 0 && (
+						<div
+							className={[
+								'tdc-zone-ticker-anchor',
+								'tdc-zone-ticker-anchor--embedded',
+								`tdc-zone-ticker-anchor--${tickerThemeSlug}`,
+							].join(' ')}
+							style={{ height: tickerHeightPx }}
+							aria-hidden>
+							<ActiveTokensTicker
+								mockMode={false}
+								tokens={activeTokens}
+								className={tickerClassName}
+							/>
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 };

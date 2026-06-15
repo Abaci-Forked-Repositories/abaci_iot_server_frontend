@@ -1301,6 +1301,7 @@
 // ─── Pipboy · Active Tokens ticker (ONLY pipboy-terminal — not other themes) ─
 .pct-bar.pct-bar--pipboy,
 .tdc-canvas-preview-stack[data-ticker-theme='pipboy-terminal'] .pct-bar.pct-bar--active-tokens,
+.tdc-zone-ticker-anchor[data-ticker-theme='pipboy-terminal'] .pct-bar.pct-bar--active-tokens,
 .screen-public-root[data-ticker-theme='pipboy-terminal'] .pct-bar.pct-bar--active-tokens {
 	--pip-green: #1aff40;
 	--pip-glow: rgba(26, 255, 64, 0.6);
@@ -1451,6 +1452,7 @@
 // ─── Velvet Crown · Active Tokens ticker (ONLY velvet-crown — not other themes) ─
 .pct-bar.pct-bar--velvet-crown,
 .tdc-canvas-preview-stack[data-ticker-theme='velvet-crown'] .pct-bar.pct-bar--active-tokens,
+.tdc-zone-ticker-anchor[data-ticker-theme='velvet-crown'] .pct-bar.pct-bar--active-tokens,
 .screen-public-root[data-ticker-theme='velvet-crown'] .pct-bar.pct-bar--active-tokens {
 	--vc-gold: #e8c872;
 	--vc-gold-deep: #c9a227;
@@ -1596,6 +1598,7 @@
 
 .pct-bar.pct-bar--sun-bento,
 .tdc-canvas-preview-stack[data-ticker-theme='sun-bento'] .pct-bar.pct-bar--active-tokens,
+.tdc-zone-ticker-anchor[data-ticker-theme='sun-bento'] .pct-bar.pct-bar--active-tokens,
 .screen-public-root[data-ticker-theme='sun-bento'] .pct-bar.pct-bar--active-tokens {
 	--sb-cream: #fff492;
 	--sb-cream-deep: #f5e050;
@@ -1708,6 +1711,7 @@
 
 .pct-bar.pct-bar--royal-ticket,
 .tdc-canvas-preview-stack[data-ticker-theme='royal-ticket'] .pct-bar.pct-bar--active-tokens,
+.tdc-zone-ticker-anchor[data-ticker-theme='royal-ticket'] .pct-bar.pct-bar--active-tokens,
 .screen-public-root[data-ticker-theme='royal-ticket'] .pct-bar.pct-bar--active-tokens {
 	--rt-bg: #14101f;
 	--rt-bg-light: #1f1830;

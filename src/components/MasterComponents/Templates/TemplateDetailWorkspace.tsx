@@ -1064,7 +1064,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 			fc.requestRenderAll?.();
 			fc.renderAll();
-			setCanvasObjects(fc.getObjects());
+			setCanvasObjects(getZoneRects(fc));
 			setSelectedObject(activeObject);
 		},
 		[selectedObject],
@@ -1736,6 +1736,77 @@ const TemplateDetailWorkspace: React.FC = () => {
 										previewStatus='waiting'
 									/>
 
+									<div className='tdc-appearance-zone-controls'>
+										<div className='tdc-appearance-zone-controls__block'>
+											<span className='zone-appearance-picker__label'>Queue</span>
+											{queuesLoadError ? (
+												<p className='tdc-zone-queue-access-denied' role='alert'>
+													{queuesLoadError}
+												</p>
+											) : (
+												<>
+													<select
+														className='tdc-prop-input'
+														value={zoneProps.queueIds[0] ?? ''}
+														disabled={queuesLoading}
+														onChange={(e) => handleZoneQueueChange(e.target.value)}>
+														<option value=''>
+															{queuesLoading
+																? 'Loading queues…'
+																: 'Select queue for this zone…'}
+														</option>
+														{queues.map((queue) => (
+															<option key={queue.id} value={queue.id}>
+																{queue.name}
+															</option>
+														))}
+													</select>
+													<p className='tdc-zone-queue-hint'>
+														{zoneProps.queueIds.length > 0
+															? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
+															: 'One queue per zone. Select a queue from the list above.'}
+													</p>
+												</>
+											)}
+											{queuesLoadError && zoneProps.queueIds.length > 0 && (
+												<p className='tdc-zone-queue-hint'>
+													{`This zone already has queue #${zoneProps.queueIds[0]} assigned. You cannot change it without queue list access.`}
+												</p>
+											)}
+										</div>
+
+										<div className='tdc-appearance-zone-controls__block'>
+											<span className='zone-appearance-picker__label'>Zone Opacity</span>
+											<label
+												className='tdc-template-opacity-label'
+												htmlFor='zone-opacity-slider'>
+												{zoneProps.opacity}%
+											</label>
+											<input
+												id='zone-opacity-slider'
+												type='range'
+												min={0}
+												max={100}
+												step={1}
+												value={zoneProps.opacity}
+												className='form-range tdc-template-opacity-range'
+												onChange={(e) => {
+													const val = Number(e.target.value);
+													setZoneProps((s) => ({ ...s, opacity: val }));
+													if (selectedObject) {
+														selectedObject.set({
+															opacity: val / 100,
+															zoneOpacity: val,
+														});
+														fabricRef.current?.requestRenderAll?.();
+														fabricRef.current?.renderAll();
+														bumpOverlayRevision();
+													}
+												}}
+											/>
+										</div>
+									</div>
+
 									<div className='tdc-stepper-group' style={{ marginTop: '0.6rem' }}>
 										<span className='tdc-stepper-label'>Border Radius</span>
 										<div className='tdc-stepper'>
@@ -1744,71 +1815,6 @@ const TemplateDetailWorkspace: React.FC = () => {
 											<button className='tdc-step-btn' onClick={() => nudge('radius', 1)}>+</button>
 										</div>
 									</div>
-								</div>
-
-								<div className='tdc-prop-section'>
-									<div className='tdc-prop-section-label'>Queue</div>
-									{queuesLoadError ? (
-										<p className='tdc-zone-queue-access-denied' role='alert'>
-											{queuesLoadError}
-										</p>
-									) : (
-										<>
-											<select
-												className='tdc-prop-input'
-												value={zoneProps.queueIds[0] ?? ''}
-												disabled={queuesLoading}
-												onChange={(e) => handleZoneQueueChange(e.target.value)}>
-												<option value=''>
-													{queuesLoading ? 'Loading queues…' : 'Select queue for this zone…'}
-												</option>
-												{queues.map((queue) => (
-													<option key={queue.id} value={queue.id}>
-														{queue.name}
-													</option>
-												))}
-											</select>
-											<p className='tdc-zone-queue-hint'>
-												{zoneProps.queueIds.length > 0
-													? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
-													: 'One queue per zone. Select a queue from the list above.'}
-											</p>
-										</>
-									)}
-									{queuesLoadError && zoneProps.queueIds.length > 0 && (
-										<p className='tdc-zone-queue-hint'>
-											{`This zone already has queue #${zoneProps.queueIds[0]} assigned. You cannot change it without queue list access.`}
-										</p>
-									)}
-								</div>
-
-								{/* Zone opacity */}
-								<div className='tdc-prop-section'>
-									<div className='tdc-prop-section-label'>Zone Opacity</div>
-									<label
-										className='tdc-template-opacity-label'
-										htmlFor='zone-opacity-slider'>
-										{zoneProps.opacity}%
-									</label>
-									<input
-										id='zone-opacity-slider'
-										type='range'
-										min={0}
-										max={100}
-										step={1}
-										value={zoneProps.opacity}
-										className='form-range tdc-template-opacity-range'
-										onChange={(e) => {
-											const val = Number(e.target.value);
-											setZoneProps((s) => ({ ...s, opacity: val }));
-											if (selectedObject) {
-												selectedObject.set({ opacity: val / 100, zoneOpacity: val });
-												fabricRef.current?.requestRenderAll?.();
-												fabricRef.current?.renderAll();
-												bumpOverlayRevision();
-											}
-										}}
-									/>
 								</div>
 
 								{/* Layer order */}

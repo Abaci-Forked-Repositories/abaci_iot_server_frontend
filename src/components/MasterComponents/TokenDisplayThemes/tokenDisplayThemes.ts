@@ -39,7 +39,25 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'royal-ticket',
 ] as const;
 
+/** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
+export const SCREEN_TICKER_ZONE_THEME_IDS = [
+	'pipboy-terminal',
+	'velvet-crown',
+	'sun-bento',
+	'royal-ticket',
+] as const;
+
+export type ScreenTickerZoneThemeId = (typeof SCREEN_TICKER_ZONE_THEME_IDS)[number];
+
 export type ZoneDisplayThemeId = (typeof ZONE_DISPLAY_THEME_IDS)[number];
+
+const SCREEN_TICKER_THEME_SET = new Set<string>(SCREEN_TICKER_ZONE_THEME_IDS);
+
+export function zoneUsesScreenLevelActiveTokensTicker(
+	themeId: ZoneDisplayThemeId | null | undefined,
+): boolean {
+	return themeId != null && SCREEN_TICKER_THEME_SET.has(themeId);
+}
 
 export type ZoneAppearanceMode = 'fill' | 'theme';
 
@@ -538,6 +556,63 @@ export function computeTokenDisplayFillBaseFontSize(
 	return applyFillZoneFontSizeBoost(base, w, h);
 }
 
+/** Pipboy fill layout: header + clock + flip row + status — not the 58/42 split grid. */
+export const PIPBOY_FILL_LAYOUT_EM = 9.2;
+
+/** Matches `.tdc--fill.tdc--pipboy-terminal .tdc__body .tdc__token { font-size: 4.5em }`. */
+export const PIPBOY_FILL_FLIP_TOKEN_EM = 4.5;
+
+export function computePipboyFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	/** Reserve bottom band for screen-level Active Tokens ticker (editor + live). */
+	tickerHeightPx = 0,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height - Math.max(0, tickerHeightPx));
+	const chars = Math.max(1, tokenLength);
+
+	const fromHeight = h / PIPBOY_FILL_LAYOUT_EM;
+	const fromMinSide = Math.min(w, h) / PIPBOY_FILL_LAYOUT_EM;
+	const fromFlipWidth =
+		w / (chars * PIPBOY_FILL_FLIP_TOKEN_EM * 0.85 + 2.8);
+
+	const base = Math.min(fromHeight, fromMinSide, fromFlipWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Royal Ticket fill layout: header + large title + perforated stub (not the 58/42 split grid). */
+export const ROYAL_TICKET_FILL_LAYOUT_EM = 10.2;
+
+/** Matches `.tdc--fill.tdc--royal-ticket .tdc-rt-title { font-size: … }` cap in fill overrides. */
+export const ROYAL_TICKET_FILL_TITLE_EM = 2.2;
+
+export function computeRoyalTicketFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const fromHeight = h / ROYAL_TICKET_FILL_LAYOUT_EM;
+	const fromMinSide = Math.min(w, h) / ROYAL_TICKET_FILL_LAYOUT_EM;
+	const fromTitleHeight = h / (ROYAL_TICKET_FILL_TITLE_EM + 6.4);
+	const fromTitleWidth = w / (chars * ROYAL_TICKET_FILL_TITLE_EM * 0.52 + 1.6);
+	const fromStubWidth = w / 11.5;
+
+	const base = Math.min(
+		fromHeight,
+		fromMinSide,
+		fromTitleHeight,
+		fromTitleWidth,
+		fromStubWidth,
+	);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
 /**
  * Fill layout with status on the right (all themes in `.tdc--fill`):
  * header full-width | token left | status right [ | history row ].
@@ -562,6 +637,11 @@ export function computeFillZoneSplitBaseFontSize(
 		? TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM + 1.4
 		: TOKEN_DISPLAY_FILL_SPLIT_LAYOUT_EM;
 	const STATUS_FACTOR = 4.6;
+	const STATUS_STACK_EM = 3.35;
+	const historyRowFraction = hasHistoryStrip ? 0.26 : 0;
+	const headerRowFraction = 0.11;
+	const mainRowHeight = h * (1 - historyRowFraction - headerRowFraction);
+	const fromStatusStackHeight = mainRowHeight / STATUS_STACK_EM;
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
@@ -569,7 +649,13 @@ export function computeFillZoneSplitBaseFontSize(
 		(w * bodyCol) / (chars * tokenEm * 0.58 * animationMargin + 1.2);
 	const fromStatusWidth = (w * statusCol) / STATUS_FACTOR;
 
-	const base = Math.min(fromHeight, fromMinSide, fromTokenWidth, fromStatusWidth);
+	const base = Math.min(
+		fromHeight,
+		fromMinSide,
+		fromTokenWidth,
+		fromStatusWidth,
+		fromStatusStackHeight,
+	);
 	return applyFillZoneFontSizeBoost(base, w, h);
 }
 

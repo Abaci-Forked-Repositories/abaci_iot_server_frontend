@@ -9,6 +9,8 @@ export type { ZoneDisplayThemePickerProps } from './ZoneDisplayThemePicker';
 
 export {
 	ZONE_DISPLAY_THEME_IDS,
+	SCREEN_TICKER_ZONE_THEME_IDS,
+	zoneUsesScreenLevelActiveTokensTicker,
 	ZONE_DISPLAY_THEME_CONFIGS,
 	TOKEN_STATUS_DISPLAY,
 	TOKEN_DISPLAY_NO_TOKEN,
@@ -25,6 +27,7 @@ export {
 	getContrastTextColorForBackground,
 	getStatusConfig,
 	computeTokenDisplayFillBaseFontSize,
+	computePipboyFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalCrimsonFillBaseFontSize,
 	computeFillZoneTextSizes,
@@ -42,6 +45,7 @@ export {
 
 export type {
 	ZoneDisplayThemeId,
+	ScreenTickerZoneThemeId,
 	ZoneAppearanceMode,
 	ZoneDisplayAppearance,
 	ZoneDisplayThemeConfig,

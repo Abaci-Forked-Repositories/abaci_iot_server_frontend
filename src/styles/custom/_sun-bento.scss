@@ -60,7 +60,7 @@
 	background: var(--sb-cream);
 	color: var(--sb-ink);
 	border: none;
-	border-radius: clamp(1.4rem, 7.5%, 3.25rem);
+	// border-radius: clamp(1.4rem, 7.5%, 3.25rem);
 	box-shadow: none;
 	overflow: hidden;
 	transition:
@@ -237,7 +237,7 @@
 }
 
 .tdc--fill.tdc--sun-bento {
-	border-radius: clamp(1.4rem, 7.5%, 3.25rem);
+	// border-radius: clamp(1.4rem, 7.5%, 3.25rem);
 	display: flex;
 	flex-direction: column;
 	grid-template-columns: unset;
