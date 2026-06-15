@@ -657,6 +657,10 @@
 		gap: 0.08em;
 		min-height: 0;
 		min-width: 0;
+	}
+
+	// Themes 1–5 split grid body — Pipboy uses its own grid (see _themes-new-fill-overrides.scss).
+	&:not(.tdc--pipboy-terminal) .tdc__body {
 		overflow: hidden;
 		border-right: 1px solid var(--tdc-border);
 		container-type: size;
@@ -675,15 +679,19 @@
 	}
 
 	.tdc__token {
-		font-size: 3.35em;
 		flex-shrink: 1;
 		min-height: 0;
 		max-width: 100%;
+		text-align: center;
+	}
+
+	// Plain numeral themes only — Pipboy uses FlipTokenDisplay (flip-digit panels).
+	&:not(.tdc--pipboy-terminal) .tdc__token {
+		font-size: 3.35em;
 		width: 100%;
 		line-height: 0.94;
 		overflow: hidden;
 		text-overflow: clip;
-		text-align: center;
 	}
 
 	.tdc__footer {
@@ -694,43 +702,72 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 0.35em 0.28em;
+		padding: 0.2em 0.22em;
 		min-width: 0;
 		min-height: 0;
+		overflow: visible;
+		container-type: size;
+		container-name: tdc-foot;
 	}
 
 	.tdc__status-badge {
 		flex-direction: column;
-		gap: 0.22em;
-		padding: 0.38em 0.36em;
+		gap: min(0.22em, 6cqh);
+		padding: min(0.38em, 8cqh) min(0.36em, 3cqw);
 		border-radius: 10px;
 		max-width: 100%;
 		width: 100%;
+		max-height: 94%;
 		box-sizing: border-box;
 		text-align: center;
 		white-space: normal;
-		font-size: 0.66em;
+		font-size: min(0.66em, 24cqh);
 		overflow: visible;
+		justify-content: center;
 	}
 
 	.tdc__status-icon {
-		font-size: 1.35em;
+		font-size: min(1.35em, 34cqh);
 		display: block;
 		text-align: center;
-		line-height: 1.1;
+		line-height: 1;
+		flex-shrink: 0;
 	}
 
 	.tdc__status-label {
-		font-size: 0.86em;
+		font-size: min(0.86em, 20cqh);
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		display: block;
 		text-align: center;
-		line-height: 1.25;
+		line-height: 1.15;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		max-width: 100%;
+		flex-shrink: 1;
+		min-width: 0;
+	}
+}
+
+// When the footer column is short, lay out icon + label in one row.
+@container tdc-foot (max-height: 88px) {
+	.tdc__status-badge {
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2em;
+		padding: 0.2em 0.32em;
+		font-size: min(0.58em, 26cqh);
+	}
+
+	.tdc__status-icon {
+		font-size: min(1.1em, 32cqh);
+	}
+
+	.tdc__status-label {
+		font-size: min(0.82em, 22cqh);
 	}
 }
 
@@ -810,9 +847,9 @@
 	}
 
 	.tdc__status-badge {
-		overflow: hidden;
 		background: rgba(0, 0, 0, 0.38);
 		border-color: rgba(220, 30, 30, 0.40);
+		overflow: visible;
 	}
 
 	.tdc__status-label {
@@ -863,11 +900,11 @@
 	}
 
 	.tdc__status-badge {
-		overflow: hidden;
+		overflow: visible;
 		width: 88%;
 		max-width: 8.5em;
-		font-size: 0.66em;
-		padding: 0.45em 0.4em;
+		font-size: min(0.66em, 24cqh);
+		padding: min(0.45em, 8cqh) min(0.4em, 3cqw);
 	}
 }
 
@@ -1337,12 +1374,45 @@
 .zone-appearance-picker__preview-card {
 	display: flex;
 	justify-content: center;
+	align-items: center;
 	padding: 0.5rem 0;
 
 	.tdc {
 		width: 260px;
 		height: 280px;
+		flex: 0 0 auto;
 	}
+}
+
+// Template editor sidebar — explicit preview height (do not use container-type:size
+// on this wrapper — it collapses the box and clips the theme to a thin strip).
+.tdc-panel .zone-appearance-picker__preview-card {
+	min-height: 148px;
+	overflow: hidden;
+	border-radius: 6px;
+
+	.tdc {
+		width: 100%;
+		max-width: 100%;
+		height: 148px;
+		min-height: 148px;
+		flex: 0 0 148px;
+		// cqw rules for Pipboy etc. query this fill root, not the wrapper.
+		container-type: size;
+	}
+}
+
+.zone-appearance-picker__zone-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.zone-appearance-picker__control-block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
 }
 
 // Template editor + theme picker — toned-down token glow (no large backdrop panel).
@@ -1393,7 +1463,8 @@
 }
 
 // Wide TV zones: cap token by body column width/height (ResizeObserver + CSS safety net).
-.tdc--fill .tdc__body .tdc__token {
+// Pipboy uses FlipTokenDisplay — excluded (see _themes-new-fill-overrides.scss).
+.tdc--fill:not(.tdc--pipboy-terminal) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
@@ -1402,7 +1473,7 @@
 }
 
 // Preview mode — slightly larger token numeral (template editor + theme picker).
-.tdc--preview.tdc--fill .tdc__body .tdc__token {
+.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1.14 * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.50 + 0.26)),
@@ -1444,3 +1515,6 @@
 		font-size: 4.28em;
 	}
 }
+
+// Themes 6–9 · fill overrides (must be last — after generic `.tdc--fill` rules)
+@import 'themes-new-fill-overrides';

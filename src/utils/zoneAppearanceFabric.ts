@@ -268,3 +268,51 @@ export function getZoneOverlayBounds(rect: FabricZoneOverlayRect): {
 		borderRadius: rect.rx ?? 0,
 	};
 }
+
+export type ZoneOverlayBounds = ReturnType<typeof getZoneOverlayBounds>;
+
+/** Bounding box union for all zone rects (template editor ticker anchoring). */
+export function getZonesUnionBounds(
+	rects: FabricZoneOverlayRect[],
+): ZoneOverlayBounds | null {
+	if (!rects.length) return null;
+
+	let left = Infinity;
+	let top = Infinity;
+	let right = -Infinity;
+	let bottom = -Infinity;
+
+	rects.forEach((rect) => {
+		const b = getZoneOverlayBounds(rect);
+		left = Math.min(left, b.left);
+		top = Math.min(top, b.top);
+		right = Math.max(right, b.left + b.width);
+		bottom = Math.max(bottom, b.top + b.height);
+	});
+
+	if (!Number.isFinite(left) || right <= left || bottom <= top) return null;
+
+	return {
+		left,
+		top,
+		width: right - left,
+		height: bottom - top,
+		borderRadius: 0,
+	};
+}
+
+/** Active Tokens bar height for themes 6–9 (matches editor + live display clamp). */
+export const PIPBOY_TICKER_HEIGHT_RATIO = 0.18;
+
+export function getThemedActiveTokensTickerHeight(
+	zoneHeight: number,
+	zoneWidth?: number,
+): number {
+	const h = Math.max(1, zoneHeight);
+	const w = Math.max(1, zoneWidth ?? zoneHeight);
+	const fromHeight = h * PIPBOY_TICKER_HEIGHT_RATIO;
+	// Narrow zones need a shorter band so cards fit without clipping.
+	const fromWidth = w * 0.13;
+	const raw = Math.min(fromHeight, fromWidth);
+	return Math.round(Math.min(130, Math.max(44, raw)));
+}

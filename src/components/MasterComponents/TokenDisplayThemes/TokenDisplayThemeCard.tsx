@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	computeFillZoneSplitBaseFontSize,
+	computePipboyFillBaseFontSize,
+	computeRoyalTicketFillBaseFontSize,
 	getFillZoneBodyColumnFraction,
 	getFillZoneTokenEm,
 	getStatusConfig,
@@ -166,20 +168,24 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			if (width < 1 || height < 1) return;
 			const tokenLen = displayToken.length;
 			const hasHistory = el.classList.contains('tdc--has-history');
+			const isPipboy = resolved.themeClass === 'tdc--pipboy-terminal';
+			const isRoyalTicketTheme = resolved.themeClass === 'tdc--royal-ticket';
 			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
-			const fontSize = computeFillZoneSplitBaseFontSize(
-				width,
-				height,
-				tokenLen,
-				hasHistory,
-				{
-					tokenEm,
-					bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
-				},
-			);
+			const fontSize = isPipboy
+				? computePipboyFillBaseFontSize(width, height, tokenLen)
+				: isRoyalTicketTheme
+					? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
+					: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
+						tokenEm,
+						bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
+					});
 			el.style.fontSize = `${fontSize}px`;
-			el.style.setProperty('--tdc-token-fill-em', String(tokenEm));
-			el.style.setProperty('--tdc-token-chars', String(tokenLen));
+			if (isPipboy) {
+				el.style.setProperty('--tdc-token-chars', String(tokenLen));
+			} else {
+				el.style.setProperty('--tdc-token-fill-em', String(tokenEm));
+				el.style.setProperty('--tdc-token-chars', String(tokenLen));
+			}
 		};
 
 		applyScale();

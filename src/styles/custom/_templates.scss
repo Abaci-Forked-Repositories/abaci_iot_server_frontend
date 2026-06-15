@@ -503,30 +503,201 @@
 	}
 }
 
-// Zone preview + active-tokens ticker stacked (template editor — no overlap).
-.tdc-canvas-preview-stack {
+// Themes 6–9: unified zone shell — card + Active Tokens ticker share opacity & border-radius.
+.tdc-zone-theme-shell {
 	position: absolute;
-	inset: 0;
 	z-index: 2;
-	display: flex;
-	flex-direction: column;
 	pointer-events: none;
+	box-sizing: border-box;
+	overflow: hidden;
+	container-type: size;
+	container-name: tdc-zone-shell;
 
-	.tdc-zone-overlays {
-		position: relative;
-		flex: 1 1 auto;
-		min-height: 0;
-		width: 100%;
-		inset: unset;
+	.tdc-zone-theme-overlay--in-shell {
+		opacity: 1;
+		border-radius: 0;
+	}
+
+	&--single {
+		display: flex;
+		flex-direction: column;
+
+		.tdc-zone-theme-overlay--in-shell {
+			position: relative;
+			flex: 1 1 auto;
+			min-height: 0;
+			width: 100%;
+			height: auto;
+		}
+
+		.tdc-zone-ticker-anchor--embedded {
+			position: relative;
+			flex: 0 0 auto;
+			width: 100%;
+		}
+	}
+
+	&--multi {
+		.tdc-zone-theme-overlay--in-shell {
+			position: absolute;
+		}
+
+		.tdc-zone-ticker-anchor--embedded {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			width: 100%;
+		}
+	}
+}
+
+// Themes 6–9: Active Tokens bar (embedded in shell, or legacy absolute anchor on live display).
+.tdc-zone-ticker-anchor {
+	position: absolute;
+	z-index: 3;
+	pointer-events: none;
+	overflow: hidden;
+	box-sizing: border-box;
+	container-type: size;
+	container-name: tdc-zone-ticker;
+
+	&.tdc-zone-ticker-anchor--embedded {
+		z-index: 1;
 	}
 
 	.pct-bar {
 		position: relative;
-		flex: 0 0 22%;
-		height: 22%;
 		bottom: auto;
 		left: auto;
 		right: auto;
+		width: 100%;
+		height: 100% !important;
+		min-height: 0;
+		box-sizing: border-box;
+	}
+
+	// Zone-scoped sizing — replace viewport vw/vh so the bar scales with zone width/height.
+	.pct-bar.pct-bar--compact {
+		height: 100% !important;
+	}
+
+	.pct-label {
+		flex: 0 0 clamp(1.6rem, 14cqi, 2.75rem);
+		padding: 0 clamp(3px, 4cqi, 14px);
+		gap: clamp(2px, 5cqh, 8px);
+		min-width: 0;
+	}
+
+	.pct-label-text {
+		font-size: clamp(5px, 10cqh, 12px) !important;
+		letter-spacing: clamp(0.03em, 0.6cqi, 0.1em) !important;
+	}
+
+	.pct-scroll {
+		gap: clamp(3px, 2.5cqi, 12px);
+		padding: 0 clamp(3px, 2cqi, 12px);
+	}
+
+	.pct-card {
+		gap: clamp(0px, 2cqh, 2px);
+		min-width: clamp(32px, 13cqi, 84px) !important;
+		padding: clamp(2px, 7cqh, 8px) clamp(4px, 3.5cqi, 12px) !important;
+		border-radius: clamp(4px, 2.5cqi, 10px);
+	}
+
+	.pct-card-token {
+		font-size: clamp(8px, 24cqh, 30px) !important;
+		line-height: 1;
+	}
+
+	.pct-card-counter-label {
+		font-size: clamp(4px, 9cqh, 7px) !important;
+		letter-spacing: clamp(0.04em, 0.5cqi, 0.1em);
+		line-height: 1.05;
+	}
+
+	.pct-card-counter-num {
+		font-size: clamp(5px, 11cqh, 11px) !important;
+		line-height: 1.05;
+	}
+
+	.pct-card-time {
+		font-size: clamp(4px, 8cqh, 8px) !important;
+		line-height: 1.05;
+		margin-top: 0;
+	}
+
+	// Sun Bento — keep pills but scale with zone.
+	[data-ticker-theme='sun-bento'] .pct-card {
+		border-radius: 999px;
+	}
+
+	// Velvet Crown — slightly tighter label column on narrow zones.
+	[data-ticker-theme='velvet-crown'] .pct-label-text {
+		letter-spacing: clamp(0.04em, 0.5cqi, 0.1em) !important;
+	}
+
+	// Royal Pass — keep vertical label from overlapping token cards on narrow zones.
+	[data-ticker-theme='royal-ticket'] .pct-label {
+		flex: 0 0 clamp(1.15rem, 10cqi, 2.15rem);
+		max-width: 22%;
+		overflow: hidden;
+	}
+
+	[data-ticker-theme='royal-ticket'] .pct-label-text {
+		letter-spacing: clamp(0.03em, 0.4cqi, 0.12em) !important;
+	}
+
+	[data-ticker-theme='royal-ticket'] .pct-scroll {
+		padding-left: clamp(2px, 1.5cqi, 10px);
+	}
+}
+
+.tdc-zone-theme-shell--royal-ticket {
+	background: #14101f;
+}
+
+@container tdc-zone-ticker (max-height: 56px) {
+	.tdc-zone-ticker-anchor {
+		.pct-label {
+			flex-basis: clamp(1.35rem, 12cqi, 2rem);
+		}
+
+		.pct-label-text {
+			font-size: clamp(4px, 9cqh, 9px) !important;
+		}
+
+		.pct-card-token {
+			font-size: clamp(7px, 20cqh, 14px) !important;
+		}
+
+		.pct-card-time {
+			display: none;
+		}
+	}
+}
+
+@container tdc-zone-ticker (max-width: 320px) {
+	.tdc-zone-ticker-anchor {
+		.pct-card {
+			min-width: clamp(28px, 11cqi, 64px) !important;
+		}
+
+		.pct-card-counter-label {
+			font-size: clamp(3px, 7cqh, 6px) !important;
+		}
+
+		[data-ticker-theme='royal-ticket'] .pct-label {
+			flex-basis: clamp(1rem, 8.5cqi, 1.65rem);
+			max-width: 20%;
+		}
+	}
+}
+
+.tdc-zone-theme-overlay--with-ticker {
+	.tdc {
+		min-height: 0;
 	}
 }
 
@@ -579,7 +750,8 @@
 	}
 
 	// Template editor only: slight token bump (~5%) — live TV screens unchanged.
-	.tdc--fill .tdc__body .tdc__token {
+	// Pipboy flip digits size themselves — do not apply generic fill token scaling.
+	.tdc--fill:not(.tdc--pipboy-terminal) .tdc__body .tdc__token {
 		font-size: min(
 			calc(var(--tdc-token-fill-em, 3.35) * 1.05 * 1em),
 			calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
@@ -621,10 +793,41 @@
 	}
 }
 
+// Queue + opacity — sibling below theme picker preview (not inside preview card).
+.tdc-appearance-zone-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid rgba(#fff, 0.08);
+	flex-shrink: 0;
+}
+
+.tdc-appearance-zone-controls__block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
+
+	.tdc-zone-queue-hint {
+		margin: 0;
+	}
+
+	.tdc-template-opacity-label {
+		margin-bottom: 0.15rem;
+	}
+}
+
+.tdc-panel .zone-appearance-picker__label {
+	color: #cbd5e1;
+}
+
 // Properties panel
 .tdc-panel {
 	width: 280px;
 	flex-shrink: 0;
+	min-height: 0;
 	background: #1a1c22;
 	border-left: 1px solid rgba(#ffffff, 0.07);
 	display: flex;
@@ -657,9 +860,13 @@
 }
 
 .tdc-props-scroll {
-	flex: 1;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-x: hidden;
 	overflow-y: auto;
 	padding: 0.75rem 0.9rem;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
 }
 
 // ─── Property sections ────────────────────────────────────────────────────────
