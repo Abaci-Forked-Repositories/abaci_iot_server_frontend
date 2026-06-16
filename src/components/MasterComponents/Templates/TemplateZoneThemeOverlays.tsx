@@ -10,6 +10,7 @@ import {
 	type FabricZoneOverlayRect,
 	getThemedActiveTokensTickerHeight,
 	getZoneAppearanceFromRect,
+	getZoneOpacityFromRect,
 	getZoneOverlayBounds,
 	getZonesUnionBounds,
 } from '../../../utils/zoneAppearanceFabric';
@@ -82,19 +83,13 @@ function resolveEditorScreenTickerSlug(
 	return zoneUsesScreenLevelActiveTokensTicker(slug) ? slug : undefined;
 }
 
-function getZoneOpacity(rect: FabricZoneOverlayRect): number {
-	return typeof (rect as { opacity?: number }).opacity === 'number'
-		? (rect as { opacity: number }).opacity
-		: 1;
-}
-
 /** Opacity + border radius for the unified zone shell (themes 6–9). */
 function resolveZoneShellChrome(zones: FabricZoneOverlayRect[]): {
 	opacity: number;
 	borderRadius: number;
 } {
 	if (!zones.length) return { opacity: 1, borderRadius: 0 };
-	const opacities = zones.map(getZoneOpacity);
+	const opacities = zones.map(getZoneOpacityFromRect);
 	const opacity = opacities.every((o) => o === opacities[0]) ? opacities[0] : opacities[0];
 	const borderRadius = Math.max(
 		0,
@@ -203,6 +198,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			rect.name ??
 			'Queue';
 
+		const zoneOpacity = getZoneOpacityFromRect(rect);
+
 		return (
 			<div
 				key={rect.id ?? `${bounds.left}-${bounds.top}`}
@@ -234,7 +231,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 								width: bounds.width,
 								height: bounds.height,
 								borderRadius: bounds.borderRadius,
-								opacity: getZoneOpacity(rect),
+								// opacity moved to backgroundOpacity on TokenDisplayThemeCard
 							}
 				}>
 				<TokenDisplayThemeCard
@@ -246,6 +243,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					fillContainer
 					showHistoryTime={false}
 					previewMode
+					backgroundOpacity={zoneOpacity < 1 ? zoneOpacity : undefined}
 				/>
 			</div>
 		);
@@ -273,14 +271,16 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						`tdc-zone-theme-shell--${tickerThemeSlug}`,
 					].join(' ')}
 					data-ticker-theme={tickerThemeSlug}
-					style={{
-						left: zonesUnion.left,
-						top: zonesUnion.top,
-						width: zonesUnion.width,
-						height: zonesUnion.height,
-						borderRadius: shellChrome.borderRadius,
-						opacity: shellChrome.opacity,
-					}}>
+				style={{
+					left: zonesUnion.left,
+					top: zonesUnion.top,
+					width: zonesUnion.width,
+					height: zonesUnion.height,
+					borderRadius: shellChrome.borderRadius,
+					...(shellChrome.opacity < 1
+						? ({ '--tdc-zone-bg-opacity': shellChrome.opacity } as React.CSSProperties)
+						: {}),
+				}}>
 					{zoneCards}
 					{tickerHeightPx > 0 && (
 						<div
@@ -295,6 +295,9 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 								mockMode={false}
 								tokens={activeTokens}
 								className={tickerClassName}
+								backgroundOpacity={
+									shellChrome.opacity < 1 ? shellChrome.opacity : undefined
+								}
 							/>
 						</div>
 					)}

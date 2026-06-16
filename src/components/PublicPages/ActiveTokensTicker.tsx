@@ -9,6 +9,11 @@ export interface ActiveTokensTickerProps {
 	mockMode?: boolean;
 	className?: string;
 	scale?: number;
+	/**
+	 * 0–1 opacity applied only to bar/card backgrounds (not labels, text, or borders).
+	 * Matches zone background opacity from the template editor.
+	 */
+	backgroundOpacity?: number;
 }
 
 const MOCK_TOKENS: RecentQueueToken[] = [
@@ -96,6 +101,7 @@ const ActiveTokensTicker: React.FC<ActiveTokensTickerProps> = ({
 	mockMode = false,
 	className,
 	scale = 1,
+	backgroundOpacity,
 }) => {
 	const source = mockMode ? MOCK_TOKENS : (tokens ?? []);
 	const trackRef = useRef<HTMLDivElement>(null);
@@ -171,6 +177,9 @@ const ActiveTokensTicker: React.FC<ActiveTokensTickerProps> = ({
 	const cssVars = {
 		'--pct-count': source.length,
 		'--pct-scale': scale,
+		...(backgroundOpacity != null && backgroundOpacity < 1
+			? { '--pct-zone-bg-opacity': backgroundOpacity }
+			: {}),
 	} as React.CSSProperties;
 
 	const rootClass = [
@@ -190,7 +199,10 @@ const ActiveTokensTicker: React.FC<ActiveTokensTickerProps> = ({
 		<div className={rootClass} style={cssVars} aria-label='Active tokens'>
 			<div className='pct-label' aria-hidden>
 				<span className='pct-label-divider' />
-				<span className='pct-label-text'>Active Tokens</span>
+				<span className='pct-label-text'>
+					<span className='pct-label-word'>Active</span>
+					<span className='pct-label-word'>Tokens</span>
+				</span>
 				<span className='pct-label-divider' />
 			</div>
 

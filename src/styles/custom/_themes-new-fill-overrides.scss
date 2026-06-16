@@ -157,12 +157,16 @@
 }
 
 // ─── Velvet Crown ────────────────────────────────────────────────────────────
+// Keep the standard fill grid (token left | status seal right) — flex column hid
+// the footer when the screen-level Active Tokens bar consumes vertical space.
 .tdc--fill.tdc--velvet-crown {
-	display: flex;
-	flex-direction: column;
-	grid-template-columns: unset;
-	grid-template-rows: unset;
-	grid-template-areas: unset;
+	display: grid;
+	grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+	grid-template-rows: auto 1fr;
+	grid-template-areas:
+		'head head'
+		'body foot';
+	align-items: stretch;
 	border-radius: inherit;
 	padding: 0.55em;
 	min-height: 0;
@@ -178,28 +182,32 @@
 	}
 
 	.tdc__header {
-		flex: 0 0 auto;
+		grid-area: head;
 		padding: 0.22em 0.5em 0.18em;
 	}
 
 	.tdc__body {
-		flex: 1 1 auto;
+		grid-area: body;
 		min-height: 0;
 		min-width: 0;
-		border-right: none;
+		border-right: 1px solid rgba(201, 162, 39, 0.22);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		padding: 0.2em 0.35em;
+		overflow: hidden;
 	}
 
 	.tdc__footer {
-		flex: 0 0 auto;
+		grid-area: foot;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		padding: 0.2em 0.35em 0.28em;
+		align-self: stretch;
+		min-width: 0;
+		overflow: visible;
 	}
 
 	.tdc__token {
@@ -243,7 +251,7 @@
 	grid-template-columns: unset;
 	grid-template-rows: unset;
 	grid-template-areas: unset;
-	background: var(--rt-bg, #14101f);
+	background: var(--rt-bg, rgba(20, 16, 31, #{tdc-zone-a(1)}));
 	min-height: 0;
 	min-width: 0;
 	width: 100%;

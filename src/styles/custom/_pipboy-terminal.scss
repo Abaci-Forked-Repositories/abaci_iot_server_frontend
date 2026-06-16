@@ -371,7 +371,7 @@
 	}
 
 	.tdc__history-label {
-		background: var(--pip-green);
+		background: rgba(26, 255, 64, #{tdc-zone-a(1)});
 		color: var(--bg-dark);
 		border-right: none;
 	}

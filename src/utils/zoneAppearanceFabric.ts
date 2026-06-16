@@ -11,6 +11,35 @@ import {
 /** Custom Fabric rect props persisted in fabric_json. */
 export const FABRIC_ZONE_APPEARANCE_PROPS = ['displayTheme', 'zoneFillColor'] as const;
 
+/**
+ * Read zone opacity (0–1) from a Fabric rect.
+ * Prefers `zoneOpacity` (0–100, editor/save format); falls back to legacy Fabric `opacity` (0–1).
+ */
+export function getZoneOpacityFromRect(rect: {
+	zoneOpacity?: number;
+	opacity?: number;
+}): number {
+	if (typeof rect.zoneOpacity === 'number' && Number.isFinite(rect.zoneOpacity)) {
+		return Math.max(0, Math.min(1, rect.zoneOpacity / 100));
+	}
+	if (typeof rect.opacity === 'number' && Number.isFinite(rect.opacity)) {
+		return Math.max(0, Math.min(1, rect.opacity));
+	}
+	return 1;
+}
+
+/** Resolve zone opacity (0–1) for template-wide chrome (e.g. Active Tokens bar). */
+export function resolveTemplateZoneBackgroundOpacity(
+	zones: { opacity?: number }[],
+): number | undefined {
+	if (!zones.length) return undefined;
+	const opacities = zones.map((z) =>
+		typeof z.opacity === 'number' && Number.isFinite(z.opacity) ? z.opacity : 1,
+	);
+	const opacity = opacities.every((o) => o === opacities[0]) ? opacities[0] : opacities[0];
+	return opacity < 1 ? opacity : undefined;
+}
+
 /** Minimum Fabric zone rect shape for appearance + HTML overlay positioning. */
 export type FabricZoneOverlayRect = {
 	id?: string;
@@ -20,7 +49,9 @@ export type FabricZoneOverlayRect = {
 	displayTheme?: string | null;
 	zoneFillColor?: string | null;
 	fill?: string | null;
-	/** Fabric built-in opacity (0–1). Used for per-zone opacity. */
+	/** Zone opacity 0–100 (editor + saved config). */
+	zoneOpacity?: number;
+	/** Legacy Fabric built-in opacity (0–1). */
 	opacity?: number;
 	setCoords?: () => void;
 	aCoords?: { tl?: { x: number; y: number }; br?: { x: number; y: number } };
@@ -299,6 +330,53 @@ export function getZonesUnionBounds(
 		height: bottom - top,
 		borderRadius: 0,
 	};
+}
+
+/**
+ * Convert any CSS color string to `rgba(r,g,b,alpha)` with the given alpha.
+ * Handles `#rrggbb`, `#rgb`, `rgb(...)`, and `rgba(...)` formats.
+ * Returns the original string unchanged when the format is unrecognised.
+ */
+export function applyColorAlpha(color: string, alpha: number): string {
+	const a = Math.max(0, Math.min(1, alpha));
+	if (a >= 1) return color;
+	if (a <= 0) return 'rgba(0,0,0,0)';
+
+	const trimmed = color.trim();
+
+	// #rrggbb or #rgb
+	const hexMatch = /^#([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(trimmed);
+	if (hexMatch) {
+		const h = hexMatch[1];
+		const [r, g, b] =
+			h.length === 3
+				? [
+						parseInt(h[0] + h[0], 16),
+						parseInt(h[1] + h[1], 16),
+						parseInt(h[2] + h[2], 16),
+					]
+				: [
+						parseInt(h.slice(0, 2), 16),
+						parseInt(h.slice(2, 4), 16),
+						parseInt(h.slice(4, 6), 16),
+					];
+		return `rgba(${r},${g},${b},${a})`;
+	}
+
+	// rgb(r, g, b)
+	const rgbMatch = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i.exec(trimmed);
+	if (rgbMatch) {
+		return `rgba(${rgbMatch[1]},${rgbMatch[2]},${rgbMatch[3]},${a})`;
+	}
+
+	// rgba(r, g, b, old-alpha) — replace existing alpha
+	const rgbaMatch =
+		/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*[\d.]+\s*\)$/i.exec(trimmed);
+	if (rgbaMatch) {
+		return `rgba(${rgbaMatch[1]},${rgbaMatch[2]},${rgbaMatch[3]},${a})`;
+	}
+
+	return color;
 }
 
 /** Active Tokens bar height for themes 6–9 (matches editor + live display clamp). */

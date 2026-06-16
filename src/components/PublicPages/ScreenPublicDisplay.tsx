@@ -14,6 +14,7 @@ import type {
 	RecentQueueToken,
 } from '../../services/publicScreenApi';
 import { aggregateActiveTokensFromQueues } from '../../services/publicScreenApi';
+import { resolveTemplateZoneBackgroundOpacity } from '../../utils/zoneAppearanceFabric';
 import { resolveMediaUrl } from '../../utils/resolveMediaUrl';
 
 interface ScreenPublicDisplayProps {
@@ -66,9 +67,21 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 
 	const useThemedScreenTicker = Boolean(tickerThemeSlug);
 
+	const zoneBackgroundOpacity = useMemo(
+		() => resolveTemplateZoneBackgroundOpacity(enrichedZones),
+		[enrichedZones],
+	);
+
 	return (
 		<div
-			className='screen-public-root screen-public-root--fullscreen'
+			className={[
+				'screen-public-root screen-public-root--fullscreen',
+				useThemedScreenTicker && activeTokens.length > 0
+					? 'screen-public-root--active-tokens'
+					: '',
+			]
+				.filter(Boolean)
+				.join(' ')}
 			data-ticker-theme={useThemedScreenTicker ? tickerThemeSlug : undefined}>
 			{backgroundUrl && (
 				<div
@@ -104,7 +117,11 @@ const ScreenPublicDisplay: React.FC<ScreenPublicDisplayProps> = ({
 				</div>
 			)}
 			{useThemedScreenTicker && activeTokens.length > 0 && (
-				<ActiveTokensTicker tokens={activeTokens} className={tickerThemeClass} />
+				<ActiveTokensTicker
+					tokens={activeTokens}
+					className={tickerThemeClass}
+					backgroundOpacity={zoneBackgroundOpacity}
+				/>
 			)}
 		</div>
 	);

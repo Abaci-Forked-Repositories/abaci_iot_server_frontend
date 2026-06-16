@@ -16,6 +16,7 @@ import {
 } from '../../../utils/parseTemplateZones';
 import {
 	FABRIC_ZONE_APPEARANCE_PROPS,
+	applyColorAlpha,
 	applyZoneAppearanceToRect,
 	captureTemplateThumbnailFromFabric,
 	getZoneAppearanceFromRect,
@@ -516,14 +517,27 @@ const TemplateDetailWorkspace: React.FC = () => {
 			if (isZoneThemeSelectionComplete(next)) {
 				setThemeError(false);
 			}
-			if (!fabricRef.current) return;
-			const fc = fabricRef.current;
-			const active = fc.getActiveObject?.();
-			const target = active ?? selectedObject;
-			if (!target || !isZoneRect(target)) return;
+		if (!fabricRef.current) return;
+		const fc = fabricRef.current;
+		const active = fc.getActiveObject?.();
+		const target = active ?? selectedObject;
+		if (!target || !isZoneRect(target)) return;
 
-			const stroke = target.stroke ?? null;
-			applyZoneAppearanceToRect(target, next, stroke);
+		const stroke = target.stroke ?? null;
+		applyZoneAppearanceToRect(target, next, stroke);
+
+		// Re-encode zone opacity into the fill alpha after changing appearance
+		// (applyZoneAppearanceToRect resets fill to a solid colour).
+		if (next.mode === 'fill') {
+			const zoneOpacity100 = Number.isFinite((target as any).zoneOpacity)
+				? Number((target as any).zoneOpacity)
+				: Math.round(((target as any).opacity ?? 1) * 100);
+			if (zoneOpacity100 < 100) {
+				const fraction = zoneOpacity100 / 100;
+				const base = next.backgroundColor ?? '#ffffff';
+				target.set({ fill: applyColorAlpha(base, fraction) });
+			}
+		}
 
 			const fillColor =
 				next.mode === 'fill' ? (next.backgroundColor ?? '#ffffff') : 'theme';
@@ -734,6 +748,31 @@ const TemplateDetailWorkspace: React.FC = () => {
 					attachZoneRectHandlers(rect, fc);
 					const appearance = getZoneAppearanceFromRect(rect);
 					applyZoneAppearanceToRect(rect, appearance, rect.stroke ?? 'black');
+
+					// Migrate legacy fabric opacity to zoneOpacity / fill-alpha approach.
+					// Old saves stored opacity on the whole Fabric rect (which fades text too).
+					const fabricOpacity: number = (rect as any).opacity ?? 1;
+					const existingZoneOpacity: number | undefined = (rect as any).zoneOpacity;
+					const zoneOpacity100 = Number.isFinite(existingZoneOpacity)
+						? Number(existingZoneOpacity)
+						: Math.round(fabricOpacity * 100);
+
+					if (!Number.isFinite(existingZoneOpacity)) {
+						(rect as any).set?.({ zoneOpacity: zoneOpacity100 });
+					}
+
+					// For fill mode: move opacity from fabric rect into fill colour alpha.
+					if (appearance.mode === 'fill' && zoneOpacity100 < 100) {
+						const fraction = zoneOpacity100 / 100;
+						const base = appearance.backgroundColor ?? '#ffffff';
+						(rect as any).set?.({ fill: applyColorAlpha(base, fraction) });
+					}
+
+					// Always reset fabric element opacity to 1 (opacity now lives in fill alpha).
+					if (fabricOpacity < 1) {
+						(rect as any).set?.({ opacity: 1 });
+					}
+
 					// Do not constrain on load — fabric_json / saved zones already have
 					// correct positions; constraining here was shifting the user's design.
 				});
@@ -780,28 +819,33 @@ const TemplateDetailWorkspace: React.FC = () => {
 							sf,
 							'clamp',
 						);
-						const rect = new Rect({
-							id: nanoid(),
-							name: zone.name ?? '',
-							queueIds,
-							queueUuids,
-							queueChipNames,
-							queueId: queueIds[0] ?? null,
-							originX: 'left',
-							originY: 'top',
-							width: fabricGeom.width,
-							height: fabricGeom.height,
-							left: fabricGeom.left,
-							top: fabricGeom.top,
-							fill:
-								zone.appearance.mode === 'fill'
-									? (zone.appearance.backgroundColor ?? '#ffffff')
-									: 'rgba(0,0,0,0.2)',
-							displayTheme:
-								zone.appearance.mode === 'theme' ? zone.appearance.displayTheme : null,
-					zoneFillColor: zone.appearance.backgroundColor,
-						zoneOpacity: Math.round((zone.zoneOpacityFraction ?? 1) * 100),
-						opacity: zone.zoneOpacityFraction ?? 1,
+					const zoneOpacityFraction = zone.zoneOpacityFraction ?? 1;
+					const rect = new Rect({
+						id: nanoid(),
+						name: zone.name ?? '',
+						queueIds,
+						queueUuids,
+						queueChipNames,
+						queueId: queueIds[0] ?? null,
+						originX: 'left',
+						originY: 'top',
+						width: fabricGeom.width,
+						height: fabricGeom.height,
+						left: fabricGeom.left,
+						top: fabricGeom.top,
+						fill:
+							zone.appearance.mode === 'fill'
+								? applyColorAlpha(
+										zone.appearance.backgroundColor ?? '#ffffff',
+										zoneOpacityFraction,
+									)
+								: 'rgba(0,0,0,0.2)',
+						displayTheme:
+							zone.appearance.mode === 'theme' ? zone.appearance.displayTheme : null,
+						zoneFillColor: zone.appearance.backgroundColor,
+						// zoneOpacity stores 0-100; Fabric opacity is always 1 (we never reduce
+						// the whole-element opacity — only the fill colour's alpha channel).
+						zoneOpacity: Math.round(zoneOpacityFraction * 100),
 						stroke: zone.stroke ?? 'black',
 						strokeUniform: true,
 						lockScalingFlip: true,
@@ -810,7 +854,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 						rx: (zone.rx ?? 0) * sf,
 						ry: (zone.rx ?? 0) * sf,
 					});
-						applyZoneAppearanceToRect(rect, zone.appearance, zone.stroke ?? 'black');
+					applyZoneAppearanceToRect(rect, zone.appearance, zone.stroke ?? 'black');
+					// Re-encode fill alpha after applyZoneAppearanceToRect (which sets solid fill)
+					if (zone.appearance.mode === 'fill' && zoneOpacityFraction < 1) {
+						const base = zone.appearance.backgroundColor ?? '#ffffff';
+						rect.set({ fill: applyColorAlpha(base, zoneOpacityFraction) });
+					}
 						rect.on('deselected', () => {
 							setSelectedObject(null);
 							setZoneProps(BLANK_PROPS);
@@ -945,13 +994,16 @@ const TemplateDetailWorkspace: React.FC = () => {
 			height: geom.height,
 			left: geom.left,
 			top: geom.top,
-			color:
-				appearance.mode === 'fill'
-					? (appearance.backgroundColor ?? '#ffffff')
-					: 'theme',
-			radius: Math.round((selectedObject.rx ?? 0) / scalingFactor),
-			borderColor: selectedObject.stroke ?? 'rgba(255,255,255,0)',
-			opacity: Math.round((selectedObject.opacity ?? 1) * 100),
+		color:
+			appearance.mode === 'fill'
+				? (appearance.backgroundColor ?? '#ffffff')
+				: 'theme',
+		radius: Math.round((selectedObject.rx ?? 0) / scalingFactor),
+		borderColor: selectedObject.stroke ?? 'rgba(255,255,255,0)',
+		// Read opacity from zoneOpacity (never from fabric opacity, which we no longer set)
+		opacity: Number.isFinite((selectedObject as any).zoneOpacity)
+			? Math.round(Number((selectedObject as any).zoneOpacity))
+			: 100,
 		});
 	}, [selectedObject, scalingFactor, canvasObjects, queuesByUuidMulti, queuesByName]);
 
@@ -1132,7 +1184,6 @@ const TemplateDetailWorkspace: React.FC = () => {
 				displayTheme: defaultAppearance.displayTheme,
 				zoneFillColor: null,
 				zoneOpacity: 100,
-				opacity: 1,
 				stroke: 'black',
 				strokeUniform: true,
 				lockScalingFlip: true,
@@ -1452,27 +1503,29 @@ const TemplateDetailWorkspace: React.FC = () => {
 							? `<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(queueName)}</span>`
 							: '';
 
-						return `
+					return `
 	<div
 		class="queue-zone"
 		data-queue-ids="${queueUuids.join(',')}"
 		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}
-					style="
+		style="
 			position:absolute;
 			left:${zone.left}px;
 			top:${zone.top}px;
 			width:${zone.width}px;
 			height:${zone.height}px;
-			background:${zone.backgroundColor};
 			border:${zone.border ? `1px solid ${zone.borderColor}` : 'none'};
 			border-radius:${zone.borderRadius}px;
 			z-index:${zone.zIndex};
-			opacity:${zone.zone_opacity ?? 1};
 			box-sizing:border-box;
 			overflow:hidden;
 		"
 	>
-		<div class="queue-zone-queues" style="position:absolute;inset:0;padding:8px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:2px;pointer-events:none;overflow:hidden;">
+		<div
+			class="queue-zone-bg"
+			style="position:absolute;inset:0;background:${zone.backgroundColor};opacity:${zone.zone_opacity ?? 1};border-radius:${zone.borderRadius}px;pointer-events:none;z-index:0;"
+		></div>
+		<div class="queue-zone-queues" style="position:absolute;inset:0;padding:8px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;align-content:center;gap:2px;pointer-events:none;overflow:hidden;z-index:1;">
 			${chips}
 		</div>
 	</div>`;
@@ -1794,10 +1847,21 @@ const TemplateDetailWorkspace: React.FC = () => {
 													const val = Number(e.target.value);
 													setZoneProps((s) => ({ ...s, opacity: val }));
 													if (selectedObject) {
-														selectedObject.set({
-															opacity: val / 100,
-															zoneOpacity: val,
-														});
+														const fraction = val / 100;
+														// Store zone opacity without touching Fabric's own
+														// opacity (which would reduce text/borders too).
+														selectedObject.set({ zoneOpacity: val });
+														// For fill-mode zones: encode opacity into the
+														// fill colour's alpha channel only.
+														if (!selectedObject.displayTheme) {
+															const base =
+																selectedObject.zoneFillColor ||
+																selectedObject.fill ||
+																'#ffffff';
+															selectedObject.set({
+																fill: applyColorAlpha(base, fraction),
+															});
+														}
 														fabricRef.current?.requestRenderAll?.();
 														fabricRef.current?.renderAll();
 														bumpOverlayRevision();

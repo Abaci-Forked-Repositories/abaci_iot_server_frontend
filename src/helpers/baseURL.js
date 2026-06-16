@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://copying-gmc-accept-olympus.trycloudflare.com';
+		return 'https://port-banners-seconds-klein.trycloudflare.com';
 	}
 	return url;
 };

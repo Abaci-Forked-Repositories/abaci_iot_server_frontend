@@ -638,15 +638,20 @@
 		letter-spacing: clamp(0.04em, 0.5cqi, 0.1em) !important;
 	}
 
-	// Royal Pass — keep vertical label from overlapping token cards on narrow zones.
+	// Royal Pass — two-line vertical label; width/padding aligned with Digital Crimson history strip.
 	[data-ticker-theme='royal-ticket'] .pct-label {
-		flex: 0 0 clamp(1.15rem, 10cqi, 2.15rem);
-		max-width: 22%;
-		overflow: hidden;
+		flex: 0 0 clamp(1.65rem, 14cqi, 2.75rem);
+		min-width: clamp(1.65rem, 14cqi, 2.75rem);
+		max-width: none;
+		overflow: visible;
+		padding: clamp(2px, 5cqh, 8px) clamp(8px, 5cqi, 16px);
 	}
 
 	[data-ticker-theme='royal-ticket'] .pct-label-text {
-		letter-spacing: clamp(0.03em, 0.4cqi, 0.12em) !important;
+		gap: clamp(0.2em, 3cqh, 0.4em) !important;
+		letter-spacing: clamp(0.04em, 0.45cqi, 0.1em) !important;
+		padding: 0.1em 0.28em;
+		overflow: visible;
 	}
 
 	[data-ticker-theme='royal-ticket'] .pct-scroll {
@@ -655,7 +660,7 @@
 }
 
 .tdc-zone-theme-shell--royal-ticket {
-	background: #14101f;
+	background: rgba(20, 16, 31, calc(1 * var(--tdc-zone-bg-opacity, 1)));
 }
 
 @container tdc-zone-ticker (max-height: 56px) {
@@ -689,8 +694,10 @@
 		}
 
 		[data-ticker-theme='royal-ticket'] .pct-label {
-			flex-basis: clamp(1rem, 8.5cqi, 1.65rem);
-			max-width: 20%;
+			flex: 0 0 clamp(1.5rem, 13cqi, 2.35rem);
+			min-width: clamp(1.5rem, 13cqi, 2.35rem);
+			max-width: none;
+			padding: clamp(2px, 5cqh, 6px) clamp(6px, 4.5cqi, 12px);
 		}
 	}
 }

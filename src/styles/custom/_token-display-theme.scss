@@ -5,6 +5,7 @@
 // BEM root: .tdc
 
 @import 'tdc-border-energy';
+@import 'tdc-zone-bg-opacity';
 
 // ─── CSS custom properties (defaults — digital-crimson) ──────────────────────
 
@@ -17,7 +18,7 @@
 	--tdc-token-color: #fff5d0;
 	--tdc-token-shadow: 0 4px 36px rgba(255, 100, 50, 0.45);
 	--tdc-border: rgba(220, 30, 30, 0.35);
-	--tdc-badge-bg: rgba(0, 0, 0, 0.45);
+	--tdc-badge-bg: rgba(0, 0, 0, #{tdc-zone-a(0.45)});
 	--tdc-badge-text: rgba(255, 255, 255, 0.95);
 	--tdc-badge-border: rgba(220, 30, 30, 0.50);
 }
@@ -81,7 +82,7 @@
 	--tdc-token-color: #fff5d0;
 	--tdc-token-shadow: 0 4px 36px rgba(255, 100, 50, 0.45);
 	--tdc-border: rgba(220, 30, 30, 0.35);
-	--tdc-badge-bg: rgba(0, 0, 0, 0.45);
+	--tdc-badge-bg: rgba(0, 0, 0, #{tdc-zone-a(0.45)});
 	--tdc-badge-text: rgba(255, 255, 255, 0.95);
 	--tdc-badge-border: rgba(220, 30, 30, 0.50);
 
@@ -238,7 +239,7 @@
 	--tdc-token-color: #d4af37;
 	--tdc-token-shadow: 0 4px 40px rgba(212, 175, 55, 0.55), 0 0 80px rgba(212, 175, 55, 0.15);
 	--tdc-border: rgba(212, 175, 55, 0.28);
-	--tdc-badge-bg: rgba(212, 175, 55, 0.10);
+	--tdc-badge-bg: rgba(212, 175, 55, #{tdc-zone-a(0.10)});
 	--tdc-badge-text: #d4af37;
 	--tdc-badge-border: rgba(212, 175, 55, 0.42);
 
@@ -394,7 +395,7 @@
 	gap: 0.2em;
 	border: 1px solid rgba(212, 175, 55, 0.38);
 	border-radius: 10px;
-	background: rgba(12, 10, 0, 0.62);
+	background: rgba(12, 10, 0, #{tdc-zone-a(0.62)});
 	color: rgba(240, 204, 90, 0.95);
 	font-size: 0.54em;
 	font-weight: 600;
@@ -430,7 +431,7 @@
 .tdc--onyx-gold .tdc__status-badge--postponed,
 .tdc--onyx-gold .tdc__status-badge--waiting {
 	border-color: rgba(212, 175, 55, 0.38);
-	background: rgba(12, 10, 0, 0.62);
+	background: rgba(12, 10, 0, #{tdc-zone-a(0.62)});
 	color: rgba(240, 204, 90, 0.95);
 }
 
@@ -469,7 +470,7 @@
 	--tdc-token-color: #ffffff;
 	--tdc-token-shadow: 0 4px 24px rgba(255, 255, 255, 0.2);
 	--tdc-border: rgba(255, 255, 255, 0.15);
-	--tdc-badge-bg: rgba(0, 0, 0, 0.50);
+	--tdc-badge-bg: rgba(0, 0, 0, #{tdc-zone-a(0.50)});
 	--tdc-badge-text: rgba(255, 255, 255, 0.95);
 	--tdc-badge-border: rgba(255, 255, 255, 0.25);
 }
@@ -481,7 +482,7 @@
 	--tdc-token-color: #0f1928;
 	--tdc-token-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
 	--tdc-border: rgba(0, 0, 0, 0.12);
-	--tdc-badge-bg: rgba(0, 0, 0, 0.12);
+	--tdc-badge-bg: rgba(0, 0, 0, #{tdc-zone-a(0.12)});
 	--tdc-badge-text: rgba(15, 25, 45, 0.92);
 	--tdc-badge-border: rgba(0, 0, 0, 0.18);
 }
@@ -624,7 +625,7 @@
 		z-index: 3;
 		padding: 0.28em 0.75em 0.22em;
 		flex-shrink: 0;
-		background: rgba(0, 0, 0, 0.22);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.22)});
 		border-bottom: 1px solid var(--tdc-border);
 		overflow: hidden;
 		min-width: 0;
@@ -810,7 +811,7 @@
 		display: inline-block; // transform requires block/inline-block
 	}
 	.tdc__status-badge {
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.35)});
 		border-color: rgba(220, 30, 30, 0.40);
 		color: rgba(255, 220, 200, 0.95);
 		font-weight: 700;
@@ -820,7 +821,7 @@
 // ── Digital Crimson fill — theme accents on shared split grid ─────────────────
 .tdc--fill.tdc--digital-crimson {
 	.tdc__header {
-		background: rgba(0, 0, 0, 0.28);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.28)});
 		border-bottom-color: rgba(220, 40, 40, 0.30);
 	}
 
@@ -847,7 +848,7 @@
 	}
 
 	.tdc__status-badge {
-		background: rgba(0, 0, 0, 0.38);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.38)});
 		border-color: rgba(220, 30, 30, 0.40);
 		overflow: visible;
 	}
@@ -927,7 +928,7 @@
 
 	.tdc__history {
 		border-top-color: var(--tdc-border);
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.35)});
 	}
 }
 
@@ -973,7 +974,7 @@
 		z-index: 4;
 		overflow: hidden;
 		border-top: 1px solid var(--tdc-border);
-		background: rgba(0, 0, 0, 0.28);
+		background: rgba(0, 0, 0, calc(0.28 * var(--tdc-zone-bg-opacity, 1)));
 		pointer-events: none;
 	}
 
@@ -1001,7 +1002,7 @@
 	gap: 0.15em;
 	min-width: 0;
 	border-right: 1px solid var(--tdc-border);
-	background: rgba(0, 0, 0, 0.15);
+	background: rgba(0, 0, 0, calc(0.15 * var(--tdc-zone-bg-opacity, 1)));
 }
 
 .tdc__history-label-text {
@@ -1099,7 +1100,7 @@
 	padding: 0.12em 0.42em 0.14em;
 	border: 1px solid var(--tdc-border);
 	border-radius: 0.5em;
-	background: rgba(0, 0, 0, 0.2);
+	background: rgba(0, 0, 0, calc(0.2 * var(--tdc-zone-bg-opacity, 1)));
 	flex-shrink: 0;
 	min-width: 2.6em;
 }
@@ -1201,32 +1202,32 @@
 
 .tdc__status-badge--serving {
 	border-color: rgba(70, 188, 170, 0.5);
-	background: rgba(70, 188, 170, 0.18);
+	background: rgba(70, 188, 170, #{tdc-zone-a(0.18)});
 	color: #a0ffe8;
 }
 
 .tdc__status-badge--completed {
 	border-color: rgba(70, 200, 100, 0.4);
-	background: rgba(70, 200, 100, 0.15);
+	background: rgba(70, 200, 100, #{tdc-zone-a(0.15)});
 	color: #a0ffb8;
 }
 
 .tdc__status-badge--cancelled,
 .tdc__status-badge--no-show {
 	border-color: rgba(243, 84, 33, 0.4);
-	background: rgba(243, 84, 33, 0.15);
+	background: rgba(243, 84, 33, #{tdc-zone-a(0.15)});
 	color: #ffb8a0;
 }
 
 .tdc__status-badge--postponed {
 	border-color: rgba(255, 207, 82, 0.4);
-	background: rgba(255, 207, 82, 0.15);
+	background: rgba(255, 207, 82, #{tdc-zone-a(0.15)});
 	color: #ffe8a0;
 }
 
 .tdc__status-badge--waiting {
 	border-color: rgba(255, 165, 40, 0.45);
-	background: rgba(255, 140, 10, 0.18);
+	background: rgba(255, 140, 10, #{tdc-zone-a(0.18)});
 	color: #ffd090;
 }
 
@@ -1518,3 +1519,9 @@
 
 // Themes 6–9 · fill overrides (must be last — after generic `.tdc--fill` rules)
 @import 'themes-new-fill-overrides';
+
+// Zone opacity — status badge fill only (backdrop blur would fight alpha fade)
+.tdc--zone-bg-fade .tdc__status-badge {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}

@@ -75,6 +75,8 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 	const zones: ParsedTemplateZone[] = [];
 	container.querySelectorAll('.queue-zone').forEach((el) => {
 		const style = el.getAttribute('style') ?? '';
+		const bgEl = el.querySelector('.queue-zone-bg');
+		const bgStyle = bgEl?.getAttribute('style') ?? '';
 		const borderRaw = parseStyleValue(style, 'border') ?? '';
 		const borderMatch = borderRaw.match(/solid\s+(.+)$/i);
 		const queueIdsAttr = el.getAttribute('data-queue-ids') ?? el.getAttribute('data-queue-id') ?? '';
@@ -88,7 +90,9 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			el.getAttribute('data-display-theme')?.trim() ||
 			null;
 
-		const opacityRaw = parseStyleValue(style, 'opacity');
+		// New saves: opacity + background live on .queue-zone-bg; legacy: on .queue-zone itself.
+		const opacityRaw =
+			parseStyleValue(bgStyle, 'opacity') ?? parseStyleValue(style, 'opacity');
 		const opacityParsed = opacityRaw != null ? parseFloat(opacityRaw) : NaN;
 		zones.push({
 			name: el.getAttribute('data-zone-name') ?? '',
@@ -100,6 +104,8 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			width: parsePx(parseStyleValue(style, 'width')),
 			height: parsePx(parseStyleValue(style, 'height')),
 			backgroundColor:
+				parseStyleValue(bgStyle, 'background') ??
+				parseStyleValue(bgStyle, 'background-color') ??
 				parseStyleValue(style, 'background') ??
 				parseStyleValue(style, 'background-color') ??
 				'#ffffff',

@@ -19,6 +19,7 @@ import {
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
 import { computeFillZoneTextSizes } from '../TokenDisplayThemes/tokenDisplayThemes';
 import {
+	applyColorAlpha,
 	getZoneAppearanceFromParsedZone,
 	getZoneAppearanceFromRect,
 } from '../../../utils/zoneAppearanceFabric';
@@ -586,58 +587,59 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 				className={`${hostClassName}${flicker ? ' template-fabric-preview-host--live' : ''}`}>
 				<div className='screen-public-zone-layer'>
 					{overlayZones.map((zone, index) => {
-						console.log('zone', zone);
 						const queue = resolveQueueForParsedZone(zone, queuesByUuid);
 						const display = getPublicQueueZoneDisplay(queue, {
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
-						console.log('display', display);
 						const appearance = getZoneAppearanceFromParsedZone(zone);
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
 
-				const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
+						const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
 
-				if (
-					(appearance.mode === 'theme' && appearance.displayTheme) ||
-					appearance.mode === 'fill'
-				) {
-					// Primary: live `other_current_tokens` returned by the API each poll.
-					// Fallback: frontend-tracked history keyed by queue UUID.
-					const zoneRecentTokens =
-						!suppressZoneHistory && queue?.other_tokens?.length
-							? queue.other_tokens
-							: !suppressZoneHistory && queue?.uuid
-								? (recentByQueue[queue.uuid] ?? [])
-								: [];
-					return (
-						<div
-							key={`${zone.name}-${index}`}
-							className='screen-zone-live-overlay screen-zone-live-overlay--theme'
-							style={{ ...zoneStyle, opacity: zoneOpacity }}>
-							<TokenDisplayThemeCard
-								appearance={appearance}
-								queueName={display.queueName}
-								subtitle={display.servingPointName}
-								tokenDisplay={display.tokenDisplay}
-								status={display.tokenStatus}
-								recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
-								fillContainer
+						if (
+							(appearance.mode === 'theme' && appearance.displayTheme) ||
+							appearance.mode === 'fill'
+						) {
+							// Primary: live `other_current_tokens` returned by the API each poll.
+							// Fallback: frontend-tracked history keyed by queue UUID.
+							const zoneRecentTokens =
+								!suppressZoneHistory && queue?.other_tokens?.length
+									? queue.other_tokens
+									: !suppressZoneHistory && queue?.uuid
+										? (recentByQueue[queue.uuid] ?? [])
+										: [];
+							return (
+								<div
+									key={`${zone.name}-${index}`}
+									className='screen-zone-live-overlay screen-zone-live-overlay--theme'
+									style={zoneStyle}>
+									<TokenDisplayThemeCard
+										appearance={appearance}
+										queueName={display.queueName}
+										subtitle={display.servingPointName}
+										tokenDisplay={display.tokenDisplay}
+										status={display.tokenStatus}
+										recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
+										fillContainer
+										backgroundOpacity={zoneOpacity < 1 ? zoneOpacity : undefined}
+									/>
+								</div>
+							);
+						}
+
+						return (
+							<div
+								key={`${zone.name}-${index}-fill`}
+								className='screen-zone-live-overlay screen-zone-live-overlay--plain'
+								style={{
+									...zoneStyle,
+									background: applyColorAlpha(
+										zone.backgroundColor ?? '#ffffff',
+										zoneOpacity,
+									),
+								}}
 							/>
-						</div>
-					);
-				}
-
-					return (
-						<div
-							key={`${zone.name}-${index}-fill`}
-							className='screen-zone-live-overlay screen-zone-live-overlay--plain'
-							style={{
-								...zoneStyle,
-								background: zone.backgroundColor,
-								opacity: zoneOpacity,
-							}}
-						/>
-					);
+						);
 					})}
 				</div>
 			</div>

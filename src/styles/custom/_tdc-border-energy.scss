@@ -162,6 +162,7 @@
 		inset: 1px;
 		border-radius: inherit;
 		background: $inner-bg;
+		opacity: var(--tdc-zone-bg-opacity, 1);
 		z-index: -1;
 	}
 }

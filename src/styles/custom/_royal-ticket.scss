@@ -33,8 +33,8 @@
 }
 
 .tdc--royal-ticket {
-	--rt-bg: #14101f;
-	--rt-bg-light: #1f1830;
+	--rt-bg: rgba(20, 16, 31, #{tdc-zone-a(1)});
+	--rt-bg-light: rgba(31, 24, 48, #{tdc-zone-a(1)});
 	--rt-accent: #d4af37;
 	--rt-accent-soft: #e8c872;
 	--rt-accent-glow: rgba(212, 175, 55, 0.5);
@@ -339,7 +339,7 @@
 		position: relative;
 		z-index: 2;
 		border-top: 1px solid rgba(212, 175, 55, 0.18);
-		background: rgba(20, 16, 31, 0.92);
+		background: rgba(20, 16, 31, #{tdc-zone-a(0.92)});
 		margin-top: 0.2em;
 		border-radius: 0 0 0.75em 0.75em;
 	}
@@ -357,7 +357,7 @@
 	}
 
 	.tdc__history-card {
-		background: var(--rt-bg-light);
+		background: rgba(31, 24, 48, #{tdc-zone-a(1)});
 		border: 1px solid rgba(212, 175, 55, 0.28);
 		border-radius: 0.5em;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);

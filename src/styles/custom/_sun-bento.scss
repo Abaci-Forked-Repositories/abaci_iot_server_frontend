@@ -177,7 +177,7 @@
 		position: relative;
 		z-index: 2;
 		border-top: 2px solid rgba(10, 10, 10, 0.08);
-		background: rgba(245, 224, 80, 0.55);
+		background: rgba(245, 224, 80, #{tdc-zone-a(0.55)});
 		margin-top: 0.15em;
 	}
 
@@ -194,7 +194,7 @@
 	}
 
 	.tdc__history-card {
-		background: var(--sb-cream);
+		background: rgba(255, 244, 146, #{tdc-zone-a(1)});
 		border: 2px solid rgba(10, 10, 10, 0.12);
 		border-radius: 999px;
 		box-shadow: none;

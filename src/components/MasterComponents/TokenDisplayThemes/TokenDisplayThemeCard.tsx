@@ -63,6 +63,13 @@ export interface TokenDisplayThemeCardProps {
 
 	/** Template editor / theme picker — flat token numeral without glow panel. */
 	previewMode?: boolean;
+
+	/**
+	 * 0–1 opacity applied ONLY to the zone background (fill color or theme gradient).
+	 * Text, borders, and decorations remain at full opacity.
+	 * When omitted or 1, the card renders normally with no separate background layer.
+	 */
+	backgroundOpacity?: number;
 }
 
 /** Short counter label: "Counter 03" → "03", "COUNTER 4" → "04". */
@@ -98,6 +105,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	recentTokens,
 	showHistoryTime = true,
 	previewMode = false,
+	backgroundOpacity,
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
 	const seenHistoryKeysRef = useRef(new Set<string>());
@@ -129,10 +137,17 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
+	// Background-only opacity: when < 1 the background is painted in a separate
+	// absolute layer (z-index -1) so text and borders stay fully opaque.
+	const bgOpacity = backgroundOpacity ?? 1;
+	const useBgLayer = bgOpacity < 1;
+
 	const inlineStyle = useMemo<React.CSSProperties>(() => {
+		// When using the bg layer, the root div is transparent — background is on the layer.
+		if (useBgLayer) return {};
 		if (!resolved.useFillBackground || !resolved.backgroundColor) return {};
 		return { backgroundColor: resolved.backgroundColor };
-	}, [resolved]);
+	}, [resolved, useBgLayer]);
 
 	const hasHistory = fillContainer && Boolean(recentTokens?.length);
 	const activeTokenCount = recentTokens?.length ?? 0;
@@ -147,6 +162,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		hasHistory ? 'tdc--has-history' : '',
 		hasHistory && !useHistoryMarquee ? 'tdc--history-static' : '',
 		previewMode ? 'tdc--preview' : '',
+		bgOpacity < 1 ? 'tdc--zone-bg-fade' : '',
 		`tdc--status-${statusConfig.modifier}`,
 		className,
 	]
@@ -241,11 +257,53 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	}, [recentTokens, useHistoryMarquee]);
 
 	return (
-		<div ref={rootRef} className={rootClasses} style={{ ...inlineStyle, ...style }}>
-			{isImperialCourt && <ImperialCourtBackdrop />}
-			{isArcticGlass && <ArcticGlassBackdrop />}
-			{isPipboyTerminal && <PipboyTerminalBackdropLayer />}
-			{isVelvetCrown && <VelvetCrownBackdrop />}
+		<div
+			ref={rootRef}
+			className={rootClasses}
+			style={{
+				// When using the bg layer, override the CSS-class background with transparent
+				// so only the dedicated background layer (below, z-index:-1) is visible.
+				...(useBgLayer ? { isolation: 'isolate', background: 'transparent', backgroundColor: 'transparent' } : {}),
+				// Fades in-zone Active Tokens strip backgrounds (themes 1–5) without dimming text.
+				...(bgOpacity < 1
+					? ({ '--tdc-zone-bg-opacity': bgOpacity } as React.CSSProperties)
+					: {}),
+				...inlineStyle,
+				...style,
+			}}>
+			{/* ── Background-only opacity layer ─────────────────────────────────────
+			    Rendered at z-index:-1 inside an isolate stacking context so that
+			    opacity only affects the background, not text/borders/decorations.  */}
+			{useBgLayer && (
+				<div
+					className={['tdc', resolved.themeClass].filter(Boolean).join(' ')}
+					style={{
+						position: 'absolute',
+						inset: 0,
+						opacity: bgOpacity,
+						zIndex: -1,
+						overflow: 'hidden',
+						pointerEvents: 'none',
+						borderRadius: 'inherit',
+						// Fill mode: explicit color (CSS class has no gradient for fill mode)
+						...(resolved.useFillBackground && resolved.backgroundColor
+							? { background: resolved.backgroundColor }
+							: {}),
+					}}
+					aria-hidden>
+					{isImperialCourt && <ImperialCourtBackdrop />}
+					{isArcticGlass && <ArcticGlassBackdrop />}
+					{isPipboyTerminal && <PipboyTerminalBackdropLayer />}
+					{isVelvetCrown && <VelvetCrownBackdrop />}
+				</div>
+			)}
+
+			{/* Regular backdrop components (full opacity path) */}
+			{!useBgLayer && isImperialCourt && <ImperialCourtBackdrop />}
+			{!useBgLayer && isArcticGlass && <ArcticGlassBackdrop />}
+			{!useBgLayer && isPipboyTerminal && <PipboyTerminalBackdropLayer />}
+			{!useBgLayer && isVelvetCrown && <VelvetCrownBackdrop />}
+
 			{(isOnyxGold || isArcticGlass || isImperialCourt) && fillContainer && (
 				<TokenDisplayColumnSeparator />
 			)}

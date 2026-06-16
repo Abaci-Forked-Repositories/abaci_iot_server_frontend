@@ -274,9 +274,9 @@ export function getPublicQueueZoneDisplay(
 		'—';
 	const tokenStatus =
 		queue?.token_status?.trim() ||
-		queue?.status?.trim() ||
 		queue?.current_token?.status?.trim() ||
-		'—';
+		queue?.status?.trim() ||
+		'waiting';
 
 	return { queueName, servingPointName, tokenDisplay, tokenStatus };
 }

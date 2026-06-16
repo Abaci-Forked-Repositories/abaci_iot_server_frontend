@@ -930,6 +930,46 @@
 		max-height: none;
 		overflow: hidden;
 	}
+
+	// Themes 6–9: screen-level Active Tokens bar is absolutely positioned at the
+	// bottom — lift the template layer so zone cards (esp. Pipboy flip digits) do
+	// not render underneath the ticker (matches editor shell + embedded ticker).
+	&--fullscreen.screen-public-root--active-tokens[data-ticker-theme] {
+		--screen-active-tokens-height: clamp(72px, 18vh, 130px);
+
+		.screen-public-template-layer {
+			bottom: var(--screen-active-tokens-height);
+			// `height: 100%` on the layer ignores `bottom` — shrink to top…bottom band.
+			height: auto;
+		}
+
+		> .pct-bar.pct-bar--active-tokens {
+			height: var(--screen-active-tokens-height);
+		}
+	}
+
+	// Pipboy live display: keep body|foot in the shared 1fr row (status column visible).
+	// Clip flip digits to the body column so they cannot paint over the status badge.
+	&--fullscreen[data-ticker-theme='pipboy-terminal'] {
+		.tdc--fill.tdc--pipboy-terminal {
+			grid-template-rows: auto auto minmax(0, 0.12fr) minmax(0, 1fr) minmax(0, 0.1fr);
+
+			.tdc__body .tdc__token {
+				overflow: hidden;
+				max-width: 100%;
+			}
+
+			.tdc__footer {
+				z-index: 5;
+				overflow: visible;
+				align-self: stretch;
+			}
+
+			.tdc__status-badge {
+				overflow: visible;
+			}
+		}
+	}
 }
 
 .screen-public-background {
@@ -1143,15 +1183,27 @@
 }
 
 .pct-label-text {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: clamp(0.25em, 0.45em, 0.45em);
 	font-size: clamp(8px, 1.1vw, 13px);
 	font-weight: 700;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
 	color: rgba(255, 255, 255, 0.55);
-	white-space: nowrap;
 	writing-mode: vertical-rl;
 	text-orientation: mixed;
 	transform: rotate(180deg);
+	max-height: 100%;
+	overflow: hidden;
+}
+
+.pct-label-word {
+	display: block;
+	line-height: 1;
+	white-space: nowrap;
 }
 
 .pct-label-divider {
@@ -1307,7 +1359,7 @@
 	--pip-glow: rgba(26, 255, 64, 0.6);
 	--pip-bg: #020a02;
 
-	background: rgba(2, 10, 2, 0.94);
+	background: rgba(2, 10, 2, calc(0.94 * var(--pct-zone-bg-opacity, 1)));
 	border-top: 1px solid rgba(26, 255, 64, 0.45);
 	box-shadow:
 		0 -4px 28px rgba(26, 255, 64, 0.18),
@@ -1343,7 +1395,7 @@
 	}
 
 	.pct-card {
-		background: rgba(0, 0, 0, 0.42);
+		background: rgba(0, 0, 0, calc(0.42 * var(--pct-zone-bg-opacity, 1)));
 		border: 1px dashed rgba(26, 255, 64, 0.4);
 		border-radius: 4px;
 		backdrop-filter: none;
@@ -1459,7 +1511,11 @@
 	--vc-champagne: #f5deb3;
 	--vc-burgundy: #1a0a12;
 
-	background: linear-gradient(180deg, rgba(45, 15, 31, 0.96) 0%, rgba(18, 6, 14, 0.98) 100%);
+	background: linear-gradient(
+		180deg,
+		rgba(45, 15, 31, calc(0.96 * var(--pct-zone-bg-opacity, 1))) 0%,
+		rgba(18, 6, 14, calc(0.98 * var(--pct-zone-bg-opacity, 1))) 100%
+	);
 	border-top: 1px solid rgba(201, 162, 39, 0.4);
 	box-shadow:
 		0 -6px 32px rgba(0, 0, 0, 0.45),
@@ -1491,7 +1547,7 @@
 	}
 
 	.pct-card {
-		background: rgba(0, 0, 0, 0.4);
+		background: rgba(0, 0, 0, calc(0.4 * var(--pct-zone-bg-opacity, 1)));
 		border: 1px solid rgba(201, 162, 39, 0.38);
 		border-radius: 6px;
 		box-shadow:
@@ -1605,7 +1661,7 @@
 	--sb-ink: #0a0a0a;
 	--sb-ink-soft: rgba(10, 10, 10, 0.52);
 
-	background: var(--sb-cream);
+	background: rgba(255, 244, 146, calc(1 * var(--pct-zone-bg-opacity, 1)));
 	border-top: 2px solid rgba(10, 10, 10, 0.08);
 	box-shadow: 0 -8px 32px rgba(10, 10, 10, 0.08);
 	backdrop-filter: none;
@@ -1633,7 +1689,7 @@
 	}
 
 	.pct-card {
-		background: var(--sb-cream);
+		background: rgba(255, 244, 146, calc(1 * var(--pct-zone-bg-opacity, 1)));
 		border: 2px solid rgba(10, 10, 10, 0.12);
 		border-radius: 999px;
 		box-shadow: none;
@@ -1720,7 +1776,11 @@
 	--rt-accent-glow: rgba(212, 175, 55, 0.45);
 	--rt-text-muted: rgba(245, 222, 179, 0.62);
 
-	background: linear-gradient(180deg, var(--rt-bg-light) 0%, var(--rt-bg) 100%);
+	background: linear-gradient(
+		180deg,
+		rgba(31, 24, 48, calc(1 * var(--pct-zone-bg-opacity, 1))) 0%,
+		rgba(20, 16, 31, calc(1 * var(--pct-zone-bg-opacity, 1))) 100%
+	);
 	border-top: 1px solid rgba(212, 175, 55, 0.28);
 	box-shadow:
 		0 -10px 36px rgba(0, 0, 0, 0.55),
@@ -1746,8 +1806,23 @@
 		background: rgba(212, 175, 55, 0.22);
 	}
 
+	// Vertical label — two stacked words (matches Digital Crimson in-zone history strip).
+	.pct-label {
+		flex: 0 0 clamp(2rem, 4vw, 2.85rem);
+		min-width: clamp(2rem, 4vw, 2.85rem);
+		overflow: visible;
+		padding: clamp(4px, 0.8vh, 10px) clamp(10px, 1.8vw, 22px);
+	}
+
+	.pct-label-text {
+		gap: clamp(0.3em, 0.45em, 0.45em);
+		letter-spacing: clamp(0.06em, 0.85vw, 0.1em);
+		padding: 0.12em 0.28em;
+		overflow: visible;
+	}
+
 	.pct-card {
-		background: var(--rt-bg-light);
+		background: rgba(31, 24, 48, calc(1 * var(--pct-zone-bg-opacity, 1)));
 		border: 1px solid rgba(212, 175, 55, 0.32);
 		border-radius: 0.5em;
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
