@@ -455,6 +455,17 @@
 
 @import 'royal-ticket';
 
+@import 'airport-arrival';
+
+@import 'oled-pulse';
+
+@import 'digital-healthcare';
+
+@import 'glass-lobby';
+
+@import 'neon-prism';
+@import 'aurora-nexus';
+
 // Fill-only zone (no named theme) — background from inline style
 .tdc--fill-mode {
 	--tdc-bg: transparent;
@@ -660,8 +671,8 @@
 		min-width: 0;
 	}
 
-	// Themes 1–5 split grid body — Pipboy uses its own grid (see _themes-new-fill-overrides.scss).
-	&:not(.tdc--pipboy-terminal) .tdc__body {
+	// Themes 1–5 split grid body — custom cards (Pipboy, Arrival, OLED Pulse) excluded.
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus) .tdc__body {
 		overflow: hidden;
 		border-right: 1px solid var(--tdc-border);
 		container-type: size;
@@ -686,8 +697,8 @@
 		text-align: center;
 	}
 
-	// Plain numeral themes only — Pipboy uses FlipTokenDisplay (flip-digit panels).
-	&:not(.tdc--pipboy-terminal) .tdc__token {
+	// Pipboy flip digits / Airport door digits — excluded (see _themes-new-fill-overrides.scss).
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus) .tdc__token {
 		font-size: 3.35em;
 		width: 100%;
 		line-height: 0.94;
@@ -1463,9 +1474,8 @@
 	}
 }
 
-// Wide TV zones: cap token by body column width/height (ResizeObserver + CSS safety net).
-// Pipboy uses FlipTokenDisplay — excluded (see _themes-new-fill-overrides.scss).
-.tdc--fill:not(.tdc--pipboy-terminal) .tdc__body .tdc__token {
+// Pipboy / custom card themes — excluded (see theme SCSS + _themes-new-fill-overrides.scss).
+.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
@@ -1474,7 +1484,7 @@
 }
 
 // Preview mode — slightly larger token numeral (template editor + theme picker).
-.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal) .tdc__body .tdc__token {
+.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1.14 * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.50 + 0.26)),
@@ -1514,6 +1524,26 @@
 
 	&.tdc--crimson-banner .tdc__token {
 		font-size: 4.28em;
+	}
+
+	&.tdc--oled-pulse .tdc-op-token {
+		font-size: 4.6em;
+	}
+
+	&.tdc--digital-healthcare .tdc-dh-token {
+		font-size: 4.1em;
+	}
+
+	&.tdc--glass-lobby .tdc-gl-token {
+		font-size: 4.4em;
+	}
+
+	&.tdc--neon-prism .tdc-np-token {
+		font-size: 4.4em;
+	}
+
+	&.tdc--aurora-nexus .tdc-an-token__digit {
+		font-size: 5.2em;
 	}
 }
 

@@ -58,7 +58,7 @@ function FlipDigit({ char }: { char: string }) {
 					className='flip-digit__flip'
 					aria-hidden='true'
 					onAnimationEnd={(event) => {
-						if (!event.animationName.includes('pipboy-digit-flip')) return;
+						if (!event.animationName.includes('digit-flip')) return;
 						finishFlip();
 					}}>
 					<span className='flip-digit__flip-front'>

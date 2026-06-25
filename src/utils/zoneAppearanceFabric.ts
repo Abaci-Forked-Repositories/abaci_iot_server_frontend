@@ -108,6 +108,12 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'velvet-crown': '#1a0a12',
 		'sun-bento': '#fff492',
 		'royal-ticket': '#14101f',
+		'airport-arrival': '#000000',
+		'oled-pulse': '#000000',
+		'digital-healthcare': '#ffffff',
+		'glass-lobby': '#2a2048',
+		'neon-prism': '#010820',
+		'aurora-nexus': '#030510',
 	};
 	return fallbacks[themeId];
 }

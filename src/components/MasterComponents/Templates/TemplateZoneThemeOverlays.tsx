@@ -124,6 +124,21 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		[zones, revision],
 	);
 
+	const hasAnimatedPreviewToken = useMemo(
+		() =>
+			zones.some((rect) => {
+				const theme = getZoneAppearanceFromRect(rect).displayTheme;
+				return (
+					theme === 'oled-pulse' ||
+					theme === 'digital-healthcare' ||
+					theme === 'glass-lobby' ||
+					theme === 'neon-prism' ||
+					theme === 'aurora-nexus'
+				);
+			}),
+		[zones, revision],
+	);
+
 	const useThemedScreenTicker = Boolean(tickerThemeSlug);
 
 	const zonesUnion = useMemo(
@@ -154,7 +169,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 	const activeTokenPoolRef = useRef(0);
 
 	useEffect(() => {
-		if (!useThemedScreenTicker) return undefined;
+		if (!useThemedScreenTicker && !hasAnimatedPreviewToken) return undefined;
 
 		const timer = window.setInterval(() => {
 			setPreviewToken((current) => {
@@ -165,7 +180,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		}, PREVIEW_FLIP_INTERVAL_MS);
 
 		return () => window.clearInterval(timer);
-	}, [useThemedScreenTicker]);
+	}, [useThemedScreenTicker, hasAnimatedPreviewToken]);
 
 	useEffect(() => {
 		if (!useThemedScreenTicker) return undefined;
@@ -237,7 +252,16 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 				<TokenDisplayThemeCard
 					appearance={appearance}
 					queueName={queueName}
-					tokenDisplay={usesScreenTicker ? previewToken : '05'}
+					tokenDisplay={
+						usesScreenTicker ||
+						appearance.displayTheme === 'oled-pulse' ||
+						appearance.displayTheme === 'digital-healthcare' ||
+						appearance.displayTheme === 'glass-lobby' ||
+						appearance.displayTheme === 'neon-prism' ||
+						appearance.displayTheme === 'aurora-nexus'
+							? previewToken
+							: '05'
+					}
 					status='waiting'
 					recentTokens={usesScreenTicker ? undefined : MOCK_RECENT_TOKENS}
 					fillContainer

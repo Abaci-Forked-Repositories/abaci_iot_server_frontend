@@ -21,6 +21,7 @@ function getQueueServingPoint(queue: PublicQueueStatus): string {
 
 /** Announcement phrase from API when token + serving point are present. */
 function getQueueAnnouncementText(queue: PublicQueueStatus): string | null {
+	console.log('queue', queue);
 	const tokenDisplay = getQueueTokenDisplay(queue);
 	const servingPointName = getQueueServingPoint(queue);
 	if (!tokenDisplay || !servingPointName) return null;

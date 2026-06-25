@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
+	computeAuroraNexusFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
+	computeDigitalHealthcareFillBaseFontSize,
+	computeGlassLobbyFillBaseFontSize,
+	computeNeonPrismFillBaseFontSize,
+	computeOledPulseFillBaseFontSize,
 	computePipboyFillBaseFontSize,
 	computeRoyalTicketFillBaseFontSize,
 	getFillZoneBodyColumnFraction,
@@ -19,6 +24,13 @@ import ArcticGlassBackdrop from './ArcticGlassBackdrop';
 import VelvetCrownBackdrop from './VelvetCrownBackdrop';
 import SunBentoCard from './SunBentoCard';
 import RoyalTicketCard from './RoyalTicketCard';
+import AirportArrivalCard from './AirportArrivalCard';
+import OledPulseCard from './OledPulseCard';
+import HealthcareDashboardCard from './HealthcareDashboardCard';
+import GlassLobbyCard from './GlassLobbyCard';
+import NeonPrismCard from './NeonPrismCard';
+import AuroraNexusCard from './AuroraNexusCard';
+import AuroraNexusActiveTokens from './AuroraNexusActiveTokens';
 import {
 	PipboyTerminalBackdropLayer,
 	PipboyTerminalClockRow,
@@ -134,6 +146,12 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isVelvetCrown = resolved.themeClass === 'tdc--velvet-crown';
 	const isSunBento = resolved.themeClass === 'tdc--sun-bento';
 	const isRoyalTicket = resolved.themeClass === 'tdc--royal-ticket';
+	const isAirportArrival = resolved.themeClass === 'tdc--airport-arrival';
+	const isOledPulse = resolved.themeClass === 'tdc--oled-pulse';
+	const isDigitalHealthcare = resolved.themeClass === 'tdc--digital-healthcare';
+	const isGlassLobby = resolved.themeClass === 'tdc--glass-lobby';
+	const isNeonPrism = resolved.themeClass === 'tdc--neon-prism';
+	const isAuroraNexus = resolved.themeClass === 'tdc--aurora-nexus';
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
@@ -185,16 +203,43 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const tokenLen = displayToken.length;
 			const hasHistory = el.classList.contains('tdc--has-history');
 			const isPipboy = resolved.themeClass === 'tdc--pipboy-terminal';
+			const isOledPulseTheme = resolved.themeClass === 'tdc--oled-pulse';
+			const isDigitalHealthcareTheme = resolved.themeClass === 'tdc--digital-healthcare';
+			const isGlassLobbyTheme = resolved.themeClass === 'tdc--glass-lobby';
+			const isNeonPrismTheme = resolved.themeClass === 'tdc--neon-prism';
+			const isAuroraNexusTheme = resolved.themeClass === 'tdc--aurora-nexus';
 			const isRoyalTicketTheme = resolved.themeClass === 'tdc--royal-ticket';
 			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
 			const fontSize = isPipboy
 				? computePipboyFillBaseFontSize(width, height, tokenLen)
-				: isRoyalTicketTheme
-					? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
-					: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
-						tokenEm,
-						bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
-					});
+				: isOledPulseTheme
+					? computeOledPulseFillBaseFontSize(width, height, tokenLen, hasHistory)
+					: isDigitalHealthcareTheme
+						? computeDigitalHealthcareFillBaseFontSize(width, height, tokenLen, hasHistory)
+						: isGlassLobbyTheme
+							? computeGlassLobbyFillBaseFontSize(width, height, tokenLen, hasHistory)
+							: isNeonPrismTheme
+								? computeNeonPrismFillBaseFontSize(
+										width,
+										height,
+										tokenLen,
+										hasHistory,
+										activeTokenCount,
+									)
+								: isAuroraNexusTheme
+									? computeAuroraNexusFillBaseFontSize(
+											width,
+											height,
+											tokenLen,
+											hasHistory,
+											activeTokenCount,
+										)
+								: isRoyalTicketTheme
+								? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
+								: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
+									tokenEm,
+									bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
+								});
 			el.style.fontSize = `${fontSize}px`;
 			if (isPipboy) {
 				el.style.setProperty('--tdc-token-chars', String(tokenLen));
@@ -219,7 +264,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			el.style.removeProperty('--tdc-token-fill-em');
 			el.style.removeProperty('--tdc-token-chars');
 		};
-	}, [fillContainer, displayToken, resolved.themeClass]);
+	}, [fillContainer, displayToken, resolved.themeClass, activeTokenCount]);
 
 	useEffect(() => {
 		if (!recentTokens?.length) return;
@@ -324,6 +369,122 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 				/>
+			) : isAirportArrival ? (
+				<AirportArrivalCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+				/>
+			) : isOledPulse ? (
+				<OledPulseCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+				/>
+			) : isDigitalHealthcare ? (
+				<HealthcareDashboardCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+				/>
+			) : isGlassLobby ? (
+				<GlassLobbyCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+				/>
+			) : isNeonPrism ? (
+				<div className='tdc-np-shell'>
+					<NeonPrismCard
+						queueName={queueName}
+						subtitle={subtitle}
+						displayToken={displayToken}
+						statusLabel={statusConfig.label}
+						statusModifier={statusConfig.modifier}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 && (
+						<div
+							className={[
+								'tdc-np-active',
+								useHistoryMarquee ? 'tdc-np-active--marquee' : 'tdc-np-active--fit',
+							]
+								.filter(Boolean)
+								.join(' ')}
+							aria-label='Active tokens'
+							style={
+								{ '--tdc-np-active-count': activeTokenCount } as React.CSSProperties
+							}>
+							<span className='tdc-np-active__title' aria-hidden='true'>
+								Active Tokens
+							</span>
+							<div className='tdc-np-active__viewport'>
+								<div className='tdc-np-active__grid'>
+									{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+										const counter = shortCounterLabel(t.serving_point_name);
+										const tokenKey = historyTokenKey(t);
+										const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+										const isEntering =
+											!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+										return (
+											<div
+												key={`${tokenKey}-${i}`}
+												className={[
+													'tdc-np-active__chip',
+													isEntering ? 'tdc-np-active__chip--enter' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-hidden={isMarqueeDuplicate}
+												onAnimationEnd={() => {
+													if (isEntering) clearHistoryEnter(tokenKey);
+												}}>
+												<span className='tdc-np-active__token'>{t.token_display}</span>
+												{counter && (
+													<span
+														className='tdc-np-active__counter'
+														title={`Counter ${counter}`}>
+														{counter}
+													</span>
+												)}
+												{showHistoryTime && t.called_at && (
+													<span className='tdc-np-active__time'>{fmtTime(t.called_at)}</span>
+												)}
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					)}
+				</div>
+			) : isAuroraNexus ? (
+				<div className='tdc-an-shell'>
+					<AuroraNexusCard
+						queueName={queueName}
+						subtitle={subtitle}
+						displayToken={displayToken}
+						statusLabel={statusConfig.label}
+						statusModifier={statusConfig.modifier}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 && (
+						<AuroraNexusActiveTokens
+							tokens={recentTokens}
+							showHistoryTime={showHistoryTime}
+							enteringKeys={enteringHistoryKeys}
+							onEnterEnd={clearHistoryEnter}
+							tokenKeyFn={historyTokenKey}
+							shortCounterLabel={shortCounterLabel}
+							fmtTime={fmtTime}
+						/>
+					)}
+				</div>
 			) : (
 				<>
 					<div className='tdc__header'>
@@ -378,8 +539,162 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				</>
 			)}
 
+			{/* Glass Lobby — frosted active token chips */}
+			{isGlassLobby && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div
+					className={[
+						'tdc-gl-active',
+						useHistoryMarquee ? 'tdc-gl-active--marquee' : 'tdc-gl-active--fit',
+					]
+						.filter(Boolean)
+						.join(' ')}
+					aria-label='Active tokens'
+					style={{ '--tdc-gl-active-count': activeTokenCount } as React.CSSProperties}>
+					<span className='tdc-gl-active__title' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-gl-active__viewport'>
+						<div className='tdc-gl-active__grid'>
+							{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+								const counter = shortCounterLabel(t.serving_point_name);
+								const tokenKey = historyTokenKey(t);
+								const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+								const isEntering =
+									!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+								return (
+									<div
+										key={`${tokenKey}-${i}`}
+										className={[
+											'tdc-gl-active__chip',
+											isEntering ? 'tdc-gl-active__chip--enter' : '',
+										]
+											.filter(Boolean)
+											.join(' ')}
+										aria-hidden={isMarqueeDuplicate}
+										onAnimationEnd={() => {
+											if (isEntering) clearHistoryEnter(tokenKey);
+										}}>
+										<span className='tdc-gl-active__token'>{t.token_display}</span>
+										{counter && (
+											<span
+												className='tdc-gl-active__counter'
+												title={`Counter ${counter}`}>
+												{counter}
+											</span>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Digital Healthcare — metric-style active token cards (no scrollbar) */}
+			{isDigitalHealthcare && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div
+					className={[
+						'tdc-dh-metrics',
+						useHistoryMarquee ? 'tdc-dh-metrics--marquee' : 'tdc-dh-metrics--fit',
+					]
+						.filter(Boolean)
+						.join(' ')}
+					aria-label='Active tokens'
+					style={{ '--tdc-dh-active-count': activeTokenCount } as React.CSSProperties}>
+					<span className='tdc-dh-metrics__title' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-dh-metrics__viewport'>
+						<div className='tdc-dh-metrics__grid'>
+							{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+								const counter = shortCounterLabel(t.serving_point_name);
+								const tokenKey = historyTokenKey(t);
+								const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+								const isEntering =
+									!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+								return (
+									<div
+										key={`${tokenKey}-${i}`}
+										className={[
+											'tdc-dh-metric-card',
+											isEntering ? 'tdc-dh-metric-card--enter' : '',
+										]
+											.filter(Boolean)
+											.join(' ')}
+										aria-hidden={isMarqueeDuplicate}
+										onAnimationEnd={() => {
+											if (isEntering) clearHistoryEnter(tokenKey);
+										}}>
+										<span className='tdc-dh-metric-card__icon' aria-hidden='true'>
+											+
+										</span>
+										<div className='tdc-dh-metric-card__body'>
+											<span className='tdc-dh-metric-card__token'>{t.token_display}</span>
+											{counter && (
+												<span
+													className='tdc-dh-metric-card__counter'
+													title={`Counter ${counter}`}>
+													{counter}
+												</span>
+											)}
+											{showHistoryTime && t.called_at && (
+												<span className='tdc-dh-metric-card__time'>{fmtTime(t.called_at)}</span>
+											)}
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* OLED Pulse — minimal active-token chip rail */}
+			{isOledPulse && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-op-active' aria-label='Active tokens'>
+					<span className='tdc-op-active__label' aria-hidden='true'>
+						Active
+					</span>
+					<div className='tdc-op-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-op-active__chip',
+										isEntering ? 'tdc-op-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-op-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-op-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-op-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-op-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
+
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

@@ -1,0 +1,456 @@
+// ─── Theme · OLED Pulse (slug: oled-pulse) ───────────────────────────────────
+// Pure black OLED panel, violet accent sweep, oversized token, minimal status dot.
+
+@keyframes op-accent-sweep {
+	0% {
+		transform: translateX(-110%);
+		opacity: 0;
+	}
+	12% {
+		opacity: 1;
+	}
+	88% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateX(110%);
+		opacity: 0;
+	}
+}
+
+@keyframes op-token-scale-in {
+	from {
+		transform: scale(0.86);
+		opacity: 0.28;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes op-status-dot-breathe {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.72;
+		transform: scale(0.92);
+	}
+}
+
+@keyframes op-chip-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.35em);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.tdc--oled-pulse {
+	--op-bg: #000000;
+	--op-text: #fafafa;
+	--op-text-sub: rgba(250, 250, 250, 0.42);
+	--op-violet: #8b5cf6;
+	--op-mint: #34d399;
+	--op-accent: var(--op-violet);
+	--tdc-bg: var(--op-bg);
+	--tdc-glow-color: transparent;
+	--tdc-text: var(--op-text);
+	--tdc-text-sub: var(--op-text-sub);
+	--tdc-text-label: var(--op-text-sub);
+	--tdc-token-color: var(--op-text);
+	--tdc-token-shadow: none;
+	--tdc-border: rgba(139, 92, 246, 0.22);
+	--tdc-badge-bg: transparent;
+	--tdc-badge-text: var(--op-text);
+	--tdc-badge-border: transparent;
+
+	font-family:
+		system-ui,
+		-apple-system,
+		'BlinkMacSystemFont',
+		'Segoe UI',
+		'Helvetica Neue',
+		sans-serif;
+
+	background: var(--op-bg);
+	color: var(--op-text);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+	overflow: hidden;
+	isolation: isolate;
+	min-width: 0;
+	min-height: 0;
+
+	.tdc__glow {
+		display: none;
+	}
+
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc-col-separators,
+	.tdc__history {
+		display: none !important;
+	}
+
+	.tdc-op-layout {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		height: 100%;
+		position: relative;
+		z-index: 2;
+		container-type: size;
+		container-name: tdc-op;
+	}
+
+	.tdc-op-accent-track {
+		position: relative;
+		flex-shrink: 0;
+		height: 0.14em;
+		min-height: 2px;
+		max-height: 4px;
+		overflow: hidden;
+		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.tdc-op-accent {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 42%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(139, 92, 246, 0.35) 28%,
+			var(--op-violet) 50%,
+			rgba(52, 211, 153, 0.85) 72%,
+			transparent 100%
+		);
+		box-shadow: 0 0 12px rgba(139, 92, 246, 0.45);
+		will-change: transform, opacity;
+	}
+
+	.tdc-op-accent--sweep {
+		animation: op-accent-sweep 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.tdc-op-meta {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.55em;
+		padding: 0.5em 0.72em 0.35em;
+		flex-shrink: 0;
+		min-width: 0;
+	}
+
+	.tdc-op-meta__copy {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1em;
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+
+	.tdc-op-queue {
+		font-size: clamp(0.48em, 2.8cqw, 0.68em);
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--op-text-sub);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.tdc-op-queue--empty {
+		min-height: 0.9em;
+		opacity: 0;
+	}
+
+	.tdc-op-subtitle {
+		font-size: clamp(0.4em, 2.2cqw, 0.52em);
+		font-weight: 500;
+		letter-spacing: 0.08em;
+		color: rgba(250, 250, 250, 0.28);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.tdc-op-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.38em;
+		flex-shrink: 0;
+		max-width: 46%;
+		min-width: 0;
+	}
+
+	.tdc-op-status__dot {
+		flex-shrink: 0;
+		width: clamp(0.32em, 1.8cqw, 0.46em);
+		height: clamp(0.32em, 1.8cqw, 0.46em);
+		border-radius: 50%;
+		background: rgba(139, 92, 246, 0.55);
+		animation: op-status-dot-breathe 2.6s ease-in-out infinite;
+	}
+
+	.tdc-op-status__dot--serving {
+		background: var(--op-mint);
+		box-shadow: 0 0 10px rgba(52, 211, 153, 0.65);
+	}
+
+	.tdc-op-status__dot--waiting {
+		background: rgba(139, 92, 246, 0.75);
+	}
+
+	.tdc-op-status__dot--completed,
+	.tdc-op-status__dot--registered {
+		background: rgba(250, 250, 250, 0.55);
+		animation: none;
+	}
+
+	.tdc-op-status__dot--cancelled,
+	.tdc-op-status__dot--no-show {
+		background: #f87171;
+		box-shadow: 0 0 8px rgba(248, 113, 113, 0.45);
+	}
+
+	.tdc-op-status__label {
+		font-size: clamp(0.38em, 2.1cqw, 0.5em);
+		font-weight: 500;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--op-text-sub);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		min-width: 0;
+	}
+
+	.tdc-op-hero {
+		flex: 1 1 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 0;
+		min-width: 0;
+		padding: 0.15em 0.5em 0.35em;
+		container-type: size;
+	}
+
+	.tdc-op-token {
+		display: block;
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 4.8) * 1em),
+			calc(94cqw / (var(--tdc-token-chars, 2) * 0.48 + 0.22)),
+			calc(72cqh)
+		);
+		font-weight: 300;
+		line-height: 0.92;
+		letter-spacing: -0.03em;
+		color: var(--op-text);
+		font-variant-numeric: tabular-nums;
+		text-align: center;
+		max-width: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		transform-origin: center center;
+	}
+
+	.tdc-op-token--reveal {
+		animation: op-token-scale-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	// ── Active tokens — minimal chip rail (not legacy history strip) ───────────
+	.tdc-op-active {
+		flex-shrink: 0;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		padding: 0.32em 0.55em 0.38em;
+		min-height: 0;
+		max-height: min(24%, 6.5em);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		gap: 0.22em;
+	}
+
+	.tdc-op-active__label {
+		font-size: clamp(0.34em, 1.8cqw, 0.42em);
+		font-weight: 500;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: rgba(250, 250, 250, 0.22);
+		flex-shrink: 0;
+	}
+
+	.tdc-op-active__scroll {
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: center;
+		gap: 0.38em;
+		min-width: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+
+	.tdc-op-active__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.28em;
+		flex-shrink: 0;
+		padding: 0.28em 0.48em;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.03);
+		font-size: clamp(0.42em, 2.4cqw, 0.52em);
+		max-width: 100%;
+	}
+
+	.tdc-op-active__chip--enter {
+		animation: op-chip-enter 0.4s ease-out both;
+	}
+
+	.tdc-op-active__chip-token {
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: var(--op-text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.tdc-op-active__chip-sep {
+		color: rgba(139, 92, 246, 0.55);
+		font-weight: 400;
+	}
+
+	.tdc-op-active__chip-counter {
+		font-weight: 500;
+		color: var(--op-text-sub);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.tdc-op-active__chip-time {
+		font-size: 0.85em;
+		color: rgba(250, 250, 250, 0.28);
+		margin-left: 0.15em;
+	}
+
+	@container tdc-op (max-width: 11em) {
+		.tdc-op-meta {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.35em;
+		}
+
+		.tdc-op-status {
+			max-width: 100%;
+		}
+	}
+
+	@container tdc-op (max-height: 9em) {
+		.tdc-op-meta {
+			padding-top: 0.35em;
+			padding-bottom: 0.2em;
+		}
+
+		.tdc-op-hero {
+			padding-bottom: 0.2em;
+		}
+
+		.tdc-op-active {
+			max-height: 2.8em;
+			padding-top: 0.22em;
+			padding-bottom: 0.25em;
+		}
+	}
+}
+
+.tdc--fill.tdc--oled-pulse {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	border-radius: inherit;
+
+	.tdc-op-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-op-layout {
+			flex: 1 1 0;
+		}
+
+		.tdc-op-active {
+			flex-shrink: 0;
+		}
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--oled-pulse .tdc-op-token {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 4.8) * 1.1 * 1em),
+		calc(94cqw / (var(--tdc-token-chars, 2) * 0.44 + 0.18)),
+		calc(76cqh)
+	);
+}
+
+.tdc--preview:not(.tdc--fill).tdc--oled-pulse {
+	.tdc-op-token {
+		font-size: 4.6em;
+	}
+
+	.tdc-op-layout {
+		min-height: 9.5em;
+	}
+}
+
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--oled-pulse {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tdc--oled-pulse {
+		.tdc-op-accent--sweep,
+		.tdc-op-token--reveal,
+		.tdc-op-status__dot,
+		.tdc-op-active__chip--enter {
+			animation: none !important;
+		}
+
+		.tdc-op-token--reveal {
+			opacity: 1;
+			transform: none;
+		}
+	}
+}
