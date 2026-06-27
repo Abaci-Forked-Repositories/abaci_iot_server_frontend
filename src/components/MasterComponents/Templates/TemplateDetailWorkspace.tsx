@@ -39,6 +39,8 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 import { parseTemplateConfiguration } from '../../../utils/templateOverlayOpacity';
+import { normalizeZoneQueueIds } from '../../../utils/zoneQueueResolution';
+import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
 import usePermissions from '../../../hooks/usePermissions';
 import {
 	formatPermissionDeniedMessage,
@@ -115,16 +117,28 @@ function dedupeQueueIdsPreserveOrder(queueIds: number[]): number[] {
 	});
 }
 
-/** Each zone may only be linked to one queue. */
-function toSingleZoneQueueIds(queueIds: number[]): number[] {
-	const unique = dedupeQueueIdsPreserveOrder(queueIds);
-	return unique.length ? [unique[0]] : [];
-}
-
 function queueIdsToUuids(queueIds: number[], queuesById: Map<number, Queue>): string[] {
 	return queueIds
 		.map((id) => queuesById.get(id)?.uuid)
 		.filter((uuid): uuid is string => typeof uuid === 'string' && uuid.length > 0);
+}
+
+function applyQueueRefsToRect(
+	rect: any,
+	queueIds: number[],
+	queuesById: Map<number, Queue>,
+) {
+	const uniqueIds = normalizeZoneQueueIds(queueIds);
+	const queueUuids = queueIdsToUuids(uniqueIds, queuesById);
+	const queueChipNames = uniqueIds.map(
+		(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
+	);
+	rect.set({
+		queueIds: uniqueIds,
+		queueId: uniqueIds[0] ?? null,
+		queueUuids,
+		queueChipNames,
+	});
 }
 
 function buildQueuesByUuidMulti(queues: Queue[]): Map<string, Queue[]> {
@@ -201,15 +215,15 @@ function resolveQueueIdsFromRefs(
 			);
 			if (queueId != null) resolved.push(queueId);
 		});
-		if (resolved.length) return toSingleZoneQueueIds(resolved);
+		if (resolved.length) return normalizeZoneQueueIds(resolved);
 	}
 
 	const numericIds = Array.isArray(refs.queueIds)
 		? refs.queueIds.filter((id) => Number.isFinite(id) && id > 0)
 		: [];
-	if (numericIds.length) return toSingleZoneQueueIds(numericIds);
+	if (numericIds.length) return normalizeZoneQueueIds(numericIds);
 
-	return toSingleZoneQueueIds(normalizeQueueIds(refs));
+	return normalizeZoneQueueIds(normalizeQueueIds(refs));
 }
 
 function resolveQueueIdsFromRect(
@@ -223,24 +237,6 @@ function resolveQueueIdsFromRect(
 	queuesByName: Map<string, Queue[]>,
 ): number[] {
 	return resolveQueueIdsFromRefs(rect, queuesByUuidMulti, queuesByName);
-}
-
-function applyQueueRefsToRect(
-	rect: any,
-	queueIds: number[],
-	queuesById: Map<number, Queue>,
-) {
-	const uniqueIds = toSingleZoneQueueIds(queueIds);
-	const queueUuids = queueIdsToUuids(uniqueIds, queuesById);
-	const queueChipNames = uniqueIds.map(
-		(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
-	);
-	rect.set({
-		queueIds: uniqueIds,
-		queueId: uniqueIds[0] ?? null,
-		queueUuids,
-		queueChipNames,
-	});
 }
 
 function isZoneRect(obj: any): boolean {
@@ -453,6 +449,18 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 	const queuesByUuidMulti = React.useMemo(() => buildQueuesByUuidMulti(queues), [queues]);
 	const queuesByName = React.useMemo(() => buildQueuesByName(queues), [queues]);
+	const queueSelectOptions = React.useMemo(
+		() => queues.map((queue) => ({ value: queue.id, label: queue.name })),
+		[queues],
+	);
+	const selectedZoneQueueOptions = React.useMemo(
+		() =>
+			zoneProps.queueIds.map((id) => ({
+				value: id,
+				label: queuesById.get(id)?.name ?? `Queue #${id}`,
+			})),
+		[zoneProps.queueIds, queuesById],
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -899,9 +907,9 @@ const TemplateDetailWorkspace: React.FC = () => {
 					});
 					return {
 						name: zone.name,
-						queueIds: zone.queueIds.slice(0, 1),
-						queueUuids: zone.queueUuids.slice(0, 1),
-						queueChipNames: zone.queueChipNames.slice(0, 1),
+						queueIds: zone.queueIds,
+						queueUuids: zone.queueUuids,
+						queueChipNames: zone.queueChipNames,
 						...geom,
 						appearance,
 						stroke: zone.border ? zone.borderColor : null,
@@ -1134,7 +1142,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 		(nextQueueIds: number[]) => {
 			if (!selectedObject || !fabricRef.current || !isZoneRect(selectedObject)) return;
 			const fc = fabricRef.current;
-			const uniqueIds = toSingleZoneQueueIds(nextQueueIds);
+			const uniqueIds = normalizeZoneQueueIds(nextQueueIds);
 			applyQueueRefsToRect(selectedObject, uniqueIds, queuesById);
 			setZoneProps((s) => ({ ...s, queueIds: uniqueIds }));
 			syncZoneQueueLabel(fc, selectedObject);
@@ -1144,14 +1152,13 @@ const TemplateDetailWorkspace: React.FC = () => {
 		[selectedObject, queuesById, scalingFactor, bumpOverlayRevision],
 	);
 
-	const handleZoneQueueChange = (value: string) => {
-		if (!value) {
-			updateSelectedZoneQueues([]);
-			return;
-		}
-		const queueId = Number(value);
-		if (!Number.isFinite(queueId) || queueId <= 0) return;
-		updateSelectedZoneQueues([queueId]);
+	const handleZoneQueueChange = (
+		selected: Array<{ value: number; label: string }> | null,
+	) => {
+		const nextIds = (selected ?? [])
+			.map((option) => option.value)
+			.filter((id) => Number.isFinite(id) && id > 0);
+		updateSelectedZoneQueues(nextIds);
 	};
 
 	// ─── Add zone ─────────────────────────────────────────────────────────────
@@ -1490,8 +1497,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 			) => {
 				const html = zones
 					.map((zone) => {
-						const queueUuids: string[] = (zone.queue_uuids ?? []).slice(0, 1);
-						const queueName: string = (zone.queue_names ?? [])[0] ?? '';
+						const queueUuids: string[] = zone.queue_uuids ?? [];
+						const queueNames: string[] = zone.queue_names ?? [];
 						const themeSlug =
 							typeof zone.theme_id === 'string' && zone.theme_id.trim()
 								? zone.theme_id.trim()
@@ -1499,9 +1506,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 						const themeAttr = themeSlug
 							? ` data-theme-id="${escapeHtml(themeSlug)}"`
 							: '';
-						const chips = queueName
-							? `<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(queueName)}</span>`
-							: '';
+						const chips = queueNames
+							.map(
+								(name) =>
+									`<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(name)}</span>`,
+							)
+							.join('');
 
 					return `
 	<div
@@ -1791,39 +1801,39 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 									<div className='tdc-appearance-zone-controls'>
 										<div className='tdc-appearance-zone-controls__block'>
-											<span className='zone-appearance-picker__label'>Queue</span>
+											<span className='zone-appearance-picker__label'>Queues</span>
 											{queuesLoadError ? (
 												<p className='tdc-zone-queue-access-denied' role='alert'>
 													{queuesLoadError}
 												</p>
 											) : (
 												<>
-													<select
-														className='tdc-prop-input'
-														value={zoneProps.queueIds[0] ?? ''}
-														disabled={queuesLoading}
-														onChange={(e) => handleZoneQueueChange(e.target.value)}>
-														<option value=''>
-															{queuesLoading
+													<ReactSelectWithState
+														className='react-select tdc-zone-queue-select'
+														options={queueSelectOptions}
+														value={selectedZoneQueueOptions}
+														setValue={handleZoneQueueChange}
+														isMulti
+														isClearable
+														multiValueMaxHeight={112}
+														placeholder={
+															queuesLoading
 																? 'Loading queues…'
-																: 'Select queue for this zone…'}
-														</option>
-														{queues.map((queue) => (
-															<option key={queue.id} value={queue.id}>
-																{queue.name}
-															</option>
-														))}
-													</select>
+																: 'Select one or more queues…'
+														}
+													/>
 													<p className='tdc-zone-queue-hint'>
 														{zoneProps.queueIds.length > 0
-															? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
-															: 'One queue per zone. Select a queue from the list above.'}
+															? zoneProps.queueIds.length === 1
+																? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}.`
+																: `Assigned: ${zoneProps.queueIds.length} queues. Page Turn rotates through them; other themes show the first queue.`
+															: 'Select one or more queues for this zone.'}
 													</p>
 												</>
 											)}
 											{queuesLoadError && zoneProps.queueIds.length > 0 && (
 												<p className='tdc-zone-queue-hint'>
-													{`This zone already has queue #${zoneProps.queueIds[0]} assigned. You cannot change it without queue list access.`}
+													{`This zone already has ${zoneProps.queueIds.length} queue(s) assigned. You cannot change them without queue list access.`}
 												</p>
 											)}
 										</div>

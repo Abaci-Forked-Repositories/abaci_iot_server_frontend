@@ -248,13 +248,31 @@ export function normalizePublicQueueStatus(
 
 export function buildQueuesByUuidMap(
 	queues: (PublicQueueStatus | Record<string, unknown>)[],
+	requestedUuids?: string[],
 ): Record<string, PublicQueueStatus> {
+	const QUEUE_UUID_RE =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 	const map: Record<string, PublicQueueStatus> = {};
-	for (const item of queues) {
-		const queue = normalizePublicQueueStatus(item);
-		const key = queue.uuid || (queue.name ? `name:${queue.name}` : '');
-		if (key) map[key] = queue;
-	}
+	const normalized = queues.map((item) => normalizePublicQueueStatus(item));
+
+	normalized.forEach((queue, index) => {
+		const requestedUuid = requestedUuids?.[index]?.trim() ?? '';
+		const responseUuid =
+			typeof queue.uuid === 'string' && QUEUE_UUID_RE.test(queue.uuid.trim())
+				? queue.uuid.trim()
+				: '';
+		const uuidKey =
+			responseUuid ||
+			(QUEUE_UUID_RE.test(requestedUuid) ? requestedUuid : '');
+
+		const withUuid: PublicQueueStatus = uuidKey ? { ...queue, uuid: uuidKey } : queue;
+		const nameLabel = withUuid.queue_name?.trim() || withUuid.name?.trim() || '';
+
+		if (uuidKey) map[uuidKey] = withUuid;
+		if (nameLabel) map[`name:${nameLabel}`] = withUuid;
+	});
+
 	return map;
 }
 

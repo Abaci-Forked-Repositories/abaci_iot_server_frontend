@@ -45,6 +45,7 @@ export type FabricZoneOverlayRect = {
 	id?: string;
 	name?: string;
 	queueIds?: number[];
+	queueUuids?: string[];
 	queueChipNames?: string[];
 	displayTheme?: string | null;
 	zoneFillColor?: string | null;
@@ -114,6 +115,8 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'glass-lobby': '#2a2048',
 		'neon-prism': '#010820',
 		'aurora-nexus': '#030510',
+		'page-turn': '#0b1530',
+		'car-speedometer': '#000000',
 	};
 	return fallbacks[themeId];
 }

@@ -17,6 +17,7 @@ import {
 import { resolveTemplateActiveTokensTickerClass } from '../../../utils/resolveTemplateTickerTheme';
 import { parseTemplateLayoutFromHtml } from '../../../utils/parseTemplateZones';
 import type { RecentQueueToken } from '../../../services/publicScreenApi';
+import { buildEditorPageTurnQueueDisplays } from '../../../utils/zoneQueueResolution';
 
 /** In-zone active tokens preview for themes 1–5 (history strip inside each zone card). */
 const MOCK_RECENT_TOKENS: RecentQueueToken[] = [
@@ -133,7 +134,9 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					theme === 'digital-healthcare' ||
 					theme === 'glass-lobby' ||
 					theme === 'neon-prism' ||
-					theme === 'aurora-nexus'
+					theme === 'aurora-nexus' ||
+					theme === 'page-turn' ||
+					theme === 'car-speedometer'
 				);
 			}),
 		[zones, revision],
@@ -214,6 +217,10 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			'Queue';
 
 		const zoneOpacity = getZoneOpacityFromRect(rect);
+		const isPageTurn = appearance.displayTheme === 'page-turn';
+		const assignedQueues = isPageTurn
+			? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
+			: undefined;
 
 		return (
 			<div
@@ -258,10 +265,13 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						appearance.displayTheme === 'digital-healthcare' ||
 						appearance.displayTheme === 'glass-lobby' ||
 						appearance.displayTheme === 'neon-prism' ||
-						appearance.displayTheme === 'aurora-nexus'
+						appearance.displayTheme === 'aurora-nexus' ||
+						appearance.displayTheme === 'page-turn' ||
+						appearance.displayTheme === 'car-speedometer'
 							? previewToken
 							: '05'
 					}
+					assignedQueues={assignedQueues}
 					status='waiting'
 					recentTokens={usesScreenTicker ? undefined : MOCK_RECENT_TOKENS}
 					fillContainer

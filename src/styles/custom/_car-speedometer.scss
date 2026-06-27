@@ -1,0 +1,600 @@
+// ─── Theme · Car Speedometer (slug: car-speedometer) ─────────────────────────
+// Automotive dashboard — pure black OLED, white digital readout, red gauge needle.
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@keyframes cs-token-reveal {
+	from {
+		opacity: 0.2;
+		transform: scale(0.92);
+		filter: blur(2px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+		filter: blur(0);
+	}
+}
+
+@keyframes cs-car-headlight-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@keyframes cs-needle-glow {
+	0%,
+	100% {
+		filter: drop-shadow(0 0 3px rgba(255, 0, 0, 0.6));
+	}
+	50% {
+		filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.95));
+	}
+}
+
+@keyframes cs-screen-flicker {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.97;
+	}
+}
+
+@keyframes cs-chip-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.3em);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.tdc--car-speedometer {
+	--cs-bg: #000000;
+	--cs-text: #ffffff;
+	--cs-text-sub: rgba(255, 255, 255, 0.45);
+	--cs-red: #ff0000;
+	--cs-red-glow: rgba(255, 0, 0, 0.55);
+	--cs-amber: #ffd700;
+	--cs-screen-border: rgba(255, 255, 255, 0.12);
+	--cs-screen-glow: rgba(255, 255, 255, 0.04);
+	--cs-font-display: 'Orbitron', 'Audiowide', sans-serif;
+	--cs-font-ui: 'Rajdhani', 'Barlow Condensed', sans-serif;
+	--cs-font-gauge: 'Share Tech Mono', 'Courier New', monospace;
+	--tdc-bg: var(--cs-bg);
+	--tdc-glow-color: transparent;
+	--tdc-text: var(--cs-text);
+	--tdc-text-sub: var(--cs-text-sub);
+	--tdc-text-label: var(--cs-text-sub);
+	--tdc-token-color: var(--cs-text);
+	--tdc-token-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+	--tdc-border: rgba(255, 255, 255, 0.08);
+	--tdc-badge-bg: transparent;
+	--tdc-badge-text: var(--cs-text);
+	--tdc-badge-border: transparent;
+
+	font-family: var(--cs-font-gauge);
+
+	background: var(--cs-bg);
+	color: var(--cs-text);
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+		inset 0 0 40px rgba(0, 0, 0, 0.8);
+	overflow: hidden;
+	isolation: isolate;
+	min-width: 0;
+	min-height: 0;
+
+	.tdc__glow,
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc-col-separators,
+	.tdc__history {
+		display: none !important;
+	}
+
+	// ── Dashboard layout ─────────────────────────────────────────────────────
+	.tdc-cs-layout {
+		display: flex;
+		flex-direction: row;
+		align-items: stretch;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		height: 100%;
+		gap: 0.35em;
+		padding: 0.4em 0.45em;
+		container-type: size;
+		container-name: tdc-cs;
+		position: relative;
+		z-index: 2;
+	}
+
+	// ── Digital display panel (left) ─────────────────────────────────────────
+	.tdc-cs-digital {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 48%;
+		min-width: 0;
+		min-height: 0;
+		gap: 0.25em;
+	}
+
+	.tdc-cs-digital__nav {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		flex-shrink: 0;
+		padding: 0.1em 0.15em;
+	}
+
+	.tdc-cs-digital__nav-dot {
+		width: 0.45em;
+		height: 0.45em;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.18);
+		flex-shrink: 0;
+
+		&--active {
+			background: var(--cs-text);
+			box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+		}
+	}
+
+	.tdc-cs-digital__screen {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		padding: 0.45em 0.5em 0.35em;
+		border: 1px solid var(--cs-screen-border);
+		border-radius: 0.2em;
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 40%),
+			rgba(255, 255, 255, 0.02);
+		box-shadow:
+			inset 0 0 20px var(--cs-screen-glow),
+			inset 0 1px 0 rgba(255, 255, 255, 0.06);
+		animation: cs-screen-flicker 4s ease-in-out infinite;
+		container-type: size;
+		container-name: tdc-cs-screen;
+	}
+
+	.tdc-cs-digital__queue {
+		font-family: var(--cs-font-ui);
+		font-size: clamp(0.55em, 4.5cqw, 0.85em);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--cs-text-sub);
+		line-height: 1.2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		flex-shrink: 0;
+
+		&--empty {
+			min-height: 1em;
+			opacity: 0;
+		}
+	}
+
+	.tdc-cs-digital__readout {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		padding: 0.15em 0;
+		overflow: hidden;
+	}
+
+	.tdc-cs-token {
+		display: block;
+		font-family: var(--cs-font-display);
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		color: var(--cs-text);
+		line-height: 0.95;
+		white-space: nowrap;
+		text-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+		// Responsive: scales with screen container width & height
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 4.2) * 1em),
+			calc(88cqw / (var(--tdc-token-chars, 2) * 0.52 + 0.2)),
+			calc(72cqh)
+		);
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-cs-token--reveal {
+		animation: cs-token-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.tdc-cs-digital__subtitle {
+		font-family: var(--cs-font-ui);
+		font-size: clamp(0.5em, 3.8cqw, 0.75em);
+		font-weight: 600;
+		color: var(--cs-text-sub);
+		line-height: 1.25;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		flex-shrink: 0;
+	}
+
+	.tdc-cs-digital__bar {
+		flex-shrink: 0;
+		margin-top: 0.2em;
+		padding-top: 0.15em;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.tdc-cs-digital__bar-track {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		height: 0.55em;
+		gap: 0.15em;
+	}
+
+	.tdc-cs-digital__bar-tick {
+		flex: 1 1 0;
+		height: 100%;
+		background: linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.35) 0%,
+			rgba(255, 255, 255, 0.08) 100%
+		);
+		border-radius: 1px;
+
+		&:nth-child(1) { height: 40%; }
+		&:nth-child(2) { height: 65%; }
+		&:nth-child(3) { height: 100%; }
+		&:nth-child(4) { height: 55%; }
+		&:nth-child(5) { height: 30%; }
+	}
+
+	.tdc-cs-digital__footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.4em;
+		flex-shrink: 0;
+		padding: 0.1em 0.15em;
+		font-size: clamp(0.48em, 3.5cqw, 0.7em);
+	}
+
+	.tdc-cs-digital__status {
+		font-family: var(--cs-font-ui);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--cs-text-sub);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		&--serving {
+			color: var(--cs-red);
+			text-shadow: 0 0 8px var(--cs-red-glow);
+		}
+
+		&--waiting {
+			color: var(--cs-amber);
+		}
+
+		&--completed {
+			color: rgba(255, 255, 255, 0.35);
+		}
+	}
+
+	.tdc-cs-digital__clock {
+		font-family: var(--cs-font-gauge);
+		font-variant-numeric: tabular-nums;
+		color: rgba(255, 255, 255, 0.3);
+		flex-shrink: 0;
+	}
+
+	// ── Speedometer gauge (right) ────────────────────────────────────────────
+	.tdc-cs-gauge-wrap {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex: 1 1 52%;
+		min-width: 0;
+		min-height: 0;
+		padding: 0.1em;
+	}
+
+	.tdc-cs-gauge {
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+		max-height: 100%;
+		display: block;
+	}
+
+	.tdc-cs-gauge__rim {
+		fill: none;
+		stroke: rgba(255, 255, 255, 0.08);
+		stroke-width: 1.5;
+	}
+
+	.tdc-cs-gauge__car-body {
+		fill: #f8fafc;
+	}
+
+	.tdc-cs-gauge__car-cabin {
+		fill: rgba(15, 23, 42, 0.55);
+	}
+
+	.tdc-cs-gauge__car-wheel {
+		fill: #1a1a1a;
+		stroke: rgba(255, 255, 255, 0.35);
+		stroke-width: 0.35;
+	}
+
+	.tdc-cs-gauge__car-headlight {
+		fill: var(--cs-amber);
+		animation: cs-car-headlight-pulse 2.4s ease-in-out infinite;
+	}
+
+	.tdc-cs-gauge__arc {
+		stroke: rgba(255, 255, 255, 0.06);
+		stroke-width: 1;
+	}
+
+	.tdc-cs-gauge__tick {
+		stroke: rgba(255, 255, 255, 0.35);
+		stroke-width: 1;
+		stroke-linecap: round;
+
+		&--major {
+			stroke: rgba(255, 255, 255, 0.75);
+			stroke-width: 1.5;
+		}
+	}
+
+	.tdc-cs-gauge__label {
+		fill: rgba(255, 255, 255, 0.55);
+		font-family: var(--cs-font-gauge);
+		font-size: 7px;
+		font-weight: 500;
+	}
+
+	.tdc-cs-gauge__unit {
+		fill: rgba(255, 255, 255, 0.35);
+		font-family: var(--cs-font-ui);
+		font-size: 6px;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+	}
+
+	.tdc-cs-gauge__needle-group {
+		transition: transform 0.85s cubic-bezier(0.34, 1.2, 0.64, 1);
+	}
+
+	.tdc-cs-gauge--sweep .tdc-cs-gauge__needle {
+		animation: cs-needle-glow 0.85s ease-out;
+	}
+
+	.tdc-cs-gauge__needle {
+		stroke: var(--cs-red);
+		stroke-width: 2;
+		stroke-linecap: round;
+	}
+
+	.tdc-cs-gauge__hub {
+		fill: #1a1a1a;
+		stroke: rgba(255, 255, 255, 0.15);
+		stroke-width: 0.5;
+	}
+
+	.tdc-cs-gauge__hub-core {
+		fill: var(--cs-red);
+	}
+
+	.tdc-cs-gauge__sub-arc {
+		stroke: rgba(255, 255, 255, 0.15);
+		stroke-width: 1;
+	}
+
+	.tdc-cs-gauge__sub-label {
+		fill: rgba(255, 255, 255, 0.3);
+		font-family: var(--cs-font-gauge);
+		font-size: 5px;
+	}
+
+	// ── Active tokens rail ───────────────────────────────────────────────────
+	.tdc-cs-active {
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+		flex-shrink: 0;
+		padding: 0.28em 0.5em 0.32em;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		background: rgba(255, 255, 255, 0.02);
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.tdc-cs-active__label {
+		font-family: var(--cs-font-ui);
+		font-size: 0.55em;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.28);
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+
+	.tdc-cs-active__scroll {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+
+	.tdc-cs-active__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2em;
+		flex-shrink: 0;
+		padding: 0.18em 0.4em;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.15em;
+		background: rgba(255, 255, 255, 0.03);
+		font-family: var(--cs-font-gauge);
+		font-size: 0.58em;
+		white-space: nowrap;
+
+		&--enter {
+			animation: cs-chip-enter 0.4s ease-out both;
+		}
+	}
+
+	.tdc-cs-active__chip-token {
+		font-weight: 700;
+		color: var(--cs-text);
+	}
+
+	.tdc-cs-active__chip-sep {
+		color: rgba(255, 255, 255, 0.2);
+	}
+
+	.tdc-cs-active__chip-counter {
+		color: var(--cs-amber);
+		font-weight: 500;
+	}
+
+	.tdc-cs-active__chip-time {
+		color: rgba(255, 255, 255, 0.28);
+		font-size: 0.9em;
+		margin-left: 0.15em;
+	}
+
+	// ── Narrow / tall zones: stack vertically ──────────────────────────────────
+	@container tdc-cs (max-aspect-ratio: 1.1) {
+		.tdc-cs-layout {
+			flex-direction: column;
+		}
+
+		.tdc-cs-digital {
+			flex: 1 1 55%;
+		}
+
+		.tdc-cs-gauge-wrap {
+			flex: 1 1 45%;
+		}
+	}
+
+	@container tdc-cs (max-width: 180px) {
+		.tdc-cs-digital__nav {
+			display: none;
+		}
+
+		.tdc-cs-digital__bar {
+			display: none;
+		}
+	}
+}
+
+// ── Fill container mode ──────────────────────────────────────────────────────
+.tdc--fill.tdc--car-speedometer {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	border-radius: inherit;
+
+	.tdc-cs-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-cs-layout {
+			flex: 1 1 0;
+		}
+
+		.tdc-cs-active {
+			flex-shrink: 0;
+			max-height: min(22%, 5.5em);
+		}
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--car-speedometer .tdc-cs-token {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 4.2) * 1.05 * 1em),
+		calc(90cqw / (var(--tdc-token-chars, 2) * 0.5 + 0.18)),
+		calc(74cqh)
+	);
+}
+
+.tdc--preview:not(.tdc--fill).tdc--car-speedometer {
+	.tdc-cs-token {
+		font-size: 3.8em;
+	}
+
+	.tdc-cs-layout {
+		min-height: 10em;
+		min-width: 14em;
+	}
+}
+
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--car-speedometer {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tdc--car-speedometer {
+		.tdc-cs-token--reveal,
+		.tdc-cs-gauge__needle-group,
+		.tdc-cs-gauge__car-headlight,
+		.tdc-cs-gauge--sweep .tdc-cs-gauge__needle,
+		.tdc-cs-digital__screen,
+		.tdc-cs-active__chip--enter {
+			animation: none !important;
+			transition: none !important;
+		}
+
+		.tdc-cs-token--reveal {
+			opacity: 1;
+			transform: none;
+			filter: none;
+		}
+	}
+}

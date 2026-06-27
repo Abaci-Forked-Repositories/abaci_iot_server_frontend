@@ -89,7 +89,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 		}
 		try {
 			const response = await publicScreenApi.getQueueStatus(screenUuid, queueUuids);
-			const newQueues = buildQueuesByUuidMap(response.queues ?? []);
+			const newQueues = buildQueuesByUuidMap(response.queues ?? [], queueUuids);
 			setQueuesByUuid(newQueues);
 
 			// Detect per-queue transitions: current_token changed since last poll.

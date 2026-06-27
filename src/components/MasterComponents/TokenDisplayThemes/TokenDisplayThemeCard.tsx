@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	computeAuroraNexusFillBaseFontSize,
+	computeCarSpeedometerFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
 	computeNeonPrismFillBaseFontSize,
 	computeOledPulseFillBaseFontSize,
+	computePageTurnFillBaseFontSize,
 	computePipboyFillBaseFontSize,
 	computeRoyalTicketFillBaseFontSize,
 	getFillZoneBodyColumnFraction,
@@ -31,6 +33,9 @@ import GlassLobbyCard from './GlassLobbyCard';
 import NeonPrismCard from './NeonPrismCard';
 import AuroraNexusCard from './AuroraNexusCard';
 import AuroraNexusActiveTokens from './AuroraNexusActiveTokens';
+import PageTurnCard from './PageTurnCard';
+import SpeedometerCard from './SpeedometerCard';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
 import {
 	PipboyTerminalBackdropLayer,
 	PipboyTerminalClockRow,
@@ -76,6 +81,9 @@ export interface TokenDisplayThemeCardProps {
 	/** Template editor / theme picker — flat token numeral without glow panel. */
 	previewMode?: boolean;
 
+	/** Page Turn theme — rotate through multiple assigned queues when provided. */
+	assignedQueues?: AssignedQueueDisplay[];
+
 	/**
 	 * 0–1 opacity applied ONLY to the zone background (fill color or theme gradient).
 	 * Text, borders, and decorations remain at full opacity.
@@ -117,6 +125,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	recentTokens,
 	showHistoryTime = true,
 	previewMode = false,
+	assignedQueues,
 	backgroundOpacity,
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -152,6 +161,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isGlassLobby = resolved.themeClass === 'tdc--glass-lobby';
 	const isNeonPrism = resolved.themeClass === 'tdc--neon-prism';
 	const isAuroraNexus = resolved.themeClass === 'tdc--aurora-nexus';
+	const isPageTurn = resolved.themeClass === 'tdc--page-turn';
+	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
@@ -208,6 +219,10 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isGlassLobbyTheme = resolved.themeClass === 'tdc--glass-lobby';
 			const isNeonPrismTheme = resolved.themeClass === 'tdc--neon-prism';
 			const isAuroraNexusTheme = resolved.themeClass === 'tdc--aurora-nexus';
+			const isPageTurnTheme = resolved.themeClass === 'tdc--page-turn';
+			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
+			const pageTurnHasServingTable =
+				isPageTurnTheme && (assignedQueues?.length ?? 0) > 1;
 			const isRoyalTicketTheme = resolved.themeClass === 'tdc--royal-ticket';
 			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
 			const fontSize = isPipboy
@@ -234,12 +249,27 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 											hasHistory,
 											activeTokenCount,
 										)
-								: isRoyalTicketTheme
-								? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
-								: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
-									tokenEm,
-									bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
-								});
+									: isPageTurnTheme
+										? computePageTurnFillBaseFontSize(
+												width,
+												height,
+												tokenLen,
+												hasHistory,
+												pageTurnHasServingTable,
+											)
+										: isCarSpeedometerTheme
+											? computeCarSpeedometerFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+												)
+										: isRoyalTicketTheme
+											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
+											: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
+												tokenEm,
+												bodyColumnFraction: getFillZoneBodyColumnFraction(resolved.themeClass),
+											});
 			el.style.fontSize = `${fontSize}px`;
 			if (isPipboy) {
 				el.style.setProperty('--tdc-token-chars', String(tokenLen));
@@ -264,7 +294,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			el.style.removeProperty('--tdc-token-fill-em');
 			el.style.removeProperty('--tdc-token-chars');
 		};
-	}, [fillContainer, displayToken, resolved.themeClass, activeTokenCount]);
+	}, [fillContainer, displayToken, resolved.themeClass, activeTokenCount, assignedQueues?.length]);
 
 	useEffect(() => {
 		if (!recentTokens?.length) return;
@@ -485,6 +515,23 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						/>
 					)}
 				</div>
+			) : isPageTurn ? (
+				<PageTurnCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
+				/>
+			) : isCarSpeedometer ? (
+				<SpeedometerCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+				/>
 			) : (
 				<>
 					<div className='tdc__header'>
@@ -691,10 +738,94 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				</div>
 			)}
 
+			{/* Page Turn — merged active-token chip rail */}
+			{isPageTurn && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-pt-active' aria-label='Active tokens'>
+					<span className='tdc-pt-active__label' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-pt-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-pt-active__chip',
+										isEntering ? 'tdc-pt-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-pt-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-pt-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-pt-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-pt-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{/* Car Speedometer — active-token chip rail */}
+			{isCarSpeedometer && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-cs-active' aria-label='Active tokens'>
+					<span className='tdc-cs-active__label' aria-hidden='true'>
+						Active
+					</span>
+					<div className='tdc-cs-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-cs-active__chip',
+										isEntering ? 'tdc-cs-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-cs-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-cs-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-cs-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-cs-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isPageTurn && !isCarSpeedometer && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://cork-diesel-sets-montgomery.trycloudflare.com';
+		return 'https://eternal-contracting-standards-oct.trycloudflare.com';
 	}
 	return url;
 };

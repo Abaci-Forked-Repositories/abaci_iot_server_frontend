@@ -548,6 +548,59 @@
 	}
 }
 
+// ─── Page Turn ────────────────────────────────────────────────────────────────
+.tdc--fill.tdc--page-turn {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+
+	.tdc-pt-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-pt-active {
+			flex-shrink: 0;
+		}
+	}
+}
+
+// ─── Car Speedometer ──────────────────────────────────────────────────────────
+.tdc--fill.tdc--car-speedometer {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+
+	.tdc-cs-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-cs-layout {
+			flex: 1 1 0;
+		}
+
+		.tdc-cs-active {
+			flex-shrink: 0;
+			max-height: min(22%, 5.5em);
+		}
+	}
+}
+
 // Themes 6–9 use a screen-level Active Tokens bar — never the in-zone history row.
 .tdc--fill.tdc--pipboy-terminal,
 .tdc--fill.tdc--velvet-crown,

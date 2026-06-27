@@ -28,6 +28,8 @@
  *   glass-lobby        — frosted glass lobby with floating cards and glowing token
  *   neon-prism         — cyberpunk 3D LED stage with five neon-framed panels and magenta floor glow
  *   aurora-nexus       — aurora cyber dashboard with gradient token digits, glass status, and neon pills
+ *   page-turn          — editorial split panel with corner page-curl token reveal and multi-queue rotation
+ *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -49,6 +51,8 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'glass-lobby',
 	'neon-prism',
 	'aurora-nexus',
+	'page-turn',
+	'car-speedometer',
 ] as const;
 
 /** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
@@ -218,6 +222,24 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(ellipse 90% 70% at 50% 40%, rgba(0, 240, 255, 0.22) 0%, rgba(192, 38, 255, 0.12) 38%, #030510 72%, #010308 100%)',
+	},
+	'page-turn': {
+		id: 'page-turn',
+		label: 'Page Turn',
+		description:
+			'Editorial split layout with navy panel, gradient hero, corner page-curl token reveal, and multi-queue rotation',
+		textColor: 'light',
+		previewGradient:
+			'linear-gradient(135deg, #0b1530 0%, #0b1530 42%, #2563eb 58%, #60a5fa 100%)',
+	},
+	'car-speedometer': {
+		id: 'car-speedometer',
+		label: 'Car Speedometer',
+		description:
+			'Automotive dashboard with OLED black field, digital readout panel, animated red gauge needle, and responsive token display',
+		textColor: 'light',
+		previewGradient:
+			'radial-gradient(circle at 72% 50%, rgba(255, 0, 0, 0.12) 0%, #000000 45%, #000000 100%)',
 	},
 };
 
@@ -562,6 +584,10 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 4.4;
 		case 'tdc--aurora-nexus':
 			return 5.2;
+		case 'tdc--page-turn':
+			return 4.6;
+		case 'tdc--car-speedometer':
+			return 4.2;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
 	}
@@ -877,6 +903,89 @@ export function computeAuroraNexusFillBaseFontSize(
 		fromTokenWidth,
 		fromStatusWidth,
 	) * narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Page Turn fill layout: meta + split stage + active rail. */
+export const PAGE_TURN_FILL_LAYOUT_EM = 9.4;
+
+export const PAGE_TURN_FILL_TABLE_LAYOUT_EM = 11.2;
+
+export const PAGE_TURN_FILL_TOKEN_EM = 4.6;
+
+export function computePageTurnFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasServingTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasServingTable
+		? PAGE_TURN_FILL_TABLE_LAYOUT_EM
+		: PAGE_TURN_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + (hasServingTable ? 1.15 : 1.65) : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.2 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (!hasServingTable) {
+		// Single-queue hero: meta row + "Now Calling" cap + active rail eat vertical space.
+		const metaFraction = 0.13;
+		const heroCapFraction = 0.11;
+		const heroMainHeight = stageHeight * (1 - metaFraction - heroCapFraction);
+		const fromTokenHeight = heroMainHeight / (PAGE_TURN_FILL_TOKEN_EM * 1.18);
+		const fromTokenWidth = (w * 0.82) / (chars * PAGE_TURN_FILL_TOKEN_EM * 0.52 + 0.65);
+		const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (PAGE_TURN_FILL_TOKEN_EM * 1.04);
+	const fromTokenWidth = (w * 0.52) / (chars * PAGE_TURN_FILL_TOKEN_EM * 0.5 + 0.7);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Car Speedometer fill layout: digital panel + gauge + active rail. */
+export const CAR_SPEEDOMETER_FILL_LAYOUT_EM = 9;
+
+export const CAR_SPEEDOMETER_FILL_TOKEN_EM = 4.2;
+
+export function computeCarSpeedometerFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutEm = hasHistoryStrip
+		? CAR_SPEEDOMETER_FILL_LAYOUT_EM + 1.1
+		: CAR_SPEEDOMETER_FILL_LAYOUT_EM;
+	const historyFraction = hasHistoryStrip ? 0.2 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.76;
+	else if (aspect < 0.55) narrowFactor = 0.86;
+	else if (aspect < 0.75) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+	const fromTokenHeight = stageHeight / (CAR_SPEEDOMETER_FILL_TOKEN_EM * 1.05);
+	const digitalCol = aspect < 1.1 ? 0.88 : 0.46;
+	const fromTokenWidth = (w * digitalCol) / (chars * CAR_SPEEDOMETER_FILL_TOKEN_EM * 0.52 + 0.65);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth) * narrowFactor;
 	return applyFillZoneFontSizeBoost(base, w, h);
 }
 

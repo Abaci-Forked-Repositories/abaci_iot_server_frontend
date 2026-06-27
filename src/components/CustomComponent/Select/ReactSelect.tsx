@@ -2,7 +2,30 @@ import React from 'react'
 import Select from 'react-select'
 import useDarkMode from '../../../hooks/useDarkMode'
 
-const ReactSelectWithState = ({ options, value, setValue, isClearable = false, placeholder, isMulti = false }: any) => {
+interface ReactSelectWithStateProps {
+	options: { value: number | string; label: string }[]
+	value: unknown
+	setValue: (value: unknown) => void
+	isClearable?: boolean
+	placeholder?: string
+	isMulti?: boolean
+	className?: string
+	/** Cap chip area height and scroll when many items are selected (multi only). */
+	scrollableMultiValues?: boolean
+	multiValueMaxHeight?: number
+}
+
+const ReactSelectWithState = ({
+	options,
+	value,
+	setValue,
+	isClearable = false,
+	placeholder,
+	isMulti = false,
+	className = 'react-select',
+	scrollableMultiValues = true,
+	multiValueMaxHeight = 120,
+}: ReactSelectWithStateProps) => {
     const { darkModeStatus } = useDarkMode();
 
     const customStyles = {
@@ -24,7 +47,8 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
 
             return {
                 ...provided,
-                height: '40px',
+                height: isMulti ? 'auto' : '40px',
+                minHeight: isMulti ? '40px' : '40px',
                 border: darkModeStatus ? "1px solid #34393F" : boxShadow === '' ? '1px solid #ededed' : '',
                 // borderRadius: '15px',
                 backgroundColor: darkModeStatus ? "#212529" : "#F8F9FA",
@@ -33,11 +57,45 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
                 fontWeight: 600,
                 fontSize: "13px",
                 zIndex: 'auto',
+                alignItems: isMulti ? 'flex-start' : 'center',
                 ":hover": {
                     borderColor: darkModeStatus ? "#34393F" : hoverBorderColor,
                 },
             };
         },
+        valueContainer: (provided) => ({
+            ...provided,
+            ...(isMulti && scrollableMultiValues
+                ? {
+                        maxHeight: `${multiValueMaxHeight}px`,
+                        overflowY: 'auto' as const,
+                        flexWrap: 'wrap' as const,
+                        paddingTop: '4px',
+                        paddingBottom: '4px',
+                        alignItems: 'flex-start',
+                  }
+                : {}),
+        }),
+        multiValue: (provided) => ({
+            ...provided,
+            margin: '2px',
+            maxWidth: '100%',
+        }),
+        multiValueLabel: (provided) => ({
+            ...provided,
+            whiteSpace: 'nowrap' as const,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+        }),
+        indicatorsContainer: (provided) => ({
+            ...provided,
+            ...(isMulti
+                ? {
+                        alignSelf: 'flex-start',
+                        paddingTop: '6px',
+                  }
+                : {}),
+        }),
         menuList: (base) => ({
             ...base,
             maxHeight: "150px",
@@ -71,7 +129,7 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
             onChange={(values) => {
                 setValue(values)
             }}
-            className='react-select'
+            className={className}
             isClearable={isClearable}
             styles={customStyles}
             options={options}
