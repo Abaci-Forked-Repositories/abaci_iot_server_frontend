@@ -1,6 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
 import GlassLobbyBackdrop from './GlassLobbyBackdrop';
+import GlassLobbyClock from './GlassLobbyClock';
+import GlassLobbyQueueTable from './GlassLobbyQueueTable';
 import GlassLobbyToken from './GlassLobbyToken';
+import GlassLobbyTokenParticles from './GlassLobbyTokenParticles';
 
 export interface GlassLobbyCardProps {
 	queueName?: string;
@@ -8,6 +13,8 @@ export interface GlassLobbyCardProps {
 	displayToken: string;
 	statusLabel: string;
 	statusModifier: string;
+	previewMode?: boolean;
+	assignedQueues?: AssignedQueueDisplay[];
 }
 
 const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
@@ -16,11 +23,20 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 	displayToken,
 	statusLabel,
 	statusModifier,
+	previewMode = false,
+	assignedQueues = [],
 }) => {
+	const isMultiQueue = assignedQueues.length > 1;
 	const skipGlowRef = useRef(true);
 	const [tokenGlow, setTokenGlow] = useState(false);
 
+	const servingRows = useMemo(
+		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
+		[assignedQueues, isMultiQueue],
+	);
+
 	useEffect(() => {
+		if (isMultiQueue) return;
 		if (skipGlowRef.current) {
 			skipGlowRef.current = false;
 			return;
@@ -28,20 +44,51 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 		setTokenGlow(true);
 		const timer = window.setTimeout(() => setTokenGlow(false), 1200);
 		return () => window.clearTimeout(timer);
-	}, [displayToken]);
+	}, [displayToken, isMultiQueue]);
+
+	if (isMultiQueue) {
+		return (
+			<div className='tdc-gl-layout tdc-gl-layout--table'>
+				<GlassLobbyBackdrop />
+
+				<header className='tdc-gl-table-header'>
+					<div className='tdc-gl-table-header__copy' aria-live='polite'>
+						<span className='tdc-gl-table-header__count'>
+							{assignedQueues.length} queues
+						</span>
+					</div>
+					<div className='tdc-gl-table-header__meta'>
+						<GlassLobbyClock />
+					</div>
+				</header>
+
+				<div className='tdc-gl-table-stage'>
+					<GlassLobbyTokenParticles previewMode={previewMode} density='stage' />
+					<GlassLobbyQueueTable rows={servingRows} />
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className='tdc-gl-layout'>
 			<GlassLobbyBackdrop />
 
 			<div className='tdc-gl-stage'>
+				<GlassLobbyTokenParticles previewMode={previewMode} density='stage' />
 				<div className='tdc-gl-card tdc-gl-card--queue tdc-gl-float tdc-gl-float--delay-1'>
 					<span className='tdc-gl-card__label'>Queue</span>
-					{queueName ? (
-						<span className='tdc-gl-card__value'>{queueName}</span>
-					) : (
-						<span className='tdc-gl-card__value tdc-gl-card__value--empty' aria-hidden='true' />
-					)}
+					<div className='tdc-gl-card__queue-body'>
+						{queueName ? (
+							<span className='tdc-gl-card__value tdc-gl-card__value--queue'>{queueName}</span>
+						) : (
+							<span
+								className='tdc-gl-card__value tdc-gl-card__value--queue tdc-gl-card__value--empty'
+								aria-hidden='true'
+							/>
+						)}
+						<GlassLobbyClock />
+					</div>
 					{subtitle ? <span className='tdc-gl-card__sub'>{subtitle}</span> : null}
 				</div>
 
@@ -49,15 +96,15 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 					className={[
 						'tdc-gl-card',
 						'tdc-gl-card--token',
-						'tdc-gl-float',
-						'tdc-gl-float--delay-2',
-						tokenGlow ? 'tdc-gl-card--glow' : '',
+						tokenGlow ? 'tdc-gl-card--token-glow' : '',
 					]
 						.filter(Boolean)
 						.join(' ')}
 					aria-label={`Token ${displayToken}`}>
 					<span className='tdc-gl-card__label'>Now Calling</span>
-					<GlassLobbyToken value={displayToken} />
+					<div className='tdc-gl-card__token-body'>
+						<GlassLobbyToken value={displayToken} previewMode={previewMode} />
+					</div>
 				</div>
 
 				<div

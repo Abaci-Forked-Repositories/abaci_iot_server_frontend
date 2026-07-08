@@ -3,6 +3,7 @@
  * Drop into the zone properties panel when integrating.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
 import TokenDisplayThemeCard from './TokenDisplayThemeCard';
 import {
 	createFillAppearance,
@@ -21,6 +22,8 @@ export interface ZoneDisplayThemePickerProps {
 	previewSubtitle?: string;
 	previewTokenDisplay?: string;
 	previewStatus?: string;
+	/** When 2+ queues are assigned, themes with a live board show the tabular layout. */
+	previewAssignedQueues?: AssignedQueueDisplay[];
 	disabled?: boolean;
 	/** Set when save validation fails — theme mode without a swatch selected. */
 	showThemeError?: boolean;
@@ -33,6 +36,7 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 	previewSubtitle = '6th Floor',
 	previewTokenDisplay = '05',
 	previewStatus = 'waiting',
+	previewAssignedQueues,
 	disabled = false,
 	showThemeError = false,
 }) => {
@@ -160,6 +164,7 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							subtitle={previewSubtitle}
 							tokenDisplay={previewTokenDisplay}
 							status={previewStatus}
+							assignedQueues={previewAssignedQueues}
 							fillContainer
 							previewMode
 						/>

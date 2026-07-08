@@ -1,5 +1,10 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useMemo } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
+import SpeedometerClock from './SpeedometerClock';
 import SpeedometerGauge from './SpeedometerGauge';
+import SpeedometerQueueTable from './SpeedometerQueueTable';
+import SpeedometerStatusGauge from './SpeedometerStatusGauge';
 import SpeedometerToken from './SpeedometerToken';
 
 export interface SpeedometerCardProps {
@@ -8,6 +13,7 @@ export interface SpeedometerCardProps {
 	displayToken: string;
 	statusLabel: string;
 	statusModifier: string;
+	assignedQueues?: AssignedQueueDisplay[];
 }
 
 const SpeedometerCard: React.FC<SpeedometerCardProps> = ({
@@ -16,63 +22,73 @@ const SpeedometerCard: React.FC<SpeedometerCardProps> = ({
 	displayToken,
 	statusLabel,
 	statusModifier,
+	assignedQueues = [],
 }) => {
-	const [now, setNow] = useState(() => new Date());
+	const isMultiQueue = assignedQueues.length > 1;
 
-	useEffect(() => {
-		const timer = setInterval(() => setNow(new Date()), 1000);
-		return () => clearInterval(timer);
-	}, []);
+	const servingRows = useMemo(
+		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
+		[assignedQueues, isMultiQueue],
+	);
 
-	const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+	if (isMultiQueue) {
+		return (
+			<div className='tdc-cs-layout tdc-cs-layout--table'>
+				<header className='tdc-cs-table-header'>
+					<div className='tdc-cs-table-header__copy' aria-live='polite'>
+						<span className='tdc-cs-table-header__count'>
+							{assignedQueues.length} queues
+						</span>
+					</div>
+					<div className='tdc-cs-table-header__meta'>
+						<SpeedometerClock />
+					</div>
+				</header>
+
+				<div className='tdc-cs-table-stage'>
+					<SpeedometerQueueTable rows={servingRows} />
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className='tdc-cs-layout'>
-			<div className='tdc-cs-digital'>
-				<div className='tdc-cs-digital__nav' aria-hidden='true'>
-					<span className='tdc-cs-digital__nav-dot' />
-					<span className='tdc-cs-digital__nav-dot' />
-					<span className='tdc-cs-digital__nav-dot tdc-cs-digital__nav-dot--active' />
-					<span className='tdc-cs-digital__nav-dot' />
-					<span className='tdc-cs-digital__nav-dot' />
-				</div>
+			<SpeedometerClock />
 
-				<div className='tdc-cs-digital__screen'>
-					{queueName ? (
-						<span className='tdc-cs-digital__queue'>{queueName}</span>
-					) : (
-						<span className='tdc-cs-digital__queue tdc-cs-digital__queue--empty' aria-hidden='true' />
-					)}
-
-					<div className='tdc-cs-digital__readout' aria-label={`Token ${displayToken}`}>
-						<SpeedometerToken value={displayToken} />
+			<div className='tdc-cs-body'>
+				<div className='tdc-cs-digital'>
+					<div className='tdc-cs-digital__nav' aria-hidden='true'>
+						<span className='tdc-cs-digital__nav-dot' />
+						<span className='tdc-cs-digital__nav-dot' />
+						<span className='tdc-cs-digital__nav-dot tdc-cs-digital__nav-dot--active' />
+						<span className='tdc-cs-digital__nav-dot' />
+						<span className='tdc-cs-digital__nav-dot' />
 					</div>
 
-					{subtitle ? <span className='tdc-cs-digital__subtitle'>{subtitle}</span> : null}
+					<div className='tdc-cs-digital__screen'>
+						{queueName ? (
+							<span className='tdc-cs-digital__queue'>{queueName}</span>
+						) : (
+							<span className='tdc-cs-digital__queue tdc-cs-digital__queue--empty' aria-hidden='true' />
+						)}
 
-					<div className='tdc-cs-digital__bar' aria-hidden='true'>
-						<div className='tdc-cs-digital__bar-track'>
-							{[0, 1, 2, 3, 4].map((i) => (
-								<span key={i} className='tdc-cs-digital__bar-tick' />
-							))}
-						</div>
+						{subtitle ? <span className='tdc-cs-digital__subtitle'>{subtitle}</span> : null}
+
+						<SpeedometerStatusGauge
+							statusModifier={statusModifier}
+							statusLabel={statusLabel}
+							className='tdc-cs-digital__status-gauge'
+						/>
 					</div>
 				</div>
 
-				<footer className='tdc-cs-digital__footer'>
-					<span
-						className={`tdc-cs-digital__status tdc-cs-digital__status--${statusModifier}`}
-						aria-live='polite'>
-						{statusLabel}
-					</span>
-					<span className='tdc-cs-digital__clock' aria-hidden='true'>
-						{timeStr}
-					</span>
-				</footer>
-			</div>
-
-			<div className='tdc-cs-gauge-wrap'>
-				<SpeedometerGauge token={displayToken} />
+				<div className='tdc-cs-gauge-wrap' aria-label={`Token ${displayToken}`}>
+					<SpeedometerGauge token={displayToken} />
+					<div className='tdc-cs-gauge__token' aria-hidden='true'>
+						<SpeedometerToken value={displayToken} className='tdc-cs-token--gauge' />
+					</div>
+				</div>
 			</div>
 		</div>
 	);

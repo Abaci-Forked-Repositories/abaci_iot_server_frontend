@@ -1,15 +1,11 @@
 import React from 'react';
+import RoyalTicketClock from './RoyalTicketClock';
 
 export interface RoyalTicketCardProps {
 	queueName?: string;
 	subtitle?: string;
 	displayToken: string;
 	statusLabel: string;
-}
-
-function ticketBarcodeId(token: string): string {
-	const compact = token.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-	return compact ? `RQ-${compact.slice(0, 8).padEnd(4, '0')}` : 'RQ-0000';
 }
 
 const RoyalTicketCard: React.FC<RoyalTicketCardProps> = ({
@@ -46,7 +42,7 @@ const RoyalTicketCard: React.FC<RoyalTicketCardProps> = ({
 			<div className='tdc-rt-stub'>
 				<div className='tdc-rt-barcode-wrap'>
 					<div className='tdc-rt-barcode' aria-hidden='true' />
-					<div className='tdc-rt-barcode-id'>{ticketBarcodeId(displayToken)}</div>
+					<RoyalTicketClock />
 				</div>
 				<div className='tdc-rt-admit'>
 					<div className='tdc-rt-admit-text'>Token</div>

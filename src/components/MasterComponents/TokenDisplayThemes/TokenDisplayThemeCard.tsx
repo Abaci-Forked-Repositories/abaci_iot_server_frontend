@@ -2,13 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	computeAuroraNexusFillBaseFontSize,
+	computeAirportArrivalFillBaseFontSize,
+	computeAirportDepartureFillBaseFontSize,
 	computeCarSpeedometerFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
 	computeNeonPrismFillBaseFontSize,
 	computeOledPulseFillBaseFontSize,
-	computePageTurnFillBaseFontSize,
+	computeSignalBoardFillBaseFontSize,
+	computePaperFlipFillBaseFontSize,
+	computeMonoFlipFillBaseFontSize,
 	computePipboyFillBaseFontSize,
 	computeRoyalTicketFillBaseFontSize,
 	getFillZoneBodyColumnFraction,
@@ -27,14 +31,25 @@ import VelvetCrownBackdrop from './VelvetCrownBackdrop';
 import SunBentoCard from './SunBentoCard';
 import RoyalTicketCard from './RoyalTicketCard';
 import AirportArrivalCard from './AirportArrivalCard';
+import AirportDepartureCard from './AirportDepartureCard';
 import OledPulseCard from './OledPulseCard';
+import OledPulseBorderCycle from './OledPulseBorderCycle';
 import HealthcareDashboardCard from './HealthcareDashboardCard';
 import GlassLobbyCard from './GlassLobbyCard';
 import NeonPrismCard from './NeonPrismCard';
+import NeonPrismEnergyScan from './NeonPrismEnergyScan';
 import AuroraNexusCard from './AuroraNexusCard';
 import AuroraNexusActiveTokens from './AuroraNexusActiveTokens';
-import PageTurnCard from './PageTurnCard';
+import SignalBoardCard from './SignalBoardCard';
+import PaperFlipCard from './PaperFlipCard';
+import MonoFlipCard from './MonoFlipCard';
 import SpeedometerCard from './SpeedometerCard';
+import DigitalCrimsonClock from './DigitalCrimsonClock';
+import OnyxGoldClock from './OnyxGoldClock';
+import ModernQueueBoardClock from './ModernQueueBoardClock';
+import ImperialCourtClock from './ImperialCourtClock';
+import ArcticGlassClock from './ArcticGlassClock';
+import VelvetCrownClock from './VelvetCrownClock';
 import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
 import {
 	PipboyTerminalBackdropLayer,
@@ -81,7 +96,7 @@ export interface TokenDisplayThemeCardProps {
 	/** Template editor / theme picker — flat token numeral without glow panel. */
 	previewMode?: boolean;
 
-	/** Page Turn theme — rotate through multiple assigned queues when provided. */
+	/** Signal Board theme — rotate through multiple assigned queues when provided. */
 	assignedQueues?: AssignedQueueDisplay[];
 
 	/**
@@ -156,12 +171,15 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isSunBento = resolved.themeClass === 'tdc--sun-bento';
 	const isRoyalTicket = resolved.themeClass === 'tdc--royal-ticket';
 	const isAirportArrival = resolved.themeClass === 'tdc--airport-arrival';
+	const isAirportDeparture = resolved.themeClass === 'tdc--airport-departure';
 	const isOledPulse = resolved.themeClass === 'tdc--oled-pulse';
 	const isDigitalHealthcare = resolved.themeClass === 'tdc--digital-healthcare';
 	const isGlassLobby = resolved.themeClass === 'tdc--glass-lobby';
 	const isNeonPrism = resolved.themeClass === 'tdc--neon-prism';
 	const isAuroraNexus = resolved.themeClass === 'tdc--aurora-nexus';
-	const isPageTurn = resolved.themeClass === 'tdc--page-turn';
+	const isSignalBoard = resolved.themeClass === 'tdc--signal-board';
+	const isPaperFlip = resolved.themeClass === 'tdc--paper-flip';
+	const isMonoFlip = resolved.themeClass === 'tdc--mono-flip';
 	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
@@ -219,20 +237,63 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isGlassLobbyTheme = resolved.themeClass === 'tdc--glass-lobby';
 			const isNeonPrismTheme = resolved.themeClass === 'tdc--neon-prism';
 			const isAuroraNexusTheme = resolved.themeClass === 'tdc--aurora-nexus';
-			const isPageTurnTheme = resolved.themeClass === 'tdc--page-turn';
+			const isSignalBoardTheme = resolved.themeClass === 'tdc--signal-board';
+			const isPaperFlipTheme = resolved.themeClass === 'tdc--paper-flip';
+			const isMonoFlipTheme = resolved.themeClass === 'tdc--mono-flip';
+			const isAirportDepartureTheme = resolved.themeClass === 'tdc--airport-departure';
+			const isAirportArrivalTheme = resolved.themeClass === 'tdc--airport-arrival';
 			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
-			const pageTurnHasServingTable =
-				isPageTurnTheme && (assignedQueues?.length ?? 0) > 1;
+			const neonPrismHasTable =
+				isNeonPrismTheme && (assignedQueues?.length ?? 0) > 1;
+			const auroraNexusHasTable =
+				isAuroraNexusTheme && (assignedQueues?.length ?? 0) > 1;
+			const signalBoardHasServingTable =
+				isSignalBoardTheme && (assignedQueues?.length ?? 0) > 1;
+			const paperFlipHasTable =
+				isPaperFlipTheme && (assignedQueues?.length ?? 0) > 1;
+			const monoFlipHasTable =
+				isMonoFlipTheme && (assignedQueues?.length ?? 0) > 1;
+			const airportDepartureHasTable =
+				isAirportDepartureTheme && (assignedQueues?.length ?? 0) > 1;
+			const airportArrivalHasTable =
+				isAirportArrivalTheme && (assignedQueues?.length ?? 0) > 1;
+			const carSpeedometerHasTable =
+				isCarSpeedometerTheme && (assignedQueues?.length ?? 0) > 1;
+			const glassLobbyHasTable =
+				isGlassLobbyTheme && (assignedQueues?.length ?? 0) > 1;
+			const digitalHealthcareHasTable =
+				isDigitalHealthcareTheme && (assignedQueues?.length ?? 0) > 1;
+			const oledPulseHasTable =
+				isOledPulseTheme && (assignedQueues?.length ?? 0) > 1;
 			const isRoyalTicketTheme = resolved.themeClass === 'tdc--royal-ticket';
 			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
 			const fontSize = isPipboy
 				? computePipboyFillBaseFontSize(width, height, tokenLen)
 				: isOledPulseTheme
-					? computeOledPulseFillBaseFontSize(width, height, tokenLen, hasHistory)
+					? computeOledPulseFillBaseFontSize(
+							width,
+							height,
+							tokenLen,
+							hasHistory,
+							oledPulseHasTable,
+						)
 					: isDigitalHealthcareTheme
-						? computeDigitalHealthcareFillBaseFontSize(width, height, tokenLen, hasHistory)
+						? computeDigitalHealthcareFillBaseFontSize(
+								width,
+								height,
+								tokenLen,
+								hasHistory,
+								digitalHealthcareHasTable,
+							)
 						: isGlassLobbyTheme
-							? computeGlassLobbyFillBaseFontSize(width, height, tokenLen, hasHistory)
+							? computeGlassLobbyFillBaseFontSize(
+									width,
+									height,
+									tokenLen,
+									hasHistory,
+									activeTokenCount,
+									glassLobbyHasTable,
+								)
 							: isNeonPrismTheme
 								? computeNeonPrismFillBaseFontSize(
 										width,
@@ -240,6 +301,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 										tokenLen,
 										hasHistory,
 										activeTokenCount,
+										neonPrismHasTable,
 									)
 								: isAuroraNexusTheme
 									? computeAuroraNexusFillBaseFontSize(
@@ -248,21 +310,55 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 											tokenLen,
 											hasHistory,
 											activeTokenCount,
+											auroraNexusHasTable,
 										)
-									: isPageTurnTheme
-										? computePageTurnFillBaseFontSize(
+									: isSignalBoardTheme
+										? computeSignalBoardFillBaseFontSize(
 												width,
 												height,
 												tokenLen,
 												hasHistory,
-												pageTurnHasServingTable,
+												signalBoardHasServingTable,
 											)
+										: isPaperFlipTheme
+											? computePaperFlipFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													paperFlipHasTable,
+												)
+										: isMonoFlipTheme
+											? computeMonoFlipFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													monoFlipHasTable,
+												)
+										: isAirportDepartureTheme
+											? computeAirportDepartureFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													airportDepartureHasTable,
+												)
+										: isAirportArrivalTheme
+											? computeAirportArrivalFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													airportArrivalHasTable,
+												)
 										: isCarSpeedometerTheme
 											? computeCarSpeedometerFillBaseFontSize(
 													width,
 													height,
 													tokenLen,
 													hasHistory,
+													carSpeedometerHasTable,
 												)
 										: isRoyalTicketTheme
 											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
@@ -379,11 +475,15 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			{!useBgLayer && isPipboyTerminal && <PipboyTerminalBackdropLayer />}
 			{!useBgLayer && isVelvetCrown && <VelvetCrownBackdrop />}
 
+			{isNeonPrism && <NeonPrismEnergyScan />}
+
 			{(isOnyxGold || isArcticGlass || isImperialCourt) && fillContainer && (
 				<TokenDisplayColumnSeparator />
 			)}
 
 			<div className='tdc__glow' aria-hidden='true' />
+
+			{isOledPulse && <OledPulseBorderCycle />}
 
 			{isSunBento ? (
 				<SunBentoCard
@@ -405,6 +505,18 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					subtitle={subtitle}
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
+				/>
+			) : isAirportDeparture ? (
+				<AirportDepartureCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+					previewMode={previewMode}
+					assignedQueues={assignedQueues}
 				/>
 			) : isOledPulse ? (
 				<OledPulseCard
@@ -413,6 +525,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
 				/>
 			) : isDigitalHealthcare ? (
 				<HealthcareDashboardCard
@@ -421,6 +534,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
 				/>
 			) : isGlassLobby ? (
 				<GlassLobbyCard
@@ -429,6 +543,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 					statusModifier={statusConfig.modifier}
+					previewMode={previewMode}
+					assignedQueues={assignedQueues}
 				/>
 			) : isNeonPrism ? (
 				<div className='tdc-np-shell'>
@@ -438,6 +554,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						displayToken={displayToken}
 						statusLabel={statusConfig.label}
 						statusModifier={statusConfig.modifier}
+						assignedQueues={assignedQueues}
 					/>
 					{hasHistory && recentTokens && recentTokens.length > 0 && (
 						<div
@@ -502,6 +619,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						displayToken={displayToken}
 						statusLabel={statusConfig.label}
 						statusModifier={statusConfig.modifier}
+						assignedQueues={assignedQueues}
 					/>
 					{hasHistory && recentTokens && recentTokens.length > 0 && (
 						<AuroraNexusActiveTokens
@@ -515,13 +633,33 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						/>
 					)}
 				</div>
-			) : isPageTurn ? (
-				<PageTurnCard
+			) : isSignalBoard ? (
+				<SignalBoardCard
 					queueName={queueName}
 					subtitle={subtitle}
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
+				/>
+			) : isPaperFlip ? (
+				<PaperFlipCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+					previewMode={previewMode}
+					assignedQueues={assignedQueues}
+				/>
+			) : isMonoFlip ? (
+				<MonoFlipCard
+					queueName={queueName}
+					subtitle={subtitle}
+					displayToken={displayToken}
+					statusLabel={statusConfig.label}
+					statusModifier={statusConfig.modifier}
+					previewMode={previewMode}
 					assignedQueues={assignedQueues}
 				/>
 			) : isCarSpeedometer ? (
@@ -531,6 +669,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					displayToken={displayToken}
 					statusLabel={statusConfig.label}
 					statusModifier={statusConfig.modifier}
+					assignedQueues={assignedQueues}
 				/>
 			) : (
 				<>
@@ -552,6 +691,11 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 						) : (
 							<span className='tdc__queue-name tdc__queue-name--empty' aria-hidden='true' />
 						)}
+						{isDigitalCrimson ? <DigitalCrimsonClock /> : null}
+						{isOnyxGold ? <OnyxGoldClock /> : null}
+						{isModernQueueBoard ? <ModernQueueBoardClock /> : null}
+						{isImperialCourt ? <ImperialCourtClock /> : null}
+						{isArcticGlass ? <ArcticGlassClock /> : null}
 					</div>
 
 					{isPipboyTerminal && <PipboyTerminalClockRow fillContainer={fillContainer} />}
@@ -573,6 +717,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								displayToken
 							)}
 						</div>
+						{isVelvetCrown ? <VelvetCrownClock /> : null}
 					</div>
 
 					<div className='tdc__footer'>
@@ -738,13 +883,13 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				</div>
 			)}
 
-			{/* Page Turn — merged active-token chip rail */}
-			{isPageTurn && hasHistory && recentTokens && recentTokens.length > 0 && (
-				<div className='tdc-pt-active' aria-label='Active tokens'>
-					<span className='tdc-pt-active__label' aria-hidden='true'>
+			{/* Signal Board — merged active-token chip rail */}
+			{isSignalBoard && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-sig-active' aria-label='Active tokens'>
+					<span className='tdc-sig-active__label' aria-hidden='true'>
 						Active Tokens
 					</span>
-					<div className='tdc-pt-active__scroll'>
+					<div className='tdc-sig-active__scroll'>
 						{recentTokens.map((t) => {
 							const counter = shortCounterLabel(t.serving_point_name);
 							const tokenKey = historyTokenKey(t);
@@ -753,25 +898,151 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								<span
 									key={tokenKey}
 									className={[
-										'tdc-pt-active__chip',
-										isEntering ? 'tdc-pt-active__chip--enter' : '',
+										'tdc-sig-active__chip',
+										isEntering ? 'tdc-sig-active__chip--enter' : '',
 									]
 										.filter(Boolean)
 										.join(' ')}
 									onAnimationEnd={() => {
 										if (isEntering) clearHistoryEnter(tokenKey);
 									}}>
-									<span className='tdc-pt-active__chip-token'>{t.token_display}</span>
+									<span className='tdc-sig-active__chip-token'>{t.token_display}</span>
 									{counter && (
 										<>
-											<span className='tdc-pt-active__chip-sep' aria-hidden='true'>
+											<span className='tdc-sig-active__chip-sep' aria-hidden='true'>
 												·
 											</span>
-											<span className='tdc-pt-active__chip-counter'>{counter}</span>
+											<span className='tdc-sig-active__chip-counter'>{counter}</span>
 										</>
 									)}
 									{showHistoryTime && t.called_at && (
-										<span className='tdc-pt-active__chip-time'>{fmtTime(t.called_at)}</span>
+										<span className='tdc-sig-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{/* Paper Flip — active-token chip rail */}
+			{isPaperFlip && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-pf-active' aria-label='Active tokens'>
+					<span className='tdc-pf-active__label' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-pf-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-pf-active__chip',
+										isEntering ? 'tdc-pf-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-pf-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-pf-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-pf-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-pf-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{/* Mono Flip — active-token chip rail */}
+			{isMonoFlip && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-mf-active' aria-label='Active tokens'>
+					<span className='tdc-mf-active__label' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-mf-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-mf-active__chip',
+										isEntering ? 'tdc-mf-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-mf-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-mf-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-mf-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-mf-active__chip-time'>{fmtTime(t.called_at)}</span>
+									)}
+								</span>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{/* Airport Departure — active-token chip rail */}
+			{isAirportDeparture && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div className='tdc-ad-active' aria-label='Active tokens'>
+					<span className='tdc-ad-active__label' aria-hidden='true'>
+						Active Tokens
+					</span>
+					<div className='tdc-ad-active__scroll'>
+						{recentTokens.map((t) => {
+							const counter = shortCounterLabel(t.serving_point_name);
+							const tokenKey = historyTokenKey(t);
+							const isEntering = enteringHistoryKeys.has(tokenKey);
+							return (
+								<span
+									key={tokenKey}
+									className={[
+										'tdc-ad-active__chip',
+										isEntering ? 'tdc-ad-active__chip--enter' : '',
+									]
+										.filter(Boolean)
+										.join(' ')}
+									onAnimationEnd={() => {
+										if (isEntering) clearHistoryEnter(tokenKey);
+									}}>
+									<span className='tdc-ad-active__chip-token'>{t.token_display}</span>
+									{counter && (
+										<>
+											<span className='tdc-ad-active__chip-sep' aria-hidden='true'>
+												·
+											</span>
+											<span className='tdc-ad-active__chip-counter'>{counter}</span>
+										</>
+									)}
+									{showHistoryTime && t.called_at && (
+										<span className='tdc-ad-active__chip-time'>{fmtTime(t.called_at)}</span>
 									)}
 								</span>
 							);
@@ -782,7 +1053,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 
 			{/* Car Speedometer — active-token chip rail */}
 			{isCarSpeedometer && hasHistory && recentTokens && recentTokens.length > 0 && (
-				<div className='tdc-cs-active' aria-label='Active tokens'>
+				<div
+					className={[
+						'tdc-cs-active',
+						!useHistoryMarquee ? 'tdc-cs-active--static' : '',
+					]
+						.filter(Boolean)
+						.join(' ')}
+					aria-label='Active tokens'>
 					<span className='tdc-cs-active__label' aria-hidden='true'>
 						Active
 					</span>
@@ -825,7 +1103,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isPageTurn && !isCarSpeedometer && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'
@@ -866,7 +1144,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 										<span className='tdc__history-token'>{t.token_display}</span>
 										{counter && (
 											<>
-												<span className='tdc__history-counter-label'>Counter</span>
+												<span className='tdc__history-counter-label'>
+													<span className='tdc__history-counter-label__long'>
+														Counter
+													</span>
+													<span className='tdc__history-counter-label__short'>
+														Ctr
+													</span>
+												</span>
 												<span className='tdc__history-counter-num'>{counter}</span>
 											</>
 										)}

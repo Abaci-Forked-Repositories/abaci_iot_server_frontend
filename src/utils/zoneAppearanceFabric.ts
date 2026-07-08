@@ -110,12 +110,15 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'sun-bento': '#fff492',
 		'royal-ticket': '#14101f',
 		'airport-arrival': '#000000',
+		'airport-departure': '#000000',
 		'oled-pulse': '#000000',
 		'digital-healthcare': '#ffffff',
 		'glass-lobby': '#2a2048',
 		'neon-prism': '#010820',
 		'aurora-nexus': '#030510',
-		'page-turn': '#0b1530',
+		'signal-board': '#101014',
+		'paper-flip': '#c8b89a',
+		'mono-flip': '#141414',
 		'car-speedometer': '#000000',
 	};
 	return fallbacks[themeId];

@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
+import { NeonPrismDateDisplay, NeonPrismHeaderClock, NeonPrismTimeDisplay } from './NeonPrismClock';
+import NeonPrismQueueTable from './NeonPrismQueueTable';
 import NeonPrismToken from './NeonPrismToken';
 
 export interface NeonPrismCardProps {
@@ -7,6 +11,7 @@ export interface NeonPrismCardProps {
 	displayToken: string;
 	statusLabel: string;
 	statusModifier: string;
+	assignedQueues?: AssignedQueueDisplay[];
 }
 
 const NeonPrismCard: React.FC<NeonPrismCardProps> = ({
@@ -15,7 +20,42 @@ const NeonPrismCard: React.FC<NeonPrismCardProps> = ({
 	displayToken,
 	statusLabel,
 	statusModifier,
+	assignedQueues = [],
 }) => {
+	const isMultiQueue = assignedQueues.length > 1;
+
+	const servingRows = useMemo(
+		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
+		[assignedQueues, isMultiQueue],
+	);
+
+	if (isMultiQueue) {
+		return (
+			<div className='tdc-np-layout tdc-np-layout--table'>
+				<div className='tdc-np-ambient' aria-hidden='true'>
+					<div className='tdc-np-ambient__glow tdc-np-ambient__glow--left' />
+					<div className='tdc-np-ambient__glow tdc-np-ambient__glow--right' />
+					<div className='tdc-np-ambient__floor' />
+				</div>
+
+				<header className='tdc-np-table-header'>
+					<div className='tdc-np-table-header__copy' aria-live='polite'>
+						<span className='tdc-np-table-header__count'>
+							{assignedQueues.length} queues
+						</span>
+					</div>
+					<div className='tdc-np-table-header__meta'>
+						<NeonPrismHeaderClock />
+					</div>
+				</header>
+
+				<div className='tdc-np-table-stage'>
+					<NeonPrismQueueTable rows={servingRows} />
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className='tdc-np-layout'>
 			<div className='tdc-np-ambient' aria-hidden='true'>
@@ -36,13 +76,23 @@ const NeonPrismCard: React.FC<NeonPrismCardProps> = ({
 					<div className='tdc-np-panel__rim' aria-hidden='true' />
 					<div className='tdc-np-panel__floor-glow' aria-hidden='true' />
 					<div className='tdc-np-wing'>
-						<span className='tdc-np-wing__label'>Queue</span>
-						{queueName ? (
-							<span className='tdc-np-wing__value'>{queueName}</span>
-						) : (
-							<span className='tdc-np-wing__value tdc-np-wing__value--empty' aria-hidden='true' />
-						)}
-						{subtitle ? <span className='tdc-np-wing__sub'>{subtitle}</span> : null}
+						<div className='tdc-np-wing__main'>
+							<span className='tdc-np-wing__label'>Queue</span>
+							<div className='tdc-np-wing__queue-body'>
+								{queueName ? (
+									<span className='tdc-np-wing__value tdc-np-wing__value--queue'>{queueName}</span>
+								) : (
+									<span
+										className='tdc-np-wing__value tdc-np-wing__value--queue tdc-np-wing__value--empty'
+										aria-hidden='true'
+									/>
+								)}
+							</div>
+							{subtitle ? <span className='tdc-np-wing__sub'>{subtitle}</span> : null}
+						</div>
+						<div className='tdc-np-wing__foot'>
+							<NeonPrismDateDisplay />
+						</div>
 					</div>
 				</div>
 
@@ -72,11 +122,18 @@ const NeonPrismCard: React.FC<NeonPrismCardProps> = ({
 					<div className='tdc-np-panel__rim' aria-hidden='true' />
 					<div className='tdc-np-panel__floor-glow' aria-hidden='true' />
 					<div className='tdc-np-wing tdc-np-wing--status'>
-						<span className='tdc-np-wing__label'>Status</span>
-						<span className='tdc-np-wing__value tdc-np-wing__value--status'>
-							<span className='tdc-np-status-dot' aria-hidden='true' />
-							<span className='tdc-np-status-text'>{statusLabel}</span>
-						</span>
+						<div className='tdc-np-wing__main'>
+							<span className='tdc-np-wing__label'>Status</span>
+							<div className='tdc-np-wing__status-body'>
+								<span className='tdc-np-wing__value tdc-np-wing__value--status'>
+									<span className='tdc-np-status-dot' aria-hidden='true' />
+									<span className='tdc-np-status-text'>{statusLabel}</span>
+								</span>
+							</div>
+						</div>
+						<div className='tdc-np-wing__foot'>
+							<NeonPrismTimeDisplay />
+						</div>
 					</div>
 				</div>
 

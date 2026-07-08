@@ -724,11 +724,22 @@
 	// Size container so theme card text scales with zone width/height.
 	container-type: size;
 
-	&:has(.tdc--page-turn) {
-		overflow: hidden;
-		container-type: size;
+	&:has(.tdc--signal-board),
+	&:has(.tdc--paper-flip),
+	&:has(.tdc--mono-flip),
+	&:has(.tdc--airport-arrival),
+	&:has(.tdc--airport-departure) {
+		overflow: visible;
+		container-type: normal;
 
 		.tdc {
+			overflow: visible;
+		}
+
+		.tdc--paper-flip,
+		.tdc--mono-flip,
+		.tdc--airport-arrival,
+		.tdc--airport-departure {
 			overflow: hidden;
 		}
 	}
@@ -765,9 +776,23 @@
 		}
 	}
 
+	// Neon Prism: keep energy scan above stage panels in editor preview
+	.tdc--neon-prism {
+		isolation: isolate;
+
+		.tdc-np-energy-scan {
+			z-index: 30;
+		}
+
+		.tdc-np-shell {
+			position: relative;
+			z-index: 1;
+		}
+	}
+
 	// Template editor only: slight token bump (~5%) — live TV screens unchanged.
 	// Pipboy flip digits size themselves — do not apply generic fill token scaling.
-	.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--page-turn):not(.tdc--car-speedometer) .tdc__body .tdc__token {
+	.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--airport-departure):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--car-speedometer) .tdc__body .tdc__token {
 		font-size: min(
 			calc(var(--tdc-token-fill-em, 3.35) * 1.05 * 1em),
 			calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),

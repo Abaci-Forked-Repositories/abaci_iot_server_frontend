@@ -1,4 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
+import OledPulseClock from './OledPulseClock';
+import OledPulseQueueTable from './OledPulseQueueTable';
 import OledPulseToken from './OledPulseToken';
 
 export interface OledPulseCardProps {
@@ -7,6 +11,7 @@ export interface OledPulseCardProps {
 	displayToken: string;
 	statusLabel: string;
 	statusModifier: string;
+	assignedQueues?: AssignedQueueDisplay[];
 }
 
 const OledPulseCard: React.FC<OledPulseCardProps> = ({
@@ -15,32 +20,48 @@ const OledPulseCard: React.FC<OledPulseCardProps> = ({
 	displayToken,
 	statusLabel,
 	statusModifier,
+	assignedQueues = [],
 }) => {
-	const skipSweepRef = useRef(true);
-	const [sweepKey, setSweepKey] = useState(0);
-	console.log("subtitle", subtitle);
+	const isMultiQueue = assignedQueues.length > 1;
 
-	useEffect(() => {
-		if (skipSweepRef.current) {
-			skipSweepRef.current = false;
-			return;
-		}
-		setSweepKey((key) => key + 1);
-	}, [displayToken]);
+	const servingRows = useMemo(
+		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
+		[assignedQueues, isMultiQueue],
+	);
+
+	if (isMultiQueue) {
+		return (
+			<div className='tdc-op-layout tdc-op-layout--table'>
+				<header className='tdc-op-table-header'>
+					<div className='tdc-op-table-header__copy' aria-live='polite'>
+						<span className='tdc-op-table-header__count'>
+							{assignedQueues.length} queues
+						</span>
+					</div>
+					<div className='tdc-op-table-header__meta'>
+						<OledPulseClock />
+					</div>
+				</header>
+
+				<div className='tdc-op-table-stage'>
+					<OledPulseQueueTable rows={servingRows} />
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className='tdc-op-layout'>
-			<div className='tdc-op-accent-track' aria-hidden='true'>
-				<div key={sweepKey} className='tdc-op-accent tdc-op-accent--sweep' />
-			</div>
-
 			<header className='tdc-op-meta'>
 				<div className='tdc-op-meta__copy'>
-					{queueName ? (
-						<span className='tdc-op-queue'>{queueName}</span>
-					) : (
-						<span className='tdc-op-queue tdc-op-queue--empty' aria-hidden='true' />
-					)}
+					<div className='tdc-op-meta__lead'>
+						{queueName ? (
+							<span className='tdc-op-queue' title={`Queue ${queueName}`}>
+								{queueName}
+							</span>
+						) : null}
+						<OledPulseClock />
+					</div>
 					{subtitle ? <span className='tdc-op-subtitle'>{subtitle}</span> : null}
 				</div>
 				<div className='tdc-op-status' aria-live='polite'>

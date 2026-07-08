@@ -432,9 +432,19 @@
 		min-width: 0;
 	}
 
+	.tdc-op-layout--table {
+		height: auto;
+		overflow: hidden;
+	}
+
 	&.tdc--has-history {
 		.tdc-op-layout {
 			flex: 1 1 0;
+		}
+
+		.tdc-op-layout--table {
+			flex: 1 1 0;
+			min-height: 0;
 		}
 
 		.tdc-op-active {
@@ -461,9 +471,19 @@
 		min-width: 0;
 	}
 
+	.tdc-dh-layout--table {
+		height: auto;
+		overflow: hidden;
+	}
+
 	&.tdc--has-history {
 		.tdc-dh-layout {
 			flex: 1 1 0;
+		}
+
+		.tdc-dh-layout--table {
+			flex: 1 1 0;
+			min-height: 0;
 		}
 
 		.tdc-dh-metrics {
@@ -548,8 +568,8 @@
 	}
 }
 
-// ─── Page Turn ────────────────────────────────────────────────────────────────
-.tdc--fill.tdc--page-turn {
+// ─── Signal Board ─────────────────────────────────────────────────────────────
+.tdc--fill.tdc--signal-board {
 	display: flex;
 	flex-direction: column;
 	grid-template-columns: unset;
@@ -559,14 +579,90 @@
 	min-height: 0;
 	height: 100%;
 
-	.tdc-pt-layout {
+	.tdc-sig-layout {
 		flex: 1 1 0;
 		min-height: 0;
 		min-width: 0;
 	}
 
 	&.tdc--has-history {
-		.tdc-pt-active {
+		.tdc-sig-active {
+			flex-shrink: 0;
+		}
+	}
+}
+
+// ─── Paper Flip ───────────────────────────────────────────────────────────────
+.tdc--fill.tdc--paper-flip {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+
+	.tdc-pf-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-pf-active {
+			flex-shrink: 0;
+		}
+	}
+}
+
+// ─── Mono Flip ────────────────────────────────────────────────────────────────
+.tdc--fill.tdc--mono-flip {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+
+	.tdc-mf-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-mf-active {
+			flex-shrink: 0;
+		}
+	}
+}
+
+// ─── Airport Departure Board ───────────────────────────────────────────────────
+.tdc--fill.tdc--airport-departure {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+
+	.tdc-ad-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-ad-layout {
+			flex: 1 1 0;
+		}
+
+		.tdc-ad-active {
 			flex-shrink: 0;
 		}
 	}

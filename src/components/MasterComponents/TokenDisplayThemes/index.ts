@@ -17,6 +17,7 @@ export {
 	ACTIVE_TOKENS_MARQUEE_MIN_COUNT,
 	DEFAULT_ZONE_DISPLAY_THEME,
 	parseDisplayThemeId,
+	isSignalBoardTheme,
 	isDisplayThemeId,
 	getZoneAppearanceFromSaved,
 	serializeZoneAppearance,

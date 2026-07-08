@@ -1,4 +1,5 @@
 import React from 'react';
+import SunBentoClock from './SunBentoClock';
 
 export interface SunBentoCardProps {
 	queueName?: string;
@@ -9,7 +10,6 @@ export interface SunBentoCardProps {
 
 const SunBentoCard: React.FC<SunBentoCardProps> = ({
 	queueName,
-	subtitle,
 	displayToken,
 	statusLabel,
 }) => (
@@ -26,7 +26,7 @@ const SunBentoCard: React.FC<SunBentoCardProps> = ({
 		</div>
 
 		<div className='tdc-sb-bottom'>
-			<span className='tdc-sb-caption'>{subtitle || 'Now Serving'}</span>
+			<SunBentoClock />
 			<span className='tdc-sb-dots' aria-hidden='true'>
 				{Array.from({ length: 9 }, (_, i) => (
 					<i key={i} />

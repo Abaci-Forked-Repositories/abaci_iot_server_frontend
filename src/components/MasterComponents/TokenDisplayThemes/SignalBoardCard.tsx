@@ -2,10 +2,11 @@ import React, { useMemo } from 'react';
 import { useRotatingQueueDisplay } from '../../../hooks/useRotatingQueueDisplay';
 import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
 import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
-import PageTurnQueueTable from './PageTurnQueueTable';
-import PageTurnToken from './PageTurnToken';
+import SignalBoardClock from './SignalBoardClock';
+import SignalBoardQueueTable from './SignalBoardQueueTable';
+import SignalBoardToken from './SignalBoardToken';
 
-export interface PageTurnCardProps {
+export interface SignalBoardCardProps {
 	queueName?: string;
 	subtitle?: string;
 	displayToken: string;
@@ -14,7 +15,7 @@ export interface PageTurnCardProps {
 	assignedQueues?: AssignedQueueDisplay[];
 }
 
-const PageTurnCard: React.FC<PageTurnCardProps> = ({
+const SignalBoardCard: React.FC<SignalBoardCardProps> = ({
 	queueName,
 	subtitle,
 	displayToken,
@@ -47,16 +48,18 @@ const PageTurnCard: React.FC<PageTurnCardProps> = ({
 		[rotationSource],
 	);
 
+	const statusModifierClass = isMultiQueue ? 'waiting' : active.statusModifier;
+
 	return (
-		<div className='tdc-pt-layout'>
+		<div className='tdc-sig-layout'>
 			<header
-				className={['tdc-pt-meta', isMultiQueue ? 'tdc-pt-meta--multi' : '']
+				className={['tdc-sig-meta', isMultiQueue ? 'tdc-sig-meta--multi' : '']
 					.filter(Boolean)
 					.join(' ')}>
 				{isMultiQueue ? (
-					<div className='tdc-pt-meta__cards'>
-						<span className='tdc-pt-meta__eyebrow'>Queues</span>
-						<div className='tdc-pt-queue-cards' role='list' aria-label='Assigned queues'>
+					<div className='tdc-sig-meta__cards'>
+						<span className='tdc-sig-meta__eyebrow'>Queues</span>
+						<div className='tdc-sig-queue-cards' role='list' aria-label='Assigned queues'>
 							{rotationSource.map((queue) => {
 								const isActive = queue.queueName === active.queueName;
 								return (
@@ -64,64 +67,63 @@ const PageTurnCard: React.FC<PageTurnCardProps> = ({
 										key={queue.queueName}
 										role='listitem'
 										className={[
-											'tdc-pt-queue-card',
-											isActive ? 'tdc-pt-queue-card--active' : '',
+											'tdc-sig-queue-card',
+											isActive ? 'tdc-sig-queue-card--active' : '',
 										]
 											.filter(Boolean)
 											.join(' ')}
 										aria-current={isActive ? 'true' : undefined}
 										title={queue.queueName}>
-										<span className='tdc-pt-queue-card__name'>{queue.queueName}</span>
+										<span className='tdc-sig-queue-card__name'>{queue.queueName}</span>
 									</div>
 								);
 							})}
 						</div>
 					</div>
 				) : (
-					<div className='tdc-pt-meta__copy'>
-						<span className='tdc-pt-meta__eyebrow'>Queue</span>
-						<span className='tdc-pt-meta__queue'>{active.queueName}</span>
+					<div className='tdc-sig-meta__copy'>
+						<span className='tdc-sig-meta__eyebrow'>Queue</span>
+						<span className='tdc-sig-meta__queue'>{active.queueName}</span>
 						{active.servingPointName ? (
-							<span className='tdc-pt-meta__sub'>{active.servingPointName}</span>
+							<span className='tdc-sig-meta__sub'>{active.servingPointName}</span>
 						) : null}
 					</div>
 				)}
-				<div
-					className={[
-						'tdc-pt-status',
-						`tdc-pt-status--${isMultiQueue ? 'waiting' : active.statusModifier}`,
-					]
-						.filter(Boolean)
-						.join(' ')}
-					aria-live='polite'>
-					<span className='tdc-pt-status__dot' aria-hidden='true' />
-					<span className='tdc-pt-status__label'>
-						{isMultiQueue ? 'Live board' : active.statusLabel}
-					</span>
-				</div>
+				{isMultiQueue ? (
+					<SignalBoardClock />
+				) : (
+					<div
+						className={['tdc-sig-status', `tdc-sig-status--${statusModifierClass}`]
+							.filter(Boolean)
+							.join(' ')}
+						aria-live='polite'>
+						<span className='tdc-sig-status__dot' aria-hidden='true' />
+						<span className='tdc-sig-status__label'>{active.statusLabel}</span>
+					</div>
+				)}
 			</header>
 
 			<div
 				className={[
-					'tdc-pt-stage',
-					isMultiQueue ? 'tdc-pt-stage--table-only' : 'tdc-pt-stage--token-only',
+					'tdc-sig-stage',
+					isMultiQueue ? 'tdc-sig-stage--table-only' : 'tdc-sig-stage--token-only',
 				]
 					.filter(Boolean)
 					.join(' ')}>
 				{isMultiQueue ? (
-					<div className='tdc-pt-panel tdc-pt-panel--table'>
-						<PageTurnQueueTable
+					<div className='tdc-sig-panel tdc-sig-panel--table'>
+						<SignalBoardQueueTable
 							rows={servingRows}
 							activeQueueName={queueCount > 1 ? active.queueName : undefined}
 						/>
 					</div>
 				) : (
-					<div className='tdc-pt-panel tdc-pt-panel--hero tdc-pt-panel--hero-focus tdc-pt-panel--hero-single'>
-						<div className='tdc-pt-hero__cap'>
-							<span className='tdc-pt-hero__eyebrow'>Now Calling</span>
+					<div className='tdc-sig-panel tdc-sig-panel--hero tdc-sig-panel--hero-focus tdc-sig-panel--hero-single'>
+						<div className='tdc-sig-hero__cap'>
+							<SignalBoardClock />
 						</div>
-						<div className='tdc-pt-hero__main'>
-							<PageTurnToken value={displayToken} />
+						<div className='tdc-sig-hero__main'>
+							<SignalBoardToken value={displayToken} />
 						</div>
 					</div>
 				)}
@@ -130,4 +132,4 @@ const PageTurnCard: React.FC<PageTurnCardProps> = ({
 	);
 };
 
-export default PageTurnCard;
+export default SignalBoardCard;

@@ -14,6 +14,17 @@ const R_INNER = 72;
 const R_RIM = R_OUTER + 4;
 
 const RIM_ORBIT_PERIOD_S = 14;
+/** Outer meter arc span (degrees) and normalized path length for dash animation. */
+const ARC_START_DEG = 225;
+const ARC_END_DEG = 495;
+const RIM_SWEEP_RADIUS = R_OUTER - 1.5;
+const RIM_SWEEP_MS = 760;
+const RIM_SWEEP_SEGMENT_RATIO = 0.18;
+
+function prefersReducedMotion(): boolean {
+	if (typeof window === 'undefined') return false;
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 /** Map token digits to 0–100 for needle position. */
 function tokenToPercent(token: string): number {
@@ -101,25 +112,87 @@ const RimCarOrbit = memo(function RimCarOrbit({ glowFilterId }: { glowFilterId: 
 
 const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({ token, className = '' }) => {
 	const skipAnimRef = useRef(true);
+	const sweepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const rimAnimRef = useRef(0);
+	const rimSweepRef = useRef<SVGPathElement>(null);
 	const [needleAngle, setNeedleAngle] = useState(() => percentToAngle(tokenToPercent(token)));
-	const [sweeping, setSweeping] = useState(false);
+	const [isSweeping, setIsSweeping] = useState(false);
 
 	const uid = useId().replace(/:/g, '');
 	const carGlowFilterId = `tdc-cs-car-glow-${uid}`;
-	const needleGlowFilterId = `tdc-cs-needle-glow-${uid}`;
-	const gaugeFaceGradientId = `tdc-cs-gauge-face-${uid}`;
+	const rimSweepGlowFilterId = `tdc-cs-rim-sweep-glow-${uid}`;
+
+	const rimSweepPath = useMemo(
+		() => arcPath(CX, CY, RIM_SWEEP_RADIUS, ARC_START_DEG, ARC_END_DEG),
+		[],
+	);
 
 	const targetAngle = useMemo(() => percentToAngle(tokenToPercent(token)), [token]);
 
+	const runRimSweep = () => {
+		const path = rimSweepRef.current;
+		if (!path || prefersReducedMotion()) return;
+
+		if (rimAnimRef.current) cancelAnimationFrame(rimAnimRef.current);
+
+		const length = path.getTotalLength();
+		if (!Number.isFinite(length) || length <= 0) return;
+
+		const segment = length * RIM_SWEEP_SEGMENT_RATIO;
+		path.style.strokeDasharray = `${segment} ${length}`;
+		path.style.strokeDashoffset = '0';
+		path.style.opacity = '1';
+
+		const start = performance.now();
+
+		const tick = (now: number) => {
+			const progress = Math.min(1, (now - start) / RIM_SWEEP_MS);
+			const eased = 1 - (1 - progress) ** 3;
+			path.style.strokeDashoffset = String(-eased * length);
+
+			if (progress < 0.1) {
+				path.style.opacity = String(progress / 0.1);
+			} else if (progress > 0.86) {
+				path.style.opacity = String((1 - progress) / 0.14);
+			} else {
+				path.style.opacity = '1';
+			}
+
+			if (progress < 1) {
+				rimAnimRef.current = requestAnimationFrame(tick);
+			} else {
+				path.style.opacity = '0';
+				path.style.strokeDashoffset = '0';
+				rimAnimRef.current = 0;
+			}
+		};
+
+		rimAnimRef.current = requestAnimationFrame(tick);
+	};
+
 	useEffect(() => {
+		setNeedleAngle(targetAngle);
+
 		if (skipAnimRef.current) {
 			skipAnimRef.current = false;
-			setNeedleAngle(targetAngle);
-			return;
+			return undefined;
 		}
-		setSweeping(true);
-		setNeedleAngle(targetAngle);
-	}, [targetAngle]);
+
+		setIsSweeping(true);
+		if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current);
+		sweepTimerRef.current = setTimeout(() => setIsSweeping(false), RIM_SWEEP_MS + 40);
+
+		// Wait for layout so getTotalLength() is valid on the sweep path.
+		const startRaf = requestAnimationFrame(() => {
+			runRimSweep();
+		});
+
+		return () => {
+			cancelAnimationFrame(startRaf);
+			if (rimAnimRef.current) cancelAnimationFrame(rimAnimRef.current);
+			if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current);
+		};
+	}, [token, targetAngle]);
 
 	const ticks = useMemo(() => {
 		const items: React.ReactNode[] = [];
@@ -164,28 +237,22 @@ const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({ token, className = 
 
 	return (
 		<svg
-			className={['tdc-cs-gauge', sweeping ? 'tdc-cs-gauge--sweep' : '', className]
+			className={['tdc-cs-gauge', isSweeping ? 'tdc-cs-gauge--sweep' : '', className]
 				.filter(Boolean)
 				.join(' ')}
 			viewBox='0 0 200 200'
 			aria-hidden='true'
-			focusable='false'
-			onTransitionEnd={() => setSweeping(false)}>
+			focusable='false'>
 			<defs>
-				<filter id={needleGlowFilterId} x='-50%' y='-50%' width='200%' height='200%'>
-					<feGaussianBlur stdDeviation='2' result='blur' />
+				<filter id={carGlowFilterId} x='-80%' y='-80%' width='260%' height='260%'>
+					<feGaussianBlur stdDeviation='1.2' result='blur' />
 					<feMerge>
 						<feMergeNode in='blur' />
 						<feMergeNode in='SourceGraphic' />
 					</feMerge>
 				</filter>
-				<radialGradient id={gaugeFaceGradientId} cx='50%' cy='50%' r='50%'>
-					<stop offset='0%' stopColor='#0a0a0a' />
-					<stop offset='85%' stopColor='#000000' />
-					<stop offset='100%' stopColor='#111111' />
-				</radialGradient>
-				<filter id={carGlowFilterId} x='-80%' y='-80%' width='260%' height='260%'>
-					<feGaussianBlur stdDeviation='1.2' result='blur' />
+				<filter id={rimSweepGlowFilterId} x='-60%' y='-60%' width='220%' height='220%'>
+					<feGaussianBlur stdDeviation='2.2' result='blur' />
 					<feMerge>
 						<feMergeNode in='blur' />
 						<feMergeNode in='SourceGraphic' />
@@ -195,10 +262,10 @@ const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({ token, className = 
 
 			<circle cx={CX} cy={CY} r={R_RIM} className='tdc-cs-gauge__rim' />
 
-			<circle cx={CX} cy={CY} r={R_OUTER} fill={`url(#${gaugeFaceGradientId})`} />
+			<circle cx={CX} cy={CY} r={R_OUTER} className='tdc-cs-gauge__face' />
 
 			<path
-				d={arcPath(CX, CY, R_OUTER - 2, 225, 495)}
+				d={arcPath(CX, CY, R_OUTER - 2, ARC_START_DEG, ARC_END_DEG)}
 				className='tdc-cs-gauge__arc'
 				fill='none'
 			/>
@@ -206,9 +273,19 @@ const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({ token, className = 
 			{ticks}
 			{labels}
 
-			<text x={CX} y={CY - 28} className='tdc-cs-gauge__unit' textAnchor='middle'>
+			<text x={CX} y={CY - 34} className='tdc-cs-gauge__unit' textAnchor='middle'>
 				TOKEN
 			</text>
+
+			<RimCarOrbit glowFilterId={carGlowFilterId} />
+
+			<path
+				ref={rimSweepRef}
+				d={rimSweepPath}
+				className='tdc-cs-gauge__rim-sweep'
+				fill='none'
+				filter={`url(#${rimSweepGlowFilterId})`}
+			/>
 
 			<g
 				className='tdc-cs-gauge__needle-group'
@@ -219,30 +296,8 @@ const SpeedometerGauge: React.FC<SpeedometerGaugeProps> = ({ token, className = 
 					x2={CX}
 					y2={CY - (R_INNER - 10)}
 					className='tdc-cs-gauge__needle'
-					filter={`url(#${needleGlowFilterId})`}
 				/>
 			</g>
-
-			<circle cx={CX} cy={CY} r={5} className='tdc-cs-gauge__hub' />
-			<circle cx={CX} cy={CY} r={2.5} className='tdc-cs-gauge__hub-core' />
-
-			{/* Fuel-style status sub-gauge */}
-			<path
-				d={arcPath(CX, CY + 18, 22, 200, 340)}
-				className='tdc-cs-gauge__sub-arc'
-				fill='none'
-			/>
-			<text x={CX - 18} y={CY + 32} className='tdc-cs-gauge__sub-label'>
-				0
-			</text>
-			<text x={CX} y={CY + 36} className='tdc-cs-gauge__sub-label'>
-				½
-			</text>
-			<text x={CX + 18} y={CY + 32} className='tdc-cs-gauge__sub-label'>
-				1
-			</text>
-
-			<RimCarOrbit glowFilterId={carGlowFilterId} />
 		</svg>
 	);
 };

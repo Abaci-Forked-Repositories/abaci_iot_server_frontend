@@ -30,6 +30,7 @@ import {
 	getZoneAppearanceFromSaved,
 	isZoneThemeSelectionComplete,
 	parseDisplayThemeId,
+	isSignalBoardTheme,
 	serializeZoneAppearance,
 	type ZoneDisplayAppearance,
 } from '../TokenDisplayThemes';
@@ -39,7 +40,7 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 import { parseTemplateConfiguration } from '../../../utils/templateOverlayOpacity';
-import { normalizeZoneQueueIds } from '../../../utils/zoneQueueResolution';
+import { buildEditorPageTurnQueueDisplays, normalizeZoneQueueIds } from '../../../utils/zoneQueueResolution';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
 import usePermissions from '../../../hooks/usePermissions';
 import {
@@ -459,6 +460,22 @@ const TemplateDetailWorkspace: React.FC = () => {
 				value: id,
 				label: queuesById.get(id)?.name ?? `Queue #${id}`,
 			})),
+		[zoneProps.queueIds, queuesById],
+	);
+	const previewAssignedQueues = React.useMemo(
+		() =>
+			zoneProps.queueIds.length > 1
+				? buildEditorPageTurnQueueDisplays(
+						{
+							queueIds: zoneProps.queueIds,
+							queueChipNames: zoneProps.queueIds.map(
+								(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
+							),
+						},
+						queuesById,
+						'05',
+					)
+				: undefined,
 		[zoneProps.queueIds, queuesById],
 	);
 
@@ -1797,6 +1814,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 										previewSubtitle=''
 										previewTokenDisplay='05'
 										previewStatus='waiting'
+										previewAssignedQueues={previewAssignedQueues}
 									/>
 
 									<div className='tdc-appearance-zone-controls'>
@@ -1826,7 +1844,27 @@ const TemplateDetailWorkspace: React.FC = () => {
 														{zoneProps.queueIds.length > 0
 															? zoneProps.queueIds.length === 1
 																? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}.`
-																: `Assigned: ${zoneProps.queueIds.length} queues. Page Turn rotates through them; other themes show the first queue.`
+																: (() => {
+																		const theme =
+																			zoneAppearance.mode === 'theme'
+																				? zoneAppearance.displayTheme
+																				: null;
+																		const showsLiveBoard =
+																			isSignalBoardTheme(theme) ||
+																			theme === 'paper-flip' ||
+																			theme === 'mono-flip' ||
+																			theme === 'airport-arrival' ||
+																			theme === 'airport-departure' ||
+																			theme === 'car-speedometer' ||
+																			theme === 'aurora-nexus' ||
+																			theme === 'neon-prism' ||
+																			theme === 'glass-lobby' ||
+																			theme === 'digital-healthcare' ||
+																			theme === 'oled-pulse';
+																		return showsLiveBoard
+																			? `Assigned: ${zoneProps.queueIds.length} queues. Shows a live serving board with all queues.`
+																			: `Assigned: ${zoneProps.queueIds.length} queues. Shows the first queue only.`;
+																	})()
 															: 'Select one or more queues for this zone.'}
 													</p>
 												</>

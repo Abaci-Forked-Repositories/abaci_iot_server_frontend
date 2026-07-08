@@ -1,18 +1,8 @@
 import React, { useEffect, useState } from 'react';
-
-function formatClockTime(date: Date): string {
-	return date.toLocaleTimeString([], {
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-	});
-}
-
-function formatClockDate(date: Date): string {
-	return date
-		.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })
-		.toUpperCase();
-}
+import {
+	formatThemeDisplayClockDate,
+	formatThemeDisplayClockTimeWithSeconds,
+} from '../../../utils/themeDisplayClock';
 
 export interface PipboyLiveClockProps {
 	fillContainer?: boolean;
@@ -30,16 +20,18 @@ const PipboyLiveClock: React.FC<PipboyLiveClockProps> = ({ fillContainer = false
 		.filter(Boolean)
 		.join(' ');
 
+	const displayTime = formatThemeDisplayClockTimeWithSeconds(now);
+
 	return (
-		<div className={rootClass} aria-label={`Current time ${formatClockTime(now)}`}>
+		<div className={rootClass} aria-label={`Current time ${displayTime}`}>
 			<span className='tdc-pipboy-clock__date' aria-hidden='true'>
-				{formatClockDate(now)}
+				{formatThemeDisplayClockDate(now, { uppercase: true })}
 			</span>
 			<span className='tdc-pipboy-clock__divider' aria-hidden='true'>
 				~
 			</span>
 			<time className='tdc-pipboy-clock__time' dateTime={now.toISOString()}>
-				{formatClockTime(now)}
+				{displayTime}
 			</time>
 		</div>
 	);

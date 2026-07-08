@@ -23,12 +23,15 @@
  *   sun-bento        — neo-brutalist cream card with bold corners and lightning accent
  *   royal-ticket     — perforated royal ticket with gold grid and barcode stub
  *   airport-arrival   — Schiphol-style black wayfinding sign with yellow typography
+ *   airport-departure — FIDS split-flap departure board with yellow header bar and rolling digits
  *   oled-pulse        — pure OLED black with violet accent sweep and oversized minimal token
  *   digital-healthcare — clinical white dashboard with blue header and green pulse token
  *   glass-lobby        — frosted glass lobby with floating cards and glowing token
  *   neon-prism         — cyberpunk 3D LED stage with five neon-framed panels and magenta floor glow
  *   aurora-nexus       — aurora cyber dashboard with gradient token digits, glass status, and neon pills
- *   page-turn          — editorial split panel with corner page-curl token reveal and multi-queue rotation
+ *   signal-board       — transit LED board with charcoal base, dot-grid hero, cyan LED token, and multi-queue rotation
+ *   paper-flip         — book-style paper page with spine 3D rotateY flip when the current token changes
+ *   mono-flip          — centered black & white flip card with alternating L/R rotateY and tone inversion on token change
  *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
@@ -46,12 +49,15 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'sun-bento',
 	'royal-ticket',
 	'airport-arrival',
+	'airport-departure',
 	'oled-pulse',
 	'digital-healthcare',
 	'glass-lobby',
 	'neon-prism',
 	'aurora-nexus',
-	'page-turn',
+	'signal-board',
+	'paper-flip',
+	'mono-flip',
 	'car-speedometer',
 ] as const;
 
@@ -176,15 +182,24 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'airport-arrival',
 		label: 'Arrival Sign',
 		description:
-			'Airport wayfinding sign with black field, yellow typography, landing icon, and bold token numeral',
+			'Airport wayfinding sign with black field, yellow typography, single-queue hero, and multi-queue serving table',
 		textColor: 'light',
 		previewGradient: 'linear-gradient(180deg, #1a1a1a 0%, #000000 55%, #000000 100%)',
+	},
+	'airport-departure': {
+		id: 'airport-departure',
+		label: 'Departure Board',
+		description:
+			'Airport-style split-flap board with queue, counter, token, and status columns plus rolling digit animation',
+		textColor: 'light',
+		previewGradient:
+			'linear-gradient(180deg, #f5c518 0%, #f5c518 14%, #0c1424 18%, #000000 55%, #000000 100%)',
 	},
 	'oled-pulse': {
 		id: 'oled-pulse',
 		label: 'OLED Pulse',
 		description:
-			'Pure OLED black with violet accent sweep, oversized token, and minimal status dot',
+			'Pure OLED black with continuous violet-mint border glow cycle, oversized token, and minimal status dot',
 		textColor: 'light',
 		previewGradient: 'linear-gradient(180deg, #141414 0%, #000000 55%, #000000 100%)',
 	},
@@ -192,7 +207,7 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'digital-healthcare',
 		label: 'Health Dashboard',
 		description:
-			'Clinical white dashboard with blue header, pulsing token card, and metric-style active tokens',
+			'Clinical white dashboard with blue header, pulsing token card, metric-style active tokens, and multi-queue live board table',
 		textColor: 'dark',
 		previewGradient: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 55%, #eff6ff 100%)',
 	},
@@ -200,7 +215,7 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'glass-lobby',
 		label: 'Glass Lobby',
 		description:
-			'Frosted glassmorphism with hospital lobby blur, floating cards, fade transitions, and token glow',
+			'Frosted glassmorphism with hospital lobby blur, floating cards, token glow, and multi-queue live board table',
 		textColor: 'light',
 		previewGradient:
 			'linear-gradient(145deg, #fbcfe8 0%, #c4b5fd 38%, #a78bfa 62%, #6366f1 100%)',
@@ -209,7 +224,7 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'neon-prism',
 		label: 'Neon Prism',
 		description:
-			'Cyberpunk 3D LED stage with five neon-framed dot-matrix panels, cyan rims, and magenta floor glow',
+			'Cyberpunk 3D LED stage with five neon-framed dot-matrix panels, cyan rims, magenta floor glow, and multi-queue live board table',
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(0, 255, 255, 0.18) 0%, #010820 55%, #000510 100%)',
@@ -218,25 +233,43 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'aurora-nexus',
 		label: 'Aurora Nexus',
 		description:
-			'Aurora cyber dashboard with flowing neon ribbons, per-digit gradient token, glass status panel, and glowing active-token pills',
+			'Aurora cyber dashboard with flowing neon ribbons, per-digit gradient token, glass status panel, glowing active-token pills, and multi-queue live board table',
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(ellipse 90% 70% at 50% 40%, rgba(0, 240, 255, 0.22) 0%, rgba(192, 38, 255, 0.12) 38%, #030510 72%, #010308 100%)',
 	},
-	'page-turn': {
-		id: 'page-turn',
-		label: 'Page Turn',
+	'signal-board': {
+		id: 'signal-board',
+		label: 'Signal Board',
 		description:
-			'Editorial split layout with navy panel, gradient hero, corner page-curl token reveal, and multi-queue rotation',
+			'Transit LED board with charcoal base, dot-grid hero, cyan LED token, live clock, and multi-queue rotation',
 		textColor: 'light',
 		previewGradient:
-			'linear-gradient(135deg, #0b1530 0%, #0b1530 42%, #2563eb 58%, #60a5fa 100%)',
+			'linear-gradient(135deg, #101014 0%, #1c1c22 42%, #25252c 58%, rgba(0, 212, 255, 0.28) 100%)',
+	},
+	'paper-flip': {
+		id: 'paper-flip',
+		label: 'Paper Flip',
+		description:
+			'Book-style paper page with warm desk background, corner curl reveal on token change, and live board table for multiple queues',
+		textColor: 'dark',
+		previewGradient:
+			'linear-gradient(165deg, #d4c4a8 0%, #c8b89a 42%, #a89472 100%)',
+	},
+	'mono-flip': {
+		id: 'mono-flip',
+		label: 'Mono Flip',
+		description:
+			'Authentic black and white signage with a centered flip card that alternates direction and inverts tone when the token changes',
+		textColor: 'light',
+		previewGradient:
+			'radial-gradient(ellipse 120% 90% at 50% 18%, #1c1c1c 0%, #141414 58%, #050505 100%)',
 	},
 	'car-speedometer': {
 		id: 'car-speedometer',
 		label: 'Car Speedometer',
 		description:
-			'Automotive dashboard with OLED black field, digital readout panel, animated red gauge needle, and responsive token display',
+			'Automotive dashboard with OLED black field, digital readout panel, animated red gauge needle, responsive token display, and multi-queue live dashboard table',
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 72% 50%, rgba(255, 0, 0, 0.12) 0%, #000000 45%, #000000 100%)',
@@ -247,14 +280,25 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 
 const THEME_ID_SET = new Set<string>(ZONE_DISPLAY_THEME_IDS);
 
+/** Legacy slugs still stored on older zones — resolve to the current theme id. */
+const DISPLAY_THEME_LEGACY_ALIASES: Partial<Record<string, ZoneDisplayThemeId>> = {
+	'page-turn': 'signal-board',
+};
+
 /** Normalize API/editor string to a valid theme id, or null if unknown. */
 export function parseDisplayThemeId(
 	value: string | null | undefined,
 ): ZoneDisplayThemeId | null {
 	if (value == null) return null;
 	const normalized = String(value).trim().toLowerCase();
-	if (!normalized || !THEME_ID_SET.has(normalized)) return null;
-	return normalized as ZoneDisplayThemeId;
+	if (!normalized) return null;
+	const resolved = DISPLAY_THEME_LEGACY_ALIASES[normalized] ?? normalized;
+	if (!THEME_ID_SET.has(resolved)) return null;
+	return resolved as ZoneDisplayThemeId;
+}
+
+export function isSignalBoardTheme(value: string | null | undefined): boolean {
+	return parseDisplayThemeId(value) === 'signal-board';
 }
 
 export function isDisplayThemeId(
@@ -574,6 +618,8 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 3.1;
 		case 'tdc--airport-arrival':
 			return 4.4;
+		case 'tdc--airport-departure':
+			return 4.6;
 		case 'tdc--oled-pulse':
 			return 4.8;
 		case 'tdc--digital-healthcare':
@@ -584,7 +630,11 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 4.4;
 		case 'tdc--aurora-nexus':
 			return 5.2;
-		case 'tdc--page-turn':
+		case 'tdc--signal-board':
+			return 4.6;
+		case 'tdc--paper-flip':
+			return 4.4;
+		case 'tdc--mono-flip':
 			return 4.6;
 		case 'tdc--car-speedometer':
 			return 4.2;
@@ -717,6 +767,8 @@ export function computeRoyalTicketFillBaseFontSize(
 /** OLED Pulse fill layout: accent bar + meta row + hero token [+ chip rail]. */
 export const OLED_PULSE_FILL_LAYOUT_EM = 8.4;
 
+export const OLED_PULSE_FILL_TABLE_LAYOUT_EM = 9.6;
+
 /** Matches `.tdc-op-token` cap in _oled-pulse.scss. */
 export const OLED_PULSE_FILL_TOKEN_EM = 4.8;
 
@@ -725,22 +777,31 @@ export function computeOledPulseFillBaseFontSize(
 	height: number,
 	tokenLength = 2,
 	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
 
-	const layoutEm = hasHistoryStrip
-		? OLED_PULSE_FILL_LAYOUT_EM + 1.15
+	const layoutBase = hasMultiQueueTable
+		? OLED_PULSE_FILL_TABLE_LAYOUT_EM
 		: OLED_PULSE_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.15 : layoutBase;
 	const historyFraction = hasHistoryStrip ? 0.2 : 0;
 	const metaFraction = 0.16;
-	const accentFraction = 0.025;
-	const heroHeight = h * (1 - historyFraction - metaFraction - accentFraction);
+	const mainHeight = h * (1 - historyFraction - metaFraction);
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
-	const fromTokenHeight = heroHeight / (OLED_PULSE_FILL_TOKEN_EM * 1.02);
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = mainHeight / 5.6;
+		const fromTableWidth = w / 9;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = mainHeight / (OLED_PULSE_FILL_TOKEN_EM * 1.02);
 	const fromTokenWidth = w / (chars * OLED_PULSE_FILL_TOKEN_EM * 0.5 + 0.85);
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
@@ -750,6 +811,8 @@ export function computeOledPulseFillBaseFontSize(
 /** Digital Healthcare fill layout: topbar + card grid + metric rail. */
 export const DIGITAL_HEALTHCARE_FILL_LAYOUT_EM = 9.2;
 
+export const DIGITAL_HEALTHCARE_FILL_TABLE_LAYOUT_EM = 10;
+
 export const DIGITAL_HEALTHCARE_FILL_TOKEN_EM = 4.2;
 
 export function computeDigitalHealthcareFillBaseFontSize(
@@ -757,20 +820,30 @@ export function computeDigitalHealthcareFillBaseFontSize(
 	height: number,
 	tokenLength = 2,
 	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
 
-	const layoutEm = hasHistoryStrip
-		? DIGITAL_HEALTHCARE_FILL_LAYOUT_EM + 1.25
+	const layoutBase = hasMultiQueueTable
+		? DIGITAL_HEALTHCARE_FILL_TABLE_LAYOUT_EM
 		: DIGITAL_HEALTHCARE_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.25 : layoutBase;
 	const historyFraction = hasHistoryStrip ? 0.22 : 0;
 	const topbarFraction = 0.12;
 	const mainHeight = h * (1 - historyFraction - topbarFraction);
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = mainHeight / 5.6;
+		const fromTableWidth = w / 9;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
 	const fromTokenHeight = mainHeight / (DIGITAL_HEALTHCARE_FILL_TOKEN_EM * 1.05);
 	const fromTokenWidth = (w * 0.88) / (chars * DIGITAL_HEALTHCARE_FILL_TOKEN_EM * 0.52 + 0.75);
 
@@ -781,6 +854,8 @@ export function computeDigitalHealthcareFillBaseFontSize(
 /** Glass Lobby fill layout: floating glass stage + active chip rail. */
 export const GLASS_LOBBY_FILL_LAYOUT_EM = 9.4;
 
+export const GLASS_LOBBY_FILL_TABLE_LAYOUT_EM = 10.2;
+
 export const GLASS_LOBBY_FILL_TOKEN_EM = 4.6;
 
 export function computeGlassLobbyFillBaseFontSize(
@@ -788,28 +863,88 @@ export function computeGlassLobbyFillBaseFontSize(
 	height: number,
 	tokenLength = 2,
 	hasHistoryStrip = false,
+	activeTokenCount = 4,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
+	const tokens = Math.max(1, activeTokenCount);
+	const aspect = w / h;
+	const minSide = Math.min(w, h);
 
-	const layoutEm = hasHistoryStrip
-		? GLASS_LOBBY_FILL_LAYOUT_EM + 1.2
-		: GLASS_LOBBY_FILL_LAYOUT_EM;
-	const historyFraction = hasHistoryStrip ? 0.2 : 0;
+	const historyFraction = hasHistoryStrip
+		? Math.min(
+				0.44,
+				0.11 +
+					Math.ceil(tokens / 2) * 0.038 +
+					(h < 360 ? 0.07 : 0) +
+					(aspect > 1.55 ? 0.05 : 0),
+			)
+		: 0;
+
 	const stageHeight = h * (1 - historyFraction);
 
-	const fromHeight = h / layoutEm;
-	const fromMinSide = Math.min(w, h) / layoutEm;
-	const fromTokenHeight = stageHeight / (GLASS_LOBBY_FILL_TOKEN_EM * 1.04);
-	const fromTokenWidth = (w * 0.62) / (chars * GLASS_LOBBY_FILL_TOKEN_EM * 0.5 + 0.7);
+	if (hasMultiQueueTable) {
+		const layoutBase = hasHistoryStrip
+			? GLASS_LOBBY_FILL_TABLE_LAYOUT_EM + 0.85 + Math.ceil(tokens / 2) * 0.28
+			: GLASS_LOBBY_FILL_TABLE_LAYOUT_EM;
+		const fromHeight = h / layoutBase;
+		const fromMinSide = minSide / layoutBase;
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
 
-	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
-	return applyFillZoneFontSizeBoost(base, w, h);
+	// Keep in sync with CSS: side-by-side only when wide AND tall enough.
+	const sideBySide = w >= 681 && h >= 300;
+	const stackedLayout = !sideBySide;
+
+	const layoutEm =
+		(hasHistoryStrip
+			? GLASS_LOBBY_FILL_LAYOUT_EM + 0.85 + Math.ceil(tokens / 2) * 0.28
+			: GLASS_LOBBY_FILL_LAYOUT_EM) +
+		(stackedLayout ? 0.55 : 0) +
+		(h < 240 ? 1 : h < 360 ? 0.55 : h < 480 ? 0.3 : 0) +
+		(aspect > 1.75 ? 0.35 : 0);
+
+	const tokenWidthFraction = stackedLayout ? 0.92 : 0.56;
+
+	let heightFactor = 1;
+	if (h < 220) heightFactor = 0.7;
+	else if (h < 320) heightFactor = 0.8;
+	else if (h < 480) heightFactor = 0.9;
+
+	const fromHeight = (h / layoutEm) * heightFactor;
+	const fromMinSide = (minSide / layoutEm) * heightFactor;
+	const fromTokenHeight =
+		stageHeight / (GLASS_LOBBY_FILL_TOKEN_EM * (stackedLayout ? 1.18 : 1.06));
+	const fromTokenWidth =
+		(w * tokenWidthFraction) / (chars * GLASS_LOBBY_FILL_TOKEN_EM * 0.52 + 0.85);
+	const fromQueueRow = stackedLayout ? w / (2 * 4.6 + 1) : w / (4.6 + 1.1);
+	const fromStageOnly = stageHeight / (stackedLayout ? 7.4 : 6.5);
+
+	const base = Math.min(
+		fromHeight,
+		fromMinSide,
+		fromTokenHeight,
+		fromTokenWidth,
+		fromQueueRow,
+		fromStageOnly,
+	);
+
+	let result = applyFillZoneFontSizeBoost(base, w, h);
+	if (minSide < 520) result = Math.min(result, base * 1.03);
+	if (h < 400) result = Math.min(result, base * 1.02);
+	if (h < 280) result = Math.max(5, Math.min(result, base));
+	return Math.max(5, Math.round(result));
 }
 
 /** Neon Prism fill layout: 3D stage panels + neon active-token rail. */
 export const NEON_PRISM_FILL_LAYOUT_EM = 8.8;
+
+export const NEON_PRISM_FILL_TABLE_LAYOUT_EM = 10.4;
 
 export const NEON_PRISM_FILL_TOKEN_EM = 4.4;
 
@@ -819,6 +954,7 @@ export function computeNeonPrismFillBaseFontSize(
 	tokenLength = 2,
 	hasHistoryStrip = false,
 	activeTokenCount = 4,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
@@ -828,9 +964,12 @@ export function computeNeonPrismFillBaseFontSize(
 	const historyFraction = hasHistoryStrip
 		? Math.min(0.34, 0.12 + tokens * 0.038)
 		: 0;
-	const layoutEm = hasHistoryStrip
-		? NEON_PRISM_FILL_LAYOUT_EM + 1.35 + tokens * 0.08
+	const layoutBase = hasMultiQueueTable
+		? NEON_PRISM_FILL_TABLE_LAYOUT_EM
 		: NEON_PRISM_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip
+		? layoutBase + 1.35 + tokens * 0.08
+		: layoutBase;
 	const stageHeight = h * (1 - historyFraction);
 
 	const aspect = w / h;
@@ -841,6 +980,14 @@ export function computeNeonPrismFillBaseFontSize(
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
 	const fromTokenHeight = stageHeight / (NEON_PRISM_FILL_TOKEN_EM * 1.08);
 	const centerCol = aspect < 0.55 ? 0.52 : 0.36;
 	const fromTokenWidth = (w * centerCol) / (chars * NEON_PRISM_FILL_TOKEN_EM * 0.52 + 0.7);
@@ -860,6 +1007,8 @@ export function computeNeonPrismFillBaseFontSize(
 /** Aurora Nexus fill layout: header + hero/status row + active pill rail. */
 export const AURORA_NEXUS_FILL_LAYOUT_EM = 9.2;
 
+export const AURORA_NEXUS_FILL_TABLE_LAYOUT_EM = 10.8;
+
 export const AURORA_NEXUS_FILL_TOKEN_EM = 5.2;
 
 export function computeAuroraNexusFillBaseFontSize(
@@ -868,6 +1017,7 @@ export function computeAuroraNexusFillBaseFontSize(
 	tokenLength = 2,
 	hasHistoryStrip = false,
 	activeTokenCount = 4,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
@@ -877,9 +1027,12 @@ export function computeAuroraNexusFillBaseFontSize(
 	const historyFraction = hasHistoryStrip
 		? Math.min(0.32, 0.14 + tokens * 0.032)
 		: 0;
-	const layoutEm = hasHistoryStrip
-		? AURORA_NEXUS_FILL_LAYOUT_EM + 1.2 + tokens * 0.06
+	const layoutBase = hasMultiQueueTable
+		? AURORA_NEXUS_FILL_TABLE_LAYOUT_EM
 		: AURORA_NEXUS_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip
+		? layoutBase + 1.2 + tokens * 0.06
+		: layoutBase;
 	const stageHeight = h * (1 - historyFraction);
 
 	const aspect = w / h;
@@ -890,6 +1043,14 @@ export function computeAuroraNexusFillBaseFontSize(
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
 	const fromTokenHeight = stageHeight / (AURORA_NEXUS_FILL_TOKEN_EM * 1.02);
 	const tokenCol = aspect < 0.55 ? 0.58 : 0.48;
 	const fromTokenWidth = (w * tokenCol) / (chars * AURORA_NEXUS_FILL_TOKEN_EM * 0.5 + 0.65);
@@ -906,14 +1067,14 @@ export function computeAuroraNexusFillBaseFontSize(
 	return applyFillZoneFontSizeBoost(base, w, h);
 }
 
-/** Page Turn fill layout: meta + split stage + active rail. */
-export const PAGE_TURN_FILL_LAYOUT_EM = 9.4;
+/** Signal Board fill layout: meta + LED hero stage + active rail. */
+export const SIGNAL_BOARD_FILL_LAYOUT_EM = 9.4;
 
-export const PAGE_TURN_FILL_TABLE_LAYOUT_EM = 11.2;
+export const SIGNAL_BOARD_FILL_TABLE_LAYOUT_EM = 11.2;
 
-export const PAGE_TURN_FILL_TOKEN_EM = 4.6;
+export const SIGNAL_BOARD_FILL_TOKEN_EM = 4.6;
 
-export function computePageTurnFillBaseFontSize(
+export function computeSignalBoardFillBaseFontSize(
 	width: number,
 	height: number,
 	tokenLength = 2,
@@ -925,8 +1086,8 @@ export function computePageTurnFillBaseFontSize(
 	const chars = Math.max(1, tokenLength);
 
 	const layoutBase = hasServingTable
-		? PAGE_TURN_FILL_TABLE_LAYOUT_EM
-		: PAGE_TURN_FILL_LAYOUT_EM;
+		? SIGNAL_BOARD_FILL_TABLE_LAYOUT_EM
+		: SIGNAL_BOARD_FILL_LAYOUT_EM;
 	const layoutEm = hasHistoryStrip ? layoutBase + (hasServingTable ? 1.15 : 1.65) : layoutBase;
 	const historyFraction = hasHistoryStrip ? 0.2 : 0;
 	const stageHeight = h * (1 - historyFraction);
@@ -939,14 +1100,185 @@ export function computePageTurnFillBaseFontSize(
 		const metaFraction = 0.13;
 		const heroCapFraction = 0.11;
 		const heroMainHeight = stageHeight * (1 - metaFraction - heroCapFraction);
-		const fromTokenHeight = heroMainHeight / (PAGE_TURN_FILL_TOKEN_EM * 1.18);
-		const fromTokenWidth = (w * 0.82) / (chars * PAGE_TURN_FILL_TOKEN_EM * 0.52 + 0.65);
+		const fromTokenHeight = heroMainHeight / (SIGNAL_BOARD_FILL_TOKEN_EM * 1.18);
+		const fromTokenWidth = (w * 0.82) / (chars * SIGNAL_BOARD_FILL_TOKEN_EM * 0.52 + 0.65);
 		const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
 		return applyFillZoneFontSizeBoost(base, w, h);
 	}
 
-	const fromTokenHeight = stageHeight / (PAGE_TURN_FILL_TOKEN_EM * 1.04);
-	const fromTokenWidth = (w * 0.52) / (chars * PAGE_TURN_FILL_TOKEN_EM * 0.5 + 0.7);
+	const fromTokenHeight = stageHeight / (SIGNAL_BOARD_FILL_TOKEN_EM * 1.04);
+	const fromTokenWidth = (w * 0.52) / (chars * SIGNAL_BOARD_FILL_TOKEN_EM * 0.5 + 0.7);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Paper Flip fill layout: desk padding + paper page + active rail. */
+export const PAPER_FLIP_FILL_LAYOUT_EM = 9.2;
+
+export const PAPER_FLIP_FILL_TABLE_LAYOUT_EM = 10.6;
+
+export const PAPER_FLIP_FILL_TOKEN_EM = 4.4;
+
+/** Mono Flip fill layout: header + centered card stage + active rail. */
+export const MONO_FLIP_FILL_LAYOUT_EM = 9;
+
+export const MONO_FLIP_FILL_TABLE_LAYOUT_EM = 10.4;
+
+export const MONO_FLIP_FILL_TOKEN_EM = 4.6;
+
+export function computeMonoFlipFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? MONO_FLIP_FILL_TABLE_LAYOUT_EM
+		: MONO_FLIP_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.1 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.22 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (MONO_FLIP_FILL_TOKEN_EM * 1.1);
+	const fromTokenWidth = (w * 0.72) / (chars * MONO_FLIP_FILL_TOKEN_EM * 0.54 + 0.48);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+export function computePaperFlipFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? PAPER_FLIP_FILL_TABLE_LAYOUT_EM
+		: PAPER_FLIP_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.15 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.22 : 0;
+	const pageHeight = h * (1 - historyFraction);
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = pageHeight / 5.9;
+		const fromTableWidth = w / 9.4;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = pageHeight / (PAPER_FLIP_FILL_TOKEN_EM * 1.12);
+	const fromTokenWidth = (w * 0.78) / (chars * PAPER_FLIP_FILL_TOKEN_EM * 0.52 + 0.65);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Airport Arrival fill layout: hazard header + sign hero. */
+export const AIRPORT_ARRIVAL_FILL_LAYOUT_EM = 9.2;
+
+export const AIRPORT_ARRIVAL_FILL_TABLE_LAYOUT_EM = 11.4;
+
+export const AIRPORT_ARRIVAL_FILL_TOKEN_EM = 4.4;
+
+export function computeAirportArrivalFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? AIRPORT_ARRIVAL_FILL_TABLE_LAYOUT_EM
+		: AIRPORT_ARRIVAL_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip
+		? layoutBase + 1.15
+		: layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.22 : 0;
+	const boardHeight = h * (1 - historyFraction);
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = boardHeight / 6.1;
+		const fromTableWidth = w / 10.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = boardHeight / (AIRPORT_ARRIVAL_FILL_TOKEN_EM * 1.08);
+	const fromTokenWidth =
+		(w * 0.58) / (chars * AIRPORT_ARRIVAL_FILL_TOKEN_EM * 0.54 + 0.38);
+
+	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Airport Departure fill layout: yellow header + FIDS table + active rail. */
+export const AIRPORT_DEPARTURE_FILL_LAYOUT_EM = 9.2;
+
+export const AIRPORT_DEPARTURE_FILL_TABLE_LAYOUT_EM = 11.6;
+
+export const AIRPORT_DEPARTURE_FILL_TOKEN_EM = 4.6;
+
+export function computeAirportDepartureFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? AIRPORT_DEPARTURE_FILL_TABLE_LAYOUT_EM
+		: AIRPORT_DEPARTURE_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.1 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.2 : 0;
+	const boardHeight = h * (1 - historyFraction);
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = boardHeight / 6.2;
+		const fromTableWidth = w / 10.4;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = boardHeight / (AIRPORT_DEPARTURE_FILL_TOKEN_EM * 1.15);
+	const fromTokenWidth = (w * 0.24) / (chars * AIRPORT_DEPARTURE_FILL_TOKEN_EM * 0.52 + 0.42);
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth);
 	return applyFillZoneFontSizeBoost(base, w, h);
@@ -955,6 +1287,8 @@ export function computePageTurnFillBaseFontSize(
 /** Car Speedometer fill layout: digital panel + gauge + active rail. */
 export const CAR_SPEEDOMETER_FILL_LAYOUT_EM = 9;
 
+export const CAR_SPEEDOMETER_FILL_TABLE_LAYOUT_EM = 10.6;
+
 export const CAR_SPEEDOMETER_FILL_TOKEN_EM = 4.2;
 
 export function computeCarSpeedometerFillBaseFontSize(
@@ -962,14 +1296,16 @@ export function computeCarSpeedometerFillBaseFontSize(
 	height: number,
 	tokenLength = 2,
 	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
 ): number {
 	const w = Math.max(1, width);
 	const h = Math.max(1, height);
 	const chars = Math.max(1, tokenLength);
 
-	const layoutEm = hasHistoryStrip
-		? CAR_SPEEDOMETER_FILL_LAYOUT_EM + 1.1
+	const layoutBase = hasMultiQueueTable
+		? CAR_SPEEDOMETER_FILL_TABLE_LAYOUT_EM
 		: CAR_SPEEDOMETER_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 1.1 : layoutBase;
 	const historyFraction = hasHistoryStrip ? 0.2 : 0;
 	const stageHeight = h * (1 - historyFraction);
 
@@ -981,9 +1317,20 @@ export function computeCarSpeedometerFillBaseFontSize(
 
 	const fromHeight = h / layoutEm;
 	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
 	const fromTokenHeight = stageHeight / (CAR_SPEEDOMETER_FILL_TOKEN_EM * 1.05);
-	const digitalCol = aspect < 1.1 ? 0.88 : 0.46;
-	const fromTokenWidth = (w * digitalCol) / (chars * CAR_SPEEDOMETER_FILL_TOKEN_EM * 0.52 + 0.65);
+	const gaugeFraction = aspect < 1.1 ? 0.62 : 0.68;
+	const tokenInnerFraction = 0.44;
+	const fromTokenWidth =
+		(w * gaugeFraction * tokenInnerFraction) /
+		(chars * CAR_SPEEDOMETER_FILL_TOKEN_EM * 0.54 + 0.35);
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth) * narrowFactor;
 	return applyFillZoneFontSizeBoost(base, w, h);

@@ -17,7 +17,7 @@ import {
 	type RecentQueueToken,
 } from '../../../services/publicScreenApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
-import { computeFillZoneTextSizes } from '../TokenDisplayThemes/tokenDisplayThemes';
+import { computeFillZoneTextSizes, isSignalBoardTheme } from '../TokenDisplayThemes/tokenDisplayThemes';
 import {
 	applyColorAlpha,
 	getZoneAppearanceFromParsedZone,
@@ -564,10 +564,31 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
 						const appearance = getZoneAppearanceFromParsedZone(zone);
-						const isPageTurnTheme = appearance.displayTheme === 'page-turn';
-						const assignedQueues = isPageTurnTheme
-							? resolveAssignedQueueDisplays(zone, queuesByUuid)
-							: undefined;
+						const isSignalBoardThemeActive = isSignalBoardTheme(appearance.displayTheme);
+						const isMonoFlipTheme = appearance.displayTheme === 'mono-flip';
+						const isPaperFlipTheme = appearance.displayTheme === 'paper-flip';
+						const isAirportDepartureTheme = appearance.displayTheme === 'airport-departure';
+						const isAirportArrivalTheme = appearance.displayTheme === 'airport-arrival';
+						const isCarSpeedometerTheme = appearance.displayTheme === 'car-speedometer';
+						const isAuroraNexusTheme = appearance.displayTheme === 'aurora-nexus';
+						const isNeonPrismTheme = appearance.displayTheme === 'neon-prism';
+						const isGlassLobbyTheme = appearance.displayTheme === 'glass-lobby';
+						const isDigitalHealthcareTheme = appearance.displayTheme === 'digital-healthcare';
+						const isOledPulseTheme = appearance.displayTheme === 'oled-pulse';
+						const assignedQueues =
+							isSignalBoardThemeActive ||
+							isMonoFlipTheme ||
+							isPaperFlipTheme ||
+							isAirportArrivalTheme ||
+							isAirportDepartureTheme ||
+							isCarSpeedometerTheme ||
+							isAuroraNexusTheme ||
+							isNeonPrismTheme ||
+							isGlassLobbyTheme ||
+							isDigitalHealthcareTheme ||
+							isOledPulseTheme
+								? resolveAssignedQueueDisplays(zone, queuesByUuid)
+								: undefined;
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
 
 						const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;

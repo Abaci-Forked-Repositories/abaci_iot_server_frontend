@@ -137,14 +137,55 @@
 	animation: tdc-cb-rotate-rev 35s linear infinite;
 }
 
-// ─── Header: live dot + queue name ───────────────────────────────────────────
+// ─── Header: live dot + queue name + clock ───────────────────────────────────
 .tdc--crimson-banner .tdc__header {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.35em;
+	padding-inline-end: 5.2em;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 	background: transparent;
+	overflow: hidden;
+	min-width: 0;
+}
+
+.tdc-cb-clock {
+	position: absolute;
+	top: 50%;
+	right: 0.5em;
+	z-index: 6;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.04em;
+	max-width: 42%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	line-height: 1.05;
+}
+
+.tdc-cb-clock__date {
+	font-size: 0.34em;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.52);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+.tdc-cb-clock__time {
+	font-size: 0.4em;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	font-variant-numeric: tabular-nums;
+	color: rgba(255, 255, 255, 0.94);
+	text-shadow: 0 0 0.5em rgba(33, 150, 255, 0.35);
+	white-space: nowrap;
 }
 
 .tdc--crimson-banner .tdc__header::before {
@@ -310,6 +351,8 @@
 	.tdc__header {
 		grid-column: 1 / -1;
 		padding: 0.32em 0.5em;
+		padding-inline-end: 5.4em;
+		min-height: 1.15em;
 	}
 
 	.tdc__body {
@@ -339,4 +382,16 @@
 	}
 
 	--tdc-cb-ring-scale: 1.2;
+}
+
+@container (max-width: 200px) {
+	.tdc--crimson-banner {
+		.tdc-cb-clock__date {
+			display: none;
+		}
+
+		.tdc__header {
+			padding-inline-end: 3.2em;
+		}
+	}
 }

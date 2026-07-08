@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { buildPageTurnServingRows } from '../../../utils/zoneQueueResolution';
 import AuroraNexusBackdrop from './AuroraNexusBackdrop';
+import AuroraNexusClock from './AuroraNexusClock';
+import AuroraNexusQueueTable from './AuroraNexusQueueTable';
 import AuroraNexusToken from './AuroraNexusToken';
 
 export interface AuroraNexusCardProps {
@@ -8,6 +12,7 @@ export interface AuroraNexusCardProps {
 	displayToken: string;
 	statusLabel: string;
 	statusModifier: string;
+	assignedQueues?: AssignedQueueDisplay[];
 }
 
 const ClockIcon: React.FC = () => (
@@ -24,26 +29,6 @@ const ClockIcon: React.FC = () => (
 	</svg>
 );
 
-function statusSublabel(modifier: string): string {
-	switch (modifier) {
-		case 'serving':
-			return 'Please Proceed Now';
-		case 'registered':
-			return 'Awaiting Your Call';
-		case 'completed':
-			return 'Service Complete';
-		case 'cancelled':
-			return 'Token Cancelled';
-		case 'postponed':
-			return 'Call Postponed';
-		case 'no-show':
-			return 'Missed Call';
-		case 'waiting':
-		default:
-			return 'Now Serving Soon';
-	}
-}
-
 function headerLine(queueName?: string, subtitle?: string): string | null {
 	const parts = [queueName?.trim(), subtitle?.trim()].filter(Boolean);
 	return parts.length ? parts.join(' ') : null;
@@ -55,8 +40,59 @@ const AuroraNexusCard: React.FC<AuroraNexusCardProps> = ({
 	displayToken,
 	statusLabel,
 	statusModifier,
+	assignedQueues = [],
 }) => {
+	const isMultiQueue = assignedQueues.length > 1;
 	const headerText = headerLine(queueName, subtitle);
+	const skipStatusFxRef = useRef(true);
+	const [statusEnterFx, setStatusEnterFx] = useState<'completed-enter' | 'alert-enter' | null>(
+		null,
+	);
+
+	const servingRows = useMemo(
+		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
+		[assignedQueues, isMultiQueue],
+	);
+
+	useEffect(() => {
+		if (isMultiQueue) return;
+		if (skipStatusFxRef.current) {
+			skipStatusFxRef.current = false;
+			return;
+		}
+		if (statusModifier === 'completed') {
+			setStatusEnterFx('completed-enter');
+			return;
+		}
+		if (statusModifier === 'cancelled' || statusModifier === 'no-show') {
+			setStatusEnterFx('alert-enter');
+			return;
+		}
+		setStatusEnterFx(null);
+	}, [isMultiQueue, statusModifier]);
+
+	if (isMultiQueue) {
+		return (
+			<div className='tdc-an-layout tdc-an-layout--table'>
+				<AuroraNexusBackdrop />
+
+				<header className='tdc-an-table-header'>
+					<div className='tdc-an-table-header__copy' aria-live='polite'>
+						<span className='tdc-an-table-header__count'>
+							{assignedQueues.length} queues
+						</span>
+					</div>
+					<div className='tdc-an-table-header__meta'>
+						<AuroraNexusClock />
+					</div>
+				</header>
+
+				<div className='tdc-an-table-stage'>
+					<AuroraNexusQueueTable rows={servingRows} />
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className='tdc-an-layout'>
@@ -89,13 +125,21 @@ const AuroraNexusCard: React.FC<AuroraNexusCardProps> = ({
 					className={[
 						'tdc-an-status',
 						`tdc-an-status--${statusModifier}`,
+						statusEnterFx ? `tdc-an-status--${statusEnterFx}` : '',
 					]
 						.filter(Boolean)
 						.join(' ')}
-					aria-live='polite'>
+					aria-live='polite'
+					onAnimationEnd={
+						statusEnterFx
+							? () => {
+									setStatusEnterFx(null);
+								}
+							: undefined
+					}>
 					<ClockIcon />
 					<span className='tdc-an-status__label'>{statusLabel}</span>
-					<span className='tdc-an-status__sub'>{statusSublabel(statusModifier)}</span>
+					<AuroraNexusClock />
 				</div>
 			</div>
 		</div>

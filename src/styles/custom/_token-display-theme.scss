@@ -456,6 +456,7 @@
 @import 'royal-ticket';
 
 @import 'airport-arrival';
+@import 'airport-departure';
 
 @import 'oled-pulse';
 
@@ -465,7 +466,9 @@
 
 @import 'neon-prism';
 @import 'aurora-nexus';
-@import 'page-turn';
+@import 'signal-board';
+@import 'paper-flip';
+@import 'mono-flip';
 @import 'car-speedometer';
 
 // Fill-only zone (no named theme) — background from inline style
@@ -674,7 +677,7 @@
 	}
 
 	// Themes 1–5 split grid body — custom cards (Pipboy, Arrival, OLED Pulse) excluded.
-	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--page-turn):not(.tdc--car-speedometer) .tdc__body {
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer) .tdc__body {
 		overflow: hidden;
 		border-right: 1px solid var(--tdc-border);
 		container-type: size;
@@ -700,7 +703,7 @@
 	}
 
 	// Pipboy flip digits / Airport door digits — excluded (see _themes-new-fill-overrides.scss).
-	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--page-turn):not(.tdc--car-speedometer) .tdc__token {
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer) .tdc__token {
 		font-size: 3.35em;
 		width: 100%;
 		line-height: 0.94;
@@ -794,6 +797,42 @@
 	// Header clips the sliding queue name at both edges
 	.tdc__header {
 		overflow: hidden;
+		padding-inline-end: 5em;
+	}
+
+	.tdc-dc-clock {
+		position: absolute;
+		top: 0.18em;
+		right: 0.55em;
+		z-index: 6;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.05em;
+		max-width: 44%;
+		pointer-events: none;
+		line-height: 1.05;
+	}
+
+	.tdc-dc-clock__date {
+		font-size: 0.38em;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba(255, 190, 170, 0.78);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.tdc-dc-clock__time {
+		font-size: 0.44em;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		font-variant-numeric: tabular-nums;
+		color: rgba(255, 255, 255, 0.92);
+		white-space: nowrap;
 	}
 
 	.tdc__queue-name {
@@ -836,6 +875,14 @@
 	.tdc__header {
 		background: rgba(0, 0, 0, #{tdc-zone-a(0.28)});
 		border-bottom-color: rgba(220, 40, 40, 0.30);
+		padding-inline-end: 5.8em;
+		min-height: 1.2em;
+	}
+
+	.tdc-dc-clock {
+		top: 50%;
+		right: 0.5em;
+		transform: translateY(-50%);
 	}
 
 	.tdc__queue-name {
@@ -877,8 +924,70 @@
 	}
 }
 
+@container (max-width: 200px) {
+	.tdc--digital-crimson {
+		.tdc-dc-clock__date {
+			display: none;
+		}
+
+		.tdc__header {
+			padding-inline-end: 3.4em;
+		}
+	}
+
+	.tdc--onyx-gold {
+		.tdc-og-clock__date {
+			display: none;
+		}
+
+		.tdc__header {
+			padding-inline-end: 3.2em;
+		}
+	}
+}
+
 // ── Onyx Gold ── Ultra-minimal: tiny gold queue label, token dominates ─────────
 .tdc--onyx-gold {
+	.tdc__header {
+		padding-inline-end: 5em;
+	}
+
+	.tdc-og-clock {
+		position: absolute;
+		top: 0.2em;
+		right: 0.55em;
+		z-index: 6;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.05em;
+		max-width: 44%;
+		pointer-events: none;
+		line-height: 1.05;
+	}
+
+	.tdc-og-clock__date {
+		font-size: 0.36em;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: rgba(212, 175, 55, 0.62);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.tdc-og-clock__time {
+		font-size: 0.42em;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		font-variant-numeric: tabular-nums;
+		color: rgba(240, 204, 90, 0.95);
+		white-space: nowrap;
+		text-shadow: 0 0 10px rgba(212, 175, 55, 0.22);
+	}
+
 	// Queue name: whisper-small, gold, low opacity — token is the hero
 	.tdc__queue-name {
 		font-size: 0.50em;
@@ -904,6 +1013,17 @@
 
 .tdc--fill.tdc--onyx-gold {
 	--tdc-col-separator-pos: 58%;
+
+	.tdc__header {
+		padding-inline-end: 5.5em;
+		min-height: 1.15em;
+	}
+
+	.tdc-og-clock {
+		top: 50%;
+		right: 0.5em;
+		transform: translateY(-50%);
+	}
 
 	// Extra-tiny queue name — token is the ONLY visual hero
 	.tdc__queue-name { font-size: 0.58em; letter-spacing: 0.22em; }
@@ -1001,6 +1121,45 @@
 
 	.tdc__body {
 		padding-bottom: 0.28em;
+	}
+
+	// Per-chip container for fluid token / counter sizing.
+	.tdc__history-card {
+		container-type: inline-size;
+		container-name: tdc-history-chip;
+	}
+
+	.tdc__history-token,
+	.tdc__history-counter-label,
+	.tdc__history-counter-num {
+		width: 100%;
+		text-align: center;
+		overflow: visible;
+		text-overflow: unset;
+		white-space: nowrap;
+		line-height: 1.05;
+	}
+
+	.tdc__history-token {
+		font-size: #{'min(0.62em, 24cqi)'};
+		letter-spacing: 0.02em;
+	}
+
+	.tdc__history-counter-label {
+		font-size: #{'min(0.32em, 10cqi)'};
+		letter-spacing: 0.06em;
+	}
+
+	.tdc__history-counter-label__long {
+		display: inline;
+	}
+
+	.tdc__history-counter-label__short {
+		display: none;
+	}
+
+	.tdc__history-counter-num {
+		font-size: #{'min(0.5em, 16cqi)'};
 	}
 }
 
@@ -1101,6 +1260,80 @@
 	justify-content: flex-start;
 	width: max-content;
 	max-width: 100%;
+}
+
+// Static row (< 5 chips): equal-width cards + horizontal scroll fallback.
+.tdc--fill.tdc--history-static {
+	.tdc__history-track {
+		overflow-x: auto;
+		overflow-y: hidden;
+		pointer-events: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+
+		&::-webkit-scrollbar {
+			height: 0.22em;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: rgba(255, 255, 255, 0.22);
+			border-radius: 999px;
+		}
+	}
+
+	.tdc__history-scroll {
+		width: 100%;
+		max-width: 100%;
+		min-width: 0;
+		justify-content: stretch;
+		gap: clamp(0.18em, 1.8cqw, 0.32em);
+		padding-inline: clamp(0.2em, 1.6cqw, 0.36em);
+	}
+
+	.tdc__history-card {
+		flex: 1 1 0;
+		min-width: 0;
+		max-width: 100%;
+		padding-inline: clamp(0.14em, 1.4cqw, 0.34em);
+	}
+}
+
+// Narrow chips: shorter counter label + slightly smaller type.
+@container tdc-history-chip (max-width: 108px) {
+	.tdc__history-counter-label__long {
+		display: none;
+	}
+
+	.tdc__history-counter-label__short {
+		display: inline;
+	}
+
+	.tdc__history-counter-label {
+		font-size: #{'min(0.28em, 11cqi)'};
+		letter-spacing: 0.04em;
+	}
+
+	.tdc__history-token {
+		font-size: #{'min(0.56em, 22cqi)'};
+	}
+
+	.tdc__history-counter-num {
+		font-size: #{'min(0.44em, 15cqi)'};
+	}
+}
+
+@container (max-width: 280px) {
+	.tdc--fill.tdc--history-static {
+		.tdc__history-card {
+			padding-inline: 0.12em;
+		}
+
+		.tdc__history-counter-label {
+			letter-spacing: 0.05em;
+		}
+	}
 }
 
 // ── Mini token card ───────────────────────────────────────────────────────────
@@ -1477,7 +1710,7 @@
 }
 
 // Pipboy / custom card themes — excluded (see theme SCSS + _themes-new-fill-overrides.scss).
-.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--page-turn):not(.tdc--car-speedometer) .tdc__body .tdc__token {
+.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
@@ -1486,7 +1719,7 @@
 }
 
 // Preview mode — slightly larger token numeral (template editor + theme picker).
-.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--page-turn):not(.tdc--car-speedometer) .tdc__body .tdc__token {
+.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1.14 * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.50 + 0.26)),
@@ -1536,8 +1769,9 @@
 		font-size: 4.1em;
 	}
 
-	&.tdc--glass-lobby .tdc-gl-token {
-		font-size: 4.4em;
+	&.tdc--glass-lobby .tdc-gl-token,
+	&.tdc--glass-lobby .tdc-gl-token-hero {
+		font-size: 3.8em;
 	}
 
 	&.tdc--neon-prism .tdc-np-token {

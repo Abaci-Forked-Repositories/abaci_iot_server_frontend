@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Queue } from '../../../services/queueManagementApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
 import {
+	isSignalBoardTheme,
 	zoneUsesScreenLevelActiveTokensTicker,
 	type ZoneDisplayThemeId,
 } from '../TokenDisplayThemes/tokenDisplayThemes';
@@ -135,7 +136,11 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					theme === 'glass-lobby' ||
 					theme === 'neon-prism' ||
 					theme === 'aurora-nexus' ||
-					theme === 'page-turn' ||
+					isSignalBoardTheme(theme) ||
+					theme === 'paper-flip' ||
+					theme === 'mono-flip' ||
+					theme === 'airport-arrival' ||
+					theme === 'airport-departure' ||
 					theme === 'car-speedometer'
 				);
 			}),
@@ -217,10 +222,31 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			'Queue';
 
 		const zoneOpacity = getZoneOpacityFromRect(rect);
-		const isPageTurn = appearance.displayTheme === 'page-turn';
-		const assignedQueues = isPageTurn
-			? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
-			: undefined;
+		const isSignalBoard = isSignalBoardTheme(appearance.displayTheme);
+		const isMonoFlip = appearance.displayTheme === 'mono-flip';
+		const isAirportArrival = appearance.displayTheme === 'airport-arrival';
+		const isAirportDeparture = appearance.displayTheme === 'airport-departure';
+		const isPaperFlip = appearance.displayTheme === 'paper-flip';
+		const isCarSpeedometer = appearance.displayTheme === 'car-speedometer';
+		const isAuroraNexus = appearance.displayTheme === 'aurora-nexus';
+		const isNeonPrism = appearance.displayTheme === 'neon-prism';
+		const isGlassLobby = appearance.displayTheme === 'glass-lobby';
+		const isDigitalHealthcare = appearance.displayTheme === 'digital-healthcare';
+		const isOledPulse = appearance.displayTheme === 'oled-pulse';
+		const assignedQueues =
+			isSignalBoard ||
+			isMonoFlip ||
+			isPaperFlip ||
+			isAirportArrival ||
+			isAirportDeparture ||
+			isCarSpeedometer ||
+			isAuroraNexus ||
+			isNeonPrism ||
+			isGlassLobby ||
+			isDigitalHealthcare ||
+			isOledPulse
+				? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
+				: undefined;
 
 		return (
 			<div
@@ -266,7 +292,11 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						appearance.displayTheme === 'glass-lobby' ||
 						appearance.displayTheme === 'neon-prism' ||
 						appearance.displayTheme === 'aurora-nexus' ||
-						appearance.displayTheme === 'page-turn' ||
+						isSignalBoardTheme(appearance.displayTheme) ||
+						appearance.displayTheme === 'paper-flip' ||
+						appearance.displayTheme === 'mono-flip' ||
+						appearance.displayTheme === 'airport-arrival' ||
+						appearance.displayTheme === 'airport-departure' ||
 						appearance.displayTheme === 'car-speedometer'
 							? previewToken
 							: '05'
