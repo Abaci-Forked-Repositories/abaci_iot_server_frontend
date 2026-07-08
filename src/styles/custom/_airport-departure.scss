@@ -4,12 +4,21 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;700&family=Share+Tech+Mono&display=swap');
 
-@keyframes ad-digit-flip {
+@keyframes ad-digit-flip-top {
 	0% {
 		transform: rotateX(0deg);
 	}
 	100% {
 		transform: rotateX(-90deg);
+	}
+}
+
+@keyframes ad-digit-flip-bottom {
+	0% {
+		transform: rotateX(90deg);
+	}
+	100% {
+		transform: rotateX(0deg);
 	}
 }
 
@@ -466,12 +475,16 @@
 
 		.flip-digit__flip {
 			position: absolute;
-			top: 0;
 			left: 0;
 			right: 0;
+			overflow: hidden;
+			transform-style: preserve-3d;
+		}
+
+		.flip-digit__flip--top {
+			top: 0;
 			height: 50%;
 			transform-origin: bottom center;
-			transform-style: preserve-3d;
 			z-index: 3;
 
 			&::after {
@@ -486,6 +499,14 @@
 			}
 		}
 
+		.flip-digit__flip--bottom {
+			bottom: 0;
+			height: 50%;
+			transform-origin: top center;
+			transform: rotateX(90deg);
+			z-index: 4;
+		}
+
 		.flip-digit__flip-front {
 			position: absolute;
 			inset: 0;
@@ -493,8 +514,12 @@
 			background: var(--ad-flap-bg);
 		}
 
-		.flip-digit--flipping .flip-digit__flip {
-			animation: ad-digit-flip 0.42s ease-in forwards;
+		.flip-digit--flipping .flip-digit__flip--top {
+			animation: ad-digit-flip-top 0.42s ease-in forwards;
+		}
+
+		.flip-digit--flipping-bottom .flip-digit__flip--bottom {
+			animation: ad-digit-flip-bottom 0.42s ease-in forwards;
 		}
 	}
 
@@ -997,7 +1022,8 @@
 			animation: none;
 		}
 
-		.flip-digit--flipping .flip-digit__flip {
+		.flip-digit--flipping .flip-digit__flip--top,
+		.flip-digit--flipping-bottom .flip-digit__flip--bottom {
 			animation-duration: 0.01ms;
 		}
 
