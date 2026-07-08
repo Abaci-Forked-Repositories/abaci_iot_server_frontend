@@ -54,7 +54,7 @@ const SpeedometerCard: React.FC<SpeedometerCardProps> = ({
 
 	return (
 		<div className='tdc-cs-layout'>
-			<SpeedometerClock />
+			<SpeedometerClock queueName={queueName} />
 
 			<div className='tdc-cs-body'>
 				<div className='tdc-cs-digital'>
@@ -67,12 +67,6 @@ const SpeedometerCard: React.FC<SpeedometerCardProps> = ({
 					</div>
 
 					<div className='tdc-cs-digital__screen'>
-						{queueName ? (
-							<span className='tdc-cs-digital__queue'>{queueName}</span>
-						) : (
-							<span className='tdc-cs-digital__queue tdc-cs-digital__queue--empty' aria-hidden='true' />
-						)}
-
 						{subtitle ? <span className='tdc-cs-digital__subtitle'>{subtitle}</span> : null}
 
 						<SpeedometerStatusGauge

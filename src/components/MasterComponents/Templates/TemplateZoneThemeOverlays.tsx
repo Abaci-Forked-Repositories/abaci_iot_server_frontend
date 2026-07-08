@@ -18,15 +18,14 @@ import {
 import { resolveTemplateActiveTokensTickerClass } from '../../../utils/resolveTemplateTickerTheme';
 import { parseTemplateLayoutFromHtml } from '../../../utils/parseTemplateZones';
 import type { RecentQueueToken } from '../../../services/publicScreenApi';
-import { buildEditorPageTurnQueueDisplays } from '../../../utils/zoneQueueResolution';
+import {
+	buildEditorPageTurnQueueDisplays,
+	countZoneQueueAssignmentSlots,
+	THEME_PREVIEW_RECENT_TOKENS,
+} from '../../../utils/zoneQueueResolution';
 
-/** In-zone active tokens preview for themes 1–5 (history strip inside each zone card). */
-const MOCK_RECENT_TOKENS: RecentQueueToken[] = [
-	{ token_display: 'B026', serving_point_name: 'Counter 03' },
-	{ token_display: 'B025', serving_point_name: 'Counter 02' },
-	{ token_display: 'B024', serving_point_name: 'Counter 01' },
-	{ token_display: 'B023', serving_point_name: 'Counter 04' },
-];
+/** Editor canvas mock serving point — matches buildEditorPageTurnQueueDisplays slot 0. */
+const EDITOR_PREVIEW_SERVING_POINT = 'Counter 01';
 
 /** Cycles 01→15 in the template editor so Pipboy flip digits are visible without live queue data. */
 const PREVIEW_FLIP_TOKENS = Array.from({ length: 15 }, (_, i) =>
@@ -233,6 +232,12 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		const isGlassLobby = appearance.displayTheme === 'glass-lobby';
 		const isDigitalHealthcare = appearance.displayTheme === 'digital-healthcare';
 		const isOledPulse = appearance.displayTheme === 'oled-pulse';
+		const editorPreviewDisplays =
+			countZoneQueueAssignmentSlots(rect) > 0
+				? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
+				: [];
+		const previewSubtitle =
+			editorPreviewDisplays[0]?.servingPointName ?? EDITOR_PREVIEW_SERVING_POINT;
 		const assignedQueues =
 			isSignalBoard ||
 			isMonoFlip ||
@@ -245,7 +250,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			isGlassLobby ||
 			isDigitalHealthcare ||
 			isOledPulse
-				? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
+				? editorPreviewDisplays
 				: undefined;
 
 		return (
@@ -285,6 +290,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 				<TokenDisplayThemeCard
 					appearance={appearance}
 					queueName={queueName}
+					subtitle={previewSubtitle}
 					tokenDisplay={
 						usesScreenTicker ||
 						appearance.displayTheme === 'oled-pulse' ||
@@ -303,7 +309,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					}
 					assignedQueues={assignedQueues}
 					status='waiting'
-					recentTokens={usesScreenTicker ? undefined : MOCK_RECENT_TOKENS}
+					recentTokens={usesScreenTicker ? undefined : THEME_PREVIEW_RECENT_TOKENS}
 					fillContainer
 					showHistoryTime={false}
 					previewMode

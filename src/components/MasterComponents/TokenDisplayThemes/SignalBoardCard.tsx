@@ -81,24 +81,30 @@ const SignalBoardCard: React.FC<SignalBoardCardProps> = ({
 						</div>
 					</div>
 				) : (
-					<div className='tdc-sig-meta__copy'>
-						<span className='tdc-sig-meta__eyebrow'>Queue</span>
-						<span className='tdc-sig-meta__queue'>{active.queueName}</span>
-						{active.servingPointName ? (
-							<span className='tdc-sig-meta__sub'>{active.servingPointName}</span>
-						) : null}
-					</div>
+					<>
+						<div className='tdc-sig-meta__side tdc-sig-meta__side--start'>
+							{active.servingPointName ? (
+								<span className='tdc-sig-meta__sub'>{active.servingPointName}</span>
+							) : null}
+						</div>
+						<div className='tdc-sig-meta__center'>
+							<span className='tdc-sig-meta__eyebrow'>Queue</span>
+							<span className='tdc-sig-meta__queue'>{active.queueName}</span>
+						</div>
+					</>
 				)}
 				{isMultiQueue ? (
 					<SignalBoardClock />
 				) : (
-					<div
-						className={['tdc-sig-status', `tdc-sig-status--${statusModifierClass}`]
-							.filter(Boolean)
-							.join(' ')}
-						aria-live='polite'>
-						<span className='tdc-sig-status__dot' aria-hidden='true' />
-						<span className='tdc-sig-status__label'>{active.statusLabel}</span>
+					<div className='tdc-sig-meta__side tdc-sig-meta__side--end'>
+						<div
+							className={['tdc-sig-status', `tdc-sig-status--${statusModifierClass}`]
+								.filter(Boolean)
+								.join(' ')}
+							aria-live='polite'>
+							<span className='tdc-sig-status__dot' aria-hidden='true' />
+							<span className='tdc-sig-status__label'>{active.statusLabel}</span>
+						</div>
 					</div>
 				)}
 			</header>

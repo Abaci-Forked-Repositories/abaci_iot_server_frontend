@@ -202,12 +202,7 @@ const MonoFlipCardStack: React.FC<MonoFlipCardStackProps> = ({
 			className={['tdc-mf-layout', className].filter(Boolean).join(' ')}
 			aria-live='polite'>
 			<header className='tdc-mf-header'>
-				<MonoFlipClock />
-				{queueName ? (
-					<span className='tdc-mf-queue'>{queueName}</span>
-				) : (
-					<span className='tdc-mf-queue tdc-mf-queue--empty' aria-hidden='true' />
-				)}
+				<MonoFlipClock queueName={queueName} />
 				{subtitle ? <span className='tdc-mf-subtitle'>{subtitle}</span> : null}
 			</header>
 

@@ -178,6 +178,45 @@
 		overflow: hidden;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 		background: rgba(0, 0, 0, #{tdc-zone-a(0.18)});
+
+		&:not(.tdc-sig-meta--multi) {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr);
+			align-items: center;
+			gap: 0.35em 0.45em;
+			overflow: visible;
+		}
+	}
+
+	.tdc-sig-meta__side {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+
+		&--start {
+			grid-column: 1;
+			justify-self: start;
+		}
+
+		&--end {
+			grid-column: 3;
+			justify-self: end;
+			flex-shrink: 0;
+			min-width: min-content;
+			overflow: visible;
+		}
+	}
+
+	.tdc-sig-meta__center {
+		grid-column: 2;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.06em;
+		min-width: 0;
+		max-width: 100%;
+		text-align: center;
 	}
 
 	.tdc-sig-meta__copy {
@@ -293,6 +332,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		max-width: 100%;
+		width: 100%;
 	}
 
 	.tdc-sig-meta__sub {
@@ -303,6 +343,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		max-width: 100%;
+		text-align: left;
 	}
 
 	.tdc-sig-status {
@@ -310,12 +351,16 @@
 		align-items: center;
 		gap: 0.28em;
 		flex-shrink: 0;
-		max-width: 42%;
 		min-width: 0;
-		padding: 0.14em 0.28em;
+		padding: 0.14em 0.34em;
 		border-radius: 999px;
 		background: rgba(255, 255, 255, #{tdc-zone-a(0.05)});
 		border: 1px solid rgba(255, 255, 255, 0.08);
+		white-space: nowrap;
+
+		.tdc-sig-meta:not(.tdc-sig-meta--multi) & {
+			max-width: none;
+		}
 	}
 
 	.tdc-sig-status__dot {
@@ -345,10 +390,14 @@
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--sig-text-sub);
-		overflow: hidden;
-		text-overflow: ellipsis;
 		white-space: nowrap;
-		min-width: 0;
+		flex-shrink: 0;
+
+		.tdc-sig-meta:not(.tdc-sig-meta--multi) & {
+			overflow: visible;
+			text-overflow: clip;
+			min-width: 0;
+		}
 	}
 
 	.tdc-sig-stage {
@@ -889,6 +938,21 @@
 	}
 
 	@container tdc-sig (max-width: 11em) {
+		.tdc-sig-meta:not(.tdc-sig-meta--multi) {
+			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+			gap: 0.28em 0.32em;
+		}
+
+		.tdc-sig-meta__side--end .tdc-sig-status {
+			padding: 0.12em 0.24em;
+		}
+
+		.tdc-sig-meta__side--end .tdc-sig-status__label {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 4.2em;
+		}
+
 		.tdc-sig-stage--token-only,
 		.tdc-sig-stage--table-only {
 			grid-template-columns: 1fr;

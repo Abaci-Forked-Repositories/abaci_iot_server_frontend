@@ -709,7 +709,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								<div className='tdc-cb-circle tdc-cb-circle--dots' />
 							</div>
 						)}
-						{subtitle && <div className='tdc__subtitle'>{subtitle}</div>}
+						{subtitle && !isPipboyTerminal && <div className='tdc__subtitle'>{subtitle}</div>}
 						<div className='tdc__token' aria-label={`Token ${displayToken}`}>
 							{isPipboyTerminal ? (
 								<PipboyTerminalToken value={displayToken} />
@@ -726,6 +726,9 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								{isImperialCourt || isArcticGlass || isVelvetCrown ? null : statusConfig.icon}
 							</span>
 							<span className='tdc__status-label'>{statusConfig.label}</span>
+							{isPipboyTerminal && subtitle ? (
+								<span className='tdc__status-subtitle'>{subtitle}</span>
+							) : null}
 						</span>
 					</div>
 				</>

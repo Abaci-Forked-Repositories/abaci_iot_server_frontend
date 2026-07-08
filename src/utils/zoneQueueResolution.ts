@@ -9,6 +9,14 @@ import { getStatusConfig } from '../components/MasterComponents/TokenDisplayThem
 const QUEUE_UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Mock active-token chips for template editor + theme picker previews. */
+export const THEME_PREVIEW_RECENT_TOKENS: RecentQueueToken[] = [
+	{ token_display: 'B026', serving_point_name: 'Counter 03' },
+	{ token_display: 'B025', serving_point_name: 'Counter 02' },
+	{ token_display: 'B024', serving_point_name: 'Counter 01' },
+	{ token_display: 'B023', serving_point_name: 'Counter 04' },
+];
+
 export interface ZoneQueueRefs {
 	queueIds?: number[];
 	queueUuids?: string[];

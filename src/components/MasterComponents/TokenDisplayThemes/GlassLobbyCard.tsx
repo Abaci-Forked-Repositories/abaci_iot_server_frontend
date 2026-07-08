@@ -96,6 +96,8 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 					className={[
 						'tdc-gl-card',
 						'tdc-gl-card--token',
+						'tdc-gl-float',
+						'tdc-gl-float--delay-2',
 						tokenGlow ? 'tdc-gl-card--token-glow' : '',
 					]
 						.filter(Boolean)
@@ -111,6 +113,8 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 					className={[
 						'tdc-gl-card',
 						'tdc-gl-card--status',
+						'tdc-gl-float',
+						'tdc-gl-float--delay-3',
 						`tdc-gl-card--status-${statusModifier}`,
 					]
 						.filter(Boolean)

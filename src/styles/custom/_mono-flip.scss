@@ -124,10 +124,10 @@
 	}
 
 	.tdc-mf-clock {
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
-		justify-content: space-between;
-		gap: 0.45em;
+		gap: 0.35em 0.45em;
 		width: 100%;
 		min-width: 0;
 		flex-shrink: 0;
@@ -145,29 +145,43 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		min-width: 0;
-		flex: 1 1 0;
 	}
 
 	.tdc-mf-clock__date {
+		grid-column: 1;
+		justify-self: start;
 		text-align: left;
 	}
 
-	.tdc-mf-clock__time {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.tdc-mf-queue {
-		text-align: center;
-		font-size: 0.62em;
+	.tdc-mf-clock__queue {
+		grid-column: 2;
+		justify-self: center;
+		max-width: 100%;
+		font-size: clamp(0.38em, min(2.4cqw, 2.8cqh), 0.56em);
 		font-weight: 700;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--mf-ink);
+		line-height: 1.15;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
 
 		&--empty {
-			min-height: 0.62em;
+			min-width: 0;
+			min-height: 0;
+			padding: 0;
+			opacity: 0;
+			pointer-events: none;
 		}
+	}
+
+	.tdc-mf-clock__time {
+		grid-column: 3;
+		justify-self: end;
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.tdc-mf-subtitle {
@@ -351,27 +365,36 @@
 	.tdc-mf-active {
 		flex-shrink: 0;
 		display: flex;
-		flex-direction: column;
-		gap: 0.22em;
-		padding: 0.28em 0.42em 0.32em;
+		flex-direction: row;
+		align-items: center;
+		gap: clamp(0.22em, 2cqw, 0.32em);
+		padding: clamp(0.12em, 1.8cqh, 0.18em) clamp(0.28em, 3.5cqi, 0.36em);
 		border-top: 1px solid var(--mf-rule);
 		background: rgba(0, 0, 0, #{tdc-zone-a(0.22)});
 		min-height: 0;
+		overflow: hidden;
 	}
 
 	.tdc-mf-active__label {
-		font-size: 0.46em;
+		flex-shrink: 0;
+		font-size: clamp(0.32em, 2.4cqw, 0.38em);
 		font-weight: 700;
-		letter-spacing: 0.16em;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--mf-ink-muted);
+		white-space: nowrap;
+		line-height: 1.1;
 	}
 
 	.tdc-mf-active__scroll {
 		display: flex;
 		flex-wrap: nowrap;
-		gap: 0.32em;
+		align-items: center;
+		gap: clamp(0.16em, 1.8cqw, 0.22em);
+		flex: 1 1 auto;
+		min-width: 0;
 		overflow-x: auto;
+		overflow-y: hidden;
 		scrollbar-width: none;
 
 		&::-webkit-scrollbar {
@@ -383,13 +406,14 @@
 		flex-shrink: 0;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.22em;
-		padding: 0.22em 0.42em;
+		gap: 0.14em;
+		padding: clamp(0.1em, 1.4cqh, 0.14em) clamp(0.22em, 2.8cqi, 0.3em);
 		border-radius: 0.08em;
 		background: rgba(255, 255, 255, #{tdc-zone-a(0.06)});
 		border: 1px solid var(--mf-rule);
-		font-size: 0.5em;
+		font-size: clamp(0.38em, 2.8cqw, 0.44em);
 		color: var(--mf-ink);
+		line-height: 1.1;
 
 		&--enter {
 			animation: mf-chip-enter 420ms ease-out both;
@@ -408,7 +432,7 @@
 	.tdc-mf-active__chip-counter,
 	.tdc-mf-active__chip-time {
 		color: var(--mf-ink-sub);
-		font-size: 0.92em;
+		font-size: 0.88em;
 	}
 
 	// ─── Multi-queue tabular board ───────────────────────────────────────────
@@ -648,6 +672,11 @@
 			letter-spacing: 0.05em;
 		}
 
+		.tdc-mf-clock__queue {
+			font-size: clamp(0.32em, 2cqw, 0.44em);
+			letter-spacing: 0.08em;
+		}
+
 		.tdc-mf-table-header__copy .tdc-mf-clock__date,
 		.tdc-mf-table-header__copy .tdc-mf-clock__time {
 			font-size: clamp(0.32em, 2cqw, 0.38em);
@@ -667,6 +696,21 @@
 
 		.tdc-mf-table__cell--status {
 			display: none;
+		}
+
+		.tdc-mf-active {
+			gap: 0.2em;
+			padding: 0.1em 0.24em 0.12em;
+		}
+
+		.tdc-mf-active__label {
+			font-size: clamp(0.28em, 2cqw, 0.34em);
+			letter-spacing: 0.06em;
+		}
+
+		.tdc-mf-active__chip {
+			font-size: clamp(0.34em, 2.4cqw, 0.4em);
+			padding: 0.1em 0.22em;
 		}
 	}
 }
@@ -718,7 +762,7 @@
 	&.tdc--has-history {
 		.tdc-mf-active {
 			flex-shrink: 0;
-			max-height: min(24%, 5.8em);
+			max-height: min(14%, 3.4em);
 		}
 	}
 }

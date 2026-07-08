@@ -139,9 +139,9 @@
 	.tdc-dh-topbar {
 		display: flex;
 		align-items: center;
-		gap: 0.42em;
+		gap: 0.34em;
 		flex-shrink: 0;
-		padding: 0.4em 0.58em;
+		padding: 0.36em 0.52em;
 		background: linear-gradient(90deg, var(--dh-blue-bg) 0%, var(--dh-blue-dark-bg) 100%);
 		color: #ffffff;
 		min-width: 0;
@@ -187,6 +187,24 @@
 		text-overflow: ellipsis;
 	}
 
+	.tdc-dh-topbar__serving-point {
+		flex: 0 1 auto;
+		min-width: 0;
+		max-width: 9em;
+		padding: 0.16em 0.38em;
+		border-radius: 0.35em;
+		font-size: clamp(0.44em, 2.2cqw, 0.58em);
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		line-height: 1.1;
+		text-align: center;
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.12)});
+		border: 1px solid rgba(255, 255, 255, 0.22);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	.tdc-dh-clock {
 		display: flex;
 		flex-direction: row;
@@ -203,7 +221,7 @@
 
 	.tdc-dh-clock__date {
 		flex: 0 1 auto;
-		font-size: clamp(0.46em, 2.4cqw, 0.62em);
+		font-size: clamp(0.38em, 2cqw, 0.52em);
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
@@ -215,7 +233,7 @@
 
 	.tdc-dh-clock__time {
 		flex: 0 1 auto;
-		font-size: clamp(0.48em, 2.5cqw, 0.64em);
+		font-size: clamp(0.4em, 2.1cqw, 0.54em);
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 		letter-spacing: 0.04em;
@@ -253,9 +271,10 @@
 	}
 
 	.tdc-dh-main {
-		flex: 1 1 auto;
+		flex: 1 1 0;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr);
 		gap: 0.45em;
 		padding: 0.45em 0.55em 0.4em;
 		min-height: 0;
@@ -294,6 +313,8 @@
 		justify-content: center;
 		overflow: hidden;
 		background: var(--dh-bg);
+		min-height: 0;
+		height: 100%;
 		container-type: size;
 	}
 
@@ -582,14 +603,15 @@
 		}
 	}
 
-	// ── Active tokens — fit row or seamless marquee (no scrollbar) ─────────────
+	// ── Active tokens — compact strip; capped height keeps hero token stable
 	.tdc-dh-metrics {
 		flex: 0 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.2em;
-		padding: 0.36em 0.55em 0.34em;
+		gap: 0.14em;
+		padding: 0.24em 0.45em 0.22em;
 		min-width: 0;
+		max-height: clamp(2.4em, 15cqh, 4em);
 		overflow: hidden;
 		border-top: 1px solid rgba(37, 99, 235, 0.1);
 		background: linear-gradient(
@@ -601,7 +623,7 @@
 
 	.tdc-dh-metrics__title {
 		flex: 0 0 auto;
-		font-size: clamp(0.34em, 4.5cqw, 0.44em);
+		font-size: clamp(0.28em, 3.6cqw, 0.36em);
 		font-weight: 700;
 		line-height: 1.2;
 		letter-spacing: 0.12em;
@@ -623,7 +645,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: stretch;
-		gap: 0.28em;
+		gap: 0.2em;
 		min-width: 0;
 	}
 
@@ -636,7 +658,7 @@
 
 	.tdc-dh-metrics--fit .tdc-dh-metric-card {
 		flex: 1 1
-			calc((100% - (var(--tdc-dh-active-count, 2) - 1) * 0.28em) / var(--tdc-dh-active-count, 2));
+			calc((100% - (var(--tdc-dh-active-count, 2) - 1) * 0.2em) / var(--tdc-dh-active-count, 2));
 		min-width: 0;
 		max-width: 100%;
 	}
@@ -651,21 +673,21 @@
 
 	.tdc-dh-metrics--marquee .tdc-dh-metric-card {
 		flex: 0 0 auto;
-		width: clamp(3.6em, 22cqw, 5.2em);
-		min-width: 3.2em;
-		max-width: 5.5em;
+		width: clamp(2.8em, 17cqw, 4em);
+		min-width: 2.5em;
+		max-width: 4.2em;
 	}
 
 	.tdc-dh-metric-card {
 		display: flex;
 		align-items: center;
-		gap: 0.28em;
+		gap: 0.2em;
 		min-width: 0;
-		padding: 0.26em 0.34em;
-		border-radius: 0.42em;
+		padding: 0.18em 0.26em;
+		border-radius: 0.34em;
 		background: var(--dh-bg);
 		border: 1px solid var(--dh-border);
-		box-shadow: 0 3px 12px rgba(37, 99, 235, #{tdc-zone-a(0.08)});
+		box-shadow: 0 2px 8px rgba(37, 99, 235, #{tdc-zone-a(0.07)});
 		transition:
 			box-shadow 0.3s ease,
 			transform 0.3s ease;
@@ -684,14 +706,14 @@
 
 	.tdc-dh-metric-card__icon {
 		flex-shrink: 0;
-		width: 1em;
-		height: 1em;
-		min-width: 1em;
-		border-radius: 0.28em;
+		width: 0.82em;
+		height: 0.82em;
+		min-width: 0.82em;
+		border-radius: 0.22em;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.58em;
+		font-size: 0.5em;
 		font-weight: 800;
 		line-height: 1;
 		color: #ffffff;
@@ -709,9 +731,9 @@
 
 	.tdc-dh-metric-card__token {
 		font-size: clamp(
-			0.32em,
-			calc(5.2cqw / max(1, var(--tdc-dh-active-count, 2) * 0.42)),
-			0.5em
+			0.26em,
+			calc(4.2cqw / max(1, var(--tdc-dh-active-count, 2) * 0.42)),
+			0.4em
 		);
 		font-weight: 800;
 		line-height: 1.15;
@@ -724,9 +746,9 @@
 
 	.tdc-dh-metric-card__counter {
 		font-size: clamp(
-			0.28em,
-			calc(4.2cqw / max(1, var(--tdc-dh-active-count, 2) * 0.45)),
-			0.4em
+			0.22em,
+			calc(3.4cqw / max(1, var(--tdc-dh-active-count, 2) * 0.45)),
+			0.32em
 		);
 		font-weight: 600;
 		line-height: 1.15;
@@ -737,7 +759,7 @@
 	}
 
 	.tdc-dh-metric-card__time {
-		font-size: clamp(0.28em, 3.6cqw, 0.36em);
+		font-size: clamp(0.22em, 2.9cqw, 0.3em);
 		line-height: 1.1;
 		color: var(--dh-ink-sub);
 		white-space: nowrap;
@@ -747,8 +769,8 @@
 
 	@container tdc-dh-zone (max-width: 11.5em) {
 		.tdc-dh-metrics--fit .tdc-dh-metric-card {
-			flex: 1 1 calc(50% - 0.14em);
-			max-width: calc(50% - 0.14em);
+			flex: 1 1 calc(50% - 0.1em);
+			max-width: calc(50% - 0.1em);
 		}
 
 		.tdc-dh-metric-card__icon {
@@ -769,13 +791,13 @@
 		}
 
 		.tdc-dh-metrics {
-			padding-top: 0.28em;
-			padding-bottom: 0.26em;
+			padding-top: 0.2em;
+			padding-bottom: 0.18em;
 		}
 
 		.tdc-dh-metric-card {
-			padding: 0.2em 0.28em;
-			gap: 0.2em;
+			padding: 0.14em 0.22em;
+			gap: 0.16em;
 		}
 	}
 }
@@ -789,6 +811,7 @@
 
 	.tdc-dh-topbar__title,
 	.tdc-dh-topbar__queue,
+	.tdc-dh-topbar__serving-point,
 	.tdc-dh-clock__date,
 	.tdc-dh-clock__time,
 	.tdc-dh-topbar__status,
@@ -807,8 +830,13 @@
 	}
 
 	.tdc-dh-topbar__queue,
+	.tdc-dh-topbar__serving-point,
 	.tdc-dh-topbar__status {
 		color: rgba(255, 255, 255, 1);
+	}
+
+	.tdc-dh-topbar__serving-point {
+		border-color: rgba(255, 255, 255, 0.22);
 	}
 
 	.tdc-dh-clock__date,
@@ -859,6 +887,11 @@
 	border-radius: inherit;
 
 	.tdc-dh-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+
+	.tdc-dh-main {
 		flex: 1 1 0;
 		min-height: 0;
 	}
@@ -941,11 +974,11 @@
 	}
 
 	.tdc--digital-healthcare .tdc-dh-clock__date {
-		font-size: clamp(0.4em, 2.2cqw, 0.54em);
+		font-size: clamp(0.34em, 1.9cqw, 0.46em);
 	}
 
 	.tdc--digital-healthcare .tdc-dh-clock__time {
-		font-size: clamp(0.42em, 2.3cqw, 0.56em);
+		font-size: clamp(0.36em, 2cqw, 0.48em);
 	}
 }
 

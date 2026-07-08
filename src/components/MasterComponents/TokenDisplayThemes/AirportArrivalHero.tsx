@@ -7,22 +7,6 @@ export interface AirportArrivalHeroProps {
 	statusLabel: string;
 }
 
-/** Landing-plane glyph in a square frame — Schiphol-style arrival signage. */
-export const ArrivalIcon: React.FC = () => (
-	<svg
-		className='tdc-aa-icon__svg'
-		viewBox='0 0 48 48'
-		aria-hidden='true'
-		focusable='false'>
-		<rect x='2' y='2' width='44' height='44' fill='none' stroke='currentColor' strokeWidth='2.5' />
-		<path
-			d='M10 30 L22 26 L28 32 L38 28 L34 24 L28 26 L22 20 L14 22 Z'
-			fill='currentColor'
-		/>
-		<line x1='8' y1='36' x2='40' y2='36' stroke='currentColor' strokeWidth='2' />
-	</svg>
-);
-
 const AirportArrivalHero: React.FC<AirportArrivalHeroProps> = ({
 	queueName,
 	subtitle,
@@ -31,18 +15,19 @@ const AirportArrivalHero: React.FC<AirportArrivalHeroProps> = ({
 }) => (
 	<>
 		<div className='tdc-aa-left'>
-			<div className='tdc-aa-icon'>
-				<ArrivalIcon />
-			</div>
-			<div className='tdc-aa-labels'>
+			<div className='tdc-aa-drift-track tdc-aa-queue-track'>
 				{queueName ? (
 					<span className='tdc-aa-queue'>{queueName}</span>
 				) : (
 					<span className='tdc-aa-queue tdc-aa-queue--empty' aria-hidden='true' />
 				)}
-				{subtitle ? <span className='tdc-aa-subtitle'>{subtitle}</span> : null}
 			</div>
-			<div className='tdc-aa-status-track' aria-live='polite'>
+			{subtitle ? (
+				<div className='tdc-aa-drift-track tdc-aa-subtitle-track'>
+					<span className='tdc-aa-subtitle'>{subtitle}</span>
+				</div>
+			) : null}
+			<div className='tdc-aa-drift-track tdc-aa-status-track' aria-live='polite'>
 				<span className='tdc-aa-status'>{statusLabel}</span>
 			</div>
 		</div>

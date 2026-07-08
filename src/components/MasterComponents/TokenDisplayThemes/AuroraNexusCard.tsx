@@ -29,11 +29,6 @@ const ClockIcon: React.FC = () => (
 	</svg>
 );
 
-function headerLine(queueName?: string, subtitle?: string): string | null {
-	const parts = [queueName?.trim(), subtitle?.trim()].filter(Boolean);
-	return parts.length ? parts.join(' ') : null;
-}
-
 const AuroraNexusCard: React.FC<AuroraNexusCardProps> = ({
 	queueName,
 	subtitle,
@@ -43,7 +38,9 @@ const AuroraNexusCard: React.FC<AuroraNexusCardProps> = ({
 	assignedQueues = [],
 }) => {
 	const isMultiQueue = assignedQueues.length > 1;
-	const headerText = headerLine(queueName, subtitle);
+	const queueLabel = queueName?.trim() || '';
+	const pointLabel = subtitle?.trim() || '';
+	const hasHeader = Boolean(queueLabel || pointLabel);
 	const skipStatusFxRef = useRef(true);
 	const [statusEnterFx, setStatusEnterFx] = useState<'completed-enter' | 'alert-enter' | null>(
 		null,
@@ -101,8 +98,24 @@ const AuroraNexusCard: React.FC<AuroraNexusCardProps> = ({
 			<header className='tdc-an-header'>
 				<span className='tdc-an-header__line' aria-hidden='true' />
 				<span className='tdc-an-header__dot' aria-hidden='true' />
-				{headerText ? (
-					<span className='tdc-an-header__text'>{headerText}</span>
+				{hasHeader ? (
+					<span className='tdc-an-header__text'>
+						{queueLabel ? (
+							<span className='tdc-an-header__queue' title={`Queue ${queueLabel}`}>
+								{queueLabel}
+							</span>
+						) : null}
+						{queueLabel && pointLabel ? (
+							<span className='tdc-an-header__sep' aria-hidden='true'>
+								·
+							</span>
+						) : null}
+						{pointLabel ? (
+							<span className='tdc-an-header__point' title={pointLabel}>
+								{pointLabel}
+							</span>
+						) : null}
+					</span>
 				) : (
 					<span className='tdc-an-header__text tdc-an-header__text--empty' aria-hidden='true' />
 				)}

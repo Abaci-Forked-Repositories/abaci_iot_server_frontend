@@ -27,6 +27,7 @@ const MedicalCrossIcon: React.FC = () => (
 
 const HealthcareDashboardCard: React.FC<HealthcareDashboardCardProps> = ({
 	queueName,
+	subtitle,
 	displayToken,
 	statusLabel,
 	statusModifier,
@@ -35,6 +36,16 @@ const HealthcareDashboardCard: React.FC<HealthcareDashboardCardProps> = ({
 	const isMultiQueue = assignedQueues.length > 1;
 	const skipCallRef = useRef(true);
 	const [tokenCardActive, setTokenCardActive] = useState(false);
+
+	const servingPointLabel = useMemo(() => {
+		if (assignedQueues.length === 1) {
+			const point = assignedQueues[0].servingPointName?.trim();
+			if (point && point !== '—') return point;
+		}
+		const sub = subtitle?.trim();
+		if (sub && sub !== '—') return sub;
+		return null;
+	}, [assignedQueues, subtitle]);
 
 	const servingRows = useMemo(
 		() => (isMultiQueue ? buildPageTurnServingRows(assignedQueues) : []),
@@ -75,10 +86,14 @@ const HealthcareDashboardCard: React.FC<HealthcareDashboardCardProps> = ({
 	return (
 		<div className='tdc-dh-layout'>
 			<header className='tdc-dh-topbar'>
-				<MedicalCrossIcon />
 				{queueName ? (
 					<span className='tdc-dh-topbar__queue' title={`Queue ${queueName}`}>
 						{queueName}
+					</span>
+				) : null}
+				{servingPointLabel ? (
+					<span className='tdc-dh-topbar__serving-point' title={servingPointLabel}>
+						{servingPointLabel}
 					</span>
 				) : null}
 				<HealthcareDashboardClock />

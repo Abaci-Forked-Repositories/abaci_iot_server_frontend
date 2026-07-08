@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import PaperFlipClock from './PaperFlipClock';
 
 export interface PaperFlipPageStackProps {
 	token: string;
@@ -94,19 +93,13 @@ function PaperFlipPageFace({
 
 	return (
 		<div className='tdc-pf-page__front'>
-			<header className='tdc-pf-page__header'>
-				{data.queueName ? (
-					<span className='tdc-pf-page__queue'>{data.queueName}</span>
-				) : (
-					<span className='tdc-pf-page__queue tdc-pf-page__queue--empty' aria-hidden='true' />
-				)}
-				{data.subtitle ? (
+			{data.subtitle ? (
+				<header className='tdc-pf-page__header'>
 					<span className='tdc-pf-page__subtitle'>{data.subtitle}</span>
-				) : null}
-			</header>
+				</header>
+			) : null}
 
 			<div className='tdc-pf-page__token-wrap'>
-				<PaperFlipClock />
 				<span className='tdc-pf-page__token'>{data.token}</span>
 			</div>
 

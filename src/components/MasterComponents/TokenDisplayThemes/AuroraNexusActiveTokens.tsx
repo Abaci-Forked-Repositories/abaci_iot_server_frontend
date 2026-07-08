@@ -16,27 +16,19 @@ export interface AuroraNexusActiveTokensProps {
 	fmtTime: (iso: string | undefined) => string;
 }
 
-const GroupIcon: React.FC = () => (
-	<svg className='tdc-an-active__group-icon' viewBox='0 0 24 24' aria-hidden='true'>
-		<circle cx='9' cy='8' r='3' fill='currentColor' />
-		<circle cx='16' cy='9' r='2.5' fill='currentColor' opacity='0.85' />
+const NavChevron: React.FC = () => (
+	<svg className='tdc-an-active__nav-icon' viewBox='0 0 24 24' aria-hidden='true'>
 		<path
-			d='M4 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5'
+			d='M10 7l5 5-5 5'
 			fill='none'
 			stroke='currentColor'
-			strokeWidth='1.6'
+			strokeWidth='2.2'
 			strokeLinecap='round'
-		/>
-		<path
-			d='M14 17.5c0-1.8 1.4-3.2 3.2-3.2'
-			fill='none'
-			stroke='currentColor'
-			strokeWidth='1.4'
-			strokeLinecap='round'
-			opacity='0.8'
+			strokeLinejoin='round'
 		/>
 	</svg>
 );
+
 
 const AuroraNexusActiveTokens: React.FC<AuroraNexusActiveTokensProps> = ({
 	tokens,
@@ -74,7 +66,6 @@ const AuroraNexusActiveTokens: React.FC<AuroraNexusActiveTokensProps> = ({
 				<div className='tdc-an-active__label-block' aria-hidden='true'>
 					<span className='tdc-an-active__label'>Active</span>
 					<span className='tdc-an-active__label'>Tokens</span>
-					<GroupIcon />
 				</div>
 
 				<div className='tdc-an-active__viewport'>
@@ -119,11 +110,11 @@ const AuroraNexusActiveTokens: React.FC<AuroraNexusActiveTokensProps> = ({
 						className='tdc-an-active__nav'
 						aria-label='Next active tokens page'
 						onClick={() => setPage((current) => (current + 1) % pageCount)}>
-						<span aria-hidden='true'>&rsaquo;</span>
+						<NavChevron />
 					</button>
 				) : (
 					<div className='tdc-an-active__nav tdc-an-active__nav--ghost' aria-hidden='true'>
-						<span>&rsaquo;</span>
+						<NavChevron />
 					</div>
 				)}
 			</div>

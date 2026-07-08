@@ -462,22 +462,20 @@ const TemplateDetailWorkspace: React.FC = () => {
 			})),
 		[zoneProps.queueIds, queuesById],
 	);
-	const previewAssignedQueues = React.useMemo(
-		() =>
-			zoneProps.queueIds.length > 1
-				? buildEditorPageTurnQueueDisplays(
-						{
-							queueIds: zoneProps.queueIds,
-							queueChipNames: zoneProps.queueIds.map(
-								(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
-							),
-						},
-						queuesById,
-						'05',
-					)
-				: undefined,
-		[zoneProps.queueIds, queuesById],
-	);
+	const previewAssignedQueues = React.useMemo(() => {
+		if (!selectedObject) return undefined;
+		const displays = buildEditorPageTurnQueueDisplays(
+			{
+				queueIds: zoneProps.queueIds,
+				queueUuids: (selectedObject as { queueUuids?: string[] }).queueUuids,
+				queueChipNames: (selectedObject as { queueChipNames?: string[] }).queueChipNames,
+				name: zoneProps.containerName,
+			},
+			queuesById,
+			'05',
+		);
+		return displays.length > 0 ? displays : undefined;
+	}, [selectedObject, zoneProps.queueIds, zoneProps.containerName, queuesById]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -519,6 +517,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 	useEffect(() => {
 		refreshAllZoneLabels();
+		const fc = fabricRef.current;
+		if (!fc) return;
+		setCanvasObjects(getZoneRects(fc));
+		setOverlayRevision((n) => n + 1);
 	}, [refreshAllZoneLabels, templateDetails]);
 
 	/** When read-only, zones cannot be selected (no Zone Properties panel). */
@@ -1811,7 +1813,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 													`Queue #${zoneProps.queueIds[0]}`)
 												: zoneProps.containerName || 'Queue'
 										}
-										previewSubtitle=''
+										previewSubtitle={
+											previewAssignedQueues?.[0]?.servingPointName ??
+											'Counter 01'
+										}
 										previewTokenDisplay='05'
 										previewStatus='waiting'
 										previewAssignedQueues={previewAssignedQueues}

@@ -82,8 +82,10 @@
 	--aa-board-gap: 0.34em;
 	--aa-yellow: #000000;
 	--aa-ink: #ffc107;
+	--aa-ink-bg: rgba(255, 193, 7, #{tdc-zone-a(1)});
+	--aa-bg: rgba(0, 0, 0, #{tdc-zone-a(1)});
 	--aa-ink-soft: rgba(255, 193, 7, 0.62);
-	--aa-frame: rgba(255, 193, 7, 0.28);
+	--aa-frame: rgba(255, 193, 7, #{tdc-zone-a(0.28)});
 	--aa-token-em: 4.4;
 	// Scale cqw to match Onyx Gold body column (58%) while token sits in 64% column.
 	--aa-onyx-cqw-scale: 0.90625;
@@ -98,7 +100,7 @@
 		'Helvetica Neue',
 		sans-serif;
 
-	--tdc-bg: var(--aa-yellow);
+	--tdc-bg: var(--aa-bg);
 	--tdc-glow-color: transparent;
 	--tdc-text: var(--aa-ink);
 	--tdc-text-sub: var(--aa-ink-soft);
@@ -106,20 +108,20 @@
 	--tdc-token-color: var(--aa-ink);
 	--tdc-token-shadow: none;
 	--tdc-border: var(--aa-frame);
-	--tdc-badge-bg: var(--aa-ink);
+	--tdc-badge-bg: var(--aa-ink-bg);
 	--tdc-badge-text: var(--aa-yellow);
-	--tdc-badge-border: var(--aa-ink);
+	--tdc-badge-border: var(--aa-ink-bg);
 
 	font-family: var(--aa-font-signage);
-	background: var(--aa-yellow);
+	background: var(--aa-bg);
 	color: var(--aa-ink);
 	border: 3px solid var(--aa-frame);
 	border-radius: 0;
 	display: flex;
 	flex-direction: column;
 	box-shadow:
-		inset 0 0 0 1px rgba(255, 193, 7, 0.08),
-		0 6px 24px rgba(0, 0, 0, 0.45);
+		inset 0 0 0 1px rgba(255, 193, 7, #{tdc-zone-a(0.08)}),
+		0 6px 24px rgba(0, 0, 0, #{tdc-zone-a(0.45)});
 	overflow: hidden;
 	min-width: 0;
 	min-height: 0;
@@ -232,10 +234,10 @@
 			height: 5px;
 			background: repeating-linear-gradient(
 				-45deg,
-				var(--aa-ink) 0,
-				var(--aa-ink) 6px,
-				var(--aa-yellow) 6px,
-				var(--aa-yellow) 12px
+				var(--aa-ink-bg) 0,
+				var(--aa-ink-bg) 6px,
+				var(--aa-bg) 6px,
+				var(--aa-bg) 12px
 			);
 			background-size: 24px 24px;
 			animation: tdc-aa-stripe-travel var(--aa-stripe-cycle-duration, 1.5s) linear infinite;
@@ -258,33 +260,36 @@
 		gap: 0.22em;
 		min-width: 0;
 		max-width: 100%;
+		padding-left: clamp(0.2em, 1.5cqw, 0.42em);
+		box-sizing: border-box;
 		overflow: hidden;
 		z-index: 2;
 	}
 
-	.tdc-aa-icon {
-		color: var(--aa-ink);
-		line-height: 0;
+	.tdc-aa-drift-track {
+		position: relative;
+		align-self: stretch;
+		width: 100%;
 		flex-shrink: 0;
-
-		&__svg {
-			width: 1.1em;
-			height: 1.1em;
-			display: block;
-		}
+		overflow: hidden;
+		pointer-events: none;
+		z-index: 2;
 	}
 
-	.tdc-aa-labels {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.05em;
-		min-width: 0;
-		max-width: 100%;
-		overflow: hidden;
+	.tdc-aa-queue-track {
+		height: 0.68em;
+	}
+
+	.tdc-aa-subtitle-track {
+		height: 0.52em;
+		margin-top: 0.04em;
 	}
 
 	.tdc-aa-queue {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		display: inline-block;
 		font-weight: 700;
 		font-size: 0.56em;
 		line-height: 1.02;
@@ -292,9 +297,13 @@
 		text-transform: uppercase;
 		color: var(--aa-ink);
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
+		width: max-content;
+		max-width: none;
+		overflow: visible;
+		transform: translateY(-50%) translateX(0);
+		transform-origin: center center;
+		will-change: left, transform;
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
 
 		&--empty {
 			display: none;
@@ -302,15 +311,23 @@
 	}
 
 	.tdc-aa-subtitle {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		display: inline-block;
 		font-weight: 500;
 		font-size: 0.42em;
 		line-height: 1.12;
 		letter-spacing: 0.06em;
 		color: var(--aa-ink-soft);
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
+		width: max-content;
+		max-width: none;
+		overflow: visible;
+		transform: translateY(-50%) translateX(0);
+		transform-origin: center center;
+		will-change: left, transform;
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
 
 	.tdc-aa-status {
@@ -326,8 +343,8 @@
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: var(--aa-yellow);
-		background: var(--aa-ink);
-		border: 2px solid var(--aa-ink);
+		background: var(--aa-ink-bg);
+		border: 2px solid var(--aa-ink-bg);
 		white-space: nowrap;
 		width: max-content;
 		max-width: none;
@@ -339,17 +356,10 @@
 		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
 
-	// Left column only — status bounces horizontally without crossing the token lane.
+	// Left column only — labels bounce horizontally without crossing the token lane.
 	.tdc-aa-status-track {
-		position: relative;
-		align-self: stretch;
-		width: 100%;
 		height: 1.6em;
 		margin-top: 0.06em;
-		flex-shrink: 0;
-		overflow: hidden;
-		pointer-events: none;
-		z-index: 2;
 	}
 
 	// Grid column 2 — full yellow sign height (top → bottom limits for token cycle).
@@ -416,7 +426,7 @@
 	.tdc__history {
 		position: relative;
 		z-index: 2;
-		border-top: 3px solid var(--aa-ink);
+		border-top: 3px solid var(--aa-ink-bg);
 		background: rgba(0, 0, 0, #{tdc-zone-a(0.92)});
 		margin-top: 0;
 		min-width: 0;
@@ -424,8 +434,8 @@
 	}
 
 	.tdc__history-label {
-		background: var(--aa-ink);
-		border-right: 3px solid var(--aa-ink);
+		background: var(--aa-ink-bg);
+		border-right: 3px solid var(--aa-ink-bg);
 	}
 
 	.tdc__history-label-text {
@@ -435,7 +445,7 @@
 	}
 
 	.tdc__history-label-divider {
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.35)});
 	}
 
 	.tdc__history-track {
@@ -449,7 +459,7 @@
 
 	.tdc__history-card {
 		background: rgba(255, 193, 7, #{tdc-zone-a(0.04)});
-		border: 2px solid rgba(255, 193, 7, 0.22);
+		border: 2px solid rgba(255, 193, 7, #{tdc-zone-a(0.22)});
 		border-radius: 0;
 		color: var(--aa-ink);
 		min-width: 0;
@@ -552,7 +562,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 2;
-		background: var(--aa-yellow);
+		background: var(--aa-bg);
 	}
 
 	.tdc-aa-table th {
@@ -563,7 +573,7 @@
 		text-transform: uppercase;
 		text-align: left;
 		color: var(--aa-ink);
-		border-bottom: 1px solid rgba(255, 193, 7, 0.28);
+		border-bottom: 1px solid rgba(255, 193, 7, #{tdc-zone-a(0.28)});
 		white-space: nowrap;
 	}
 
@@ -588,11 +598,11 @@
 	}
 
 	.tdc-aa-table__row--odd {
-		background: rgba(255, 193, 7, 0.03);
+		background: rgba(255, 193, 7, #{tdc-zone-a(0.03)});
 	}
 
 	.tdc-aa-table__row--even {
-		background: rgba(255, 193, 7, 0.07);
+		background: rgba(255, 193, 7, #{tdc-zone-a(0.07)});
 	}
 
 	.tdc-aa-table__row--serving {
@@ -602,7 +612,7 @@
 	.tdc-aa-table__cell {
 		padding: 0.24em 0.3em;
 		vertical-align: middle;
-		border-bottom: 1px solid rgba(255, 193, 7, 0.12);
+		border-bottom: 1px solid rgba(255, 193, 7, #{tdc-zone-a(0.12)});
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
@@ -644,8 +654,8 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--aa-yellow);
-		background: var(--aa-ink);
-		border: 1px solid var(--aa-ink);
+		background: var(--aa-ink-bg);
+		border: 1px solid var(--aa-ink-bg);
 		white-space: nowrap;
 		max-width: 100%;
 		overflow: hidden;
@@ -677,6 +687,8 @@
 			transform: translate(-50%, -50%);
 		}
 
+		.tdc-aa-queue,
+		.tdc-aa-subtitle,
 		.tdc-aa-status {
 			animation: none;
 			left: 0;
@@ -776,6 +788,8 @@
 		animation: tdc-aa-token-drift var(--aa-token-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
 
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
 	.tdc-aa-status {
 		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
@@ -791,11 +805,57 @@
 		animation: tdc-aa-token-drift var(--aa-token-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
 
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
 	.tdc-aa-status {
 		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
 	}
 
 	.tdc-aa-header::after {
 		animation: tdc-aa-stripe-travel var(--aa-stripe-cycle-duration, 1.5s) linear infinite;
+	}
+}
+
+// Zone opacity — sign backgrounds fade; yellow/black typography stays fully legible.
+.tdc--zone-bg-fade.tdc--airport-arrival {
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
+	.tdc-aa-status,
+	.tdc-aa-header-text,
+	.tdc-aa-token,
+	.tdc__history-label-text,
+	.tdc__history-token,
+	.tdc__history-counter-label,
+	.tdc__history-counter-num,
+	.tdc__history-time,
+	.tdc-aa-table th,
+	.tdc-aa-table__queue,
+	.tdc-aa-table__point,
+	.tdc-aa-table__token,
+	.tdc-aa-table__status {
+		opacity: 1;
+	}
+
+	.tdc-aa-queue,
+	.tdc-aa-header-text,
+	.tdc-aa-token,
+	.tdc__history-token,
+	.tdc__history-counter-num,
+	.tdc-aa-table th,
+	.tdc-aa-table__queue,
+	.tdc-aa-table__token {
+		color: var(--aa-ink);
+	}
+
+	.tdc-aa-subtitle,
+	.tdc-aa-table__point,
+	.tdc__history-counter-label,
+	.tdc__history-time {
+		color: var(--aa-ink-soft);
+	}
+
+	.tdc-aa-status,
+	.tdc-aa-table__status {
+		color: var(--aa-yellow);
 	}
 }

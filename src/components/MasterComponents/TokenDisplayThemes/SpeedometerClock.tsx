@@ -5,8 +5,12 @@ import {
 	formatThemeDisplayClockTime,
 } from '../../../utils/themeDisplayClock';
 
-/** Live date (left) and time (right) — Car Speedometer header only. */
-const SpeedometerClock: React.FC = () => {
+/** Live date (left), optional queue (center), and time (right) — Car Speedometer header. */
+export interface SpeedometerClockProps {
+	queueName?: string;
+}
+
+const SpeedometerClock: React.FC<SpeedometerClockProps> = ({ queueName }) => {
 	const [now, setNow] = useState(() => new Date());
 
 	useEffect(() => {
@@ -19,6 +23,13 @@ const SpeedometerClock: React.FC = () => {
 			<span className='tdc-cs-clock__date' aria-hidden='true'>
 				{formatThemeDisplayClockDate(now)}
 			</span>
+			{queueName ? (
+				<span className='tdc-cs-clock__queue' title={`Queue ${queueName}`}>
+					{queueName}
+				</span>
+			) : (
+				<span className='tdc-cs-clock__queue tdc-cs-clock__queue--empty' aria-hidden='true' />
+			)}
 			<time className='tdc-cs-clock__time' dateTime={now.toISOString()}>
 				{formatThemeDisplayClockTime(now)}
 			</time>

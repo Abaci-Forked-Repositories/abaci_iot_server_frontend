@@ -9,6 +9,8 @@
 	min-width: 0;
 	min-height: 0;
 	box-sizing: border-box;
+	container-type: inline-size;
+	container-name: tdc-pipboy-fill;
 	padding: clamp(0.35rem, 2.5cqw, 1rem);
 	border-radius: clamp(0.5rem, 2cqw, 1.2rem);
 	// Own grid — do not inherit generic 58/42 split from `.tdc--fill`.
@@ -57,8 +59,21 @@
 	.tdc-pipboy-clock {
 		grid-area: clock;
 		align-self: center;
-		padding: 0.08em 0.4em 0.05em;
+		justify-content: center;
+		width: 100%;
+		max-width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+		padding: 0.08em clamp(0.12em, 0.9cqw, 0.4em) 0.05em;
 		margin-bottom: 0;
+		overflow: hidden;
+	}
+
+	.tdc-pipboy-clock__date,
+	.tdc-pipboy-clock__time {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.tdc__header {

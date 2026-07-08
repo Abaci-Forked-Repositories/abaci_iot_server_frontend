@@ -1647,6 +1647,49 @@
 		// cqw rules for Pipboy etc. query this fill root, not the wrapper.
 		container-type: size;
 	}
+
+	// Departure Board — taller preview so 3-column hero + active tokens match canvas.
+	&:has(.tdc--airport-departure) {
+		min-height: 196px;
+
+		.tdc {
+			height: 196px;
+			min-height: 196px;
+			flex: 0 0 196px;
+		}
+	}
+
+	// Pipboy — match canvas (no in-card history; room for flip token + status card).
+	&:has(.tdc--pipboy-terminal) {
+		min-height: 200px;
+
+		.tdc {
+			height: 200px;
+			min-height: 200px;
+			flex: 0 0 200px;
+			container-type: inline-size;
+		}
+
+		.tdc-pipboy-clock {
+			font-size: min(1em, 5.4cqw);
+			gap: 0.2em;
+			letter-spacing: 0.05em;
+		}
+
+		.tdc-pipboy-clock__date {
+			font-size: 0.48em;
+			letter-spacing: 0.08em;
+		}
+
+		.tdc-pipboy-clock__divider {
+			font-size: 0.42em;
+		}
+
+		.tdc-pipboy-clock__time {
+			font-size: 0.68em;
+			letter-spacing: 0.06em;
+		}
+	}
 }
 
 .zone-appearance-picker__zone-controls {

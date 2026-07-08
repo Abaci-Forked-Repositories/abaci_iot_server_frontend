@@ -3,11 +3,15 @@
  * Drop into the zone properties panel when integrating.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import {
+	THEME_PREVIEW_RECENT_TOKENS,
+	type AssignedQueueDisplay,
+} from '../../../utils/zoneQueueResolution';
 import TokenDisplayThemeCard from './TokenDisplayThemeCard';
 import {
 	createFillAppearance,
 	createThemeAppearance,
+	getActiveTokensTickerClassForTheme,
 	ZONE_DISPLAY_THEME_CONFIGS,
 	ZONE_DISPLAY_THEME_IDS,
 	type ZoneDisplayAppearance,
@@ -42,6 +46,9 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 }) => {
 	const themeSelectionMissing = value.mode === 'theme' && !value.displayTheme;
 	const showThemeErrorMessage = showThemeError && themeSelectionMissing;
+	const usesScreenLevelTicker =
+		value.mode === 'theme' &&
+		Boolean(getActiveTokensTickerClassForTheme(value.displayTheme));
 	const [localFill, setLocalFill] = useState(value.backgroundColor ?? '#22499e');
 
 	useEffect(() => {
@@ -165,6 +172,10 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							tokenDisplay={previewTokenDisplay}
 							status={previewStatus}
 							assignedQueues={previewAssignedQueues}
+							recentTokens={
+								usesScreenLevelTicker ? undefined : THEME_PREVIEW_RECENT_TOKENS
+							}
+							showHistoryTime={false}
 							fillContainer
 							previewMode
 						/>

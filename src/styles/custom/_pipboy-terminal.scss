@@ -356,6 +356,25 @@
 		padding: 0.32em 0.42em;
 		border-radius: 4px;
 		margin: 0;
+		min-width: 0;
+		max-width: 100%;
+		white-space: normal;
+	}
+
+	.tdc__status-subtitle {
+		font-size: 0.52em;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--pip-green);
+		text-shadow: 0 0 4px var(--pip-glow);
+		line-height: 1.15;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+		opacity: 0.9;
 	}
 
 	.tdc__status-icon {

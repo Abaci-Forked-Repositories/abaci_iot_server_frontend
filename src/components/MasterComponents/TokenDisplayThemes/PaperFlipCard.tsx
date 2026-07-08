@@ -59,6 +59,9 @@ const PaperFlipCard: React.FC<PaperFlipCardProps> = ({
 
 	return (
 		<div className='tdc-pf-layout'>
+			<header className='tdc-pf-zone-header'>
+				<PaperFlipClock layout='split' queueName={queueName} />
+			</header>
 			<PaperFlipPageStack
 				token={displayToken}
 				queueName={queueName}
