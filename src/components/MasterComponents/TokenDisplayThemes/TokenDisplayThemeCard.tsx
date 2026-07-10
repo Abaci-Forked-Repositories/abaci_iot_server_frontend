@@ -51,6 +51,8 @@ import ImperialCourtClock from './ImperialCourtClock';
 import ArcticGlassClock from './ArcticGlassClock';
 import VelvetCrownClock from './VelvetCrownClock';
 import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+import { useRotatingQueueDisplay } from '../../../hooks/useRotatingQueueDisplay';
+import { resolveZoneIsTabularView } from '../../../utils/zoneMultiQueueView';
 import {
 	PipboyTerminalBackdropLayer,
 	PipboyTerminalClockRow,
@@ -96,8 +98,14 @@ export interface TokenDisplayThemeCardProps {
 	/** Template editor / theme picker — flat token numeral without glow panel. */
 	previewMode?: boolean;
 
-	/** Signal Board theme — rotate through multiple assigned queues when provided. */
+	/** When 2+ queues are assigned, themes with a live board show the tabular layout. */
 	assignedQueues?: AssignedQueueDisplay[];
+
+	/**
+	 * Saved zone preference for board-capable themes (`is_tabular_view` from configuration).
+	 * When false with multiple queues, the hero rotates every 6 seconds instead.
+	 */
+	isTabularView?: boolean;
 
 	/**
 	 * 0–1 opacity applied ONLY to the zone background (fill color or theme gradient).
@@ -141,6 +149,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	showHistoryTime = true,
 	previewMode = false,
 	assignedQueues,
+	isTabularView,
 	backgroundOpacity,
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -181,6 +190,20 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isPaperFlip = resolved.themeClass === 'tdc--paper-flip';
 	const isMonoFlip = resolved.themeClass === 'tdc--mono-flip';
 	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
+	const multiQueueCount = assignedQueues?.length ?? 0;
+	const useTabularMultiQueue = resolveZoneIsTabularView(
+		appearance.displayTheme,
+		isTabularView,
+		multiQueueCount,
+	);
+	const isRotatingMultiQueue =
+		multiQueueCount > 1 && !useTabularMultiQueue;
+	const rotationQueues = useMemo(
+		() => (isRotatingMultiQueue ? assignedQueues! : []),
+		[isRotatingMultiQueue, assignedQueues],
+	);
+	const { active: rotatedQueue } = useRotatingQueueDisplay(rotationQueues);
+	const cardAssignedQueues = useTabularMultiQueue ? assignedQueues : undefined;
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
@@ -196,9 +219,41 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		return { backgroundColor: resolved.backgroundColor };
 	}, [resolved, useBgLayer]);
 
-	const hasHistory = fillContainer && Boolean(recentTokens?.length);
+	const hasHistory =
+		fillContainer && Boolean(recentTokens?.length) && !useTabularMultiQueue;
 	const activeTokenCount = recentTokens?.length ?? 0;
 	const useHistoryMarquee = activeTokenCount >= ACTIVE_TOKENS_MARQUEE_MIN_COUNT;
+
+	const displayToken =
+		tokenDisplay != null && tokenDisplay !== '' ? tokenDisplay : TOKEN_DISPLAY_NO_TOKEN;
+
+	const heroLayout = useMemo(() => {
+		if (isRotatingMultiQueue) {
+			const token =
+				rotatedQueue.tokenDisplay != null && rotatedQueue.tokenDisplay !== ''
+					? rotatedQueue.tokenDisplay
+					: TOKEN_DISPLAY_NO_TOKEN;
+			return {
+				queueName: rotatedQueue.queueName,
+				subtitle: rotatedQueue.servingPointName,
+				displayToken: token,
+				statusConfig: getStatusConfig(rotatedQueue.statusModifier),
+			};
+		}
+		return {
+			queueName: queueName ?? '',
+			subtitle: subtitle ?? '',
+			displayToken,
+			statusConfig,
+		};
+	}, [
+		isRotatingMultiQueue,
+		rotatedQueue,
+		queueName,
+		subtitle,
+		displayToken,
+		statusConfig,
+	]);
 
 	const rootClasses = [
 		'tdc',
@@ -210,14 +265,12 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 		hasHistory && !useHistoryMarquee ? 'tdc--history-static' : '',
 		previewMode ? 'tdc--preview' : '',
 		bgOpacity < 1 ? 'tdc--zone-bg-fade' : '',
-		`tdc--status-${statusConfig.modifier}`,
+		isRotatingMultiQueue ? 'tdc--rotating-multi-queue' : '',
+		`tdc--status-${heroLayout.statusConfig.modifier}`,
 		className,
 	]
 		.filter(Boolean)
 		.join(' ');
-
-	const displayToken =
-		tokenDisplay != null && tokenDisplay !== '' ? tokenDisplay : TOKEN_DISPLAY_NO_TOKEN;
 
 	useEffect(() => {
 		if (!fillContainer) return;
@@ -229,7 +282,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const width = el.clientWidth;
 			const height = el.clientHeight;
 			if (width < 1 || height < 1) return;
-			const tokenLen = displayToken.length;
+			const tokenLen = (isRotatingMultiQueue ? heroLayout.displayToken : displayToken).length;
 			const hasHistory = el.classList.contains('tdc--has-history');
 			const isPipboy = resolved.themeClass === 'tdc--pipboy-terminal';
 			const isOledPulseTheme = resolved.themeClass === 'tdc--oled-pulse';
@@ -244,27 +297,27 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isAirportArrivalTheme = resolved.themeClass === 'tdc--airport-arrival';
 			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
 			const neonPrismHasTable =
-				isNeonPrismTheme && (assignedQueues?.length ?? 0) > 1;
+				isNeonPrismTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const auroraNexusHasTable =
-				isAuroraNexusTheme && (assignedQueues?.length ?? 0) > 1;
+				isAuroraNexusTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const signalBoardHasServingTable =
-				isSignalBoardTheme && (assignedQueues?.length ?? 0) > 1;
+				isSignalBoardTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const paperFlipHasTable =
-				isPaperFlipTheme && (assignedQueues?.length ?? 0) > 1;
+				isPaperFlipTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const monoFlipHasTable =
-				isMonoFlipTheme && (assignedQueues?.length ?? 0) > 1;
+				isMonoFlipTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const airportDepartureHasTable =
-				isAirportDepartureTheme && (assignedQueues?.length ?? 0) > 1;
+				isAirportDepartureTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const airportArrivalHasTable =
-				isAirportArrivalTheme && (assignedQueues?.length ?? 0) > 1;
+				isAirportArrivalTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const carSpeedometerHasTable =
-				isCarSpeedometerTheme && (assignedQueues?.length ?? 0) > 1;
+				isCarSpeedometerTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const glassLobbyHasTable =
-				isGlassLobbyTheme && (assignedQueues?.length ?? 0) > 1;
+				isGlassLobbyTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const digitalHealthcareHasTable =
-				isDigitalHealthcareTheme && (assignedQueues?.length ?? 0) > 1;
+				isDigitalHealthcareTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const oledPulseHasTable =
-				isOledPulseTheme && (assignedQueues?.length ?? 0) > 1;
+				isOledPulseTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const isRoyalTicketTheme = resolved.themeClass === 'tdc--royal-ticket';
 			const tokenEm = getFillZoneTokenEm(resolved.themeClass);
 			const fontSize = isPipboy
@@ -390,7 +443,15 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			el.style.removeProperty('--tdc-token-fill-em');
 			el.style.removeProperty('--tdc-token-chars');
 		};
-	}, [fillContainer, displayToken, resolved.themeClass, activeTokenCount, assignedQueues?.length]);
+	}, [
+		fillContainer,
+		displayToken,
+		heroLayout.displayToken,
+		isRotatingMultiQueue,
+		resolved.themeClass,
+		activeTokenCount,
+		cardAssignedQueues?.length,
+	]);
 
 	useEffect(() => {
 		if (!recentTokens?.length) return;
@@ -487,74 +548,74 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 
 			{isSunBento ? (
 				<SunBentoCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
 				/>
 			) : isRoyalTicket ? (
 				<RoyalTicketCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
 				/>
 			) : isAirportArrival ? (
 				<AirportArrivalCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
-					assignedQueues={assignedQueues}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isAirportDeparture ? (
 				<AirportDepartureCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
 					previewMode={previewMode}
-					assignedQueues={assignedQueues}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isOledPulse ? (
 				<OledPulseCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
-					assignedQueues={assignedQueues}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isDigitalHealthcare ? (
 				<HealthcareDashboardCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
-					assignedQueues={assignedQueues}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isGlassLobby ? (
 				<GlassLobbyCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
 					previewMode={previewMode}
-					assignedQueues={assignedQueues}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isNeonPrism ? (
 				<div className='tdc-np-shell'>
 					<NeonPrismCard
-						queueName={queueName}
-						subtitle={subtitle}
-						displayToken={displayToken}
-						statusLabel={statusConfig.label}
-						statusModifier={statusConfig.modifier}
-						assignedQueues={assignedQueues}
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
 					/>
 					{hasHistory && recentTokens && recentTokens.length > 0 && (
 						<div
@@ -614,12 +675,12 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			) : isAuroraNexus ? (
 				<div className='tdc-an-shell'>
 					<AuroraNexusCard
-						queueName={queueName}
-						subtitle={subtitle}
-						displayToken={displayToken}
-						statusLabel={statusConfig.label}
-						statusModifier={statusConfig.modifier}
-						assignedQueues={assignedQueues}
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
 					/>
 					{hasHistory && recentTokens && recentTokens.length > 0 && (
 						<AuroraNexusActiveTokens
@@ -635,41 +696,41 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				</div>
 			) : isSignalBoard ? (
 				<SignalBoardCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
-					assignedQueues={assignedQueues}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isPaperFlip ? (
 				<PaperFlipCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
 					previewMode={previewMode}
-					assignedQueues={assignedQueues}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isMonoFlip ? (
 				<MonoFlipCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
 					previewMode={previewMode}
-					assignedQueues={assignedQueues}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : isCarSpeedometer ? (
 				<SpeedometerCard
-					queueName={queueName}
-					subtitle={subtitle}
-					displayToken={displayToken}
-					statusLabel={statusConfig.label}
-					statusModifier={statusConfig.modifier}
-					assignedQueues={assignedQueues}
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
 				/>
 			) : (
 				<>
@@ -686,8 +747,13 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								aria-hidden='true'
 							/>
 						)}
-						{queueName ? (
-							<span className='tdc__queue-name'>{queueName}</span>
+						{heroLayout.queueName ? (
+							<span
+								key={isRotatingMultiQueue ? heroLayout.queueName : undefined}
+								className='tdc__queue-name'
+								aria-live={isRotatingMultiQueue ? 'polite' : undefined}>
+								{heroLayout.queueName}
+							</span>
 						) : (
 							<span className='tdc__queue-name tdc__queue-name--empty' aria-hidden='true' />
 						)}
@@ -709,25 +775,38 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 								<div className='tdc-cb-circle tdc-cb-circle--dots' />
 							</div>
 						)}
-						{subtitle && !isPipboyTerminal && <div className='tdc__subtitle'>{subtitle}</div>}
-						<div className='tdc__token' aria-label={`Token ${displayToken}`}>
+						{heroLayout.subtitle && !isPipboyTerminal && (
+							<div
+								className='tdc__subtitle'
+								aria-live={isRotatingMultiQueue ? 'polite' : undefined}>
+								{heroLayout.subtitle}
+							</div>
+						)}
+						<div
+							className='tdc__token'
+							aria-label={`Token ${heroLayout.displayToken}`}
+							aria-live={isRotatingMultiQueue ? 'polite' : undefined}>
 							{isPipboyTerminal ? (
-								<PipboyTerminalToken value={displayToken} />
+								<PipboyTerminalToken value={heroLayout.displayToken} />
 							) : (
-								displayToken
+								heroLayout.displayToken
 							)}
 						</div>
 						{isVelvetCrown ? <VelvetCrownClock /> : null}
 					</div>
 
 					<div className='tdc__footer'>
-						<span className={`tdc__status-badge tdc__status-badge--${statusConfig.modifier}`}>
+						<span
+							className={`tdc__status-badge tdc__status-badge--${heroLayout.statusConfig.modifier}`}
+							aria-live={isRotatingMultiQueue ? 'polite' : undefined}>
 							<span className='tdc__status-icon' aria-hidden='true'>
-								{isImperialCourt || isArcticGlass || isVelvetCrown ? null : statusConfig.icon}
+								{isImperialCourt || isArcticGlass || isVelvetCrown
+									? null
+									: heroLayout.statusConfig.icon}
 							</span>
-							<span className='tdc__status-label'>{statusConfig.label}</span>
-							{isPipboyTerminal && subtitle ? (
-								<span className='tdc__status-subtitle'>{subtitle}</span>
+							<span className='tdc__status-label'>{heroLayout.statusConfig.label}</span>
+							{isPipboyTerminal && heroLayout.subtitle ? (
+								<span className='tdc__status-subtitle'>{heroLayout.subtitle}</span>
 							) : null}
 						</span>
 					</div>

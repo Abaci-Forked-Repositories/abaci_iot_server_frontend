@@ -23,6 +23,10 @@ import {
 	countZoneQueueAssignmentSlots,
 	THEME_PREVIEW_RECENT_TOKENS,
 } from '../../../utils/zoneQueueResolution';
+import {
+	readZoneIsTabularViewFromRect,
+	resolveZoneIsTabularView,
+} from '../../../utils/zoneMultiQueueView';
 
 /** Editor canvas mock serving point — matches buildEditorPageTurnQueueDisplays slot 0. */
 const EDITOR_PREVIEW_SERVING_POINT = 'Counter 01';
@@ -221,37 +225,21 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			'Queue';
 
 		const zoneOpacity = getZoneOpacityFromRect(rect);
-		const isSignalBoard = isSignalBoardTheme(appearance.displayTheme);
-		const isMonoFlip = appearance.displayTheme === 'mono-flip';
-		const isAirportArrival = appearance.displayTheme === 'airport-arrival';
-		const isAirportDeparture = appearance.displayTheme === 'airport-departure';
-		const isPaperFlip = appearance.displayTheme === 'paper-flip';
-		const isCarSpeedometer = appearance.displayTheme === 'car-speedometer';
-		const isAuroraNexus = appearance.displayTheme === 'aurora-nexus';
-		const isNeonPrism = appearance.displayTheme === 'neon-prism';
-		const isGlassLobby = appearance.displayTheme === 'glass-lobby';
-		const isDigitalHealthcare = appearance.displayTheme === 'digital-healthcare';
-		const isOledPulse = appearance.displayTheme === 'oled-pulse';
+		const zoneQueueSlots = countZoneQueueAssignmentSlots(rect);
 		const editorPreviewDisplays =
-			countZoneQueueAssignmentSlots(rect) > 0
+			zoneQueueSlots > 0
 				? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
 				: [];
+		const savedTabularView = readZoneIsTabularViewFromRect(rect);
+		const isTabularView = resolveZoneIsTabularView(
+			appearance.displayTheme,
+			savedTabularView,
+			zoneQueueSlots,
+		);
 		const previewSubtitle =
 			editorPreviewDisplays[0]?.servingPointName ?? EDITOR_PREVIEW_SERVING_POINT;
 		const assignedQueues =
-			isSignalBoard ||
-			isMonoFlip ||
-			isPaperFlip ||
-			isAirportArrival ||
-			isAirportDeparture ||
-			isCarSpeedometer ||
-			isAuroraNexus ||
-			isNeonPrism ||
-			isGlassLobby ||
-			isDigitalHealthcare ||
-			isOledPulse
-				? editorPreviewDisplays
-				: undefined;
+			zoneQueueSlots > 1 ? editorPreviewDisplays : undefined;
 
 		return (
 			<div
@@ -308,8 +296,11 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 							: '05'
 					}
 					assignedQueues={assignedQueues}
+					isTabularView={isTabularView}
 					status='waiting'
-					recentTokens={usesScreenTicker ? undefined : THEME_PREVIEW_RECENT_TOKENS}
+					recentTokens={
+						usesScreenTicker || isTabularView ? undefined : THEME_PREVIEW_RECENT_TOKENS
+					}
 					fillContainer
 					showHistoryTime={false}
 					previewMode

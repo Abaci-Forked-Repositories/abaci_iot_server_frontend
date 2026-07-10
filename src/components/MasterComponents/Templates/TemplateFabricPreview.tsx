@@ -17,7 +17,7 @@ import {
 	type RecentQueueToken,
 } from '../../../services/publicScreenApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
-import { computeFillZoneTextSizes, isSignalBoardTheme } from '../TokenDisplayThemes/tokenDisplayThemes';
+import { computeFillZoneTextSizes } from '../TokenDisplayThemes/tokenDisplayThemes';
 import {
 	applyColorAlpha,
 	getZoneAppearanceFromParsedZone,
@@ -28,7 +28,9 @@ import {
 	resolveAssignedQueueDisplays,
 	resolvePrimaryQueueForZone,
 	resolveQueuesForZone,
+	countZoneQueueAssignmentSlots,
 } from '../../../utils/zoneQueueResolution';
+import { resolveZoneIsTabularView } from '../../../utils/zoneMultiQueueView';
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
@@ -564,29 +566,14 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
 						const appearance = getZoneAppearanceFromParsedZone(zone);
-						const isSignalBoardThemeActive = isSignalBoardTheme(appearance.displayTheme);
-						const isMonoFlipTheme = appearance.displayTheme === 'mono-flip';
-						const isPaperFlipTheme = appearance.displayTheme === 'paper-flip';
-						const isAirportDepartureTheme = appearance.displayTheme === 'airport-departure';
-						const isAirportArrivalTheme = appearance.displayTheme === 'airport-arrival';
-						const isCarSpeedometerTheme = appearance.displayTheme === 'car-speedometer';
-						const isAuroraNexusTheme = appearance.displayTheme === 'aurora-nexus';
-						const isNeonPrismTheme = appearance.displayTheme === 'neon-prism';
-						const isGlassLobbyTheme = appearance.displayTheme === 'glass-lobby';
-						const isDigitalHealthcareTheme = appearance.displayTheme === 'digital-healthcare';
-						const isOledPulseTheme = appearance.displayTheme === 'oled-pulse';
+						const zoneQueueSlots = countZoneQueueAssignmentSlots(zone);
+						const isTabularView = resolveZoneIsTabularView(
+							appearance.displayTheme,
+							zone.isTabularView,
+							zoneQueueSlots,
+						);
 						const assignedQueues =
-							isSignalBoardThemeActive ||
-							isMonoFlipTheme ||
-							isPaperFlipTheme ||
-							isAirportArrivalTheme ||
-							isAirportDepartureTheme ||
-							isCarSpeedometerTheme ||
-							isAuroraNexusTheme ||
-							isNeonPrismTheme ||
-							isGlassLobbyTheme ||
-							isDigitalHealthcareTheme ||
-							isOledPulseTheme
+							zoneQueueSlots > 1
 								? resolveAssignedQueueDisplays(zone, queuesByUuid)
 								: undefined;
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
@@ -598,8 +585,9 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 							appearance.mode === 'fill'
 						) {
 							const zoneQueues = resolveQueuesForZone(zone, queuesByUuid);
-							const zoneRecentTokens = !suppressZoneHistory
-								? (() => {
+							const zoneRecentTokens =
+								!suppressZoneHistory && !isTabularView
+									? (() => {
 										const merged = mergeRecentTokensFromQueues(zoneQueues);
 										if (merged.length) return merged;
 										const fallback: RecentQueueToken[] = [];
@@ -623,6 +611,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 										tokenDisplay={display.tokenDisplay}
 										status={display.tokenStatus}
 										assignedQueues={assignedQueues}
+										isTabularView={isTabularView}
 										recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
 										fillContainer
 										backgroundOpacity={zoneOpacity < 1 ? zoneOpacity : undefined}

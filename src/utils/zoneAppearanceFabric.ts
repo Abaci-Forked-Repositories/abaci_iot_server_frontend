@@ -54,6 +54,8 @@ export type FabricZoneOverlayRect = {
 	zoneOpacity?: number;
 	/** Legacy Fabric built-in opacity (0–1). */
 	opacity?: number;
+	/** When true with 2+ queues on board-capable themes, render the tabular layout. */
+	isTabularView?: boolean;
 	setCoords?: () => void;
 	aCoords?: { tl?: { x: number; y: number }; br?: { x: number; y: number } };
 	getBoundingRect?: () => { left: number; top: number; width: number; height: number };

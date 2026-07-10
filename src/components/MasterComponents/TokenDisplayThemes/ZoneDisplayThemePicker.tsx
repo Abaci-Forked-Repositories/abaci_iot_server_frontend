@@ -28,6 +28,8 @@ export interface ZoneDisplayThemePickerProps {
 	previewStatus?: string;
 	/** When 2+ queues are assigned, themes with a live board show the tabular layout. */
 	previewAssignedQueues?: AssignedQueueDisplay[];
+	/** Mirrors the zone's saved `is_tabular_view` for board-capable themes. */
+	previewIsTabularView?: boolean;
 	disabled?: boolean;
 	/** Set when save validation fails — theme mode without a swatch selected. */
 	showThemeError?: boolean;
@@ -41,6 +43,7 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 	previewTokenDisplay = '05',
 	previewStatus = 'waiting',
 	previewAssignedQueues,
+	previewIsTabularView = true,
 	disabled = false,
 	showThemeError = false,
 }) => {
@@ -172,8 +175,12 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							tokenDisplay={previewTokenDisplay}
 							status={previewStatus}
 							assignedQueues={previewAssignedQueues}
+							isTabularView={previewIsTabularView}
 							recentTokens={
-								usesScreenLevelTicker ? undefined : THEME_PREVIEW_RECENT_TOKENS
+								usesScreenLevelTicker ||
+								(previewIsTabularView && (previewAssignedQueues?.length ?? 0) > 1)
+									? undefined
+									: THEME_PREVIEW_RECENT_TOKENS
 							}
 							showHistoryTime={false}
 							fillContainer

@@ -30,7 +30,7 @@
  *   neon-prism         — cyberpunk 3D LED stage with five neon-framed panels and magenta floor glow
  *   aurora-nexus       — aurora cyber dashboard with gradient token digits, glass status, and neon pills
  *   signal-board       — transit LED board with charcoal base, dot-grid hero, cyan LED token, and multi-queue rotation
- *   paper-flip         — book-style paper page with spine 3D rotateY flip when the current token changes
+ *   paper-flip         — book-style paper page with diagonal corner curl on token change
  *   mono-flip          — centered black & white flip card with alternating L/R rotateY and tone inversion on token change
  *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
  *
@@ -251,7 +251,7 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		id: 'paper-flip',
 		label: 'Paper Flip',
 		description:
-			'Book-style paper page with warm desk background, corner curl reveal on token change, and live board table for multiple queues',
+			'Book-style paper page with warm desk background, 3D corner peel on token change, and live board table for multiple queues',
 		textColor: 'dark',
 		previewGradient:
 			'linear-gradient(165deg, #d4c4a8 0%, #c8b89a 42%, #a89472 100%)',
