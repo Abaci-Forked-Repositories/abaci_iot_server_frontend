@@ -1,3 +1,5 @@
+import { parseTabularViewAttribute } from './zoneMultiQueueView';
+
 const QUEUE_UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -96,6 +98,9 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 		const opacityRaw =
 			parseStyleValue(bgStyle, 'opacity') ?? parseStyleValue(style, 'opacity');
 		const opacityParsed = opacityRaw != null ? parseFloat(opacityRaw) : NaN;
+		const isTabularView = parseTabularViewAttribute(
+			el.getAttribute('data-is-tabular-view'),
+		);
 		zones.push({
 			name: el.getAttribute('data-zone-name') ?? '',
 			queueIds,
@@ -116,6 +121,7 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			borderColor: borderMatch?.[1]?.trim() ?? 'black',
 			border: borderRaw !== '' && borderRaw !== 'none' && !/^0(?:px)?$/i.test(borderRaw),
 			opacity: Number.isFinite(opacityParsed) ? Math.min(1, Math.max(0, opacityParsed)) : 1,
+			isTabularView,
 		});
 	});
 
@@ -558,7 +564,11 @@ export function enrichParsedZonesWithConfiguration(
 				? true
 				: configZone.is_tabular_view === false
 					? false
-					: zone.isTabularView;
+					: zone.isTabularView === true
+						? true
+						: zone.isTabularView === false
+							? false
+							: undefined;
 
 		return {
 			...zone,

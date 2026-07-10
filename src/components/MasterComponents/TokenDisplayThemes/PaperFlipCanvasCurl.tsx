@@ -1,10 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import type { PageSnapshot } from './paperFlipPageFace';
 import {
 	drawPaperFlipCurlFrame,
 	PAPER_FLIP_CANVAS_CURL_MS,
 } from './paperFlipCanvasCurlEngine';
-import { renderPaperFlipPageCanvas } from './paperFlipCanvasPage';
+import {
+	renderPaperFlipPageCanvas,
+	setupPaperFlipCanvasSize,
+} from './paperFlipCanvasPage';
 
 export interface PaperFlipCanvasCurlProps {
 	from: PageSnapshot;
@@ -12,7 +15,6 @@ export interface PaperFlipCanvasCurlProps {
 	flipSeq: number;
 	stageWidth: number;
 	stageHeight: number;
-	onReady: () => void;
 	onComplete: () => void;
 }
 
@@ -22,13 +24,14 @@ const PaperFlipCanvasCurl: React.FC<PaperFlipCanvasCurlProps> = ({
 	flipSeq,
 	stageWidth,
 	stageHeight,
-	onReady,
 	onComplete,
 }) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const rafRef = useRef<number | null>(null);
+	const onCompleteRef = useRef(onComplete);
+	onCompleteRef.current = onComplete;
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		let cancelled = false;
 		const canvas = canvasRef.current;
 
@@ -36,31 +39,19 @@ const PaperFlipCanvasCurl: React.FC<PaperFlipCanvasCurlProps> = ({
 			return undefined;
 		}
 
-		const width = stageWidth;
-		const height = stageHeight;
+		const width = Math.round(stageWidth);
+		const height = Math.round(stageHeight);
 
 		const underCanvas = renderPaperFlipPageCanvas(to, width, height);
 		const overCanvas = renderPaperFlipPageCanvas(from, width, height);
 
-		const dpr = Math.min(window.devicePixelRatio || 1, 3);
-		canvas.width = Math.round(width * dpr);
-		canvas.height = Math.round(height * dpr);
-		canvas.style.width = `${width}px`;
-		canvas.style.height = `${height}px`;
-
-		const ctx = canvas.getContext('2d');
+		const ctx = setupPaperFlipCanvasSize(canvas, width, height);
 		if (!ctx) {
-			onComplete();
+			onCompleteRef.current();
 			return undefined;
 		}
 
-		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-		ctx.imageSmoothingEnabled = true;
-		ctx.imageSmoothingQuality = 'high';
-
-		// Paint the first frame before revealing the canvas overlay.
 		drawPaperFlipCurlFrame(ctx, underCanvas, overCanvas, width, height, 0);
-		onReady();
 
 		const start = performance.now();
 
@@ -71,7 +62,7 @@ const PaperFlipCanvasCurl: React.FC<PaperFlipCanvasCurlProps> = ({
 			if (raw < 1) {
 				rafRef.current = requestAnimationFrame(tick);
 			} else {
-				onComplete();
+				onCompleteRef.current();
 			}
 		};
 
@@ -84,7 +75,7 @@ const PaperFlipCanvasCurl: React.FC<PaperFlipCanvasCurlProps> = ({
 				rafRef.current = null;
 			}
 		};
-	}, [flipSeq, from, to, stageWidth, stageHeight, onReady, onComplete]);
+	}, [flipSeq, from, to, stageWidth, stageHeight]);
 
 	return <canvas ref={canvasRef} className='tdc-pf-canvas-curl' aria-hidden='true' />;
 };

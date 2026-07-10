@@ -44,6 +44,7 @@ import {
 	formatMultiQueueAssignmentHint,
 	readZoneIsTabularViewFromRect,
 	resolveZoneIsTabularView,
+	coalesceZoneTabularView,
 	themeSupportsTabularMultiQueueView,
 } from '../../../utils/zoneMultiQueueView';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
@@ -867,7 +868,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						queueUuids.length,
 						queueChipNames.length,
 					);
-					const isTabularView = resolveZoneIsTabularView(
+					const isTabularView = coalesceZoneTabularView(
 						zone.appearance.displayTheme,
 						zone.isTabularView,
 						queueSlotCount,
@@ -1046,7 +1047,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 			queuesByUuidMulti,
 			queuesByName,
 		);
-		const resolvedTabularView = resolveZoneIsTabularView(
+		const resolvedTabularView = coalesceZoneTabularView(
 			appearance.displayTheme,
 			readZoneIsTabularViewFromRect(selectedObject as any),
 			selectedQueueIds.length,
@@ -1500,9 +1501,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 					themeId != null
 						? themeFallbackBackgroundColor(themeId)
 						: background_color || obj.zoneFillColor || obj.fill || '#ffffff';
-				const isTabularView = resolveZoneIsTabularView(
+				const explicitTabular = readZoneIsTabularViewFromRect(obj);
+				const isTabularView = coalesceZoneTabularView(
 					themeId,
-					readZoneIsTabularViewFromRect(obj),
+					explicitTabular,
 					queueIds.length,
 				);
 
@@ -1603,6 +1605,14 @@ const TemplateDetailWorkspace: React.FC = () => {
 						const themeAttr = themeSlug
 							? ` data-theme-id="${escapeHtml(themeSlug)}"`
 							: '';
+						const queueCount = Math.max(
+							zone.queue_ids?.length ?? 0,
+							zone.queue_uuids?.length ?? 0,
+						);
+						const tabularViewAttr =
+							queueCount > 1 && themeSlug
+								? ` data-is-tabular-view="${zone.is_tabular_view === false ? 'false' : 'true'}"`
+								: '';
 						const chips = queueNames
 							.map(
 								(name) =>
@@ -1614,7 +1624,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 	<div
 		class="queue-zone"
 		data-queue-ids="${queueUuids.join(',')}"
-		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}
+		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}${tabularViewAttr}
 		style="
 			position:absolute;
 			left:${zone.left}px;

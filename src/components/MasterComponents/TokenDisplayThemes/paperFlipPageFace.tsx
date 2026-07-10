@@ -24,17 +24,12 @@ export function PaperFlipPageFace({ data, side }: PaperFlipPageFaceProps) {
 
 	return (
 		<div className='tdc-pf-page__front'>
-			{data.subtitle ? (
-				<header className='tdc-pf-page__header'>
+			<header className='tdc-pf-page__header'>
+				{data.subtitle ? (
 					<span className='tdc-pf-page__subtitle'>{data.subtitle}</span>
-				</header>
-			) : null}
-
-			<div className='tdc-pf-page__token-wrap'>
-				<span className='tdc-pf-page__token'>{data.token}</span>
-			</div>
-
-			<footer className='tdc-pf-page__footer'>
+				) : (
+					<span className='tdc-pf-page__subtitle tdc-pf-page__subtitle--empty' aria-hidden='true' />
+				)}
 				<span
 					className={[
 						'tdc-pf-page__status',
@@ -43,7 +38,11 @@ export function PaperFlipPageFace({ data, side }: PaperFlipPageFaceProps) {
 					<span className='tdc-pf-page__status-dot' aria-hidden='true' />
 					<span className='tdc-pf-page__status-label'>{data.statusLabel}</span>
 				</span>
-			</footer>
+			</header>
+
+			<div className='tdc-pf-page__token-wrap'>
+				<span className='tdc-pf-page__token'>{data.token}</span>
+			</div>
 		</div>
 	);
 }

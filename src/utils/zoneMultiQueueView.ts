@@ -67,6 +67,27 @@ export function readZoneIsTabularViewFromRect(rect: {
 	return undefined;
 }
 
+/** Parse `data-is-tabular-view` from saved template HTML. */
+export function parseTabularViewAttribute(
+	attr: string | null | undefined,
+): boolean | undefined {
+	if (attr === 'true') return true;
+	if (attr === 'false') return false;
+	return undefined;
+}
+
+/**
+ * Use an explicitly saved preference when present; otherwise apply legacy defaults.
+ */
+export function coalesceZoneTabularView(
+	themeId: string | null | undefined,
+	saved: boolean | null | undefined,
+	queueCount: number,
+): boolean {
+	if (saved === true || saved === false) return saved;
+	return resolveZoneIsTabularView(themeId, undefined, queueCount);
+}
+
 /** Hint copy for the template editor queue assignment panel. */
 export function formatMultiQueueAssignmentHint(
 	themeId: string | null | undefined,
