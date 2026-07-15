@@ -33,6 +33,7 @@
  *   paper-flip         — book-style paper page with diagonal corner curl on token change
  *   mono-flip          — centered black & white flip card with alternating L/R rotateY and tone inversion on token change
  *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
+ *   royal-luxury       — gilded court diamond lattice on matte black with metallic gold and entrance reveal
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -59,6 +60,7 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'paper-flip',
 	'mono-flip',
 	'car-speedometer',
+	'royal-luxury',
 ] as const;
 
 /** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
@@ -273,6 +275,15 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 72% 50%, rgba(255, 0, 0, 0.12) 0%, #000000 45%, #000000 100%)',
+	},
+	'royal-luxury': {
+		id: 'royal-luxury',
+		label: 'Royal Luxury',
+		description:
+			'Gilded court diamond lattice on matte black, metallic gold typography, entrance reveal animation, and multi-queue live serving board',
+		textColor: 'light',
+		previewGradient:
+			'radial-gradient(circle at 50% 42%, rgba(212, 175, 55, 0.28) 0%, #121212 42%, #050505 72%, #000000 100%)',
 	},
 };
 
@@ -638,6 +649,8 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 4.6;
 		case 'tdc--car-speedometer':
 			return 4.2;
+		case 'tdc--royal-luxury':
+			return 4.4;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
 	}
@@ -1333,6 +1346,62 @@ export function computeCarSpeedometerFillBaseFontSize(
 		(chars * CAR_SPEEDOMETER_FILL_TOKEN_EM * 0.54 + 0.35);
 
 	const base = Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth) * narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Royal Luxury fill layout: brand header + diamond hero / table + active rail. */
+export const ROYAL_LUXURY_FILL_LAYOUT_EM = 9.2;
+
+export const ROYAL_LUXURY_FILL_TABLE_LAYOUT_EM = 10.8;
+
+export const ROYAL_LUXURY_FILL_TOKEN_EM = 4.4;
+
+export function computeRoyalLuxuryFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? ROYAL_LUXURY_FILL_TABLE_LAYOUT_EM
+		: ROYAL_LUXURY_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 0.85 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.14 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.72;
+	else if (aspect < 0.55) narrowFactor = 0.82;
+	else if (aspect < 0.75) narrowFactor = 0.9;
+	else if (aspect > 2.4) narrowFactor = 0.88;
+	else if (aspect > 1.8) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (ROYAL_LUXURY_FILL_TOKEN_EM * 1.12);
+	const diamondFraction = aspect < 1.1 ? 0.48 : aspect > 1.8 ? 0.5 : 0.56;
+	const fromTokenWidth =
+		(w * diamondFraction) / (chars * ROYAL_LUXURY_FILL_TOKEN_EM * 0.56 + 0.4);
+	// Keep counter / subtitle readable: base font tied to meta column share
+	const fromMetaWidth = (w * 0.42) / 7.2;
+
+	const base =
+		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *
+		narrowFactor;
 	return applyFillZoneFontSizeBoost(base, w, h);
 }
 

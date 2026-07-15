@@ -5,6 +5,7 @@ import {
 	computeAirportArrivalFillBaseFontSize,
 	computeAirportDepartureFillBaseFontSize,
 	computeCarSpeedometerFillBaseFontSize,
+	computeRoyalLuxuryFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
@@ -44,6 +45,7 @@ import SignalBoardCard from './SignalBoardCard';
 import PaperFlipCard from './PaperFlipCard';
 import MonoFlipCard from './MonoFlipCard';
 import SpeedometerCard from './SpeedometerCard';
+import RoyalLuxuryCard from './RoyalLuxuryCard';
 import DigitalCrimsonClock from './DigitalCrimsonClock';
 import OnyxGoldClock from './OnyxGoldClock';
 import ModernQueueBoardClock from './ModernQueueBoardClock';
@@ -190,6 +192,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isPaperFlip = resolved.themeClass === 'tdc--paper-flip';
 	const isMonoFlip = resolved.themeClass === 'tdc--mono-flip';
 	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
+	const isRoyalLuxury = resolved.themeClass === 'tdc--royal-luxury';
 	const multiQueueCount = assignedQueues?.length ?? 0;
 	const useTabularMultiQueue = resolveZoneIsTabularView(
 		appearance.displayTheme,
@@ -296,6 +299,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isAirportDepartureTheme = resolved.themeClass === 'tdc--airport-departure';
 			const isAirportArrivalTheme = resolved.themeClass === 'tdc--airport-arrival';
 			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
+			const isRoyalLuxuryTheme = resolved.themeClass === 'tdc--royal-luxury';
 			const neonPrismHasTable =
 				isNeonPrismTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const auroraNexusHasTable =
@@ -312,6 +316,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				isAirportArrivalTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const carSpeedometerHasTable =
 				isCarSpeedometerTheme && (cardAssignedQueues?.length ?? 0) > 1;
+			const royalLuxuryHasTable =
+				isRoyalLuxuryTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const glassLobbyHasTable =
 				isGlassLobbyTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const digitalHealthcareHasTable =
@@ -412,6 +418,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 													tokenLen,
 													hasHistory,
 													carSpeedometerHasTable,
+												)
+										: isRoyalLuxuryTheme
+											? computeRoyalLuxuryFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													royalLuxuryHasTable,
 												)
 										: isRoyalTicketTheme
 											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
@@ -725,6 +739,15 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				/>
 			) : isCarSpeedometer ? (
 				<SpeedometerCard
+					queueName={heroLayout.queueName}
+					subtitle={heroLayout.subtitle}
+					displayToken={heroLayout.displayToken}
+					statusLabel={heroLayout.statusConfig.label}
+					statusModifier={heroLayout.statusConfig.modifier}
+					assignedQueues={cardAssignedQueues}
+				/>
+			) : isRoyalLuxury ? (
+				<RoyalLuxuryCard
 					queueName={heroLayout.queueName}
 					subtitle={heroLayout.subtitle}
 					displayToken={heroLayout.displayToken}
@@ -1182,10 +1205,68 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				</div>
 			)}
 
+			{/* Royal Luxury — single-row gilded active-token rail */}
+			{isRoyalLuxury && hasHistory && recentTokens && recentTokens.length > 0 && (
+				<div
+					className={[
+						'tdc-rl-active',
+						useHistoryMarquee ? 'tdc-rl-active--marquee' : 'tdc-rl-active--static',
+					]
+						.filter(Boolean)
+						.join(' ')}
+					aria-label='Active tokens'
+					style={
+						{ '--tdc-rl-active-count': activeTokenCount } as React.CSSProperties
+					}>
+					<div className='tdc-rl-active__aside' aria-hidden='true'>
+						<span className='tdc-rl-active__label'>Active</span>
+						<span className='tdc-rl-active__rule' />
+					</div>
+					<div className='tdc-rl-active__viewport'>
+						<div className='tdc-rl-active__track'>
+							{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+								const counter = shortCounterLabel(t.serving_point_name);
+								const tokenKey = historyTokenKey(t);
+								const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+								const isEntering =
+									!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+								return (
+									<span
+										key={`${tokenKey}-${i}`}
+										className={[
+											'tdc-rl-active__chip',
+											isEntering ? 'tdc-rl-active__chip--enter' : '',
+										]
+											.filter(Boolean)
+											.join(' ')}
+										aria-hidden={isMarqueeDuplicate}
+										onAnimationEnd={() => {
+											if (isEntering) clearHistoryEnter(tokenKey);
+										}}>
+										<span className='tdc-rl-active__chip-token'>{t.token_display}</span>
+										{counter && (
+											<>
+												<span className='tdc-rl-active__chip-sep' aria-hidden='true'>
+													◇
+												</span>
+												<span className='tdc-rl-active__chip-counter'>{counter}</span>
+											</>
+										)}
+										{showHistoryTime && t.called_at && (
+											<span className='tdc-rl-active__chip-time'>{fmtTime(t.called_at)}</span>
+										)}
+									</span>
+								);
+							})}
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

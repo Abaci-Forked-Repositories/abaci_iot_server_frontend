@@ -72,12 +72,13 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 	const editId = isEdit ? servingPoint?.id : null;
 
 	const [form, setForm] = useState<ServingPointFormValues>(() => emptyServingPointForm(defaultQueueId));
+	const [nameError, setNameError] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [optionsLoading, setOptionsLoading] = useState(false);
 	const [queues, setQueues] = useState<Queue[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
 
-	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
 	useEffect(() => {
 		errorNotifierRef.current = showErrorNotification;
@@ -101,6 +102,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 
 	useEffect(() => {
 		if (!isOpen) return;
+		setNameError('');
 		void loadOptions();
 		if (isEdit && servingPoint) {
 			setForm(servingPointToFormValues(servingPoint));
@@ -148,9 +150,10 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 
 	const handleSubmit = async () => {
 		if (!form.name.trim()) {
-			showNotification('Error', 'Serving point name is required.', 'danger');
+			setNameError('Serving point name is required.');
 			return;
 		}
+		setNameError('');
 		if (isEdit && !editId) {
 			showErrorNotification('Serving point could not be identified for update.');
 			return;
@@ -211,13 +214,22 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 							</label>
 							<input
 								id='sp-name'
-								className='form-control'
+								className={`form-control${nameError ? ' is-invalid' : ''}`}
 								value={form.name}
-								onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+								onChange={(e) => {
+									setForm((prev) => ({ ...prev, name: e.target.value }));
+									if (nameError) setNameError('');
+								}}
 								placeholder='Enter serving point name'
-								required
 								disabled={isSubmitting}
+								aria-invalid={Boolean(nameError)}
+								aria-describedby={nameError ? 'sp-name-error' : undefined}
 							/>
+							{nameError ? (
+								<div id='sp-name-error' className='invalid-feedback d-block'>
+									{nameError}
+								</div>
+							) : null}
 						</div>
 						<div className='col-md-6'>
 							<label className='form-label fw-semibold'>Queues</label>

@@ -16,6 +16,7 @@ export const TABULAR_MULTI_QUEUE_THEME_IDS = [
 	'glass-lobby',
 	'digital-healthcare',
 	'oled-pulse',
+	'royal-luxury',
 ] as const satisfies readonly ZoneDisplayThemeId[];
 
 const TABULAR_MULTI_QUEUE_THEME_SET = new Set<string>(TABULAR_MULTI_QUEUE_THEME_IDS);

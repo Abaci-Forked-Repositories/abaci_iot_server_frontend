@@ -185,7 +185,6 @@ export function buildEditorPageTurnQueueDisplays(
 
 	const status = getStatusConfig('waiting');
 	const servingStatus = getStatusConfig('serving');
-	const baseNum = parseInt(previewToken, 10) || 5;
 	const isMulti = slotCount > 1;
 
 	return Array.from({ length: slotCount }, (_, i) => {
@@ -193,8 +192,10 @@ export function buildEditorPageTurnQueueDisplays(
 		const name =
 			(id != null ? queuesById.get(id)?.name : null) ??
 			(chipNames[i] || `Queue ${i + 1}`);
+		// Multi-queue singular preview: stable token per queue (01, 02, 03…) so rotation
+		// reads in order. Single-queue preview uses the cycling demo token (01→15).
 		const token = isMulti
-			? String(baseNum + i * 3).padStart(2, '0')
+			? String(i + 1).padStart(2, '0')
 			: previewToken;
 		const statusConfig = i % 3 === 1 ? servingStatus : status;
 

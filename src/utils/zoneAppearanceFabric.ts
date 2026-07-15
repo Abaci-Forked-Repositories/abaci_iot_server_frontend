@@ -122,6 +122,7 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'paper-flip': '#c8b89a',
 		'mono-flip': '#141414',
 		'car-speedometer': '#000000',
+		'royal-luxury': '#050505',
 	};
 	return fallbacks[themeId];
 }
