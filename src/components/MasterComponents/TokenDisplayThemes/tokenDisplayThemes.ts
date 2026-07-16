@@ -34,6 +34,7 @@
  *   mono-flip          — centered black & white flip card with alternating L/R rotateY and tone inversion on token change
  *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
  *   royal-luxury       — gilded court diamond lattice on matte black with metallic gold and entrance reveal
+ *   galaxy-spiral      — deep-space nebula with twinkling stars and dual dashed orbit rings around the token
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -61,6 +62,7 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'mono-flip',
 	'car-speedometer',
 	'royal-luxury',
+	'galaxy-spiral',
 ] as const;
 
 /** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
@@ -284,6 +286,15 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 50% 42%, rgba(212, 175, 55, 0.28) 0%, #121212 42%, #050505 72%, #000000 100%)',
+	},
+	'galaxy-spiral': {
+		id: 'galaxy-spiral',
+		label: 'Galaxy Spiral',
+		description:
+			'Deep-space nebula with twinkling starfield, cyan/magenta dual dashed orbit rings, and multi-queue live serving board',
+		textColor: 'light',
+		previewGradient:
+			'radial-gradient(circle at 68% 38%, rgba(192, 132, 252, 0.35) 0%, rgba(30, 64, 175, 0.25) 38%, #03010c 70%, #000000 100%)',
 	},
 };
 
@@ -650,6 +661,8 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 		case 'tdc--car-speedometer':
 			return 4.2;
 		case 'tdc--royal-luxury':
+			return 4.4;
+		case 'tdc--galaxy-spiral':
 			return 4.4;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
@@ -1398,6 +1411,65 @@ export function computeRoyalLuxuryFillBaseFontSize(
 		(w * diamondFraction) / (chars * ROYAL_LUXURY_FILL_TOKEN_EM * 0.56 + 0.4);
 	// Keep counter / subtitle readable: base font tied to meta column share
 	const fromMetaWidth = (w * 0.42) / 7.2;
+
+	const base =
+		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *
+		narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Galaxy Spiral fill layout: clock + orbit hero / table + active rail. */
+export const GALAXY_SPIRAL_FILL_LAYOUT_EM = 9.0;
+
+export const GALAXY_SPIRAL_FILL_TABLE_LAYOUT_EM = 10.6;
+
+export const GALAXY_SPIRAL_FILL_TOKEN_EM = 4.4;
+
+export function computeGalaxySpiralFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? GALAXY_SPIRAL_FILL_TABLE_LAYOUT_EM
+		: GALAXY_SPIRAL_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 0.85 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.14 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.72;
+	else if (aspect < 0.55) narrowFactor = 0.82;
+	else if (aspect < 0.75) narrowFactor = 0.9;
+	else if (aspect < 1.05) narrowFactor = 0.92; // near-square stacks meta above orbit
+	else if (aspect > 2.4) narrowFactor = 0.88;
+	else if (aspect > 1.8) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (GALAXY_SPIRAL_FILL_TOKEN_EM * 1.12);
+	// Near-square / portrait stacks: token uses full width. Wide: ~orbit fraction.
+	const orbitFraction = aspect < 1.05 ? 0.72 : aspect > 1.8 ? 0.52 : 0.58;
+	const fromTokenWidth =
+		(w * orbitFraction) / (chars * GALAXY_SPIRAL_FILL_TOKEN_EM * 0.56 + 0.4);
+	// Meta is full-width when stacked; side column only when landscape
+	const metaFraction = aspect < 1.05 ? 0.85 : 0.4;
+	const fromMetaWidth = (w * metaFraction) / 7.2;
 
 	const base =
 		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *

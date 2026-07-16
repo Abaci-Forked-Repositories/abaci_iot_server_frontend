@@ -6,6 +6,7 @@ import {
 	computeAirportDepartureFillBaseFontSize,
 	computeCarSpeedometerFillBaseFontSize,
 	computeRoyalLuxuryFillBaseFontSize,
+	computeGalaxySpiralFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
@@ -46,6 +47,7 @@ import PaperFlipCard from './PaperFlipCard';
 import MonoFlipCard from './MonoFlipCard';
 import SpeedometerCard from './SpeedometerCard';
 import RoyalLuxuryCard from './RoyalLuxuryCard';
+import GalaxySpiralCard from './GalaxySpiralCard';
 import DigitalCrimsonClock from './DigitalCrimsonClock';
 import OnyxGoldClock from './OnyxGoldClock';
 import ModernQueueBoardClock from './ModernQueueBoardClock';
@@ -193,6 +195,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isMonoFlip = resolved.themeClass === 'tdc--mono-flip';
 	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
 	const isRoyalLuxury = resolved.themeClass === 'tdc--royal-luxury';
+	const isGalaxySpiral = resolved.themeClass === 'tdc--galaxy-spiral';
 	const multiQueueCount = assignedQueues?.length ?? 0;
 	const useTabularMultiQueue = resolveZoneIsTabularView(
 		appearance.displayTheme,
@@ -300,6 +303,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isAirportArrivalTheme = resolved.themeClass === 'tdc--airport-arrival';
 			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
 			const isRoyalLuxuryTheme = resolved.themeClass === 'tdc--royal-luxury';
+			const isGalaxySpiralTheme = resolved.themeClass === 'tdc--galaxy-spiral';
 			const neonPrismHasTable =
 				isNeonPrismTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const auroraNexusHasTable =
@@ -318,6 +322,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				isCarSpeedometerTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const royalLuxuryHasTable =
 				isRoyalLuxuryTheme && (cardAssignedQueues?.length ?? 0) > 1;
+			const galaxySpiralHasTable =
+				isGalaxySpiralTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const glassLobbyHasTable =
 				isGlassLobbyTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const digitalHealthcareHasTable =
@@ -427,6 +433,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 													hasHistory,
 													royalLuxuryHasTable,
 												)
+										: isGalaxySpiralTheme
+											? computeGalaxySpiralFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													galaxySpiralHasTable,
+												)
 										: isRoyalTicketTheme
 											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
 											: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
@@ -513,6 +527,19 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				// Fades in-zone Active Tokens strip backgrounds (themes 1–5) without dimming text.
 				...(bgOpacity < 1
 					? ({ '--tdc-zone-bg-opacity': bgOpacity } as React.CSSProperties)
+					: {}),
+				// Galaxy: never inherit generic fill 58/42 grid (empty foot = white void).
+				...(isGalaxySpiral && fillContainer
+					? ({
+							display: 'flex',
+							flexDirection: 'column',
+							width: '100%',
+							height: '100%',
+							minWidth: 0,
+							minHeight: 0,
+							position: 'relative',
+							backgroundColor: '#03010c',
+						} as React.CSSProperties)
 					: {}),
 				...inlineStyle,
 				...style,
@@ -755,6 +782,87 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					statusModifier={heroLayout.statusConfig.modifier}
 					assignedQueues={cardAssignedQueues}
 				/>
+			) : isGalaxySpiral ? (
+				<div
+					className='tdc-gs-shell'
+					style={{
+						position: 'absolute',
+						inset: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						width: '100%',
+						height: '100%',
+						minWidth: 0,
+						minHeight: 0,
+						zIndex: 2,
+						boxSizing: 'border-box',
+						backgroundColor: '#03010c',
+					}}>
+					<GalaxySpiralCard
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 ? (
+						<div
+							className={[
+								'tdc-gs-active',
+								useHistoryMarquee ? 'tdc-gs-active--marquee' : 'tdc-gs-active--static',
+							]
+								.filter(Boolean)
+								.join(' ')}
+							aria-label='Active tokens'
+							style={
+								{ '--tdc-gs-active-count': activeTokenCount } as React.CSSProperties
+							}>
+							<div className='tdc-gs-active__aside' aria-hidden='true'>
+								<span className='tdc-gs-active__label'>Active</span>
+								<span className='tdc-gs-active__rule' />
+							</div>
+							<div className='tdc-gs-active__viewport'>
+								<div className='tdc-gs-active__track'>
+									{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+										const counter = shortCounterLabel(t.serving_point_name);
+										const tokenKey = historyTokenKey(t);
+										const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+										const isEntering =
+											!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+										return (
+											<span
+												key={`${tokenKey}-${i}`}
+												className={[
+													'tdc-gs-active__chip',
+													isEntering ? 'tdc-gs-active__chip--enter' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-hidden={isMarqueeDuplicate}
+												onAnimationEnd={() => {
+													if (!isMarqueeDuplicate) clearHistoryEnter(tokenKey);
+												}}>
+												<span className='tdc-gs-active__chip-token'>{t.token_display}</span>
+												{counter && (
+													<>
+														<span className='tdc-gs-active__chip-sep' aria-hidden='true'>
+															·
+														</span>
+														<span className='tdc-gs-active__chip-counter'>{counter}</span>
+													</>
+												)}
+												{showHistoryTime && t.called_at && (
+													<span className='tdc-gs-active__chip-time'>{fmtTime(t.called_at)}</span>
+												)}
+											</span>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					) : null}
+				</div>
 			) : (
 				<>
 					<div className='tdc__header'>
@@ -1266,7 +1374,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && !isGalaxySpiral && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

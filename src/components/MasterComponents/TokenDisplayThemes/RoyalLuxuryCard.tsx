@@ -49,10 +49,6 @@ const RoyalLuxuryCard: React.FC<RoyalLuxuryCardProps> = ({
 			<RoyalLuxuryBackdrop />
 
 			<header className='tdc-rl-header'>
-				{/* <div className='tdc-rl-brand'>
-					<span className='tdc-rl-brand__eyebrow'>The Luxury</span>
-					<span className='tdc-rl-brand__title'>Gilded Court</span>
-				</div> */}
 				<RoyalLuxuryClock />
 			</header>
 

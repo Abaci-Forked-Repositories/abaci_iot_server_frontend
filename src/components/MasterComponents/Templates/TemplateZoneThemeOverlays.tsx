@@ -145,7 +145,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					theme === 'airport-arrival' ||
 					theme === 'airport-departure' ||
 					theme === 'car-speedometer' ||
-					theme === 'royal-luxury'
+					theme === 'royal-luxury' ||
+					theme === 'galaxy-spiral'
 				);
 			}),
 		[zones, revision],
@@ -273,6 +274,10 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 								width: bounds.width,
 								height: bounds.height,
 								borderRadius: bounds.borderRadius,
+								// Galaxy paints full-bleed HTML; keep overlay dark so fabric white never shows.
+								...(appearance.displayTheme === 'galaxy-spiral'
+									? { backgroundColor: '#03010c' }
+									: {}),
 								// opacity moved to backgroundOpacity on TokenDisplayThemeCard
 							}
 				}>
@@ -293,7 +298,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						appearance.displayTheme === 'airport-arrival' ||
 						appearance.displayTheme === 'airport-departure' ||
 						appearance.displayTheme === 'car-speedometer' ||
-						appearance.displayTheme === 'royal-luxury'
+						appearance.displayTheme === 'royal-luxury' ||
+						appearance.displayTheme === 'galaxy-spiral'
 							? previewToken
 							: '05'
 					}

@@ -471,6 +471,7 @@
 @import 'mono-flip';
 @import 'car-speedometer';
 @import 'royal-luxury';
+@import 'galaxy-spiral';
 
 // Fill-only zone (no named theme) — background from inline style
 .tdc--fill-mode {
@@ -624,17 +625,22 @@
 
 // Zone fill mode: CSS grid — header full width | token left | status right.
 // Root font-size from ResizeObserver (computeFillZoneSplitBaseFontSize).
+// Custom full-card themes (Galaxy Spiral, etc.) must NOT inherit the 58%/42% split —
+// an empty "foot" column shows as a white void and crushes theme content into ~58% width.
 .tdc--fill {
 	container-type: size;
-	display: grid;
-	grid-template-columns: 58% 42%;
-	grid-template-rows: auto 1fr;
-	grid-template-areas:
-		'head  head'
-		'body  foot';
 	align-items: stretch;
 	min-height: 0;
 	min-width: 0;
+
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral):not(.tdc--sun-bento):not(.tdc--royal-ticket):not(.tdc--velvet-crown) {
+		display: grid;
+		grid-template-columns: 58% 42%;
+		grid-template-rows: auto 1fr;
+		grid-template-areas:
+			'head  head'
+			'body  foot';
+	}
 
 	.tdc__header {
 		grid-area: head;
@@ -678,7 +684,7 @@
 	}
 
 	// Themes 1–5 split grid body — custom cards (Pipboy, Arrival, OLED Pulse) excluded.
-	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury) .tdc__body {
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral) .tdc__body {
 		overflow: hidden;
 		border-right: 1px solid var(--tdc-border);
 		container-type: size;
@@ -704,7 +710,7 @@
 	}
 
 	// Pipboy flip digits / Airport door digits — excluded (see _themes-new-fill-overrides.scss).
-	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury) .tdc__token {
+	&:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral) .tdc__token {
 		font-size: 3.35em;
 		width: 100%;
 		line-height: 0.94;
@@ -1089,7 +1095,8 @@
 }
 
 // ── Layout: third grid row for other active tokens ────────────────────────────
-.tdc--fill.tdc--has-history {
+// Excludes custom full-card themes that render their own Active rail / layout.
+.tdc--fill.tdc--has-history:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral):not(.tdc--sun-bento):not(.tdc--royal-ticket):not(.tdc--velvet-crown) {
 	--tdc-history-row-max: 26%;
 
 	grid-template-rows: auto 1fr minmax(clamp(1.85em, 17%, 24%), 26%);
@@ -1203,7 +1210,7 @@
 }
 
 @container (max-height: 160px) {
-	.tdc--fill.tdc--has-history {
+	.tdc--fill.tdc--has-history:not(.tdc--galaxy-spiral):not(.tdc--royal-luxury):not(.tdc--car-speedometer):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-arrival):not(.tdc--airport-departure):not(.tdc--pipboy-terminal):not(.tdc--sun-bento):not(.tdc--royal-ticket):not(.tdc--velvet-crown) {
 		--tdc-history-row-max: 24%;
 
 		grid-template-rows: auto 1fr minmax(clamp(1.65em, 16%, 22%), 24%);
@@ -1754,7 +1761,7 @@
 }
 
 // Pipboy / custom card themes — excluded (see theme SCSS + _themes-new-fill-overrides.scss).
-.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury) .tdc__body .tdc__token {
+.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),
@@ -1763,7 +1770,7 @@
 }
 
 // Preview mode — slightly larger token numeral (template editor + theme picker).
-.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury) .tdc__body .tdc__token {
+.tdc--preview.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--airport-departure):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral) .tdc__body .tdc__token {
 	font-size: min(
 		calc(var(--tdc-token-fill-em, 3.35) * 1.14 * 1em),
 		calc(94cqw / (var(--tdc-token-chars, 2) * 0.50 + 0.26)),
@@ -1831,6 +1838,10 @@
 	}
 
 	&.tdc--royal-luxury .tdc-rl-token {
+		font-size: 2.4em;
+	}
+
+	&.tdc--galaxy-spiral .tdc-gs-token {
 		font-size: 2.4em;
 	}
 }
