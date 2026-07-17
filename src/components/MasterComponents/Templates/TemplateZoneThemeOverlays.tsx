@@ -146,7 +146,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					theme === 'airport-departure' ||
 					theme === 'car-speedometer' ||
 					theme === 'royal-luxury' ||
-					theme === 'galaxy-spiral'
+					theme === 'galaxy-spiral' ||
+					theme === 'terracotta-olive-sand'
 				);
 			}),
 		[zones, revision],
@@ -299,7 +300,8 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						appearance.displayTheme === 'airport-departure' ||
 						appearance.displayTheme === 'car-speedometer' ||
 						appearance.displayTheme === 'royal-luxury' ||
-						appearance.displayTheme === 'galaxy-spiral'
+						appearance.displayTheme === 'galaxy-spiral' ||
+						appearance.displayTheme === 'terracotta-olive-sand'
 							? previewToken
 							: '05'
 					}

@@ -577,6 +577,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 								? resolveAssignedQueueDisplays(zone, queuesByUuid)
 								: undefined;
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
+						const zoneKey = `${zone.name}-${index}`;
 
 						const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
 
@@ -615,6 +616,8 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 										recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
 										fillContainer
 										backgroundOpacity={zoneOpacity < 1 ? zoneOpacity : undefined}
+										zoneKey={zoneKey}
+										primaryQueueUuid={queue?.uuid}
 									/>
 								</div>
 							);

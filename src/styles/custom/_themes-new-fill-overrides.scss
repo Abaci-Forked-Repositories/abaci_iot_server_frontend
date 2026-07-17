@@ -807,6 +807,55 @@
 	}
 }
 
+// ─── Terracotta Olive Sand ────────────────────────────────────────────────────
+.tdc--fill.tdc--terracotta-olive-sand {
+	display: flex !important;
+	flex-direction: column !important;
+	grid: none !important;
+	width: 100% !important;
+	height: 100% !important;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	box-sizing: border-box;
+	position: relative;
+
+	.tdc-tos-shell {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+	}
+
+	.tdc-tos-mosaic-layout,
+	.tdc-tos-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		width: 100%;
+	}
+
+	&.tdc--has-history {
+		grid: none !important;
+
+		.tdc-tos-mosaic-layout,
+		.tdc-tos-layout {
+			flex: 1 1 0;
+			min-height: 0;
+		}
+
+		.tdc-tos-active {
+			flex-shrink: 0;
+			width: 100%;
+			max-height: min(9%, 3.4rem);
+			overflow: hidden;
+		}
+	}
+}
+
 // Themes 6–9 use a screen-level Active Tokens bar — never the in-zone history row.
 .tdc--fill.tdc--pipboy-terminal,
 .tdc--fill.tdc--velvet-crown,

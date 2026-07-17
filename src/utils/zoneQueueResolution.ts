@@ -25,6 +25,8 @@ export interface ZoneQueueRefs {
 }
 
 export interface AssignedQueueDisplay {
+	/** Queue UUID when resolved from live API data. */
+	uuid?: string;
 	queueName: string;
 	servingPointName: string;
 	tokenDisplay: string;
@@ -238,6 +240,7 @@ export function resolveAssignedQueueDisplays(
 				: display.queueName;
 
 		return {
+			uuid: queue?.uuid?.trim() || undefined,
 			queueName: display.queueName,
 			servingPointName,
 			tokenDisplay: display.tokenDisplay,

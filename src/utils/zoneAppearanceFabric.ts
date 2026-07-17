@@ -124,6 +124,7 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'car-speedometer': '#000000',
 		'royal-luxury': '#050505',
 		'galaxy-spiral': '#03010c',
+		'terracotta-olive-sand': '#E2725B',
 	};
 	return fallbacks[themeId];
 }

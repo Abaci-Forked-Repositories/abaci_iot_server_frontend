@@ -7,6 +7,7 @@ import {
 	computeCarSpeedometerFillBaseFontSize,
 	computeRoyalLuxuryFillBaseFontSize,
 	computeGalaxySpiralFillBaseFontSize,
+	computeTerracottaOliveSandFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
@@ -48,6 +49,7 @@ import MonoFlipCard from './MonoFlipCard';
 import SpeedometerCard from './SpeedometerCard';
 import RoyalLuxuryCard from './RoyalLuxuryCard';
 import GalaxySpiralCard from './GalaxySpiralCard';
+import TerracottaOliveSandCard from './TerracottaOliveSandCard';
 import DigitalCrimsonClock from './DigitalCrimsonClock';
 import OnyxGoldClock from './OnyxGoldClock';
 import ModernQueueBoardClock from './ModernQueueBoardClock';
@@ -57,6 +59,7 @@ import VelvetCrownClock from './VelvetCrownClock';
 import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
 import { useRotatingQueueDisplay } from '../../../hooks/useRotatingQueueDisplay';
 import { resolveZoneIsTabularView } from '../../../utils/zoneMultiQueueView';
+import { useRegisterAudibleQueues } from '../../../contexts/ScreenAudibleQueuesContext';
 import {
 	PipboyTerminalBackdropLayer,
 	PipboyTerminalClockRow,
@@ -117,6 +120,12 @@ export interface TokenDisplayThemeCardProps {
 	 * When omitted or 1, the card renders normally with no separate background layer.
 	 */
 	backgroundOpacity?: number;
+
+	/** Public screen zone key — registers visible queues for audio announcements. */
+	zoneKey?: string;
+
+	/** Primary queue UUID for single-queue zones on the public screen. */
+	primaryQueueUuid?: string;
 }
 
 /** Short counter label: "Counter 03" → "03", "COUNTER 4" → "04". */
@@ -155,6 +164,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	assignedQueues,
 	isTabularView,
 	backgroundOpacity,
+	zoneKey,
+	primaryQueueUuid,
 }) => {
 	const rootRef = useRef<HTMLDivElement>(null);
 	const seenHistoryKeysRef = useRef(new Set<string>());
@@ -196,6 +207,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isCarSpeedometer = resolved.themeClass === 'tdc--car-speedometer';
 	const isRoyalLuxury = resolved.themeClass === 'tdc--royal-luxury';
 	const isGalaxySpiral = resolved.themeClass === 'tdc--galaxy-spiral';
+	const isTerracottaOliveSand = resolved.themeClass === 'tdc--terracotta-olive-sand';
 	const multiQueueCount = assignedQueues?.length ?? 0;
 	const useTabularMultiQueue = resolveZoneIsTabularView(
 		appearance.displayTheme,
@@ -210,6 +222,34 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	);
 	const { active: rotatedQueue } = useRotatingQueueDisplay(rotationQueues);
 	const cardAssignedQueues = useTabularMultiQueue ? assignedQueues : undefined;
+
+	const audibleQueueUuids = useMemo(() => {
+		if (!fillContainer || previewMode) return [];
+		// TEMP: tabular multi-queue audio disabled — re-enable when announcements are needed again.
+		// if (useTabularMultiQueue && assignedQueues?.length) {
+		// 	return assignedQueues
+		// 		.map((queue) => queue.uuid?.trim())
+		// 		.filter((uuid): uuid is string => Boolean(uuid));
+		// }
+		if (useTabularMultiQueue) return [];
+		if (isRotatingMultiQueue) {
+			const uuid = rotatedQueue.uuid?.trim();
+			return uuid ? [uuid] : [];
+		}
+		const uuid = primaryQueueUuid?.trim();
+		return uuid ? [uuid] : [];
+	}, [
+		fillContainer,
+		previewMode,
+		useTabularMultiQueue,
+		assignedQueues,
+		isRotatingMultiQueue,
+		rotatedQueue.uuid,
+		primaryQueueUuid,
+	]);
+
+	useRegisterAudibleQueues(zoneKey, audibleQueueUuids, fillContainer && !previewMode);
+
 	const showHeaderBeam =
 		isDigitalCrimson || isOnyxGold || isImperialCourt || isArcticGlass;
 
@@ -304,6 +344,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			const isCarSpeedometerTheme = resolved.themeClass === 'tdc--car-speedometer';
 			const isRoyalLuxuryTheme = resolved.themeClass === 'tdc--royal-luxury';
 			const isGalaxySpiralTheme = resolved.themeClass === 'tdc--galaxy-spiral';
+			const isTerracottaOliveSandTheme = resolved.themeClass === 'tdc--terracotta-olive-sand';
 			const neonPrismHasTable =
 				isNeonPrismTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const auroraNexusHasTable =
@@ -324,6 +365,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				isRoyalLuxuryTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const galaxySpiralHasTable =
 				isGalaxySpiralTheme && (cardAssignedQueues?.length ?? 0) > 1;
+			const terracottaOliveSandHasTable =
+				isTerracottaOliveSandTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const glassLobbyHasTable =
 				isGlassLobbyTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const digitalHealthcareHasTable =
@@ -441,6 +484,14 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 													hasHistory,
 													galaxySpiralHasTable,
 												)
+										: isTerracottaOliveSandTheme
+											? computeTerracottaOliveSandFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													terracottaOliveSandHasTable,
+												)
 										: isRoyalTicketTheme
 											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
 											: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
@@ -528,8 +579,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				...(bgOpacity < 1
 					? ({ '--tdc-zone-bg-opacity': bgOpacity } as React.CSSProperties)
 					: {}),
-				// Galaxy: never inherit generic fill 58/42 grid (empty foot = white void).
-				...(isGalaxySpiral && fillContainer
+				// Custom card themes: never inherit generic fill 58/42 grid.
+				...((isGalaxySpiral || isTerracottaOliveSand) && fillContainer
 					? ({
 							display: 'flex',
 							flexDirection: 'column',
@@ -538,7 +589,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 							minWidth: 0,
 							minHeight: 0,
 							position: 'relative',
-							backgroundColor: '#03010c',
+							...(isGalaxySpiral ? { backgroundColor: '#03010c' } : {}),
 						} as React.CSSProperties)
 					: {}),
 				...inlineStyle,
@@ -854,6 +905,68 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 												)}
 												{showHistoryTime && t.called_at && (
 													<span className='tdc-gs-active__chip-time'>{fmtTime(t.called_at)}</span>
+												)}
+											</span>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					) : null}
+				</div>
+			) : isTerracottaOliveSand ? (
+				<div className='tdc-tos-shell'>
+					<TerracottaOliveSandCard
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 ? (
+						<div
+							className={[
+								'tdc-tos-active',
+								useHistoryMarquee ? 'tdc-tos-active--marquee' : 'tdc-tos-active--static',
+							]
+								.filter(Boolean)
+								.join(' ')}
+							aria-label='Active tokens'
+							style={
+								{ '--tdc-tos-active-count': activeTokenCount } as React.CSSProperties
+							}>
+							<div className='tdc-tos-active__aside' aria-hidden='true'>
+								<span className='tdc-tos-active__label'>Active</span>
+								<span className='tdc-tos-active__rule' />
+							</div>
+							<div className='tdc-tos-active__viewport'>
+								<div className='tdc-tos-active__track'>
+									{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+										const counter = shortCounterLabel(t.serving_point_name);
+										const tokenKey = historyTokenKey(t);
+										const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+										const isEntering =
+											!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+										return (
+											<span
+												key={`${tokenKey}-${i}`}
+												className={[
+													'tdc-tos-active__chip',
+													isEntering ? 'tdc-tos-active__chip--enter' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-hidden={isMarqueeDuplicate}
+												onAnimationEnd={() => {
+													if (!isMarqueeDuplicate) clearHistoryEnter(tokenKey);
+												}}>
+												<span className='tdc-tos-active__chip-token'>{t.token_display}</span>
+												{counter && (
+													<span className='tdc-tos-active__chip-counter'>{counter}</span>
+												)}
+												{showHistoryTime && t.called_at && (
+													<span className='tdc-tos-active__chip-time'>{fmtTime(t.called_at)}</span>
 												)}
 											</span>
 										);
@@ -1374,7 +1487,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && !isGalaxySpiral && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && !isGalaxySpiral && !isTerracottaOliveSand && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

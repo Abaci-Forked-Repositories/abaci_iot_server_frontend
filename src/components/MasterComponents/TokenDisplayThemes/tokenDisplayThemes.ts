@@ -63,6 +63,7 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'car-speedometer',
 	'royal-luxury',
 	'galaxy-spiral',
+	'terracotta-olive-sand',
 ] as const;
 
 /** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
@@ -295,6 +296,15 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		textColor: 'light',
 		previewGradient:
 			'radial-gradient(circle at 68% 38%, rgba(192, 132, 252, 0.35) 0%, rgba(30, 64, 175, 0.25) 38%, #03010c 70%, #000000 100%)',
+	},
+	'terracotta-olive-sand': {
+		id: 'terracotta-olive-sand',
+		label: 'Terracotta Olive Sand',
+		description:
+			'Terracotta mosaic tessellation with staggered panel fade-in and a rotating aperture revealing the live token',
+		textColor: 'light',
+		previewGradient:
+			'conic-gradient(from 45deg, #E2725B 0deg, #808000 90deg, #C2B280 180deg, #E2725B 270deg)',
 	},
 };
 
@@ -664,6 +674,8 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 4.4;
 		case 'tdc--galaxy-spiral':
 			return 4.4;
+		case 'tdc--terracotta-olive-sand':
+			return 3.35;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
 	}
@@ -1469,6 +1481,69 @@ export function computeGalaxySpiralFillBaseFontSize(
 		(w * orbitFraction) / (chars * GALAXY_SPIRAL_FILL_TOKEN_EM * 0.56 + 0.4);
 	// Meta is full-width when stacked; side column only when landscape
 	const metaFraction = aspect < 1.05 ? 0.85 : 0.4;
+	const fromMetaWidth = (w * metaFraction) / 7.2;
+
+	const base =
+		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *
+		narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Terracotta Olive Sand fill layout: mosaic aperture hero / table + active rail. */
+export const TERRACOTTA_OLIVE_SAND_FILL_LAYOUT_EM = 9.0;
+
+export const TERRACOTTA_OLIVE_SAND_FILL_TABLE_LAYOUT_EM = 10.6;
+
+export const TERRACOTTA_OLIVE_SAND_FILL_TOKEN_EM = 3.35;
+
+export function computeTerracottaOliveSandFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? TERRACOTTA_OLIVE_SAND_FILL_TABLE_LAYOUT_EM
+		: TERRACOTTA_OLIVE_SAND_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 0.55 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.09 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.72;
+	else if (aspect < 0.55) narrowFactor = 0.82;
+	else if (aspect < 0.75) narrowFactor = 0.9;
+	else if (aspect < 1.05) narrowFactor = 0.92;
+	else if (aspect > 2.4) narrowFactor = 0.88;
+	else if (aspect > 1.8) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.8;
+		const fromTableWidth = w / 9.2;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (TERRACOTTA_OLIVE_SAND_FILL_TOKEN_EM * 1.12);
+	// Wide landscape: aperture left column (~58%). Stacked: aperture uses full width below meta.
+	const isWideLandscape = aspect >= 1.4;
+	const apertureFraction = isWideLandscape
+		? aspect > 1.8
+			? 0.52
+			: 0.58
+		: 0.72;
+	const metaFraction = isWideLandscape ? 0.42 : 0.85;
+	const fromTokenWidth =
+		(w * apertureFraction) / (chars * TERRACOTTA_OLIVE_SAND_FILL_TOKEN_EM * 0.56 + 0.4);
 	const fromMetaWidth = (w * metaFraction) / 7.2;
 
 	const base =
