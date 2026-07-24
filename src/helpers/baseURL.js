@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://cardiovascular-mainland-examine-downtown.trycloudflare.com';
+		return 'https://xbox-minus-carey-appeared.trycloudflare.com';
 	}
 	return url;
 };

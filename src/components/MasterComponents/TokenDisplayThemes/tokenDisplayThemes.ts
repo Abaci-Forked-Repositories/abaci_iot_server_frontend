@@ -35,6 +35,9 @@
  *   car-speedometer    — automotive dashboard with digital readout, red gauge needle, and responsive token field
  *   royal-luxury       — gilded court diamond lattice on matte black with metallic gold and entrance reveal
  *   galaxy-spiral      — deep-space nebula with twinkling stars and dual dashed orbit rings around the token
+ *   terracotta-olive-sand — terracotta mosaic tessellation with rotating aperture token
+ *   metro-mosaic       — soft matte transit map with pastel line colors and slide-in token
+ *   blueprint-atelier  — navy CAD grid with cyan ink, title-block meta, and dimension-callout token
  *
  * Legacy slugs (midnight-cobalt, deep-blue, high-contrast, amber, emerald, crimson,
  * midnight, royal-purple, slate) are no longer active. Saved zones that still
@@ -51,7 +54,6 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'sun-bento',
 	'royal-ticket',
 	'airport-arrival',
-	'airport-departure',
 	'oled-pulse',
 	'digital-healthcare',
 	'glass-lobby',
@@ -64,6 +66,9 @@ export const ZONE_DISPLAY_THEME_IDS = [
 	'royal-luxury',
 	'galaxy-spiral',
 	'terracotta-olive-sand',
+	'airport-departure',
+	'metro-mosaic',
+	'blueprint-atelier',
 ] as const;
 
 /** Themes 6–9: active tokens render in a screen-level ticker, not inside each zone card. */
@@ -305,6 +310,24 @@ export const ZONE_DISPLAY_THEME_CONFIGS: Record<
 		textColor: 'light',
 		previewGradient:
 			'conic-gradient(from 45deg, #E2725B 0deg, #808000 90deg, #C2B280 180deg, #E2725B 270deg)',
+	},
+	'metro-mosaic': {
+		id: 'metro-mosaic',
+		label: 'Metro Mosaic',
+		description:
+			'Soft matte transit map with pastel line ribbons, route-map panels, slide-in next-station token, and multi-queue live board',
+		textColor: 'dark',
+		previewGradient:
+			'linear-gradient(135deg, #e8eef5 0%, #4db8e8 28%, #3cb371 52%, #f5a623 78%, #e8eef5 100%)',
+	},
+	'blueprint-atelier': {
+		id: 'blueprint-atelier',
+		label: 'Blueprint Atelier',
+		description:
+			'Navy CAD grid with cyan ink, architectural title-block meta, dimension-callout token draw, and multi-queue schedule board',
+		textColor: 'light',
+		previewGradient:
+			'linear-gradient(145deg, #0a2238 0%, #061525 42%, #5ec8ff 78%, #03101c 100%)',
 	},
 };
 
@@ -676,6 +699,10 @@ export function getFillZoneTokenEm(themeClass: string | null): number {
 			return 4.4;
 		case 'tdc--terracotta-olive-sand':
 			return 3.35;
+		case 'tdc--metro-mosaic':
+			return 4.2;
+		case 'tdc--blueprint-atelier':
+			return 4.4;
 		default:
 			return TOKEN_DISPLAY_FILL_TOKEN_EM;
 	}
@@ -1545,6 +1572,122 @@ export function computeTerracottaOliveSandFillBaseFontSize(
 	const fromTokenWidth =
 		(w * apertureFraction) / (chars * TERRACOTTA_OLIVE_SAND_FILL_TOKEN_EM * 0.56 + 0.4);
 	const fromMetaWidth = (w * metaFraction) / 7.2;
+
+	const base =
+		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *
+		narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Metro Mosaic fill layout: soft transit panels + slide token / table + active rail. */
+export const METRO_MOSAIC_FILL_LAYOUT_EM = 9.2;
+
+export const METRO_MOSAIC_FILL_TABLE_LAYOUT_EM = 10.4;
+
+export const METRO_MOSAIC_FILL_TOKEN_EM = 4.2;
+
+export function computeMetroMosaicFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? METRO_MOSAIC_FILL_TABLE_LAYOUT_EM
+		: METRO_MOSAIC_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 0.6 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.1 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.72;
+	else if (aspect < 0.55) narrowFactor = 0.82;
+	else if (aspect < 0.75) narrowFactor = 0.9;
+	else if (aspect < 1.05) narrowFactor = 0.92;
+	else if (aspect > 2.4) narrowFactor = 0.88;
+	else if (aspect > 1.8) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.6;
+		const fromTableWidth = w / 9;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (METRO_MOSAIC_FILL_TOKEN_EM * 1.08);
+	const isWideLandscape = aspect >= 1.2;
+	const tokenFraction = isWideLandscape ? 0.58 : 0.78;
+	const metaFraction = isWideLandscape ? 0.38 : 0.9;
+	const fromTokenWidth =
+		(w * tokenFraction) / (chars * METRO_MOSAIC_FILL_TOKEN_EM * 0.52 + 0.5);
+	const fromMetaWidth = (w * metaFraction) / 6.8;
+
+	const base =
+		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *
+		narrowFactor;
+	return applyFillZoneFontSizeBoost(base, w, h);
+}
+
+/** Blueprint Atelier fill layout: CAD title block + dimension callout / table + active rail. */
+export const BLUEPRINT_ATELIER_FILL_LAYOUT_EM = 9.2;
+
+export const BLUEPRINT_ATELIER_FILL_TABLE_LAYOUT_EM = 10.4;
+
+export const BLUEPRINT_ATELIER_FILL_TOKEN_EM = 4.4;
+
+export function computeBlueprintAtelierFillBaseFontSize(
+	width: number,
+	height: number,
+	tokenLength = 2,
+	hasHistoryStrip = false,
+	hasMultiQueueTable = false,
+): number {
+	const w = Math.max(1, width);
+	const h = Math.max(1, height);
+	const chars = Math.max(1, tokenLength);
+
+	const layoutBase = hasMultiQueueTable
+		? BLUEPRINT_ATELIER_FILL_TABLE_LAYOUT_EM
+		: BLUEPRINT_ATELIER_FILL_LAYOUT_EM;
+	const layoutEm = hasHistoryStrip ? layoutBase + 0.6 : layoutBase;
+	const historyFraction = hasHistoryStrip ? 0.1 : 0;
+	const stageHeight = h * (1 - historyFraction);
+
+	const aspect = w / h;
+	let narrowFactor = 1;
+	if (aspect < 0.38) narrowFactor = 0.72;
+	else if (aspect < 0.55) narrowFactor = 0.82;
+	else if (aspect < 0.75) narrowFactor = 0.9;
+	else if (aspect < 1.05) narrowFactor = 0.92;
+	else if (aspect > 2.4) narrowFactor = 0.88;
+	else if (aspect > 1.8) narrowFactor = 0.94;
+
+	const fromHeight = h / layoutEm;
+	const fromMinSide = Math.min(w, h) / layoutEm;
+
+	if (hasMultiQueueTable) {
+		const fromTableHeight = stageHeight / 5.6;
+		const fromTableWidth = w / 9;
+		const base = Math.min(fromHeight, fromMinSide, fromTableHeight, fromTableWidth);
+		return applyFillZoneFontSizeBoost(base, w, h);
+	}
+
+	const fromTokenHeight = stageHeight / (BLUEPRINT_ATELIER_FILL_TOKEN_EM * 1.08);
+	const isWideLandscape = aspect >= 1.2;
+	const tokenFraction = isWideLandscape ? 0.58 : 0.78;
+	const metaFraction = isWideLandscape ? 0.38 : 0.9;
+	const fromTokenWidth =
+		(w * tokenFraction) / (chars * BLUEPRINT_ATELIER_FILL_TOKEN_EM * 0.52 + 0.5);
+	const fromMetaWidth = (w * metaFraction) / 6.8;
 
 	const base =
 		Math.min(fromHeight, fromMinSide, fromTokenHeight, fromTokenWidth, fromMetaWidth) *

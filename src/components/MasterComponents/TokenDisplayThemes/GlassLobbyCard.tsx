@@ -89,7 +89,6 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 						)}
 						<GlassLobbyClock />
 					</div>
-					{subtitle ? <span className='tdc-gl-card__sub'>{subtitle}</span> : null}
 				</div>
 
 				<div
@@ -120,8 +119,15 @@ const GlassLobbyCard: React.FC<GlassLobbyCardProps> = ({
 						.filter(Boolean)
 						.join(' ')}
 					aria-live='polite'>
-					<span className='tdc-gl-card__label'>Status</span>
-					<span className='tdc-gl-card__value tdc-gl-card__value--status'>{statusLabel}</span>
+					{/* <span className='tdc-gl-card__label'>Status</span> */}
+					<div className='tdc-gl-card__status-body'>
+						{subtitle ? (
+							<span className='tdc-gl-card__sub' title={subtitle}>
+								{subtitle}
+							</span>
+						) : null}
+						<span className='tdc-gl-card__value tdc-gl-card__value--status'>{statusLabel}</span>
+					</div>
 				</div>
 			</div>
 		</div>

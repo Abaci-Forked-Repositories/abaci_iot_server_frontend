@@ -6,7 +6,14 @@ import {
 } from '../../../utils/themeDisplayClock';
 
 /** Live date/time in the blue top bar — Health Dashboard only. */
-const HealthcareDashboardClock: React.FC = () => {
+export type HealthcareDashboardClockPart = 'both' | 'date' | 'time';
+
+export interface HealthcareDashboardClockProps {
+	/** Split date/time for custom top-bar placement; default renders both together. */
+	part?: HealthcareDashboardClockPart;
+}
+
+const HealthcareDashboardClock: React.FC<HealthcareDashboardClockProps> = ({ part = 'both' }) => {
 	const [now, setNow] = useState(() => new Date());
 
 	useEffect(() => {
@@ -14,13 +21,33 @@ const HealthcareDashboardClock: React.FC = () => {
 		return () => window.clearInterval(timer);
 	}, []);
 
-	return (
-		<div className='tdc-dh-clock' aria-label={formatThemeDisplayClockAriaLabel(now)}>
+	const ariaLabel = formatThemeDisplayClockAriaLabel(now);
+	const dateText = formatThemeDisplayClockDate(now);
+	const timeText = formatThemeDisplayClockTimeWithSeconds(now);
+
+	if (part === 'date') {
+		return (
 			<span className='tdc-dh-clock__date' aria-hidden='true'>
-				{formatThemeDisplayClockDate(now)}
+				{dateText}
+			</span>
+		);
+	}
+
+	if (part === 'time') {
+		return (
+			<time className='tdc-dh-clock__time' dateTime={now.toISOString()} aria-label={ariaLabel}>
+				{timeText}
+			</time>
+		);
+	}
+
+	return (
+		<div className='tdc-dh-clock' aria-label={ariaLabel}>
+			<span className='tdc-dh-clock__date' aria-hidden='true'>
+				{dateText}
 			</span>
 			<time className='tdc-dh-clock__time' dateTime={now.toISOString()}>
-				{formatThemeDisplayClockTimeWithSeconds(now)}
+				{timeText}
 			</time>
 		</div>
 	);

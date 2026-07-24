@@ -19,6 +19,8 @@ export const TABULAR_MULTI_QUEUE_THEME_IDS = [
 	'royal-luxury',
 	'galaxy-spiral',
 	'terracotta-olive-sand',
+	'metro-mosaic',
+	'blueprint-atelier',
 ] as const satisfies readonly ZoneDisplayThemeId[];
 
 const TABULAR_MULTI_QUEUE_THEME_SET = new Set<string>(TABULAR_MULTI_QUEUE_THEME_IDS);

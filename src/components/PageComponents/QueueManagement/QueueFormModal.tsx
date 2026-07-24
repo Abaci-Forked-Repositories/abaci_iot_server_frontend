@@ -13,6 +13,7 @@ import type {
 	UpdateQueuePayload,
 } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
+import { isServingPointListedForSelection } from '../../MasterComponents/QueueManagement/queueManagementUtils';
 
 interface QueueFormModalProps {
 	isOpen: boolean;
@@ -187,10 +188,12 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 
 	const servingPointOptions = useMemo(
 		() =>
-			servingPoints.map((point) => ({
-				value: point.id,
-				label: point.name,
-			})),
+			servingPoints
+				.filter(isServingPointListedForSelection)
+				.map((point) => ({
+					value: point.id,
+					label: point.name,
+				})),
 		[servingPoints],
 	);
 

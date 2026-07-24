@@ -58,6 +58,10 @@ export const servingPointAssignedUserIds = (
 	return (point.assigned_user || []).map((user) => user.id);
 };
 
+/** Listed serving points only — excludes explicitly disabled (`is_active: false`) counters from pickers. */
+export const isServingPointListedForSelection = (point: ServingPoint): boolean =>
+	point.is_active !== false;
+
 /** Customer-facing token label: prefixed `token_display` from API, else raw `token_number`. */
 export const getTokenDisplay = (token: {
 	token_display?: string | null;

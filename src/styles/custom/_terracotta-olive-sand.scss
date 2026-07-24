@@ -634,15 +634,18 @@ $tos-ink: #2f3226;
 			max-width: 42%;
 		}
 
+		// Size from container (cqw/cqh), capped by a low em — not the reverse.
+		// High em floors (0.85+) win once root fontSize grows (~1280px+ zones)
+		// and blow up serving-point / WAITING vs the scaled template editor.
 		.tdc-tos-mosaic-subtitle {
-			font-size: clamp(0.85em, #{'min(3.2cqw, 4cqh)'}, 1.35em);
+			font-size: #{'min(2.55cqw, 3.15cqh, 0.62em)'};
 			letter-spacing: 0.1em;
 		}
 
 		.tdc-tos-mosaic-status {
 			justify-content: flex-end;
-			font-size: clamp(0.65em, #{'min(2.4cqw, 3.1cqh)'}, 1em);
-			padding: 0.4em 0.95em;
+			font-size: #{'min(2cqw, 2.55cqh, 0.5em)'};
+			padding: 0.36em 0.85em;
 			gap: 0.38em;
 		}
 
@@ -664,7 +667,8 @@ $tos-ink: #2f3226;
 		}
 	}
 
-	// Full-width / large zones (~1920×1080): larger duo, still centered as one block.
+	// Full-width / large zones (~1920×1080): aperture only — meta text inherits
+	// the container-led sizes from the wide (≥1.4) block above (no second boost).
 	@container tdc-tos (min-width: 1600px) and (min-aspect-ratio: 1.4) {
 		.tdc-tos-mosaic-stage {
 			gap: clamp(1em, 3cqw, 2.2em);
@@ -685,24 +689,8 @@ $tos-ink: #2f3226;
 		}
 
 		.tdc-tos-mosaic-meta {
-			gap: 0.55em;
-			max-width: 38%;
-		}
-
-		.tdc-tos-mosaic-subtitle {
-			font-size: clamp(1.15em, #{'min(4cqw, 5.2cqh)'}, 1.85em);
-			letter-spacing: 0.08em;
-		}
-
-		.tdc-tos-mosaic-status {
-			font-size: clamp(0.88em, #{'min(3cqw, 4cqh)'}, 1.4em);
-			padding: 0.5em 1.15em;
 			gap: 0.45em;
-		}
-
-		.tdc-tos-status__dot {
-			width: 0.55em;
-			height: 0.55em;
+			max-width: 42%;
 		}
 
 		.tdc-tos-token {
@@ -710,11 +698,11 @@ $tos-ink: #2f3226;
 		}
 
 		.tdc-tos-mosaic-queue--header {
-			font-size: clamp(1.25em, #{'min(5cqw, 6.2cqh)'}, 2.1em);
+			font-size: clamp(1.05em, #{'min(4.4cqw, 5.4cqh)'}, 1.7em);
 		}
 
 		.tdc-tos-clock {
-			font-size: clamp(0.58em, #{'min(3.1cqw, 3.9cqh)'}, 0.9em);
+			font-size: clamp(0.5em, #{'min(2.9cqw, 3.5cqh)'}, 0.76em);
 		}
 	}
 

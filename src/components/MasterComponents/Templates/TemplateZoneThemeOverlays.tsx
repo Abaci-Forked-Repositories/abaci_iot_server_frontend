@@ -29,7 +29,7 @@ import {
 } from '../../../utils/zoneMultiQueueView';
 
 /** Editor canvas mock serving point — matches buildEditorPageTurnQueueDisplays slot 0. */
-const EDITOR_PREVIEW_SERVING_POINT = 'Counter 01';
+const EDITOR_PREVIEW_SERVING_POINT = 'Serving Point 01';
 
 /** Cycles 01→15 in the template editor so Pipboy flip digits are visible without live queue data. */
 const PREVIEW_FLIP_TOKENS = Array.from({ length: 15 }, (_, i) =>
@@ -147,7 +147,9 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 					theme === 'car-speedometer' ||
 					theme === 'royal-luxury' ||
 					theme === 'galaxy-spiral' ||
-					theme === 'terracotta-olive-sand'
+					theme === 'terracotta-olive-sand' ||
+					theme === 'metro-mosaic' ||
+					theme === 'blueprint-atelier'
 				);
 			}),
 		[zones, revision],
@@ -301,7 +303,9 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 						appearance.displayTheme === 'car-speedometer' ||
 						appearance.displayTheme === 'royal-luxury' ||
 						appearance.displayTheme === 'galaxy-spiral' ||
-						appearance.displayTheme === 'terracotta-olive-sand'
+						appearance.displayTheme === 'terracotta-olive-sand' ||
+						appearance.displayTheme === 'metro-mosaic' ||
+						appearance.displayTheme === 'blueprint-atelier'
 							? previewToken
 							: '05'
 					}

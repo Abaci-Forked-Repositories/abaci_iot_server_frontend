@@ -792,7 +792,7 @@
 
 	// Template editor only: slight token bump (~5%) — live TV screens unchanged.
 	// Pipboy flip digits size themselves — do not apply generic fill token scaling.
-	.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--airport-departure):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral):not(.tdc--terracotta-olive-sand) .tdc__body .tdc__token {
+	.tdc--fill:not(.tdc--pipboy-terminal):not(.tdc--airport-arrival):not(.tdc--airport-departure):not(.tdc--oled-pulse):not(.tdc--digital-healthcare):not(.tdc--glass-lobby):not(.tdc--neon-prism):not(.tdc--aurora-nexus):not(.tdc--signal-board):not(.tdc--paper-flip):not(.tdc--mono-flip):not(.tdc--car-speedometer):not(.tdc--royal-luxury):not(.tdc--galaxy-spiral):not(.tdc--terracotta-olive-sand):not(.tdc--metro-mosaic):not(.tdc--blueprint-atelier) .tdc__body .tdc__token {
 		font-size: min(
 			calc(var(--tdc-token-fill-em, 3.35) * 1.05 * 1em),
 			calc(94cqw / (var(--tdc-token-chars, 2) * 0.54 + 0.32)),

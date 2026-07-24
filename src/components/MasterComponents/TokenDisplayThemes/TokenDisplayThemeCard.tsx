@@ -8,6 +8,8 @@ import {
 	computeRoyalLuxuryFillBaseFontSize,
 	computeGalaxySpiralFillBaseFontSize,
 	computeTerracottaOliveSandFillBaseFontSize,
+	computeMetroMosaicFillBaseFontSize,
+	computeBlueprintAtelierFillBaseFontSize,
 	computeFillZoneSplitBaseFontSize,
 	computeDigitalHealthcareFillBaseFontSize,
 	computeGlassLobbyFillBaseFontSize,
@@ -50,6 +52,8 @@ import SpeedometerCard from './SpeedometerCard';
 import RoyalLuxuryCard from './RoyalLuxuryCard';
 import GalaxySpiralCard from './GalaxySpiralCard';
 import TerracottaOliveSandCard from './TerracottaOliveSandCard';
+import MetroMosaicCard from './MetroMosaicCard';
+import BlueprintAtelierCard from './BlueprintAtelierCard';
 import DigitalCrimsonClock from './DigitalCrimsonClock';
 import OnyxGoldClock from './OnyxGoldClock';
 import ModernQueueBoardClock from './ModernQueueBoardClock';
@@ -208,6 +212,8 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 	const isRoyalLuxury = resolved.themeClass === 'tdc--royal-luxury';
 	const isGalaxySpiral = resolved.themeClass === 'tdc--galaxy-spiral';
 	const isTerracottaOliveSand = resolved.themeClass === 'tdc--terracotta-olive-sand';
+	const isMetroMosaic = resolved.themeClass === 'tdc--metro-mosaic';
+	const isBlueprintAtelier = resolved.themeClass === 'tdc--blueprint-atelier';
 	const multiQueueCount = assignedQueues?.length ?? 0;
 	const useTabularMultiQueue = resolveZoneIsTabularView(
 		appearance.displayTheme,
@@ -367,6 +373,12 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 				isGalaxySpiralTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const terracottaOliveSandHasTable =
 				isTerracottaOliveSandTheme && (cardAssignedQueues?.length ?? 0) > 1;
+			const isMetroMosaicTheme = resolved.themeClass === 'tdc--metro-mosaic';
+			const metroMosaicHasTable =
+				isMetroMosaicTheme && (cardAssignedQueues?.length ?? 0) > 1;
+			const isBlueprintAtelierTheme = resolved.themeClass === 'tdc--blueprint-atelier';
+			const blueprintAtelierHasTable =
+				isBlueprintAtelierTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const glassLobbyHasTable =
 				isGlassLobbyTheme && (cardAssignedQueues?.length ?? 0) > 1;
 			const digitalHealthcareHasTable =
@@ -492,6 +504,22 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 													hasHistory,
 													terracottaOliveSandHasTable,
 												)
+										: isMetroMosaicTheme
+											? computeMetroMosaicFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													metroMosaicHasTable,
+												)
+										: isBlueprintAtelierTheme
+											? computeBlueprintAtelierFillBaseFontSize(
+													width,
+													height,
+													tokenLen,
+													hasHistory,
+													blueprintAtelierHasTable,
+												)
 										: isRoyalTicketTheme
 											? computeRoyalTicketFillBaseFontSize(width, height, tokenLen)
 											: computeFillZoneSplitBaseFontSize(width, height, tokenLen, hasHistory, {
@@ -580,7 +608,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 					? ({ '--tdc-zone-bg-opacity': bgOpacity } as React.CSSProperties)
 					: {}),
 				// Custom card themes: never inherit generic fill 58/42 grid.
-				...((isGalaxySpiral || isTerracottaOliveSand) && fillContainer
+				...((isGalaxySpiral || isTerracottaOliveSand || isMetroMosaic || isBlueprintAtelier) && fillContainer
 					? ({
 							display: 'flex',
 							flexDirection: 'column',
@@ -590,6 +618,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 							minHeight: 0,
 							position: 'relative',
 							...(isGalaxySpiral ? { backgroundColor: '#03010c' } : {}),
+							...(isBlueprintAtelier ? { backgroundColor: '#061525' } : {}),
 						} as React.CSSProperties)
 					: {}),
 				...inlineStyle,
@@ -967,6 +996,152 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 												)}
 												{showHistoryTime && t.called_at && (
 													<span className='tdc-tos-active__chip-time'>{fmtTime(t.called_at)}</span>
+												)}
+											</span>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					) : null}
+				</div>
+			) : isMetroMosaic ? (
+				<div className='tdc-mm-shell'>
+					<MetroMosaicCard
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 ? (
+						<div
+							className={[
+								'tdc-mm-active',
+								useHistoryMarquee ? 'tdc-mm-active--marquee' : 'tdc-mm-active--static',
+							]
+								.filter(Boolean)
+								.join(' ')}
+							aria-label='Active tokens'
+							style={
+								{ '--tdc-mm-active-count': activeTokenCount } as React.CSSProperties
+							}>
+							<div className='tdc-mm-active__aside' aria-hidden='true'>
+								<span className='tdc-mm-active__label'>Active</span>
+								<span className='tdc-mm-active__rule' />
+							</div>
+							<div className='tdc-mm-active__viewport'>
+								<div className='tdc-mm-active__track'>
+									{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+										const counter = shortCounterLabel(t.serving_point_name);
+										const tokenKey = historyTokenKey(t);
+										const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+										const isEntering =
+											!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+										return (
+											<span
+												key={`${tokenKey}-${i}`}
+												className={[
+													'tdc-mm-active__chip',
+													isEntering ? 'tdc-mm-active__chip--enter' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-hidden={isMarqueeDuplicate}
+												onAnimationEnd={() => {
+													if (!isMarqueeDuplicate) clearHistoryEnter(tokenKey);
+												}}>
+												<span className='tdc-mm-active__chip-token'>{t.token_display}</span>
+												{(counter || (showHistoryTime && t.called_at)) && (
+													<span className='tdc-mm-active__chip-meta'>
+														{counter ? (
+															<span className='tdc-mm-active__chip-counter'>{counter}</span>
+														) : null}
+														{counter && showHistoryTime && t.called_at ? (
+															<span className='tdc-mm-active__chip-sep' aria-hidden='true'>
+																·
+															</span>
+														) : null}
+														{showHistoryTime && t.called_at ? (
+															<span className='tdc-mm-active__chip-time'>
+																{fmtTime(t.called_at)}
+															</span>
+														) : null}
+													</span>
+												)}
+											</span>
+										);
+									})}
+								</div>
+							</div>
+						</div>
+					) : null}
+				</div>
+			) : isBlueprintAtelier ? (
+				<div className='tdc-ba-shell'>
+					<BlueprintAtelierCard
+						queueName={heroLayout.queueName}
+						subtitle={heroLayout.subtitle}
+						displayToken={heroLayout.displayToken}
+						statusLabel={heroLayout.statusConfig.label}
+						statusModifier={heroLayout.statusConfig.modifier}
+						assignedQueues={cardAssignedQueues}
+					/>
+					{hasHistory && recentTokens && recentTokens.length > 0 ? (
+						<div
+							className={[
+								'tdc-ba-active',
+								useHistoryMarquee ? 'tdc-ba-active--marquee' : 'tdc-ba-active--static',
+							]
+								.filter(Boolean)
+								.join(' ')}
+							aria-label='Active tokens'
+							style={
+								{ '--tdc-ba-active-count': activeTokenCount } as React.CSSProperties
+							}>
+							<div className='tdc-ba-active__aside' aria-hidden='true'>
+								<span className='tdc-ba-active__label'>Active</span>
+								<span className='tdc-ba-active__rule' />
+							</div>
+							<div className='tdc-ba-active__viewport'>
+								<div className='tdc-ba-active__track'>
+									{(useHistoryMarquee ? historyDisplayTokens : recentTokens).map((t, i) => {
+										const counter = shortCounterLabel(t.serving_point_name);
+										const tokenKey = historyTokenKey(t);
+										const isMarqueeDuplicate = useHistoryMarquee && i >= activeTokenCount;
+										const isEntering =
+											!isMarqueeDuplicate && enteringHistoryKeys.has(tokenKey);
+										return (
+											<span
+												key={`${tokenKey}-${i}`}
+												className={[
+													'tdc-ba-active__chip',
+													isEntering ? 'tdc-ba-active__chip--enter' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-hidden={isMarqueeDuplicate}
+												onAnimationEnd={() => {
+													if (!isMarqueeDuplicate) clearHistoryEnter(tokenKey);
+												}}>
+												<span className='tdc-ba-active__chip-token'>{t.token_display}</span>
+												{(counter || (showHistoryTime && t.called_at)) && (
+													<span className='tdc-ba-active__chip-meta'>
+														{counter ? (
+															<span className='tdc-ba-active__chip-counter'>{counter}</span>
+														) : null}
+														{counter && showHistoryTime && t.called_at ? (
+															<span className='tdc-ba-active__chip-sep' aria-hidden='true'>
+																·
+															</span>
+														) : null}
+														{showHistoryTime && t.called_at ? (
+															<span className='tdc-ba-active__chip-time'>
+																{fmtTime(t.called_at)}
+															</span>
+														) : null}
+													</span>
 												)}
 											</span>
 										);
@@ -1487,7 +1662,7 @@ const TokenDisplayThemeCard: React.FC<TokenDisplayThemeCardProps> = ({
 			{/* Neon Prism active tokens — rendered inside .tdc-np-shell above */}
 
 			{/* Active tokens strip — only rendered when tokens are provided. */}
-			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && !isGalaxySpiral && !isTerracottaOliveSand && hasHistory && historyDisplayTokens.length > 0 && (
+			{!isOledPulse && !isDigitalHealthcare && !isGlassLobby && !isNeonPrism && !isSignalBoard && !isCarSpeedometer && !isRoyalLuxury && !isGalaxySpiral && !isTerracottaOliveSand && !isMetroMosaic && !isBlueprintAtelier && hasHistory && historyDisplayTokens.length > 0 && (
 				<div
 					className={`tdc__history${useHistoryMarquee ? '' : ' tdc__history--static'}`}
 					aria-label='Active tokens'

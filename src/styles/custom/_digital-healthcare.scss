@@ -137,14 +137,40 @@
 	}
 
 	.tdc-dh-topbar {
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
-		gap: 0.34em;
+		column-gap: clamp(0.28em, 1.8cqw, 0.52em);
+		row-gap: 0.2em;
 		flex-shrink: 0;
 		padding: 0.36em 0.52em;
 		background: linear-gradient(90deg, var(--dh-blue-bg) 0%, var(--dh-blue-dark-bg) 100%);
 		color: #ffffff;
 		min-width: 0;
+	}
+
+	.tdc-dh-topbar__left,
+	.tdc-dh-topbar__right {
+		display: flex;
+		align-items: center;
+		gap: clamp(0.22em, 1.4cqw, 0.38em);
+		min-width: 0;
+	}
+
+	.tdc-dh-topbar__left {
+		justify-content: flex-start;
+	}
+
+	.tdc-dh-topbar__center {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+		padding-inline: clamp(0.2em, 1.2cqw, 0.45em);
+	}
+
+	.tdc-dh-topbar__right {
+		justify-content: flex-end;
 	}
 
 	.tdc-dh-topbar__icon {
@@ -172,7 +198,7 @@
 
 	.tdc-dh-topbar__queue {
 		flex-shrink: 0;
-		max-width: 5em;
+		max-width: min(8em, 42vw);
 		padding: 0.18em 0.4em;
 		border-radius: 0.35em;
 		font-size: clamp(0.48em, 2.4cqw, 0.62em);
@@ -187,10 +213,17 @@
 		text-overflow: ellipsis;
 	}
 
+	.tdc-dh-topbar__queue--empty {
+		min-width: 1.5em;
+		min-height: 1em;
+		opacity: 0;
+		pointer-events: none;
+	}
+
 	.tdc-dh-topbar__serving-point {
 		flex: 0 1 auto;
 		min-width: 0;
-		max-width: 9em;
+		max-width: min(10em, 36vw);
 		padding: 0.16em 0.38em;
 		border-radius: 0.35em;
 		font-size: clamp(0.44em, 2.2cqw, 0.58em);
@@ -210,9 +243,9 @@
 		flex-direction: row;
 		align-items: baseline;
 		justify-content: flex-start;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: 0.3em 0.45em;
-		flex: 1 1 auto;
+		flex: 0 1 auto;
 		min-width: 0;
 		max-width: 100%;
 		line-height: 1.1;
@@ -228,7 +261,7 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 55%;
+		max-width: 100%;
 	}
 
 	.tdc-dh-clock__time {
@@ -240,12 +273,12 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 45%;
+		max-width: 100%;
 	}
 
 	.tdc-dh-topbar__status {
 		flex-shrink: 0;
-		max-width: 42%;
+		max-width: min(8em, 34vw);
 		padding: 0.22em 0.48em;
 		border-radius: 999px;
 		font-size: clamp(0.38em, 2cqw, 0.48em);
@@ -608,10 +641,10 @@
 		flex: 0 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.14em;
-		padding: 0.24em 0.45em 0.22em;
+		gap: 0.06em;
+		padding: 0.12em 0.32em 0.1em;
 		min-width: 0;
-		max-height: clamp(2.4em, 15cqh, 4em);
+		max-height: clamp(1.55em, 8.5cqh, 2.5em);
 		overflow: hidden;
 		border-top: 1px solid rgba(37, 99, 235, 0.1);
 		background: linear-gradient(
@@ -623,10 +656,10 @@
 
 	.tdc-dh-metrics__title {
 		flex: 0 0 auto;
-		font-size: clamp(0.28em, 3.6cqw, 0.36em);
+		font-size: clamp(0.2em, 2.5cqw, 0.26em);
 		font-weight: 700;
-		line-height: 1.2;
-		letter-spacing: 0.12em;
+		line-height: 1.1;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--dh-ink-sub);
 		padding: 0;
@@ -645,7 +678,7 @@
 		display: flex;
 		flex-direction: row;
 		align-items: stretch;
-		gap: 0.2em;
+		gap: 0.1em;
 		min-width: 0;
 	}
 
@@ -658,7 +691,7 @@
 
 	.tdc-dh-metrics--fit .tdc-dh-metric-card {
 		flex: 1 1
-			calc((100% - (var(--tdc-dh-active-count, 2) - 1) * 0.2em) / var(--tdc-dh-active-count, 2));
+			calc((100% - (var(--tdc-dh-active-count, 2) - 1) * 0.1em) / var(--tdc-dh-active-count, 2));
 		min-width: 0;
 		max-width: 100%;
 	}
@@ -673,18 +706,18 @@
 
 	.tdc-dh-metrics--marquee .tdc-dh-metric-card {
 		flex: 0 0 auto;
-		width: clamp(2.8em, 17cqw, 4em);
-		min-width: 2.5em;
-		max-width: 4.2em;
+		width: clamp(1.9em, 11cqw, 2.7em);
+		min-width: 1.75em;
+		max-width: 2.9em;
 	}
 
 	.tdc-dh-metric-card {
 		display: flex;
 		align-items: center;
-		gap: 0.2em;
+		gap: 0.1em;
 		min-width: 0;
-		padding: 0.18em 0.26em;
-		border-radius: 0.34em;
+		padding: 0.08em 0.14em;
+		border-radius: 0.22em;
 		background: var(--dh-bg);
 		border: 1px solid var(--dh-border);
 		box-shadow: 0 2px 8px rgba(37, 99, 235, #{tdc-zone-a(0.07)});
@@ -706,14 +739,14 @@
 
 	.tdc-dh-metric-card__icon {
 		flex-shrink: 0;
-		width: 0.82em;
-		height: 0.82em;
-		min-width: 0.82em;
-		border-radius: 0.22em;
+		width: 0.58em;
+		height: 0.58em;
+		min-width: 0.58em;
+		border-radius: 0.14em;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.5em;
+		font-size: 0.42em;
 		font-weight: 800;
 		line-height: 1;
 		color: #ffffff;
@@ -723,7 +756,7 @@
 	.tdc-dh-metric-card__body {
 		display: flex;
 		flex-direction: column;
-		gap: 0.04em;
+		gap: 0.02em;
 		min-width: 0;
 		flex: 1 1 auto;
 		overflow: hidden;
@@ -731,9 +764,9 @@
 
 	.tdc-dh-metric-card__token {
 		font-size: clamp(
-			0.26em,
-			calc(4.2cqw / max(1, var(--tdc-dh-active-count, 2) * 0.42)),
-			0.4em
+			0.18em,
+			calc(2.9cqw / max(1, var(--tdc-dh-active-count, 2) * 0.42)),
+			0.28em
 		);
 		font-weight: 800;
 		line-height: 1.15;
@@ -746,9 +779,9 @@
 
 	.tdc-dh-metric-card__counter {
 		font-size: clamp(
-			0.22em,
-			calc(3.4cqw / max(1, var(--tdc-dh-active-count, 2) * 0.45)),
-			0.32em
+			0.16em,
+			calc(2.4cqw / max(1, var(--tdc-dh-active-count, 2) * 0.45)),
+			0.24em
 		);
 		font-weight: 600;
 		line-height: 1.15;
@@ -759,7 +792,7 @@
 	}
 
 	.tdc-dh-metric-card__time {
-		font-size: clamp(0.22em, 2.9cqw, 0.3em);
+		font-size: clamp(0.18em, 2.4cqw, 0.24em);
 		line-height: 1.1;
 		color: var(--dh-ink-sub);
 		white-space: nowrap;
@@ -962,6 +995,20 @@
 }
 
 @container tdc-dh (max-width: 240px) {
+	.tdc--digital-healthcare .tdc-dh-topbar {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.tdc--digital-healthcare .tdc-dh-topbar__center {
+		grid-column: 1 / -1;
+		order: -1;
+		justify-content: center;
+	}
+
+	.tdc--digital-healthcare .tdc-dh-topbar__right {
+		justify-content: flex-end;
+	}
+
 	.tdc--digital-healthcare .tdc-dh-clock {
 		flex-direction: column;
 		align-items: flex-start;
@@ -983,7 +1030,7 @@
 }
 
 @container tdc-dh (max-width: 160px) {
-	.tdc--digital-healthcare .tdc-dh-clock__date {
+	.tdc--digital-healthcare .tdc-dh-topbar__left .tdc-dh-clock__date {
 		display: none;
 	}
 

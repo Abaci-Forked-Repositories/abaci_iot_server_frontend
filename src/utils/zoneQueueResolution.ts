@@ -203,7 +203,7 @@ export function buildEditorPageTurnQueueDisplays(
 
 		return {
 			queueName: name,
-			servingPointName: `Counter ${String(i + 1).padStart(2, '0')}`,
+			servingPointName: `Serving Point ${String(i + 1).padStart(2, '0')}`,
 			tokenDisplay: token,
 			statusLabel: statusConfig.label,
 			statusModifier: statusConfig.modifier,

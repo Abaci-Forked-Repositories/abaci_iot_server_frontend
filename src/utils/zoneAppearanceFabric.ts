@@ -125,6 +125,8 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'royal-luxury': '#050505',
 		'galaxy-spiral': '#03010c',
 		'terracotta-olive-sand': '#E2725B',
+		'metro-mosaic': '#4db8e8',
+		'blueprint-atelier': '#061525',
 	};
 	return fallbacks[themeId];
 }

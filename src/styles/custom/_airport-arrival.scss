@@ -482,11 +482,9 @@
 		white-space: nowrap;
 	}
 
+	// Token chips show serving-point number only — no "Counter" / "Ctr" label.
 	.tdc__history-counter-label {
-		color: var(--aa-ink-soft);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		font-weight: 600;
+		display: none;
 	}
 
 	.tdc__history-counter-num {

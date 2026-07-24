@@ -86,22 +86,33 @@ const HealthcareDashboardCard: React.FC<HealthcareDashboardCardProps> = ({
 	return (
 		<div className='tdc-dh-layout'>
 			<header className='tdc-dh-topbar'>
-				{queueName ? (
-					<span className='tdc-dh-topbar__queue' title={`Queue ${queueName}`}>
-						{queueName}
+				<div className='tdc-dh-topbar__left'>
+					<HealthcareDashboardClock part='date' />
+					{servingPointLabel ? (
+						<span className='tdc-dh-topbar__serving-point' title={servingPointLabel}>
+							{servingPointLabel}
+						</span>
+					) : null}
+				</div>
+
+				<div className='tdc-dh-topbar__center'>
+					{queueName ? (
+						<span className='tdc-dh-topbar__queue' title={`Queue ${queueName}`}>
+							{queueName}
+						</span>
+					) : (
+						<span className='tdc-dh-topbar__queue tdc-dh-topbar__queue--empty' aria-hidden='true' />
+					)}
+				</div>
+
+				<div className='tdc-dh-topbar__right'>
+					<span
+						className={`tdc-dh-topbar__status tdc-dh-topbar__status--${statusModifier}`}
+						aria-live='polite'>
+						{statusLabel}
 					</span>
-				) : null}
-				{servingPointLabel ? (
-					<span className='tdc-dh-topbar__serving-point' title={servingPointLabel}>
-						{servingPointLabel}
-					</span>
-				) : null}
-				<HealthcareDashboardClock />
-				<span
-					className={`tdc-dh-topbar__status tdc-dh-topbar__status--${statusModifier}`}
-					aria-live='polite'>
-					{statusLabel}
-				</span>
+					<HealthcareDashboardClock part='time' />
+				</div>
 			</header>
 
 			<div className='tdc-dh-main'>
