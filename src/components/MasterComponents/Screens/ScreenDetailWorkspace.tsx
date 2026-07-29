@@ -120,10 +120,11 @@ const ScreenDetailWorkspace: React.FC = () => {
 		runAction(key, () => screensApi.toggleAudio(target.id, !Boolean(target.enable_audio)));
 	};
 
-	const handleHeartbeat = (target: Screen) => {
-		const key = `screen-heartbeat-${target.id}`;
-		runAction(key, () => screensApi.heartbeat(target.id));
-	};
+	// Heartbeat — hidden for now; restore when needed
+	// const handleHeartbeat = (target: Screen) => {
+	// 	const key = `screen-heartbeat-${target.id}`;
+	// 	runAction(key, () => screensApi.heartbeat(target.id));
+	// };
 
 	const handleAssignTemplate = async (payload: Parameters<typeof screenTemplatesApi.create>[0]) => {
 		try {
@@ -234,7 +235,7 @@ const ScreenDetailWorkspace: React.FC = () => {
 										'noopener,noreferrer',
 									);
 								}}>
-								Link
+								Open display
 							</Button>
 							<Button
 								color={linkCopied ? 'success' : 'info'}
@@ -276,7 +277,7 @@ const ScreenDetailWorkspace: React.FC = () => {
 							actionLoadingKey={actionLoadingKey}
 							onActivateToggle={handleActivateToggle}
 							onAudioToggle={handleAudioToggle}
-							onHeartbeat={handleHeartbeat}
+							// onHeartbeat={handleHeartbeat}
 							onAssignTemplate={() => setShowAssignTemplateModal(true)}
 							onEditTemplate={setEditingAssignment}
 							onRemoveTemplate={handleRemoveTemplate}

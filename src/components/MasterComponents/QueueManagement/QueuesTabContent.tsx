@@ -9,7 +9,7 @@ import QueueCardTile from './QueueCardTile';
 import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import Button from '../../bootstrap/Button';
-import NoDataComponent from '../../CustomComponent/NoDataComponent';
+// import NoDataComponent from '../../CustomComponent/NoDataComponent';
 // import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
 import noqueue from '../../../assets/Lottie/noqueue.json';
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -39,6 +39,8 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	const navigate = useNavigate();
 	const [queues, setQueues] = useState<Queue[]>([]);
 	const queueOffsetRef = useRef(0);
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const isFetchingMoreRef = useRef(false);
 	const [hasMoreQueues, setHasMoreQueues] = useState(true);
 	const [isLoadingMoreQueues, setIsLoadingMoreQueues] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(true);
@@ -74,12 +76,14 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 	const loadQueues = useCallback(
 		async (reset = true) => {
 			const offset = reset ? 0 : queueOffsetRef.current;
+			if (!reset) {
+				if (isFetchingMoreRef.current) return;
+				isFetchingMoreRef.current = true;
+				setIsLoadingMoreQueues(true);
+			}
 			try {
-				if (!reset) setIsLoadingMoreQueues(true);
-
 				if (typeof selectedGroupFilter === 'number') {
 					if (!reset) {
-						setIsLoadingMoreQueues(false);
 						return;
 					}
 					const refs = await queuesApi.getGroupQueues(selectedGroupFilter);
@@ -131,7 +135,10 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 			} catch (err) {
 				setError(getErrorMessage(err));
 			} finally {
-				if (!reset) setIsLoadingMoreQueues(false);
+				if (!reset) {
+					setIsLoadingMoreQueues(false);
+					isFetchingMoreRef.current = false;
+				}
 			}
 		},
 		[searchTerm, selectedGroupFilter],
@@ -141,6 +148,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 		let isMounted = true;
 		const run = async () => {
 			queueOffsetRef.current = 0;
+			isFetchingMoreRef.current = false;
 			setInitialLoading(true);
 			setError('');
 			await loadQueues(true);
@@ -151,6 +159,30 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 			isMounted = false;
 		};
 	}, [searchTerm, selectedGroupFilter, refreshKey, loadQueues]);
+
+	// When the first page fits the viewport (no overflow), scroll-to-load never fires —
+	// keep fetching until content overflows or there are no more rows.
+	useEffect(() => {
+		if (initialLoading || typeof selectedGroupFilter === 'number') return;
+		if (!hasMoreQueues || isLoadingMoreQueues) return;
+		const el = scrollRef.current;
+		if (!el || queues.length === 0) return;
+
+		const frame = window.requestAnimationFrame(() => {
+			const { scrollHeight, clientHeight } = el;
+			if (scrollHeight <= clientHeight + 1) {
+				void loadQueues(false);
+			}
+		});
+		return () => window.cancelAnimationFrame(frame);
+	}, [
+		queues,
+		hasMoreQueues,
+		isLoadingMoreQueues,
+		initialLoading,
+		loadQueues,
+		selectedGroupFilter,
+	]);
 
 	const handleScroll = useCallback(
 		(event: React.UIEvent<HTMLDivElement>) => {
@@ -194,35 +226,21 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 			<>
 				{drilldownBanner}
 				<div className='queue-empty-state d-flex flex-column align-items-center justify-content-center'>
-					{/* <NoDataComponent
-						lottie={noqueue}
-						description={
-							isGroupDrilldown
-								? searchTerm.trim()
-									? 'No queues found in this group for this search.'
-									: 'No queues in this group yet.'
-								: searchTerm.trim()
-									? 'No queues found for this search.'
-									: 'No queues found.'
-						}
-					/> */}
-
 					<Player
-					autoplay
-					loop
-					src={noqueue}
-					renderer='svg'
-					style={{ width: 560, height: 300, maxWidth: '100%' ,marginBottom: '5px'}}
-				/>
-				
-				  <p className='text-muted mb-0'>No queue found.</p>
+						autoplay
+						loop
+						src={noqueue}
+						renderer='svg'
+						style={{ width: 560, height: 300, maxWidth: '100%', marginBottom: '5px' }}
+					/>
+					<p className='text-muted mb-0'>No queue found.</p>
 				</div>
 			</>
 		);
 	}
 
 	return (
-		<div className='queue-cards-scroll' onScroll={handleScroll}>
+		<div className='queue-cards-scroll' ref={scrollRef} onScroll={handleScroll}>
 			{drilldownBanner}
 			<Row className='g-3 mx-0'>
 				{queues.map((queue) => (
@@ -242,6 +260,17 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 			{isLoadingMoreQueues && (
 				<div className='py-3'>
 					<QueueManagementSkeleton count={4} />
+				</div>
+			)}
+			{hasMoreQueues && !isGroupDrilldown && (
+				<div className='d-flex justify-content-center py-3'>
+					<Button
+						color='primary'
+						isLight
+						isDisable={isLoadingMoreQueues}
+						onClick={() => void loadQueues(false)}>
+						{isLoadingMoreQueues ? 'Loading…' : 'Load more'}
+					</Button>
 				</div>
 			)}
 		</div>

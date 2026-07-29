@@ -121,10 +121,7 @@ const ScreenCreateModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
 					<label className='form-label' htmlFor='screen-create-background-image'>
 						Screen background image
 					</label>
-					<p className='form-text text-muted mb-2'>
-						Optional. Upload an image and crop it; it is sent as{' '}
-						<code>background_image</code> when you create the screen.
-					</p>
+					
 					<div className='screen-create-background-cropper border rounded p-3 bg-light'>
 						<ImageCropper
 							croppedImage={croppedImage}

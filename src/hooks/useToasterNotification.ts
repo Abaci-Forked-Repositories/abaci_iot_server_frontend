@@ -35,6 +35,10 @@ const useToasterNotification = () => {
   };
 
   const showErrorNotification = (message: any| JSX.Element) => {
+    if (typeof message === 'string') {
+      showNotification('Error', message, 'danger');
+      return;
+    }
     if (message?.response?.status === 401) {
       setLogOut();
     } else if (isForbiddenPermissionError(message)) {

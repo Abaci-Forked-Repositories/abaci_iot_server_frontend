@@ -33,6 +33,7 @@ interface IPopoversProps extends HTMLAttributes<HTMLDivElement> {
 	delay?: number;
 	isDisplayInline?: boolean;
 	modifiers?: object;
+	strategy?: 'absolute' | 'fixed';
     popoverOpen:boolean;
     setPopoverOpen:any;
 }
@@ -50,6 +51,7 @@ const Popovers: FC<IPopoversProps> = ({
 	delay,
 	isDisplayInline,
 	modifiers,
+	strategy = 'absolute',
 	...props
 }) => {
 	const [referenceElement, setReferenceElement] = useState<HTMLSpanElement | null>(null);
@@ -57,6 +59,7 @@ const Popovers: FC<IPopoversProps> = ({
 	const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement,
+		strategy,
 		modifiers: [
 			{
 				name: 'offset',
@@ -177,6 +180,7 @@ const Popovers: FC<IPopoversProps> = ({
 					<div
 						ref={setPopperElement}
 						role='tooltip'
+						data-modal-ignore-backdrop
 						className={classNames('popover', 'bs-popover-auto', className)}
 						style={styles.popper}
 						// eslint-disable-next-line react/jsx-props-no-spreading

@@ -6,6 +6,7 @@ import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import FormGroup from '../../bootstrap/forms/FormGroup';
 import Spinner from '../../bootstrap/Spinner';
+import DateTimeLocalInput, { toDateTimeLocalValue } from '../../CustomComponent/DateTimeLocalInput';
 import JwtSecretRevealPanel from './JwtSecretRevealPanel';
 
 export interface DeviceCredential {
@@ -53,8 +54,6 @@ const toIso = (local: string): string | null => {
 	if (Number.isNaN(d.getTime())) return null;
 	return d.toISOString();
 };
-
-const toDateTimeLocalValue = (value: Date) => dayjs(value).format('YYYY-MM-DDTHH:mm');
 
 const minValidUntilAfterFrom = (validFromLocal: string): string | undefined => {
 	const trimmed = validFromLocal.trim();
@@ -183,8 +182,6 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 		};
 	};
 
-	const canSave = form.name.trim().length > 0;
-
 	const handleSubmit = async (event?: FormEvent) => {
 		event?.preventDefault();
 		const dates = validateForm();
@@ -253,7 +250,7 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 				</>
 			) : (
 				/* ── Create / Edit form ── */
-				<form onSubmit={handleSubmit}>
+				<form onSubmit={handleSubmit} noValidate>
 					<ModalBody>
 						<div className='row g-3'>
 							<div className='col-12'>
@@ -265,7 +262,6 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 										placeholder='e.g. Kiosk 1'
 										value={form.name}
 										onChange={handleChange}
-										required
 									/>
 								</FormGroup>
 							</div>
@@ -285,28 +281,22 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 
 							<div className='col-12 col-md-6'>
 								<FormGroup label={isEdit ? 'Valid from' : 'Valid from *'}>
-									<input
-										type='datetime-local'
-										className='form-control'
+									<DateTimeLocalInput
 										name='valid_from'
 										min={!isEdit ? toDateTimeLocalValue(new Date()) : undefined}
 										value={form.valid_from}
 										onChange={handleChange}
-										required={!isEdit}
 									/>
 								</FormGroup>
 							</div>
 
 							<div className='col-12 col-md-6'>
 								<FormGroup label={isEdit ? 'Valid until' : 'Valid until *'}>
-									<input
-										type='datetime-local'
-										className='form-control'
+									<DateTimeLocalInput
 										name='valid_until'
 										min={validUntilMin}
 										value={form.valid_until}
 										onChange={handleChange}
-										required={!isEdit}
 									/>
 								</FormGroup>
 							</div>
@@ -322,7 +312,7 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 							isDisable={submitting}>
 							Cancel
 						</Button>
-						<Button color='primary' type='submit' isDisable={submitting || !canSave}>
+						<Button color='primary' type='submit' isDisable={submitting}>
 							{submitting ? (
 								<>
 									<Spinner isSmall inButton />

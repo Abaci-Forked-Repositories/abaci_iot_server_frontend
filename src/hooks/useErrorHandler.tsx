@@ -5,6 +5,10 @@ const useErrorHandler = () => {
 	// const { setLogOut } = useContext(AuthContext);
 
 	const handleError = useCallback((error: any): string => {
+		if (typeof error === 'string') {
+			return error;
+		}
+
 		let errorMsg = '';
 
 		const response = error?.response;

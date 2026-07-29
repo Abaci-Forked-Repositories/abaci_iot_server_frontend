@@ -8,7 +8,7 @@ import type { QueueGroupFilterValue } from './queueManagementConstants';
 import { getErrorMessage } from './queueManagementUtils';
 import QueueGroupCardTile from './QueueGroupCardTile';
 import noqueuelottie from '../../../assets/Lottie/noqueuelottie.json';
-import NoDataComponent from '../../CustomComponent/NoDataComponent';
+import Button from '../../bootstrap/Button';
 import { Player } from '@lottiefiles/react-lottie-player';
 
 const GROUP_LIST_LIMIT = 12;
@@ -34,6 +34,8 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 }) => {
 	const [groups, setGroups] = useState<QueueGroup[]>([]);
 	const groupOffsetRef = useRef(0);
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const isFetchingMoreRef = useRef(false);
 	const [hasMoreGroups, setHasMoreGroups] = useState(true);
 	const [isLoadingMoreGroups, setIsLoadingMoreGroups] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(true);
@@ -49,8 +51,12 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 	const loadGroups = useCallback(
 		async (reset = true) => {
 			const offset = reset ? 0 : groupOffsetRef.current;
+			if (!reset) {
+				if (isFetchingMoreRef.current) return;
+				isFetchingMoreRef.current = true;
+				setIsLoadingMoreGroups(true);
+			}
 			try {
-				if (!reset) setIsLoadingMoreGroups(true);
 				const response = await queuesApi.groups({
 					search: searchTerm || undefined,
 					limit: GROUP_LIST_LIMIT,
@@ -64,7 +70,10 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 			} catch (err) {
 				setError(getErrorMessage(err));
 			} finally {
-				if (!reset) setIsLoadingMoreGroups(false);
+				if (!reset) {
+					setIsLoadingMoreGroups(false);
+					isFetchingMoreRef.current = false;
+				}
 			}
 		},
 		[searchTerm],
@@ -74,6 +83,7 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 		let isMounted = true;
 		const run = async () => {
 			groupOffsetRef.current = 0;
+			isFetchingMoreRef.current = false;
 			setInitialLoading(true);
 			setError('');
 			await loadGroups(true);
@@ -84,6 +94,23 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 			isMounted = false;
 		};
 	}, [searchTerm, refreshKey, loadGroups]);
+
+	// When the first page fits the viewport (no overflow), scroll-to-load never fires —
+	// keep fetching until content overflows or there are no more rows.
+	useEffect(() => {
+		if (initialLoading) return;
+		if (!hasMoreGroups || isLoadingMoreGroups) return;
+		const el = scrollRef.current;
+		if (!el || groups.length === 0) return;
+
+		const frame = window.requestAnimationFrame(() => {
+			const { scrollHeight, clientHeight } = el;
+			if (scrollHeight <= clientHeight + 1) {
+				void loadGroups(false);
+			}
+		});
+		return () => window.cancelAnimationFrame(frame);
+	}, [groups, hasMoreGroups, isLoadingMoreGroups, initialLoading, loadGroups]);
 
 	const handleScroll = useCallback(
 		(event: React.UIEvent<HTMLDivElement>) => {
@@ -114,17 +141,12 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 	if (!sortedGroups.length) {
 		return (
 			<div className='queue-empty-state d-flex flex-column align-items-center justify-content-center'>
-				{/* <NoDataComponent
-					lottie={noqueuelottie}
-					className='h-30 w-30'
-					description='No queue groups found.'
-				/> */}
 				<Player
 					autoplay
 					loop
 					src={noqueuelottie}
 					renderer='svg'
-					style={{ width: 460, height: 260, maxWidth: '100%' ,marginBottom: '1px'}}
+					style={{ width: 460, height: 260, maxWidth: '100%', marginBottom: '1px' }}
 				/>
 				<p className='text-muted mb-0'>No queue groups found.</p>
 			</div>
@@ -132,7 +154,7 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 	}
 
 	return (
-		<div className='queue-cards-scroll' onScroll={handleScroll}>
+		<div className='queue-cards-scroll' ref={scrollRef} onScroll={handleScroll}>
 			<Row className='g-3 mx-0'>
 				{sortedGroups.map((group) => (
 					<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={group.id}>
@@ -151,6 +173,17 @@ const QueueGroupTabContent: React.FC<QueueGroupTabContentProps> = ({
 			{isLoadingMoreGroups && (
 				<div className='py-3'>
 					<QueueManagementSkeleton count={4} />
+				</div>
+			)}
+			{hasMoreGroups && (
+				<div className='d-flex justify-content-center py-3'>
+					<Button
+						color='primary'
+						isLight
+						isDisable={isLoadingMoreGroups}
+						onClick={() => void loadGroups(false)}>
+						{isLoadingMoreGroups ? 'Loading…' : 'Load more'}
+					</Button>
 				</div>
 			)}
 		</div>

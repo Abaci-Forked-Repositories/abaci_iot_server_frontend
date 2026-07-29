@@ -115,7 +115,7 @@ const QueueManagementWorkspace: React.FC = () => {
 	};
 
 	return (
-		<Card stretch>
+		<Card stretch className='queue-management-workspace-card'>
 			<CardHeader>
 				<div className='d-flex align-items-center gap-3'>
 					<div className='media-files-title-text d-flex align-items-center gap-2 '>
