@@ -39,6 +39,15 @@ import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
 import TemplateZoneThemeOverlays from './TemplateZoneThemeOverlays';
 import { parseTemplateConfiguration } from '../../../utils/templateOverlayOpacity';
+import { buildEditorPageTurnQueueDisplays, normalizeZoneQueueIds } from '../../../utils/zoneQueueResolution';
+import {
+	formatMultiQueueAssignmentHint,
+	readZoneIsTabularViewFromRect,
+	resolveZoneIsTabularView,
+	coalesceZoneTabularView,
+	themeSupportsTabularMultiQueueView,
+} from '../../../utils/zoneMultiQueueView';
+import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
 import usePermissions from '../../../hooks/usePermissions';
 import {
 	formatPermissionDeniedMessage,
@@ -56,6 +65,7 @@ const FABRIC_CUSTOM_PROPS = [
 	'queueIds',
 	'queueUuids',
 	'queueChipNames',
+	'isTabularView',
 	'zoneOpacity',
 	...FABRIC_ZONE_APPEARANCE_PROPS,
 ];
@@ -75,6 +85,8 @@ interface ZoneProps {
 	borderColor: string;
 	/** 0–100 (%) opacity of this zone over the screen background. Default 100. */
 	opacity: number;
+	/** Multi-queue board-capable themes: true = tabular board, false = rotating singular hero. */
+	isTabularView: boolean;
 }
 
 const BLANK_PROPS: ZoneProps = {
@@ -89,6 +101,7 @@ const BLANK_PROPS: ZoneProps = {
 	radius: 0,
 	borderColor: 'rgba(255,255,255,0)',
 	opacity: 100,
+	isTabularView: true,
 };
 
 function normalizeQueueIds(source: {
@@ -115,16 +128,28 @@ function dedupeQueueIdsPreserveOrder(queueIds: number[]): number[] {
 	});
 }
 
-/** Each zone may only be linked to one queue. */
-function toSingleZoneQueueIds(queueIds: number[]): number[] {
-	const unique = dedupeQueueIdsPreserveOrder(queueIds);
-	return unique.length ? [unique[0]] : [];
-}
-
 function queueIdsToUuids(queueIds: number[], queuesById: Map<number, Queue>): string[] {
 	return queueIds
 		.map((id) => queuesById.get(id)?.uuid)
 		.filter((uuid): uuid is string => typeof uuid === 'string' && uuid.length > 0);
+}
+
+function applyQueueRefsToRect(
+	rect: any,
+	queueIds: number[],
+	queuesById: Map<number, Queue>,
+) {
+	const uniqueIds = normalizeZoneQueueIds(queueIds);
+	const queueUuids = queueIdsToUuids(uniqueIds, queuesById);
+	const queueChipNames = uniqueIds.map(
+		(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
+	);
+	rect.set({
+		queueIds: uniqueIds,
+		queueId: uniqueIds[0] ?? null,
+		queueUuids,
+		queueChipNames,
+	});
 }
 
 function buildQueuesByUuidMulti(queues: Queue[]): Map<string, Queue[]> {
@@ -201,15 +226,15 @@ function resolveQueueIdsFromRefs(
 			);
 			if (queueId != null) resolved.push(queueId);
 		});
-		if (resolved.length) return toSingleZoneQueueIds(resolved);
+		if (resolved.length) return normalizeZoneQueueIds(resolved);
 	}
 
 	const numericIds = Array.isArray(refs.queueIds)
 		? refs.queueIds.filter((id) => Number.isFinite(id) && id > 0)
 		: [];
-	if (numericIds.length) return toSingleZoneQueueIds(numericIds);
+	if (numericIds.length) return normalizeZoneQueueIds(numericIds);
 
-	return toSingleZoneQueueIds(normalizeQueueIds(refs));
+	return normalizeZoneQueueIds(normalizeQueueIds(refs));
 }
 
 function resolveQueueIdsFromRect(
@@ -223,24 +248,6 @@ function resolveQueueIdsFromRect(
 	queuesByName: Map<string, Queue[]>,
 ): number[] {
 	return resolveQueueIdsFromRefs(rect, queuesByUuidMulti, queuesByName);
-}
-
-function applyQueueRefsToRect(
-	rect: any,
-	queueIds: number[],
-	queuesById: Map<number, Queue>,
-) {
-	const uniqueIds = toSingleZoneQueueIds(queueIds);
-	const queueUuids = queueIdsToUuids(uniqueIds, queuesById);
-	const queueChipNames = uniqueIds.map(
-		(id) => queuesById.get(id)?.name ?? `Queue #${id}`,
-	);
-	rect.set({
-		queueIds: uniqueIds,
-		queueId: uniqueIds[0] ?? null,
-		queueUuids,
-		queueChipNames,
-	});
 }
 
 function isZoneRect(obj: any): boolean {
@@ -390,6 +397,7 @@ interface SavedZoneConfig {
 	queue_ids?: number[];
 	queue_uuids?: string[];
 	queue_names?: string[];
+	is_tabular_view?: boolean;
 	left?: number;
 	top?: number;
 	width?: number;
@@ -453,6 +461,32 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 	const queuesByUuidMulti = React.useMemo(() => buildQueuesByUuidMulti(queues), [queues]);
 	const queuesByName = React.useMemo(() => buildQueuesByName(queues), [queues]);
+	const queueSelectOptions = React.useMemo(
+		() => queues.map((queue) => ({ value: queue.id, label: queue.name })),
+		[queues],
+	);
+	const selectedZoneQueueOptions = React.useMemo(
+		() =>
+			zoneProps.queueIds.map((id) => ({
+				value: id,
+				label: queuesById.get(id)?.name ?? `Queue #${id}`,
+			})),
+		[zoneProps.queueIds, queuesById],
+	);
+	const previewAssignedQueues = React.useMemo(() => {
+		if (!selectedObject) return undefined;
+		const displays = buildEditorPageTurnQueueDisplays(
+			{
+				queueIds: zoneProps.queueIds,
+				queueUuids: (selectedObject as { queueUuids?: string[] }).queueUuids,
+				queueChipNames: (selectedObject as { queueChipNames?: string[] }).queueChipNames,
+				name: zoneProps.containerName,
+			},
+			queuesById,
+			'05',
+		);
+		return displays.length > 0 ? displays : undefined;
+	}, [selectedObject, zoneProps.queueIds, zoneProps.containerName, queuesById]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -494,6 +528,10 @@ const TemplateDetailWorkspace: React.FC = () => {
 
 	useEffect(() => {
 		refreshAllZoneLabels();
+		const fc = fabricRef.current;
+		if (!fc) return;
+		setCanvasObjects(getZoneRects(fc));
+		setOverlayRevision((n) => n + 1);
 	}, [refreshAllZoneLabels, templateDetails]);
 
 	/** When read-only, zones cannot be selected (no Zone Properties panel). */
@@ -543,11 +581,15 @@ const TemplateDetailWorkspace: React.FC = () => {
 				next.mode === 'fill' ? (next.backgroundColor ?? '#ffffff') : 'theme';
 			setZoneProps((s) => ({ ...s, color: fillColor }));
 
-			if (next.mode === 'theme') {
-				(fc.getObjects?.() ?? [])
-					.filter((o: any) => o[ZONE_LABEL_FOR_KEY] === target.id)
-					.forEach((o: any) => fc.remove(o));
-			} else {
+		if (next.mode === 'theme') {
+			(fc.getObjects?.() ?? [])
+				.filter((o: any) => o[ZONE_LABEL_FOR_KEY] === target.id)
+				.forEach((o: any) => fc.remove(o));
+			if (!themeSupportsTabularMultiQueueView(next.displayTheme)) {
+				target.set({ isTabularView: false });
+				setZoneProps((s) => ({ ...s, isTabularView: false }));
+			}
+		} else {
 				const queueIds = resolveQueueIdsFromRect(
 					target as any,
 					queuesByUuidMulti,
@@ -800,6 +842,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 				rx?: number;
 				/** 0-1 zone opacity (from saved data). Default 1. */
 				zoneOpacityFraction?: number;
+				isTabularView?: boolean;
 			}[],
 			) => {
 				import('fabric').then(({ Rect }) => {
@@ -820,6 +863,16 @@ const TemplateDetailWorkspace: React.FC = () => {
 							'clamp',
 						);
 					const zoneOpacityFraction = zone.zoneOpacityFraction ?? 1;
+					const queueSlotCount = Math.max(
+						queueIds.length,
+						queueUuids.length,
+						queueChipNames.length,
+					);
+					const isTabularView = coalesceZoneTabularView(
+						zone.appearance.displayTheme,
+						zone.isTabularView,
+						queueSlotCount,
+					);
 					const rect = new Rect({
 						id: nanoid(),
 						name: zone.name ?? '',
@@ -827,6 +880,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						queueUuids,
 						queueChipNames,
 						queueId: queueIds[0] ?? null,
+						isTabularView,
 						originX: 'left',
 						originY: 'top',
 						width: fabricGeom.width,
@@ -899,14 +953,15 @@ const TemplateDetailWorkspace: React.FC = () => {
 					});
 					return {
 						name: zone.name,
-						queueIds: zone.queueIds.slice(0, 1),
-						queueUuids: zone.queueUuids.slice(0, 1),
-						queueChipNames: zone.queueChipNames.slice(0, 1),
+						queueIds: zone.queueIds,
+						queueUuids: zone.queueUuids,
+						queueChipNames: zone.queueChipNames,
 						...geom,
 						appearance,
 						stroke: zone.border ? zone.borderColor : null,
 						rx: zone.borderRadius,
 						zoneOpacityFraction: zone.opacity ?? 1,
+						isTabularView: zone.isTabularView,
 					};
 				}),
 			);
@@ -938,6 +993,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 						stroke: zone.border ? zone.borderColor ?? 'black' : null,
 						rx: zone.borderRadius ?? 0,
 						zoneOpacityFraction: (zone as any).zone_opacity ?? 1,
+						isTabularView: zone.is_tabular_view,
 					};
 				}),
 				);
@@ -986,9 +1042,19 @@ const TemplateDetailWorkspace: React.FC = () => {
 		const appearance = getZoneAppearanceFromRect(selectedObject);
 		setZoneAppearance(appearance);
 		const geom = readLogicalZoneGeometryFromFabric(selectedObject, scalingFactor);
+		const selectedQueueIds = resolveQueueIdsFromRect(
+			selectedObject as any,
+			queuesByUuidMulti,
+			queuesByName,
+		);
+		const resolvedTabularView = coalesceZoneTabularView(
+			appearance.displayTheme,
+			readZoneIsTabularViewFromRect(selectedObject as any),
+			selectedQueueIds.length,
+		);
 		setZoneProps({
 			containerName: selectedObject.name ?? '',
-			queueIds: resolveQueueIdsFromRect(selectedObject as any, queuesByUuidMulti, queuesByName),
+			queueIds: selectedQueueIds,
 			containerZIndex: canvasObjects.indexOf(selectedObject),
 			width: geom.width,
 			height: geom.height,
@@ -1004,6 +1070,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 		opacity: Number.isFinite((selectedObject as any).zoneOpacity)
 			? Math.round(Number((selectedObject as any).zoneOpacity))
 			: 100,
+		isTabularView: resolvedTabularView,
 		});
 	}, [selectedObject, scalingFactor, canvasObjects, queuesByUuidMulti, queuesByName]);
 
@@ -1134,24 +1201,56 @@ const TemplateDetailWorkspace: React.FC = () => {
 		(nextQueueIds: number[]) => {
 			if (!selectedObject || !fabricRef.current || !isZoneRect(selectedObject)) return;
 			const fc = fabricRef.current;
-			const uniqueIds = toSingleZoneQueueIds(nextQueueIds);
+			const uniqueIds = normalizeZoneQueueIds(nextQueueIds);
 			applyQueueRefsToRect(selectedObject, uniqueIds, queuesById);
-			setZoneProps((s) => ({ ...s, queueIds: uniqueIds }));
+			const appearance = getZoneAppearanceFromRect(selectedObject);
+			let nextIsTabularView = resolveZoneIsTabularView(
+				appearance.displayTheme,
+				readZoneIsTabularViewFromRect(selectedObject as any),
+				uniqueIds.length,
+			);
+			if (
+				uniqueIds.length > 1 &&
+				themeSupportsTabularMultiQueueView(appearance.displayTheme) &&
+				readZoneIsTabularViewFromRect(selectedObject as any) === undefined
+			) {
+				nextIsTabularView = true;
+				selectedObject.set({ isTabularView: true });
+			}
+			if (uniqueIds.length <= 1) {
+				selectedObject.set({ isTabularView: false });
+				nextIsTabularView = false;
+			}
+			setZoneProps((s) => ({
+				...s,
+				queueIds: uniqueIds,
+				isTabularView: nextIsTabularView,
+			}));
 			syncZoneQueueLabel(fc, selectedObject);
 			bumpOverlayRevision();
 			fc.renderAll();
 		},
-		[selectedObject, queuesById, scalingFactor, bumpOverlayRevision],
+		[selectedObject, queuesById, bumpOverlayRevision],
 	);
 
-	const handleZoneQueueChange = (value: string) => {
-		if (!value) {
-			updateSelectedZoneQueues([]);
-			return;
-		}
-		const queueId = Number(value);
-		if (!Number.isFinite(queueId) || queueId <= 0) return;
-		updateSelectedZoneQueues([queueId]);
+	const handleMultiQueueViewModeChange = useCallback(
+		(nextIsTabularView: boolean) => {
+			if (!selectedObject || !fabricRef.current || !isZoneRect(selectedObject)) return;
+			selectedObject.set({ isTabularView: nextIsTabularView });
+			setZoneProps((s) => ({ ...s, isTabularView: nextIsTabularView }));
+			bumpOverlayRevision();
+			fabricRef.current.renderAll();
+		},
+		[selectedObject, bumpOverlayRevision],
+	);
+
+	const handleZoneQueueChange = (
+		selected: Array<{ value: number; label: string }> | null,
+	) => {
+		const nextIds = (selected ?? [])
+			.map((option) => option.value)
+			.filter((id) => Number.isFinite(id) && id > 0);
+		updateSelectedZoneQueues(nextIds);
 	};
 
 	// ─── Add zone ─────────────────────────────────────────────────────────────
@@ -1402,6 +1501,12 @@ const TemplateDetailWorkspace: React.FC = () => {
 					themeId != null
 						? themeFallbackBackgroundColor(themeId)
 						: background_color || obj.zoneFillColor || obj.fill || '#ffffff';
+				const explicitTabular = readZoneIsTabularViewFromRect(obj);
+				const isTabularView = coalesceZoneTabularView(
+					themeId,
+					explicitTabular,
+					queueIds.length,
+				);
 
 				return {
 					id: idx + 1,
@@ -1414,6 +1519,7 @@ const TemplateDetailWorkspace: React.FC = () => {
 					queue_names: queueIds.map(
 						(qId) => queuesById.get(qId)?.name ?? `Queue #${qId}`,
 					),
+					is_tabular_view: isTabularView,
 
 					position: 'absolute',
 
@@ -1490,8 +1596,8 @@ const TemplateDetailWorkspace: React.FC = () => {
 			) => {
 				const html = zones
 					.map((zone) => {
-						const queueUuids: string[] = (zone.queue_uuids ?? []).slice(0, 1);
-						const queueName: string = (zone.queue_names ?? [])[0] ?? '';
+						const queueUuids: string[] = zone.queue_uuids ?? [];
+						const queueNames: string[] = zone.queue_names ?? [];
 						const themeSlug =
 							typeof zone.theme_id === 'string' && zone.theme_id.trim()
 								? zone.theme_id.trim()
@@ -1499,15 +1605,26 @@ const TemplateDetailWorkspace: React.FC = () => {
 						const themeAttr = themeSlug
 							? ` data-theme-id="${escapeHtml(themeSlug)}"`
 							: '';
-						const chips = queueName
-							? `<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(queueName)}</span>`
-							: '';
+						const queueCount = Math.max(
+							zone.queue_ids?.length ?? 0,
+							zone.queue_uuids?.length ?? 0,
+						);
+						const tabularViewAttr =
+							queueCount > 1 && themeSlug
+								? ` data-is-tabular-view="${zone.is_tabular_view === false ? 'false' : 'true'}"`
+								: '';
+						const chips = queueNames
+							.map(
+								(name) =>
+									`<span class="queue-zone-queue-chip" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:rgba(0,0,0,0.45);border-radius:4px;color:#fff;font-size:13px;line-height:1.2;font-family:system-ui,sans-serif;">${escapeHtml(name)}</span>`,
+							)
+							.join('');
 
 					return `
 	<div
 		class="queue-zone"
 		data-queue-ids="${queueUuids.join(',')}"
-		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}
+		data-zone-name="${escapeHtml(zone.name ?? '')}"${themeAttr}${tabularViewAttr}
 		style="
 			position:absolute;
 			left:${zone.left}px;
@@ -1784,46 +1901,105 @@ const TemplateDetailWorkspace: React.FC = () => {
 													`Queue #${zoneProps.queueIds[0]}`)
 												: zoneProps.containerName || 'Queue'
 										}
-										previewSubtitle=''
+										previewSubtitle={
+											previewAssignedQueues?.[0]?.servingPointName ??
+											'Counter 01'
+										}
 										previewTokenDisplay='05'
 										previewStatus='waiting'
+										previewAssignedQueues={previewAssignedQueues}
+										previewIsTabularView={zoneProps.isTabularView}
 									/>
 
 									<div className='tdc-appearance-zone-controls'>
 										<div className='tdc-appearance-zone-controls__block'>
-											<span className='zone-appearance-picker__label'>Queue</span>
+											<span className='zone-appearance-picker__label'>Queues</span>
 											{queuesLoadError ? (
 												<p className='tdc-zone-queue-access-denied' role='alert'>
 													{queuesLoadError}
 												</p>
 											) : (
 												<>
-													<select
-														className='tdc-prop-input'
-														value={zoneProps.queueIds[0] ?? ''}
-														disabled={queuesLoading}
-														onChange={(e) => handleZoneQueueChange(e.target.value)}>
-														<option value=''>
-															{queuesLoading
+													<ReactSelectWithState
+														className='react-select tdc-zone-queue-select'
+														options={queueSelectOptions}
+														value={selectedZoneQueueOptions}
+														setValue={handleZoneQueueChange}
+														isMulti
+														isClearable
+														multiValueMaxHeight={112}
+														placeholder={
+															queuesLoading
 																? 'Loading queues…'
-																: 'Select queue for this zone…'}
-														</option>
-														{queues.map((queue) => (
-															<option key={queue.id} value={queue.id}>
-																{queue.name}
-															</option>
-														))}
-													</select>
+																: 'Select one or more queues…'
+														}
+													/>
+													{themeSupportsTabularMultiQueueView(
+														zoneAppearance.mode === 'theme'
+															? zoneAppearance.displayTheme
+															: null,
+													) && zoneProps.queueIds.length > 1 ? (
+														<div
+															className='tdc-multi-queue-view-toggle'
+															role='group'
+															aria-label='Multi-queue display mode'>
+															<span className='tdc-multi-queue-view-toggle__label'>
+																Display mode
+															</span>
+															<div className='tdc-multi-queue-view-toggle__buttons'>
+																<button
+																	type='button'
+																	className={[
+																		'tdc-multi-queue-view-toggle__btn',
+																		!zoneProps.isTabularView
+																			? 'tdc-multi-queue-view-toggle__btn--active'
+																			: '',
+																	]
+																		.filter(Boolean)
+																		.join(' ')}
+																	aria-pressed={!zoneProps.isTabularView}
+																	onClick={() =>
+																		handleMultiQueueViewModeChange(false)
+																	}>
+																	Singular
+																</button>
+																<button
+																	type='button'
+																	className={[
+																		'tdc-multi-queue-view-toggle__btn',
+																		zoneProps.isTabularView
+																			? 'tdc-multi-queue-view-toggle__btn--active'
+																			: '',
+																	]
+																		.filter(Boolean)
+																		.join(' ')}
+																	aria-pressed={zoneProps.isTabularView}
+																	onClick={() =>
+																		handleMultiQueueViewModeChange(true)
+																	}>
+																	Tabular
+																</button>
+															</div>
+														</div>
+													) : null}
 													<p className='tdc-zone-queue-hint'>
 														{zoneProps.queueIds.length > 0
-															? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}. Choose another option to replace it.`
-															: 'One queue per zone. Select a queue from the list above.'}
+															? zoneProps.queueIds.length === 1
+																? `Assigned: ${queuesById.get(zoneProps.queueIds[0])?.name ?? `Queue #${zoneProps.queueIds[0]}`}.`
+																: formatMultiQueueAssignmentHint(
+																		zoneAppearance.mode === 'theme'
+																			? zoneAppearance.displayTheme
+																			: null,
+																		zoneProps.queueIds.length,
+																		zoneProps.isTabularView,
+																	)
+															: 'Select one or more queues for this zone.'}
 													</p>
 												</>
 											)}
 											{queuesLoadError && zoneProps.queueIds.length > 0 && (
 												<p className='tdc-zone-queue-hint'>
-													{`This zone already has queue #${zoneProps.queueIds[0]} assigned. You cannot change it without queue list access.`}
+													{`This zone already has ${zoneProps.queueIds.length} queue(s) assigned. You cannot change them without queue list access.`}
 												</p>
 											)}
 										</div>

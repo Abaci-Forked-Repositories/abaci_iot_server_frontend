@@ -45,6 +45,7 @@ export type FabricZoneOverlayRect = {
 	id?: string;
 	name?: string;
 	queueIds?: number[];
+	queueUuids?: string[];
 	queueChipNames?: string[];
 	displayTheme?: string | null;
 	zoneFillColor?: string | null;
@@ -53,6 +54,8 @@ export type FabricZoneOverlayRect = {
 	zoneOpacity?: number;
 	/** Legacy Fabric built-in opacity (0–1). */
 	opacity?: number;
+	/** When true with 2+ queues on board-capable themes, render the tabular layout. */
+	isTabularView?: boolean;
 	setCoords?: () => void;
 	aCoords?: { tl?: { x: number; y: number }; br?: { x: number; y: number } };
 	getBoundingRect?: () => { left: number; top: number; width: number; height: number };
@@ -108,6 +111,22 @@ export function themeFallbackBackgroundColor(themeId: ZoneDisplayThemeId): strin
 		'velvet-crown': '#1a0a12',
 		'sun-bento': '#fff492',
 		'royal-ticket': '#14101f',
+		'airport-arrival': '#000000',
+		'airport-departure': '#000000',
+		'oled-pulse': '#000000',
+		'digital-healthcare': '#ffffff',
+		'glass-lobby': '#2a2048',
+		'neon-prism': '#010820',
+		'aurora-nexus': '#030510',
+		'signal-board': '#101014',
+		'paper-flip': '#c8b89a',
+		'mono-flip': '#141414',
+		'car-speedometer': '#000000',
+		'royal-luxury': '#050505',
+		'galaxy-spiral': '#03010c',
+		'terracotta-olive-sand': '#E2725B',
+		'metro-mosaic': '#4db8e8',
+		'blueprint-atelier': '#061525',
 	};
 	return fallbacks[themeId];
 }

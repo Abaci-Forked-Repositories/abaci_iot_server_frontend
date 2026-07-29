@@ -1,0 +1,1079 @@
+// ─── Theme · Terracotta Olive Sand (slug: terracotta-olive-sand) ─────────────
+// Terracotta Mosaic — tessellated panels, staggered fade-in, rotating aperture.
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Syne:wght@600;700;800&display=swap');
+
+$tos-terracotta: #e2725b;
+$tos-terracotta-deep: #c45f4a;
+$tos-terracotta-bright: #ec8f7a;
+$tos-olive: #808000;
+$tos-olive-soft: #9a9a4a;
+$tos-olive-deep: #5c5c00;
+$tos-sand: #c2b280;
+$tos-sand-deep: #a89868;
+$tos-sand-bright: #f5f0e4;
+$tos-ink: #2f3226;
+
+@keyframes tos-mosaic-fade-in {
+	from {
+		opacity: 0;
+		transform: scale(0.82) rotate(-4deg);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes tos-mosaic-shimmer {
+	0%,
+	100% {
+		opacity: 0.35;
+	}
+
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@keyframes tos-aperture-spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes tos-aperture-reveal {
+	0% {
+		transform: rotate(0deg) scale(1);
+	}
+
+	35% {
+		// No scale-up — at full-size zones it clips against overflow and looks square.
+		transform: rotate(140deg) scale(1);
+	}
+
+	100% {
+		transform: rotate(360deg) scale(1);
+	}
+}
+
+@keyframes tos-aperture-halo {
+	0%,
+	100% {
+		opacity: 0.42;
+		transform: scale(0.94);
+	}
+
+	50% {
+		opacity: 0.78;
+		transform: scale(1.06);
+	}
+}
+
+@keyframes tos-token-reveal {
+	0% {
+		opacity: 0.35;
+		transform: scale(0.92);
+		filter: blur(0.04em);
+	}
+
+	45% {
+		opacity: 1;
+		transform: scale(1.02);
+		filter: blur(0);
+	}
+
+	100% {
+		opacity: 1;
+		transform: scale(1);
+		filter: blur(0);
+	}
+}
+
+@keyframes tos-content-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.2em);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes tos-status-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+		opacity: 0.55;
+	}
+
+	50% {
+		transform: scale(1.35);
+		opacity: 1;
+	}
+}
+
+@keyframes tos-chip-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.3em) scale(0.92);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes tos-active-marquee {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes tos-row-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.25em);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.tdc--terracotta-olive-sand {
+	--tos-terracotta: #{$tos-terracotta};
+	--tos-olive: #{$tos-olive};
+	--tos-sand: #{$tos-sand};
+	--tos-font-display: 'Syne', 'Segoe UI', sans-serif;
+	--tos-font-ui: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+
+	--tdc-bg: #{$tos-sand-bright};
+	--tdc-glow-color: transparent;
+	--tdc-text: #{$tos-ink};
+	--tdc-text-sub: rgba($tos-ink, 0.72);
+	--tdc-text-label: rgba($tos-ink, 0.52);
+	--tdc-token-color: #{$tos-sand-bright};
+	--tdc-token-shadow: 0 4px 20px rgba($tos-terracotta-deep, 0.35);
+	--tdc-border: rgba($tos-olive, 0.2);
+	--tdc-badge-bg: transparent;
+	--tdc-badge-text: #{$tos-ink};
+	--tdc-badge-border: transparent;
+
+	font-family: var(--tos-font-ui);
+	color: $tos-ink;
+	background: $tos-sand-bright;
+	overflow: hidden;
+	isolation: isolate;
+	min-width: 0;
+	min-height: 0;
+	container-type: size;
+	container-name: tdc-tos;
+
+	.tdc__glow,
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc-col-separators,
+	.tdc__history {
+		display: none !important;
+	}
+
+	// ── Tessellated field ────────────────────────────────────────────────────
+	.tdc-tos-mosaic-field {
+		position: absolute;
+		inset: -8% -6%;
+		z-index: 0;
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		grid-template-rows: repeat(5, 1fr);
+		gap: 0.14em;
+		transform: skewY(-5deg) scale(1.08);
+		pointer-events: none;
+		overflow: hidden;
+	}
+
+	.tdc-tos-mosaic-cell {
+		display: block;
+		min-width: 0;
+		min-height: 0;
+		clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+		animation: tos-mosaic-fade-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.tdc-tos-mosaic-cell--flip {
+		clip-path: polygon(0% 0%, 90% 0%, 100% 100%, 10% 100%);
+	}
+
+	.tdc-tos-mosaic-cell--terra {
+		background: rgba($tos-terracotta, #{tdc-zone-a(0.88)});
+	}
+
+	.tdc-tos-mosaic-cell--terra-deep {
+		background: rgba($tos-terracotta-deep, #{tdc-zone-a(0.82)});
+	}
+
+	.tdc-tos-mosaic-cell--olive {
+		background: rgba($tos-olive, #{tdc-zone-a(0.78)});
+	}
+
+	.tdc-tos-mosaic-cell--olive-soft {
+		background: rgba($tos-olive-soft, #{tdc-zone-a(0.72)});
+	}
+
+	.tdc-tos-mosaic-cell--sand {
+		background: rgba($tos-sand, #{tdc-zone-a(0.9)});
+	}
+
+	.tdc-tos-mosaic-cell--sand-deep {
+		background: rgba($tos-sand-deep, #{tdc-zone-a(0.85)});
+	}
+
+	.tdc-tos-mosaic-field__veil {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(
+			circle at 50% 42%,
+			rgba($tos-sand-bright, 0.08) 0%,
+			rgba($tos-sand-bright, 0.55) 52%,
+			rgba($tos-sand-bright, 0.82) 100%
+		);
+		animation: tos-mosaic-shimmer 8s ease-in-out infinite;
+	}
+
+	// ── Mosaic layout ────────────────────────────────────────────────────────
+	.tdc-tos-mosaic-layout,
+	.tdc-tos-layout {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+		padding: 0 0.25em 0.32em;
+		box-sizing: border-box;
+		flex: 1 1 0;
+	}
+
+	.tdc-tos-mosaic-head,
+	.tdc-tos-table-header {
+		position: relative;
+		z-index: 3;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5em;
+		flex-shrink: 0;
+		min-width: 0;
+		margin: 0;
+		padding: 0.1em 0.05em 0.16em;
+		animation: tos-content-in 0.65s ease 0.15s both;
+	}
+
+	.tdc-tos-mosaic-queue--header {
+		flex: 0 1 auto;
+		min-width: 0;
+		max-width: 52%;
+		margin-left: auto;
+		text-align: right;
+		font-size: clamp(0.72em, #{'min(3.2cqw, 4cqh)'}, 1.15em);
+		line-height: 1.1;
+	}
+
+	.tdc-tos-clock {
+		display: flex;
+		align-items: center;
+		gap: 0.28em;
+		max-width: 100%;
+		min-width: 0;
+		font-family: var(--tos-font-ui);
+		font-size: clamp(0.36em, #{'min(2.6cqw, 3.2cqh)'}, 0.54em);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		color: rgba($tos-ink, 0.78);
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	.tdc-tos-clock__date,
+	.tdc-tos-clock__time {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-tos-clock__sep {
+		color: $tos-terracotta;
+		flex-shrink: 0;
+	}
+
+	.tdc-tos-clock__time {
+		font-variant-numeric: tabular-nums;
+		color: $tos-olive-deep;
+		flex-shrink: 0;
+	}
+
+	// Stacked default: meta top, aperture bottom.
+	.tdc-tos-mosaic-stage {
+		position: relative;
+		z-index: 2;
+		flex: 1 1 0;
+		min-height: 0;
+		display: grid;
+		grid-template-columns: 1fr;
+		grid-template-rows: auto minmax(0, 1fr);
+		grid-template-areas:
+			'meta'
+			'aperture';
+		gap: 0.28em;
+		align-items: stretch;
+	}
+
+	.tdc-tos-mosaic-aperture-wrap {
+		grid-area: aperture;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+		min-height: 0;
+		// Visible so reveal spin / halo aren't squared off by a clip box.
+		overflow: visible;
+		container-type: size;
+		container-name: tdc-tos-aperture-slot;
+	}
+
+	.tdc-tos-mosaic-meta {
+		grid-area: meta;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 0.2em;
+		text-align: center;
+		padding: 0.15em 0.3em;
+		animation: tos-content-in 0.7s ease 0.22s both;
+	}
+
+	.tdc-tos-mosaic-queue {
+		font-family: var(--tos-font-display);
+		font-size: clamp(0.88em, 1.28em, 1.48em);
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		color: $tos-olive-deep;
+		max-width: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-tos-mosaic-queue--empty {
+		min-height: 0.75em;
+	}
+
+	.tdc-tos-mosaic-subtitle {
+		font-size: clamp(0.44em, 0.54em, 0.62em);
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: rgba($tos-terracotta-deep, 0.88);
+		max-width: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-tos-mosaic-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.32em;
+		padding: 0.26em 0.68em;
+		border-radius: 999px;
+		font-size: clamp(0.42em, 0.52em, 0.58em);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		border: 1px solid rgba($tos-olive, 0.35);
+		background: rgba($tos-sand, 0.72);
+		color: $tos-ink;
+	}
+
+	.tdc-tos-status__dot {
+		width: 0.4em;
+		height: 0.4em;
+		border-radius: 50%;
+		flex-shrink: 0;
+		background: $tos-olive;
+		animation: tos-status-pulse 2.2s ease-in-out infinite;
+	}
+
+	.tdc-tos-mosaic-status--waiting .tdc-tos-status__dot {
+		background: $tos-olive;
+	}
+
+	.tdc-tos-mosaic-status--serving {
+		background: rgba($tos-terracotta, 0.88);
+		border-color: rgba($tos-terracotta-deep, 0.45);
+		color: $tos-sand-bright;
+
+		.tdc-tos-status__dot {
+			background: $tos-sand-bright;
+			box-shadow: 0 0 8px rgba($tos-sand-bright, 0.65);
+		}
+	}
+
+	// ── Rotating mosaic aperture ─────────────────────────────────────────────
+	// Prefer a large circle for readability; meta shrinks first when space is tight.
+	.tdc-tos-aperture {
+		--tos-aperture-size: 92cqmin;
+		position: relative;
+		width: var(--tos-aperture-size);
+		height: var(--tos-aperture-size);
+		aspect-ratio: 1 / 1;
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+
+	@container tdc-tos-aperture-slot (max-height: 280px) {
+		.tdc-tos-aperture {
+			--tos-aperture-size: 88cqmin;
+		}
+	}
+
+	@container tdc-tos-aperture-slot (max-height: 200px) {
+		.tdc-tos-aperture {
+			--tos-aperture-size: 84cqmin;
+		}
+	}
+
+	.tdc-tos-aperture__halo {
+		position: absolute;
+		inset: -4%;
+		border-radius: 50%;
+		background: radial-gradient(
+			circle,
+			rgba($tos-terracotta, 0.28) 0%,
+			rgba($tos-olive, 0.12) 48%,
+			transparent 72%
+		);
+		animation: tos-aperture-halo 4.8s ease-in-out infinite;
+	}
+
+	.tdc-tos-aperture__spinner {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		aspect-ratio: 1 / 1;
+		animation: tos-aperture-spin 16s linear infinite;
+	}
+
+	.tdc-tos-aperture__ring {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		aspect-ratio: 1 / 1;
+		background: repeating-conic-gradient(
+			from 0deg at 50% 50%,
+			$tos-terracotta 0deg 18deg,
+			$tos-olive 18deg 36deg,
+			$tos-sand 36deg 54deg,
+			$tos-terracotta-deep 54deg 72deg
+		);
+		-webkit-mask: radial-gradient(circle, transparent 36%, #000 44%, #000 100%);
+		mask: radial-gradient(circle, transparent 36%, #000 44%, #000 100%);
+	}
+
+	.tdc-tos-aperture__blades {
+		position: absolute;
+		inset: 6%;
+		border-radius: 50%;
+		overflow: hidden;
+	}
+
+	.tdc-tos-aperture__blade {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 50%;
+		height: 22%;
+		margin-top: -11%;
+		transform-origin: 0% 50%;
+		transform: rotate(calc(var(--tos-blade-i, 0) * 45deg));
+		background: linear-gradient(
+			90deg,
+			rgba($tos-olive-deep, 0.92) 0%,
+			rgba($tos-terracotta, 0.55) 72%,
+			transparent 100%
+		);
+		clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
+		opacity: 0.55;
+	}
+
+	.tdc-tos-aperture__portal {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 58%;
+		height: 58%;
+		aspect-ratio: 1 / 1;
+		border-radius: 50%;
+		overflow: hidden;
+		flex-shrink: 0;
+		container-type: size;
+		container-name: tdc-tos-portal;
+		background: radial-gradient(
+			circle at 38% 32%,
+			$tos-terracotta-bright 0%,
+			$tos-terracotta 58%,
+			$tos-terracotta-deep 100%
+		);
+		box-shadow:
+			0 8px 28px rgba($tos-terracotta-deep, 0.35),
+			inset 0 2px 10px rgba($tos-sand-bright, 0.28);
+	}
+
+	.tdc-tos-aperture__portal-ring {
+		position: absolute;
+		inset: -0.14em;
+		border-radius: 50%;
+		border: 2px solid rgba($tos-sand-bright, 0.45);
+		box-shadow: 0 0 18px rgba($tos-sand, 0.45);
+		pointer-events: none;
+	}
+
+	// Size token strictly to the portal circle.
+	.tdc-tos-token {
+		position: relative;
+		z-index: 1;
+		font-family: var(--tos-font-display);
+		font-size: #{'min(calc(46cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 42cqh)'};
+		font-weight: 800;
+		line-height: 1;
+		letter-spacing: -0.03em;
+		color: $tos-sand-bright;
+		text-shadow: var(--tdc-token-shadow);
+		white-space: nowrap;
+		max-width: 82%;
+		overflow: hidden;
+		text-overflow: clip;
+		text-align: center;
+	}
+
+	.tdc-tos-aperture--reveal {
+		.tdc-tos-aperture__spinner {
+			animation: tos-aperture-reveal 0.82s cubic-bezier(0.34, 1.1, 0.64, 1);
+		}
+
+		.tdc-tos-token {
+			animation: tos-token-reveal 0.72s cubic-bezier(0.34, 1.2, 0.64, 1);
+		}
+	}
+
+	&.tdc--status-serving .tdc-tos-token {
+		animation: tos-token-reveal 0.65s cubic-bezier(0.34, 1.2, 0.64, 1);
+	}
+
+	// ── Wide: meta left, token circle right — pack as one large group ────────
+	@container tdc-tos (min-aspect-ratio: 1.4) {
+		.tdc-tos-mosaic-stage {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: center;
+			gap: clamp(0.8em, 2.5cqw, 1.8em);
+			padding: 0 2cqw;
+			grid-template-columns: unset;
+			grid-template-rows: unset;
+			grid-template-areas: unset;
+		}
+
+		.tdc-tos-mosaic-aperture-wrap {
+			flex: 0 1 auto;
+			align-self: center;
+			width: min(56cqh, 48cqw);
+			height: min(56cqh, 48cqw);
+			max-width: 55%;
+			max-height: 92%;
+			aspect-ratio: 1 / 1;
+			overflow: visible;
+		}
+
+		.tdc-tos-aperture {
+			// Leave headroom so spin/halo never touch a square clip edge.
+			--tos-aperture-size: 90%;
+			width: var(--tos-aperture-size);
+			height: var(--tos-aperture-size);
+		}
+
+		.tdc-tos-mosaic-meta {
+			flex: 0 1 auto;
+			align-items: flex-end;
+			justify-content: center;
+			text-align: right;
+			gap: 0.4em;
+			padding: 0.15em 0;
+			max-width: 42%;
+		}
+
+		// Size from container (cqw/cqh), capped by a low em — not the reverse.
+		// High em floors (0.85+) win once root fontSize grows (~1280px+ zones)
+		// and blow up serving-point / WAITING vs the scaled template editor.
+		.tdc-tos-mosaic-subtitle {
+			font-size: #{'min(2.55cqw, 3.15cqh, 0.62em)'};
+			letter-spacing: 0.1em;
+		}
+
+		.tdc-tos-mosaic-status {
+			justify-content: flex-end;
+			font-size: #{'min(2cqw, 2.55cqh, 0.5em)'};
+			padding: 0.36em 0.85em;
+			gap: 0.38em;
+		}
+
+		.tdc-tos-status__dot {
+			width: 0.48em;
+			height: 0.48em;
+		}
+
+		.tdc-tos-token {
+			font-size: #{'min(calc(56cqi / (var(--tdc-token-chars, 2) * 0.52 + 0.12)), 52cqh)'};
+		}
+
+		.tdc-tos-mosaic-queue--header {
+			font-size: clamp(1em, #{'min(4.2cqw, 5.2cqh)'}, 1.65em);
+		}
+
+		.tdc-tos-clock {
+			font-size: clamp(0.48em, #{'min(2.8cqw, 3.4cqh)'}, 0.72em);
+		}
+	}
+
+	// Full-width / large zones (~1920×1080): aperture only — meta text inherits
+	// the container-led sizes from the wide (≥1.4) block above (no second boost).
+	@container tdc-tos (min-width: 1600px) and (min-aspect-ratio: 1.4) {
+		.tdc-tos-mosaic-stage {
+			gap: clamp(1em, 3cqw, 2.2em);
+			padding: 0 3cqw;
+		}
+
+		.tdc-tos-mosaic-aperture-wrap {
+			width: min(62cqh, 52cqw);
+			height: min(62cqh, 52cqw);
+			max-width: 58%;
+			overflow: visible;
+		}
+
+		.tdc-tos-aperture {
+			--tos-aperture-size: 88%;
+			width: var(--tos-aperture-size);
+			height: var(--tos-aperture-size);
+		}
+
+		.tdc-tos-mosaic-meta {
+			gap: 0.45em;
+			max-width: 42%;
+		}
+
+		.tdc-tos-token {
+			font-size: #{'min(calc(60cqi / (var(--tdc-token-chars, 2) * 0.5 + 0.1)), 56cqh)'};
+		}
+
+		.tdc-tos-mosaic-queue--header {
+			font-size: clamp(1.05em, #{'min(4.4cqw, 5.4cqh)'}, 1.7em);
+		}
+
+		.tdc-tos-clock {
+			font-size: clamp(0.5em, #{'min(2.9cqw, 3.5cqh)'}, 0.76em);
+		}
+	}
+
+	// Stacked / narrower zones: shrink counter + status first so the token circle stays large.
+	@container tdc-tos (max-aspect-ratio: 1.39) {
+		.tdc-tos-mosaic-stage {
+			display: grid;
+			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(0, 1fr);
+			grid-template-areas:
+				'meta'
+				'aperture';
+			gap: 0.14em;
+			justify-content: stretch;
+			padding: 0;
+		}
+
+		.tdc-tos-mosaic-aperture-wrap {
+			width: auto;
+			height: auto;
+			max-width: none;
+			max-height: none;
+			aspect-ratio: auto;
+		}
+
+		.tdc-tos-aperture {
+			--tos-aperture-size: 94cqmin;
+			width: var(--tos-aperture-size);
+			height: var(--tos-aperture-size);
+		}
+
+		.tdc-tos-mosaic-meta {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			gap: 0.28em 0.45em;
+			padding: 0.02em 0.2em 0.06em;
+			max-width: none;
+		}
+
+		.tdc-tos-mosaic-subtitle {
+			font-size: clamp(0.28em, 0.36em, 0.42em);
+			letter-spacing: 0.08em;
+			line-height: 1.1;
+		}
+
+		.tdc-tos-mosaic-status {
+			justify-content: center;
+			font-size: clamp(0.26em, 0.34em, 0.4em);
+			padding: 0.14em 0.42em;
+			gap: 0.22em;
+			line-height: 1.1;
+		}
+
+		.tdc-tos-status__dot {
+			width: 0.32em;
+			height: 0.32em;
+		}
+	}
+
+	@container tdc-tos (max-width: 1100px) {
+		.tdc-tos-mosaic-subtitle {
+			font-size: clamp(0.26em, 0.32em, 0.38em);
+		}
+
+		.tdc-tos-mosaic-status {
+			font-size: clamp(0.24em, 0.3em, 0.36em);
+			padding: 0.12em 0.36em;
+		}
+	}
+
+	@container tdc-tos (max-height: 220px) {
+		.tdc-tos-mosaic-stage {
+			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(0, 1fr);
+			grid-template-areas:
+				'meta'
+				'aperture';
+		}
+
+		.tdc-tos-mosaic-meta {
+			align-items: center;
+			text-align: center;
+		}
+
+		.tdc-tos-mosaic-status {
+			justify-content: center;
+		}
+	}
+
+	// ── Multi-queue table ────────────────────────────────────────────────────
+	.tdc-tos-layout--table {
+		.tdc-tos-table {
+			font-size: clamp(0.34em, 2.2cqw, 0.48em);
+		}
+	}
+
+	.tdc-tos-table-header__count {
+		font-size: clamp(0.36em, 2.4cqw, 0.52em);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba($tos-olive-deep, 0.82);
+	}
+
+	.tdc-tos-table-stage {
+		position: relative;
+		z-index: 2;
+		flex: 1 1 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.tdc-tos-table-wrap {
+		flex: 1 1 0;
+		min-height: 0;
+		overflow: auto;
+		border-radius: 0.55em;
+		border: 1px solid rgba($tos-olive, 0.22);
+		background: rgba($tos-sand-bright, 0.72);
+		backdrop-filter: blur(4px);
+	}
+
+	.tdc-tos-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+
+	.tdc-tos-table th {
+		padding: 0.55em 0.45em;
+		font-size: 0.72em;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: $tos-sand-bright;
+		background: rgba($tos-olive, 0.9);
+	}
+
+	.tdc-tos-table__head-short {
+		display: none;
+	}
+
+	.tdc-tos-table__row {
+		animation: tos-row-in 0.55s ease both;
+	}
+
+	.tdc-tos-table__row--even {
+		background: rgba($tos-sand, 0.2);
+	}
+
+	.tdc-tos-table__row--serving {
+		background: rgba($tos-terracotta, 0.14);
+	}
+
+	.tdc-tos-table td {
+		padding: 0.45em 0.4em;
+		font-size: 0.82em;
+		color: $tos-ink;
+	}
+
+	.tdc-tos-table__token {
+		font-family: var(--tos-font-display);
+		font-weight: 800;
+		color: $tos-terracotta;
+	}
+
+	.tdc-tos-table__status {
+		display: inline-flex;
+		padding: 0.2em 0.5em;
+		border-radius: 999px;
+		font-size: 0.78em;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.tdc-tos-table__status--waiting {
+		background: rgba($tos-olive, 0.55);
+		color: $tos-sand-bright;
+	}
+
+	.tdc-tos-table__status--serving {
+		background: rgba($tos-terracotta, 0.75);
+		color: $tos-sand-bright;
+	}
+
+	// ── Active tokens rail (compact) ─────────────────────────────────────────
+	.tdc-tos-active {
+		position: relative;
+		z-index: 5;
+		display: flex;
+		align-items: center;
+		gap: 0.28em;
+		flex: 0 0 auto;
+		flex-shrink: 0;
+		width: 100%;
+		min-width: 0;
+		max-height: min(9%, 3.4rem);
+		box-sizing: border-box;
+		padding: 0.18em 0.35em;
+		border-top: 1px solid rgba($tos-olive, 0.28);
+		background: rgba($tos-sand, calc(0.78 * var(--tdc-zone-bg-opacity, 1)));
+		overflow: hidden;
+	}
+
+	.tdc-tos-active__aside {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.28em;
+		padding: 0 0.2em 0 0.1em;
+		flex-shrink: 0;
+		border-right: 1px solid rgba($tos-terracotta, 0.25);
+	}
+
+	.tdc-tos-active__label {
+		font-size: 0.38em;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: rgba($tos-olive-deep, 0.78);
+		writing-mode: horizontal-tb;
+		transform: none;
+		white-space: nowrap;
+		line-height: 1;
+	}
+
+	.tdc-tos-active__rule {
+		width: 1px;
+		height: 0.85em;
+		flex: 0 0 auto;
+		min-height: 0;
+		background: linear-gradient(180deg, $tos-terracotta, transparent);
+	}
+
+	.tdc-tos-active__viewport {
+		flex: 1 1 0;
+		min-width: 0;
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		padding: 0.08em 0.2em;
+	}
+
+	.tdc-tos-active__track {
+		display: flex;
+		align-items: center;
+		gap: 0.28em;
+		min-width: max-content;
+	}
+
+	.tdc-tos-active--marquee .tdc-tos-active__track {
+		animation: tos-active-marquee calc(var(--tdc-tos-active-count, 4) * 3.8s) linear infinite;
+	}
+
+	.tdc-tos-active__chip {
+		display: inline-flex;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 0.22em;
+		padding: 0.14em 0.42em;
+		border-radius: 0.4em;
+		background: rgba($tos-sand-bright, 0.94);
+		border: 1px solid rgba($tos-terracotta, 0.28);
+		min-width: 0;
+	}
+
+	.tdc-tos-active__chip--enter {
+		animation: tos-chip-enter 0.45s ease both;
+	}
+
+	.tdc-tos-active__chip-token {
+		font-family: var(--tos-font-display);
+		font-size: 0.48em;
+		font-weight: 800;
+		color: $tos-terracotta;
+		line-height: 1;
+	}
+
+	.tdc-tos-active__chip-counter {
+		font-size: 0.32em;
+		font-weight: 700;
+		color: $tos-olive;
+		text-transform: uppercase;
+		line-height: 1;
+	}
+
+	.tdc-tos-active__chip-time {
+		font-size: 0.28em;
+		color: rgba($tos-ink, 0.65);
+		line-height: 1;
+	}
+}
+
+.tdc-tos-shell {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	flex: 1 1 0;
+	box-sizing: border-box;
+}
+
+.tdc--fill.tdc--terracotta-olive-sand {
+	display: flex;
+	flex-direction: column;
+	border: none;
+	box-shadow: none;
+	background: $tos-sand-bright;
+	grid: none !important;
+
+	.tdc-tos-mosaic-layout,
+	.tdc-tos-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+
+	.tdc-tos-token {
+		// Keep portal-relative sizing; do not inflate with zone root em.
+		font-size: #{'min(calc(46cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 42cqh)'};
+		line-height: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tdc--terracotta-olive-sand {
+		.tdc-tos-mosaic-cell,
+		.tdc-tos-mosaic-field__veil,
+		.tdc-tos-aperture__spinner,
+		.tdc-tos-aperture__halo,
+		.tdc-tos-status__dot,
+		.tdc-tos-active--marquee .tdc-tos-active__track {
+			animation: none !important;
+		}
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--terracotta-olive-sand .tdc-tos-token {
+	font-size: #{'min(calc(44cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 40cqh)'};
+}
+
+.tdc--preview:not(.tdc--fill).tdc--terracotta-olive-sand {
+	width: 260px;
+	height: 280px;
+}
+
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--terracotta-olive-sand {
+	border-radius: inherit;
+}
+
+@container tdc-tos (max-width: 280px) {
+	.tdc--terracotta-olive-sand {
+		.tdc-tos-table__head-long {
+			display: none;
+		}
+
+		.tdc-tos-table__head-short {
+			display: inline;
+		}
+	}
+}
+
+@container (max-width: 220px) {
+	.tdc--terracotta-olive-sand .tdc-tos-clock {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.04em;
+	}
+}

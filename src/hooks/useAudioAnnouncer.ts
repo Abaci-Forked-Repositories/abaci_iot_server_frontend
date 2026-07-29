@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PublicQueueStatus } from '../services/publicScreenApi';
 
+const QUEUE_UUID_RE =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 interface TrackedQueueState {
 	tokenDisplay: string;
 	servingPointName: string;
@@ -79,11 +82,16 @@ function isSpeechSupported() {
  *
  * Chrome requires a user gesture before speech works. Call `allowAudio()` from
  * the consent overlay click handler to unlock and prime the engine.
+ *
+ * When `audibleQueueUuids` is provided, only queues currently visible on screen
+ * are announced immediately. Changes on hidden rotating queues are deferred until
+ * that queue becomes visible.
  */
 export function useAudioAnnouncer(
 	queuesByUuid: Record<string, PublicQueueStatus>,
 	enableAudio: boolean,
 	screenUuid = '',
+	audibleQueueUuids?: ReadonlySet<string>,
 ): UseAudioAnnouncerResult {
 	const prevRef = useRef<Record<string, TrackedQueueState>>({});
 	const initializedRef = useRef(false);
@@ -92,6 +100,8 @@ export function useAudioAnnouncer(
 	const announcementQueueRef = useRef<string[]>([]);
 	const isSpeakingRef = useRef(false);
 	const lastQueuedAtRef = useRef<Record<string, number>>({});
+	const pendingAnnounceRef = useRef<Record<string, string>>({});
+	const prevAudibleRef = useRef<ReadonlySet<string>>(new Set());
 	const processQueueRef = useRef<() => void>(() => {});
 
 	const speechSupported = isSpeechSupported();
@@ -204,6 +214,8 @@ export function useAudioAnnouncer(
 		setIsUnlocked(false);
 		initializedRef.current = false;
 		prevRef.current = {};
+		pendingAnnounceRef.current = {};
+		prevAudibleRef.current = new Set();
 		announcementQueueRef.current = [];
 	}, [screenUuid]);
 
@@ -233,12 +245,31 @@ export function useAudioAnnouncer(
 	}, [consentStatus, enableAudio, speechSupported, unlockAudio]);
 
 	useEffect(() => {
+		if (!enableAudio || !speechSupported || !initializedRef.current) return;
+		if (!audibleQueueUuids) return;
+
+		const prevAudible = prevAudibleRef.current;
+		const newlyAudible = Array.from(audibleQueueUuids).filter(
+			(uuid) => !prevAudible.has(uuid),
+		);
+		prevAudibleRef.current = audibleQueueUuids;
+
+		for (const uuid of newlyAudible) {
+			const pending = pendingAnnounceRef.current[uuid];
+			if (!pending) continue;
+			enqueueAnnouncement(uuid, pending);
+			delete pendingAnnounceRef.current[uuid];
+		}
+	}, [audibleQueueUuids, enableAudio, speechSupported]);
+
+	useEffect(() => {
 		if (!enableAudio) return;
 		if (!speechSupported) return;
 
 		if (!initializedRef.current) {
 			const baseline: Record<string, TrackedQueueState> = {};
 			for (const [uuid, queue] of Object.entries(queuesByUuid)) {
+				if (!QUEUE_UUID_RE.test(uuid)) continue;
 				baseline[uuid] = trackQueueState(queue);
 			}
 			prevRef.current = baseline;
@@ -248,8 +279,11 @@ export function useAudioAnnouncer(
 
 		const prev = prevRef.current;
 		const textsToSpeak: string[] = [];
+		const useAudibleFilter = audibleQueueUuids != null;
 
 		for (const [uuid, queue] of Object.entries(queuesByUuid)) {
+			if (!QUEUE_UUID_RE.test(uuid)) continue;
+
 			const nextState = trackQueueState(queue);
 			const announcementText = getQueueAnnouncementText(queue);
 
@@ -266,7 +300,12 @@ export function useAudioAnnouncer(
 				!prevState || prevState.textToSpeech !== nextState.textToSpeech;
 
 			if (tokenChanged || pointChanged || speechChanged) {
-				textsToSpeak.push(announcementText);
+				if (!useAudibleFilter || audibleQueueUuids.has(uuid)) {
+					textsToSpeak.push(announcementText);
+					delete pendingAnnounceRef.current[uuid];
+				} else {
+					pendingAnnounceRef.current[uuid] = announcementText;
+				}
 			}
 
 			prev[uuid] = nextState;
@@ -277,7 +316,7 @@ export function useAudioAnnouncer(
 		for (const text of textsToSpeak) {
 			enqueueAnnouncement(text, text);
 		}
-	}, [queuesByUuid, enableAudio, speechSupported]);
+	}, [queuesByUuid, enableAudio, speechSupported, audibleQueueUuids]);
 
 	const showConsent =
 		enableAudio &&

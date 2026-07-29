@@ -196,9 +196,9 @@ const ServingPointsWorkspace: React.FC = () => {
 										event.stopPropagation();
 										setStatusUpdatingId(rowData.id);
 										try {
-											await queuesApi.updateServingPoint(rowData.id, {
-												is_active: !isActive,
-											});
+											await (isActive
+												? queuesApi.deactivateServingPoint(rowData.id)
+												: queuesApi.activateServingPoint(rowData.id));
 											showSuccessNotification(
 												`Serving point ${isActive ? 'disabled' : 'enabled'} successfully.`,
 											);

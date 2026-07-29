@@ -121,7 +121,9 @@ const StatCard: React.FC<{
 	children: React.ReactNode;
 	accent?: string;
 	icon?: string;
-}> = ({ label, children, accent = '#6366f1', icon }) => (
+	/** Center label + content (used when queue card sits alone). */
+	centered?: boolean;
+}> = ({ label, children, accent = '#6366f1', icon, centered = false }) => (
 	<div
 		style={{
 			background: '#fff',
@@ -131,9 +133,17 @@ const StatCard: React.FC<{
 			border: '1px solid #f0f0f5',
 			display: 'flex',
 			flexDirection: 'column',
+			alignItems: centered ? 'center' : 'stretch',
+			textAlign: centered ? 'center' : 'left',
 			gap: 8,
 		}}>
-		<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+		<div
+			style={{
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: centered ? 'center' : 'flex-start',
+				gap: 6,
+			}}>
 			{icon && <span style={{ fontSize: '1rem' }}>{icon}</span>}
 			<span
 				style={{
@@ -146,7 +156,15 @@ const StatCard: React.FC<{
 				{label}
 			</span>
 		</div>
-		<div style={{ color: accent }}>{children}</div>
+		<div
+			style={{
+				color: accent,
+				display: centered ? 'flex' : undefined,
+				flexDirection: centered ? 'column' : undefined,
+				alignItems: centered ? 'center' : undefined,
+			}}>
+			{children}
+		</div>
 	</div>
 );
 
@@ -161,6 +179,7 @@ const TokenStatusPage: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+	const isWaiting = data?.token.status?.toLowerCase() === 'waiting';
 
 	const fetchStatus = useCallback(async () => {
 		if (!tokenUuid || !queueId) {
@@ -412,59 +431,69 @@ const TokenStatusPage: React.FC = () => {
 									gap: 12,
 								}}>
 								{/* Queue */}
-								<StatCard label='Queue' icon='🗂️' accent='#374151'>
+								<StatCard
+									label='Queue'
+									icon='🗂️'
+									accent='#374151'
+									centered={!isWaiting}>
 									<div style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: 6 }}>
 										{data.queue.name}
 									</div>
 									<StatusBadge status={data.queue.status} />
 								</StatCard>
 
-								{/* Tokens Ahead */}
-								<StatCard label='Tokens Ahead' icon='👥' accent='#6366f1'>
-									<div
-										style={{
-											fontSize: '2.75rem',
-											fontWeight: 900,
-											color: '#6366f1',
-											lineHeight: 1,
-											marginBottom: 4,
-										}}>
-										{data.position.tokens_ahead}
-									</div>
-									<div style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
-										{data.position.tokens_ahead === 0
-											? 'You are next!'
-											: `token${data.position.tokens_ahead !== 1 ? 's' : ''} before you`}
-									</div>
-								</StatCard>
-
-								{/* Wait Time */}
-								<StatCard label='Est. Wait' icon='⏱️' accent='#0ea5e9'>
-									{data.position.estimated_wait_minutes > 0 ? (
-										<>
+								{isWaiting && (
+									<>
+										{/* Tokens Ahead */}
+										<StatCard label='Tokens Ahead' icon='👥' accent='#6366f1'>
 											<div
 												style={{
 													fontSize: '2.75rem',
 													fontWeight: 900,
-													color: '#0ea5e9',
+													color: '#6366f1',
 													lineHeight: 1,
 													marginBottom: 4,
 												}}>
-												{data.position.estimated_wait_minutes}
+												{data.position.tokens_ahead}
 											</div>
-											<div style={{ fontSize: '0.78rem', color: '#9ca3af' }}>minutes remaining</div>
-										</>
-									) : (
-										<div
-											style={{
-												fontSize: '1rem',
-												fontWeight: 700,
-												color: '#10b981',
-											}}>
-											Almost your turn
-										</div>
-									)}
-								</StatCard>
+											<div style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+												{data.position.tokens_ahead === 0
+													? 'You are next!'
+													: `token${data.position.tokens_ahead !== 1 ? 's' : ''} before you`}
+											</div>
+										</StatCard>
+
+										{/* Wait Time */}
+										<StatCard label='Est. Wait' icon='⏱️' accent='#0ea5e9'>
+											{data.position.estimated_wait_minutes > 0 ? (
+												<>
+													<div
+														style={{
+															fontSize: '2.75rem',
+															fontWeight: 900,
+															color: '#0ea5e9',
+															lineHeight: 1,
+															marginBottom: 4,
+														}}>
+														{data.position.estimated_wait_minutes}
+													</div>
+													<div style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+														minutes remaining
+													</div>
+												</>
+											) : (
+												<div
+													style={{
+														fontSize: '1rem',
+														fontWeight: 700,
+														color: '#10b981',
+													}}>
+													Almost your turn
+												</div>
+											)}
+										</StatCard>
+									</>
+								)}
 							</div>
 
 							{/* ── Currently Serving ── */}
@@ -556,6 +585,7 @@ const TokenStatusPage: React.FC = () => {
 										padding: '20px 22px',
 										boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
 										border: '1px solid #f0f0f5',
+										textAlign: !isWaiting ? 'center' : 'left',
 									}}>
 									<div
 										style={{
@@ -568,9 +598,22 @@ const TokenStatusPage: React.FC = () => {
 										}}>
 										Your Details
 									</div>
-									<div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+									<div
+										style={{
+											display: 'flex',
+											flexWrap: 'wrap',
+											gap: 16,
+											justifyContent: !isWaiting ? 'center' : 'flex-start',
+										}}>
 										{data.user.email?.trim() && (
-											<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
+											<div
+												style={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 10,
+													minWidth: 200,
+													justifyContent: !isWaiting ? 'center' : 'flex-start',
+												}}>
 												<div
 													style={{
 														width: 36,
@@ -581,10 +624,11 @@ const TokenStatusPage: React.FC = () => {
 														alignItems: 'center',
 														justifyContent: 'center',
 														fontSize: '1rem',
+														flexShrink: 0,
 													}}>
 													✉️
 												</div>
-												<div>
+												<div style={{ textAlign: !isWaiting ? 'left' : undefined }}>
 													<div
 														style={{
 															fontSize: '0.68rem',
@@ -602,7 +646,14 @@ const TokenStatusPage: React.FC = () => {
 											</div>
 										)}
 										{data.user.phone?.trim() && (
-											<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
+											<div
+												style={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 10,
+													minWidth: 180,
+													justifyContent: !isWaiting ? 'center' : 'flex-start',
+												}}>
 												<div
 													style={{
 														width: 36,
@@ -613,10 +664,11 @@ const TokenStatusPage: React.FC = () => {
 														alignItems: 'center',
 														justifyContent: 'center',
 														fontSize: '1rem',
+														flexShrink: 0,
 													}}>
 													📞
 												</div>
-												<div>
+												<div style={{ textAlign: !isWaiting ? 'left' : undefined }}>
 													<div
 														style={{
 															fontSize: '0.68rem',

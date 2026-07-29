@@ -1,3 +1,5 @@
+import { parseTabularViewAttribute } from './zoneMultiQueueView';
+
 const QUEUE_UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -18,6 +20,8 @@ export interface ParsedTemplateZone {
 	border: boolean;
 	/** Zone-level opacity (0–1). Defaults to 1 when not saved. */
 	opacity: number;
+	/** When true with 2+ queues on a board-capable theme, show the tabular layout. */
+	isTabularView?: boolean;
 }
 
 export interface ParsedTemplateLayout {
@@ -94,6 +98,9 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 		const opacityRaw =
 			parseStyleValue(bgStyle, 'opacity') ?? parseStyleValue(style, 'opacity');
 		const opacityParsed = opacityRaw != null ? parseFloat(opacityRaw) : NaN;
+		const isTabularView = parseTabularViewAttribute(
+			el.getAttribute('data-is-tabular-view'),
+		);
 		zones.push({
 			name: el.getAttribute('data-zone-name') ?? '',
 			queueIds,
@@ -114,6 +121,7 @@ export function parseTemplateLayoutFromHtml(html?: string | null): ParsedTemplat
 			borderColor: borderMatch?.[1]?.trim() ?? 'black',
 			border: borderRaw !== '' && borderRaw !== 'none' && !/^0(?:px)?$/i.test(borderRaw),
 			opacity: Number.isFinite(opacityParsed) ? Math.min(1, Math.max(0, opacityParsed)) : 1,
+			isTabularView,
 		});
 	});
 
@@ -442,6 +450,7 @@ export interface TemplateConfigurationZone {
 	queue_uuids?: string[];
 	queue_ids?: number[];
 	queue_names?: string[];
+	is_tabular_view?: boolean;
 	theme_id?: string | null;
 	/** @deprecated Use theme_id */
 	display_theme?: string | null;
@@ -504,6 +513,12 @@ export function parseTemplateConfiguration(
 		queue_names: Array.isArray(zone.queue_names)
 			? zone.queue_names.filter((name): name is string => typeof name === 'string')
 			: [],
+		is_tabular_view:
+			zone.is_tabular_view === true || zone.isTabularView === true
+				? true
+				: zone.is_tabular_view === false || zone.isTabularView === false
+					? false
+					: undefined,
 	}));
 }
 
@@ -544,6 +559,16 @@ export function enrichParsedZonesWithConfiguration(
 				: null;
 		const opacity =
 			configZoneOpacity != null ? configZoneOpacity : zone.opacity ?? 1;
+		const isTabularView =
+			configZone.is_tabular_view === true
+				? true
+				: configZone.is_tabular_view === false
+					? false
+					: zone.isTabularView === true
+						? true
+						: zone.isTabularView === false
+							? false
+							: undefined;
 
 		return {
 			...zone,
@@ -553,6 +578,7 @@ export function enrichParsedZonesWithConfiguration(
 			displayTheme: displayTheme || null,
 			backgroundColor,
 			opacity,
+			isTabularView,
 		};
 	});
 }

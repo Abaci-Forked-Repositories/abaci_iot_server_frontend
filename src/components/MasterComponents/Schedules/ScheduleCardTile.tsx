@@ -23,8 +23,8 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 	const queueTitle =
 		schedule.queue_name?.trim() || (schedule.queue != null ? `Queue #${schedule.queue}` : '—');
 	const subtitle =
-		schedule.description?.trim() ||
-		(schedule.queue_name?.trim() ? `Schedule #${schedule.id}` : `Schedule #${schedule.id}`);
+		schedule.description?.trim() || 'No description';
+		// (schedule.queue_name?.trim() ? `Schedule #${schedule.id}` : `Schedule #${schedule.id}`);
 	const fromLabel = formatDate(schedule.from_datetime);
 	const toLabel = formatDate(schedule.to_datetime);
 	const windowSummary =
@@ -49,9 +49,9 @@ const ScheduleCardTile: React.FC<ScheduleCardTileProps> = ({ schedule, onSelect 
 			}}>
 		<div className='schedule-tile__head'>
 			<div style={{ minWidth: 0, flex: '1 1 0' }}>
-				<div className='schedule-tile__eyebrow'>Schedule · #{schedule.id}</div>
+				{/* <div className='schedule-tile__eyebrow'>Schedule · #{schedule.id}</div> */}
 				<div className='schedule-tile__queue' title={queueTitle}>
-					{queueTitle}
+					Queue : {queueTitle}
 				</div>
 				{subtitle ? (
 					<div className='schedule-tile__desc' title={subtitle}>

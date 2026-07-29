@@ -14,6 +14,7 @@ import {
 } from '../../services/publicScreenApi';
 import { collectQueueUuidsFromTemplate } from '../../utils/parseTemplateZones';
 import { useAudioAnnouncer } from '../../hooks/useAudioAnnouncer';
+import { ScreenAudibleQueuesProvider } from '../../contexts/ScreenAudibleQueuesContext';
 
 const CYCLE_COOKIE_PREFIX = 'screen_display_start_';
 const QUEUE_POLL_MS = 5000;
@@ -51,11 +52,19 @@ const ScreenTokenStatusPage: React.FC = () => {
 	const [recentByQueue, setRecentByQueue] = useState<Record<string, RecentQueueToken[]>>({});
 	// Tracks the last-known token per queue UUID to detect changes between polls.
 	const prevQueuesRef = useRef<Record<string, PublicQueueStatus>>({});
+	const [audibleQueueUuids, setAudibleQueueUuids] = useState<ReadonlySet<string>>(
+		() => new Set(),
+	);
+
+	const handleAudibleQueuesChange = useCallback((uuids: ReadonlySet<string>) => {
+		setAudibleQueueUuids(uuids);
+	}, []);
 
 	const { showConsent, allowAudio, declineAudio } = useAudioAnnouncer(
 		queuesByUuid,
 		screen?.enable_audio === true,
 		screenUuid,
+		audibleQueueUuids,
 	);
 
 	// Already sorted by assignment order when loaded from publicScreenApi.getScreen.
@@ -89,7 +98,7 @@ const ScreenTokenStatusPage: React.FC = () => {
 		}
 		try {
 			const response = await publicScreenApi.getQueueStatus(screenUuid, queueUuids);
-			const newQueues = buildQueuesByUuidMap(response.queues ?? []);
+			const newQueues = buildQueuesByUuidMap(response.queues ?? [], queueUuids);
 			setQueuesByUuid(newQueues);
 
 			// Detect per-queue transitions: current_token changed since last poll.
@@ -201,12 +210,14 @@ const ScreenTokenStatusPage: React.FC = () => {
 			)}
 
 			{!loading && !error && screen && (
-				<ScreenPublicDisplay
-					screen={screen}
-					template={activeTemplate}
-					queuesByUuid={queuesByUuid}
-					recentByQueue={recentByQueue}
-				/>
+				<ScreenAudibleQueuesProvider onAudibleQueuesChange={handleAudibleQueuesChange}>
+					<ScreenPublicDisplay
+						screen={screen}
+						template={activeTemplate}
+						queuesByUuid={queuesByUuid}
+						recentByQueue={recentByQueue}
+					/>
+				</ScreenAudibleQueuesProvider>
 			)}
 
 			{!loading && !error && screen?.enable_audio && showConsent && (

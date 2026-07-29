@@ -1,0 +1,1364 @@
+// ─── Theme · Royal Luxury (slug: royal-luxury) ───────────────────────────────
+// Gilded court: matte black field, dotted diamond lattice, metallic gold, entrance reveal.
+
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700;6..96,800&family=EB+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Great+Vibes&family=Josefin+Sans:wght@400;500;600;700&display=swap');
+
+@keyframes rl-backdrop-in {
+	from {
+		opacity: 0;
+		transform: scale(1.06);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes rl-glint-in {
+	0% {
+		opacity: 0;
+		transform: scale(0.2);
+		filter: brightness(2);
+	}
+
+	55% {
+		opacity: 1;
+		transform: scale(1.15);
+		filter: brightness(1.4);
+	}
+
+	100% {
+		opacity: 0.9;
+		transform: scale(1);
+		filter: brightness(1);
+	}
+}
+
+@keyframes rl-glint-breathe {
+
+	0%,
+	100% {
+		opacity: 0.55;
+		filter: drop-shadow(0 0 2px rgba(245, 230, 163, 0.35));
+	}
+
+	50% {
+		opacity: 1;
+		filter: drop-shadow(0 0 6px rgba(245, 230, 163, 0.85));
+	}
+}
+
+@keyframes rl-brand-in {
+	from {
+		opacity: 0;
+		transform: translateY(-0.45em);
+		letter-spacing: 0.42em;
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+		letter-spacing: 0.22em;
+	}
+}
+
+@keyframes rl-script-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.35em) scale(0.92);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes rl-diamond-in {
+	0% {
+		opacity: 0;
+		transform: rotate(45deg) scale(0.35);
+		filter: blur(4px);
+	}
+
+	70% {
+		opacity: 1;
+		filter: blur(0);
+	}
+
+	100% {
+		opacity: 1;
+		transform: rotate(45deg) scale(1);
+		filter: blur(0);
+	}
+}
+
+@keyframes rl-content-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.5em);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes rl-token-shine {
+
+	0%,
+	100% {
+		text-shadow:
+			0 0 8px rgba(245, 230, 163, 0.25),
+			0 2px 0 rgba(0, 0, 0, 0.55);
+	}
+
+	50% {
+		text-shadow:
+			0 0 18px rgba(245, 230, 163, 0.55),
+			0 0 36px rgba(212, 175, 55, 0.35),
+			0 2px 0 rgba(0, 0, 0, 0.55);
+	}
+}
+
+@keyframes rl-flare {
+
+	0%,
+	100% {
+		opacity: 0.35;
+		transform: translate(-50%, -40%) scale(0.85);
+	}
+
+	50% {
+		opacity: 0.9;
+		transform: translate(-50%, -40%) scale(1.1);
+	}
+}
+
+@keyframes rl-row-in {
+	from {
+		opacity: 0;
+		transform: translateX(-0.4em);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes rl-chip-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.35em) scale(0.94);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes rl-active-marquee {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes rl-brush-drift {
+
+	0%,
+	100% {
+		opacity: 0.22;
+		transform: translateX(-2%) rotate(-18deg);
+	}
+
+	50% {
+		opacity: 0.34;
+		transform: translateX(2%) rotate(-18deg);
+	}
+}
+
+// One lattice step along the 45° diamond line (56/√2 ≈ 39.598 of 400 viewBox ≈ 9.8995%)
+@keyframes rl-dots-flow {
+	from {
+		transform: translate(0, 0);
+	}
+
+	to {
+		transform: translate(9.8995%, 9.8995%);
+	}
+}
+
+.tdc--royal-luxury {
+	// Background alphas follow --tdc-zone-bg-opacity; text/borders stay full strength
+	--rl-bg: rgba(5, 5, 5, #{tdc-zone-a(1)});
+	--rl-bg-deep: rgba(0, 0, 0, #{tdc-zone-a(1)});
+	--rl-gold: #d4af37;
+	--rl-gold-bright: #f5e6a3;
+	--rl-gold-mid: #e8c96a;
+	--rl-gold-deep: #b8860b;
+	--rl-gold-dim: rgba(212, 175, 55, 0.45);
+	--rl-text: #f5e6a3;
+	--rl-text-sub: rgba(232, 201, 106, 0.72);
+	--rl-line: rgba(212, 175, 55, 0.55);
+	--rl-font-display: 'Great Vibes', cursive;
+	--rl-font-ui: 'Josefin Sans', 'Segoe UI', sans-serif;
+	--rl-font-body: 'Great Vibes', cursive;
+	--rl-font-script: 'Great Vibes', cursive;
+	--rl-text-glow: 0 0 14px rgba(212, 175, 55, 0.35);
+
+	--tdc-bg: var(--rl-bg);
+	--tdc-glow-color: transparent;
+	--tdc-text: var(--rl-text);
+	--tdc-text-sub: var(--rl-text-sub);
+	--tdc-text-label: var(--rl-gold-dim);
+	--tdc-token-color: var(--rl-gold-bright);
+	--tdc-token-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+	--tdc-border: rgba(212, 175, 55, 0.28);
+	--tdc-badge-bg: transparent;
+	--tdc-badge-text: var(--rl-gold-mid);
+	--tdc-badge-border: transparent;
+
+	font-family: var(--rl-font-script);
+	color: var(--rl-text);
+	text-shadow: var(--rl-text-glow);
+	background:
+		radial-gradient(
+			ellipse 90% 70% at 50% 42%,
+			rgba(40, 32, 12, #{tdc-zone-a(0.55)}) 0%,
+			transparent 58%
+		),
+		linear-gradient(
+			165deg,
+			rgba(18, 18, 18, #{tdc-zone-a(1)}) 0%,
+			var(--rl-bg) 42%,
+			var(--rl-bg-deep) 100%
+		);
+	overflow: hidden;
+	isolation: isolate;
+	min-width: 0;
+	min-height: 0;
+	container-type: size;
+	container-name: tdc-rl;
+	box-shadow:
+		inset 0 0 0 1px rgba(212, 175, 55, 0.22),
+		inset 0 0 48px rgba(0, 0, 0, #{tdc-zone-a(0.85)});
+
+	.tdc__glow,
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc-col-separators,
+	.tdc__history {
+		display: none !important;
+	}
+
+	// ── Backdrop ─────────────────────────────────────────────────────────────
+	.tdc-rl-backdrop {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		overflow: hidden;
+		animation: rl-backdrop-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.tdc-rl-backdrop__grid {
+		position: absolute;
+		inset: -8%;
+		width: 116%;
+		height: 116%;
+		opacity: 0.85;
+	}
+
+	.tdc-rl-backdrop__dots {
+		transform-box: view-box;
+		transform-origin: 0 0;
+		animation: rl-dots-flow 28s linear infinite;
+		will-change: transform;
+	}
+
+	.tdc-rl-backdrop__glint {
+		opacity: 0;
+		transform-origin: center;
+		animation:
+			rl-glint-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both,
+			rl-glint-breathe 3.6s ease-in-out 1.2s infinite;
+	}
+
+	.tdc-rl-backdrop__brush {
+		position: absolute;
+		inset: -20%;
+		background: repeating-linear-gradient(-32deg,
+				transparent 0 14px,
+				rgba(255, 255, 255, 0.018) 14px 15px,
+				transparent 15px 28px);
+		animation: rl-brush-drift 12s ease-in-out infinite;
+		mix-blend-mode: soft-light;
+	}
+
+	.tdc-rl-backdrop__vignette {
+		position: absolute;
+		inset: 0;
+		background:
+			radial-gradient(
+				circle at 50% 48%,
+				transparent 28%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.55)}) 78%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.88)}) 100%
+			);
+	}
+
+	// ── Layout (zone-size container — scales text to card, not viewport) ──────
+	.tdc-rl-layout {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+		padding: 0.4em 0.5em;
+		box-sizing: border-box;
+	}
+
+	.tdc-rl-layout--table {
+		padding-bottom: 0.35em;
+
+		.tdc-rl-table-header {
+			margin-bottom: 0.05em;
+		}
+
+		.tdc-rl-table-header__count {
+			font-size: 0.58em;
+		}
+
+		.tdc-rl-table-stage {
+			margin-top: 0.28em;
+		}
+
+		// Compact table scale — zone-relative base, children inherit from here
+		.tdc-rl-table {
+			font-size: clamp(0.34em, 2.2cqw, 0.48em);
+		}
+	}
+
+	// ── Brand / header ───────────────────────────────────────────────────────
+	.tdc-rl-header,
+	.tdc-rl-table-header {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.4em;
+		flex-shrink: 0;
+		min-width: 0;
+	}
+
+	.tdc-rl-brand {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.05em;
+		min-width: 0;
+	}
+
+	.tdc-rl-brand__eyebrow {
+		font-family: var(--rl-font-script);
+		font-size: clamp(0.55em, 3.2cqw, 0.75em);
+		font-weight: 400;
+		letter-spacing: 0.04em;
+		text-transform: none;
+		color: var(--rl-gold-mid);
+		text-shadow: var(--rl-text-glow);
+		animation: rl-brand-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+	}
+
+	.tdc-rl-brand__title {
+		font-family: var(--rl-font-script);
+		font-size: clamp(0.85em, 6cqw, 1.35em);
+		line-height: 1;
+		font-weight: 400;
+		color: var(--rl-gold-bright);
+		text-shadow: var(--rl-text-glow);
+		animation: rl-script-in 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+	}
+
+	.tdc-rl-clock {
+		display: flex;
+		align-items: center;
+		gap: 0.28em;
+		max-width: 100%;
+		min-width: 0;
+		font-family: var(--rl-font-ui);
+		font-size: clamp(0.38em, #{'min(2.8cqw, 3.4cqh)'}, 0.58em);
+		font-weight: 500;
+		letter-spacing: clamp(0.04em, 0.6cqw, 0.08em);
+		color: var(--rl-text-sub);
+		text-shadow: none;
+		white-space: nowrap;
+		overflow: hidden;
+		animation: rl-content-in 0.8s ease 0.45s both;
+	}
+
+	.tdc-rl-clock__date,
+	.tdc-rl-clock__time {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-rl-clock__sep {
+		color: var(--rl-gold);
+		font-size: 0.85em;
+		flex-shrink: 0;
+	}
+
+	.tdc-rl-clock__time {
+		font-variant-numeric: tabular-nums;
+		color: var(--rl-gold-mid);
+		flex-shrink: 0;
+	}
+
+	// ── Single-queue hero ────────────────────────────────────────────────────
+	.tdc-rl-body {
+		position: relative;
+		z-index: 2;
+		flex: 1 1 0;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+		align-items: center;
+		gap: clamp(0.25em, 2cqw, 0.55em);
+		min-height: 0;
+		min-width: 0;
+	}
+
+	.tdc-rl-meta {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: center;
+		gap: 0.28em;
+		min-width: 0;
+		max-width: 100%;
+		// Extra end pad so script queue digits (e.g. “8”) aren't clipped
+		padding-right: 0.35em;
+		overflow: visible;
+		// inline-size only — `size` containment collapses height to 0 in grid
+		container-type: inline-size;
+		container-name: tdc-rl-meta;
+		opacity: 1;
+		animation: rl-content-in 0.7s ease;
+	}
+
+	.tdc-rl-queue {
+		font-family: var(--rl-font-script);
+		font-size: clamp(1.15em, 6.5cqw, 1.7em);
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-gold-bright);
+		text-shadow: var(--rl-text-glow);
+		white-space: nowrap;
+		// Same issue as diamond token — script overhang needs room
+		overflow: visible;
+		max-width: none;
+		padding-inline-end: 0.2em;
+		line-height: 1.05;
+	}
+
+	.tdc-rl-queue--empty {
+		min-height: 0.8em;
+	}
+
+	.tdc-rl-subtitle {
+		font-family: var(--rl-font-script);
+		font-size: clamp(0.72em, 3.6cqw, 1em);
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-text-sub);
+		text-shadow: var(--rl-text-glow);
+		white-space: nowrap;
+		overflow: visible;
+		max-width: none;
+		padding-inline-end: 0.15em;
+		line-height: 1.15;
+	}
+
+	.tdc-rl-status {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3em;
+		max-width: 100%;
+		margin-top: 0.08em;
+		padding: 0.28em 0.7em 0.22em;
+		font-family: var(--rl-font-script);
+		font-size: clamp(0.65em, 3.2cqw, 0.9em);
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-gold-mid);
+		text-shadow: var(--rl-text-glow);
+		border: 1px solid var(--rl-line);
+		background: linear-gradient(180deg,
+				rgba(212, 175, 55, #{tdc-zone-a(0.12)}) 0%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.35)}) 100%);
+		box-shadow: 0 0 12px rgba(212, 175, 55, 0.12);
+		box-sizing: border-box;
+		white-space: nowrap;
+		overflow: visible;
+		flex-shrink: 0;
+
+		&::before,
+		&::after {
+			content: '';
+			width: 0.65em;
+			height: 1px;
+			flex-shrink: 0;
+			background: linear-gradient(90deg, transparent, var(--rl-gold), transparent);
+		}
+	}
+
+	.tdc-rl-status--serving {
+		color: var(--rl-gold-bright);
+		border-color: rgba(245, 230, 163, 0.65);
+		box-shadow: 0 0 16px rgba(212, 175, 55, 0.28);
+	}
+
+	.tdc-rl-status--waiting {
+		color: var(--rl-gold-dim);
+	}
+
+	// ── Central diamond ──────────────────────────────────────────────────────
+	// rotate(45deg) makes tips stick out ~20.7% beyond the square box — pad so
+	// the bottom tip never sits under the Active tokens rail.
+	.tdc-rl-diamond {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+		min-height: 0;
+		width: 100%;
+		height: 100%;
+		// Pad for rotate(45deg) tip overhang; keep modest so diamond stays large
+		padding: 7% 6%;
+		box-sizing: border-box;
+		container-type: size;
+		container-name: tdc-rl-diamond;
+	}
+
+	.tdc-rl-diamond__frame {
+		position: relative;
+		width: #{'min(96%, 90cqmin)'};
+		aspect-ratio: 1;
+		max-width: 100%;
+		max-height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transform: rotate(45deg);
+		border: 1.5px solid var(--rl-gold);
+		background:
+			linear-gradient(
+				145deg,
+				rgba(30, 24, 8, #{tdc-zone-a(0.92)}) 0%,
+				rgba(5, 5, 5, #{tdc-zone-a(1)}) 48%,
+				rgba(0, 0, 0, #{tdc-zone-a(1)}) 100%
+			);
+		box-shadow:
+			0 0 0 1px rgba(245, 230, 163, 0.15),
+			0 0 28px rgba(212, 175, 55, 0.22),
+			inset 0 0 24px rgba(0, 0, 0, #{tdc-zone-a(0.75)});
+		animation: rl-diamond-in 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+		box-sizing: border-box;
+		overflow: hidden;
+		container-type: size;
+		container-name: tdc-rl-frame;
+	}
+
+	.tdc-rl-diamond__inner {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.1em;
+		width: 74%;
+		height: 74%;
+		max-width: 74%;
+		max-height: 74%;
+		transform: rotate(-45deg);
+		text-align: center;
+		// Visible so script token flourishes aren't cut (inner still clipped by frame)
+		overflow: visible;
+		box-sizing: border-box;
+	}
+
+	.tdc-rl-diamond__caption {
+		font-family: var(--rl-font-script);
+		font-size: clamp(0.55em, #{'min(14cqi, 12cqh)'}, 0.95em);
+		font-weight: 400;
+		line-height: 2;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-gold-bright);
+		text-shadow: var(--rl-text-glow);
+		opacity: 1;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.tdc-rl-token {
+		font-family: var(--rl-font-script);
+		font-size: #{'min(2.85em, calc(60cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 50cqh)'};
+		font-weight: 400;
+		line-height: 0.95;
+		letter-spacing: 0.02em;
+		color: transparent;
+		background: linear-gradient(180deg,
+				#fff8d6 0%,
+				#f5e6a3 28%,
+				#d4af37 58%,
+				#b8860b 82%,
+				#f0d98a 100%);
+		background-clip: text;
+		-webkit-background-clip: text;
+		filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
+		animation: rl-token-shine 3.2s ease-in-out 1.1s infinite;
+		max-width: none;
+		// Room for glyph overhangs (script “3” paints past its advance width)
+		padding-inline: 0.18em;
+		box-sizing: content-box;
+		// Do NOT clip — overflow:hidden was cutting the right edge of “3”
+		overflow: visible;
+		white-space: nowrap;
+		flex: 0 0 auto;
+		// Mild widen without stretching into the clip edge
+		transform: scaleX(1.06);
+		transform-origin: center;
+	}
+
+	.tdc-rl-diamond__flare {
+		position: absolute;
+		left: 50%;
+		top: 62%;
+		width: 1.4em;
+		height: 0.7em;
+		border-radius: 50%;
+		background: radial-gradient(ellipse at center,
+				rgba(255, 244, 196, 0.85) 0%,
+				rgba(212, 175, 55, 0.25) 45%,
+				transparent 72%);
+		pointer-events: none;
+		animation: rl-flare 2.8s ease-in-out 1.2s infinite;
+	}
+
+	// ── Zone-size responsive breakpoints (not viewport) ──────────────────────
+	// Only stack on very tall/narrow zones — half-width TV panes stay 2-column
+	@container tdc-rl (max-aspect-ratio: 0.72) {
+		.tdc-rl-body {
+			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(0, 1fr);
+			justify-items: center;
+			gap: 0.35em;
+			align-content: center;
+		}
+
+		.tdc-rl-meta {
+			position: relative;
+			z-index: 3;
+			align-items: center;
+			text-align: center;
+			padding-right: 0;
+			max-width: 92%;
+			flex-shrink: 0;
+		}
+
+		.tdc-rl-diamond {
+			padding: 14% 12%;
+			min-height: 0;
+		}
+
+		.tdc-rl-diamond__frame {
+			width: #{'min(72%, 58cqmin)'};
+			max-height: 100%;
+		}
+	}
+
+	@container tdc-rl (max-width: 420px) {
+		.tdc-rl-clock {
+			font-size: clamp(0.36em, 3cqw, 0.5em);
+			letter-spacing: 0.03em;
+		}
+
+		.tdc-rl-queue {
+			font-size: clamp(0.8em, 7cqw, 1.1em);
+		}
+
+		.tdc-rl-subtitle {
+			font-size: clamp(0.42em, 3.2cqw, 0.55em);
+			letter-spacing: 0.06em;
+		}
+
+		.tdc-rl-status {
+			font-size: clamp(0.38em, 2.8cqw, 0.5em);
+			letter-spacing: 0.06em;
+			padding: 0.2em 0.4em;
+
+			&::before,
+			&::after {
+				width: 0.35em;
+			}
+		}
+
+		.tdc-rl-body {
+			gap: 0.22em;
+		}
+
+		.tdc-rl-diamond {
+			padding: 10% 8%;
+		}
+
+		.tdc-rl-diamond__frame {
+			width: #{'min(88%, 78cqmin)'};
+		}
+	}
+
+	@container tdc-rl (max-height: 260px) {
+		.tdc-rl-header {
+			margin-bottom: 0.05em;
+		}
+
+		.tdc-rl-diamond {
+			padding: 8% 7%;
+		}
+
+		.tdc-rl-diamond__frame {
+			width: #{'min(78%, 64cqmin)'};
+			max-height: 100%;
+		}
+
+		.tdc-rl-diamond__caption {
+			letter-spacing: 0.01em;
+		}
+
+		.tdc-rl-meta {
+			gap: 0.12em;
+		}
+
+		.tdc-rl-queue {
+			font-size: clamp(0.75em, 6cqh, 1em);
+		}
+
+		.tdc-rl-subtitle,
+		.tdc-rl-status {
+			font-size: clamp(0.36em, 3.2cqh, 0.48em);
+		}
+	}
+
+	@container tdc-rl (max-height: 200px) {
+		.tdc-rl-body {
+			gap: 0.18em;
+		}
+
+		.tdc-rl-status {
+			padding-block: 0.14em;
+
+			&::before,
+			&::after {
+				display: none;
+			}
+		}
+
+		.tdc-rl-diamond__flare {
+			display: none;
+		}
+	}
+
+	@container tdc-rl-meta (max-width: 140px) {
+		.tdc-rl-queue {
+			font-size: clamp(0.78em, 14cqi, 1.05em);
+		}
+
+		.tdc-rl-subtitle {
+			font-size: clamp(0.4em, 8cqi, 0.52em);
+			letter-spacing: 0.05em;
+		}
+
+		.tdc-rl-status {
+			font-size: clamp(0.36em, 7cqi, 0.48em);
+			letter-spacing: 0.05em;
+			padding-inline: 0.35em;
+
+			&::before,
+			&::after {
+				display: none;
+			}
+		}
+	}
+
+	@container tdc-rl-frame (max-width: 140px) {
+		.tdc-rl-diamond__caption {
+			font-size: clamp(0.42em, 10cqi, 0.7em);
+			letter-spacing: 0.01em;
+		}
+
+		.tdc-rl-token {
+			font-size: #{'min(2.4em, calc(56cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 44cqh)'};
+		}
+	}
+
+	@container tdc-rl (max-width: 360px) {
+		.tdc-rl-active__label {
+			font-size: 0.72em;
+			letter-spacing: 0.02em;
+		}
+
+		.tdc-rl-active__chip {
+			font-size: 0.5em;
+			padding: 0.14em 0.28em;
+		}
+
+		.tdc-rl-active__chip-sep {
+			display: none;
+		}
+	}
+
+	@container tdc-rl (max-height: 180px) {
+		.tdc-rl-active {
+			padding: 0.18em 0.35em 0.2em;
+		}
+
+		.tdc-rl-active__chip {
+			font-size: 0.48em;
+			padding: 0.1em 0.26em;
+		}
+	}
+
+	// ── Multi-queue table ────────────────────────────────────────────────────
+	.tdc-rl-table-header {
+		align-items: center;
+	}
+
+	.tdc-rl-table-header .tdc-rl-clock {
+		flex: 1 1 auto;
+		min-width: 0;
+		justify-content: flex-start;
+	}
+
+	.tdc-rl-table-header__count {
+		flex: 0 0 auto;
+		margin-left: auto;
+		text-align: right;
+		white-space: nowrap;
+		font-family: var(--rl-font-script);
+		font-size: 0.58em;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-gold-dim);
+		text-shadow: var(--rl-text-glow);
+		animation: rl-content-in 0.7s ease 0.4s both;
+	}
+
+	.tdc-rl-table-stage {
+		position: relative;
+		z-index: 2;
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		margin-top: 0.28em;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.tdc-rl-table-wrap {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		overflow: auto;
+		border: 1px solid rgba(212, 175, 55, 0.35);
+		background: linear-gradient(180deg,
+				rgba(18, 14, 6, #{tdc-zone-a(0.92)}) 0%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.88)}) 100%);
+		box-shadow:
+			inset 0 0 0 1px rgba(245, 230, 163, 0.06),
+			0 0 20px rgba(212, 175, 55, 0.08);
+		animation: rl-content-in 0.85s ease 0.5s both;
+	}
+
+	.tdc-rl-table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		font-size: clamp(0.34em, 2.2cqw, 0.48em);
+	}
+
+	.tdc-rl-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		padding: 0.28em 0.38em;
+		font-family: var(--rl-font-script);
+		font-size: 1em;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		text-align: left;
+		color: var(--rl-gold-mid);
+		text-shadow: var(--rl-text-glow);
+		background: linear-gradient(
+			180deg,
+			rgba(26, 21, 8, #{tdc-zone-a(1)}) 0%,
+			rgba(12, 10, 4, #{tdc-zone-a(1)}) 100%
+		);
+		border-bottom: 1px solid rgba(212, 175, 55, 0.45);
+	}
+
+	.tdc-rl-table__head-short {
+		display: none;
+	}
+
+	.tdc-rl-table__col-queue {
+		width: 22%;
+	}
+
+	.tdc-rl-table__col-point {
+		width: 32%;
+	}
+
+	.tdc-rl-table__col-token {
+		width: 16%;
+	}
+
+	.tdc-rl-table__col-status {
+		width: 30%;
+	}
+
+	.tdc-rl-table__cell {
+		// Extra inline pad — script flourishes (e.g. “W” in Waiting) paint past advance width
+		padding: 0.28em 0.55em 0.28em 0.62em;
+		vertical-align: middle;
+		border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-rl-table__row {
+		opacity: 0;
+		animation: rl-row-in 0.55s ease both;
+	}
+
+	.tdc-rl-table__row--even {
+		background: rgba(212, 175, 55, #{tdc-zone-a(0.035)});
+	}
+
+	.tdc-rl-table__row--serving {
+		background: linear-gradient(90deg,
+				rgba(212, 175, 55, #{tdc-zone-a(0.14)}) 0%,
+				rgba(212, 175, 55, #{tdc-zone-a(0.03)}) 100%);
+	}
+
+	.tdc-rl-table__queue,
+	.tdc-rl-table__point {
+		font-family: var(--rl-font-script);
+		font-size: 1em;
+		font-weight: 400;
+		color: var(--rl-text-sub);
+		text-shadow: var(--rl-text-glow);
+		line-height: 1.1;
+		padding-inline: 0.08em 0.18em;
+		box-sizing: content-box;
+	}
+
+	.tdc-rl-table__token {
+		font-family: var(--rl-font-script);
+		font-size: 1.15em;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		color: var(--rl-gold-bright);
+		text-shadow: var(--rl-text-glow);
+		line-height: 1.05;
+		padding-inline: 0.1em 0.22em;
+		box-sizing: content-box;
+	}
+
+	.tdc-rl-table__status {
+		display: block;
+		font-family: var(--rl-font-script);
+		font-size: 0.88em;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		// Lead padding keeps leading flourish of “W” / “N” inside the cell
+		padding: 0 0.12em 0 0.22em;
+		border: none;
+		background: none;
+		box-shadow: none;
+		color: var(--rl-text-sub);
+		text-shadow: var(--rl-text-glow);
+		line-height: 1.15;
+		max-width: 100%;
+		overflow: visible;
+		white-space: nowrap;
+		box-sizing: content-box;
+	}
+
+	.tdc-rl-table__status--serving {
+		color: var(--rl-gold-bright);
+	}
+
+	.tdc-rl-table__status--waiting {
+		color: rgba(232, 201, 106, 0.72);
+	}
+
+	// ── Active tokens rail — compact sizing aligned with other board themes ──
+	.tdc-rl-active {
+		position: relative;
+		z-index: 3;
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+		flex: 0 0 auto;
+		flex-shrink: 0;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		min-height: 0;
+		box-sizing: border-box;
+		padding: 0.28em 0.5em 0.32em;
+		margin: 0;
+		border-top: 1px solid rgba(212, 175, 55, 0.32);
+		background: linear-gradient(180deg,
+				rgba(22, 17, 6, #{tdc-zone-a(0.94)}) 0%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.96)}) 100%);
+		overflow: hidden;
+	}
+
+	.tdc-rl-active__aside {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		flex: 0 0 auto;
+		min-width: 0;
+	}
+
+	.tdc-rl-active__label {
+		font-family: var(--rl-font-script);
+		font-size: 0.85em;
+		font-weight: 400;
+		letter-spacing: 0.02em;
+		text-transform: none;
+		color: var(--rl-gold-dim);
+		text-shadow: var(--rl-text-glow);
+		white-space: nowrap;
+		line-height: 1;
+	}
+
+	.tdc-rl-active__rule {
+		width: 1px;
+		height: 0.95em;
+		flex-shrink: 0;
+		background: linear-gradient(180deg,
+				transparent 0%,
+				rgba(212, 175, 55, 0.55) 30%,
+				rgba(212, 175, 55, 0.55) 70%,
+				transparent 100%);
+	}
+
+	.tdc-rl-active__viewport {
+		flex: 1 1 auto;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		overflow: hidden;
+	}
+
+	.tdc-rl-active__track {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.tdc-rl-active__chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2em;
+		flex: 0 0 auto;
+		min-width: 0;
+		max-width: 100%;
+		// Extra inline pad — script counters (03 / 04) paint past advance width
+		padding: 0.22em 0.55em;
+		border: 1px solid rgba(212, 175, 55, 0.32);
+		background: linear-gradient(180deg,
+				rgba(212, 175, 55, #{tdc-zone-a(0.1)}) 0%,
+				rgba(0, 0, 0, #{tdc-zone-a(0.42)}) 100%);
+		font-family: var(--rl-font-script);
+		font-size: 0.78em;
+		line-height: 1.15;
+		white-space: nowrap;
+		box-sizing: border-box;
+		overflow: visible;
+		container-type: inline-size;
+		container-name: tdc-rl-chip;
+		text-shadow: var(--rl-text-glow);
+	}
+
+	.tdc-rl-active__chip--enter {
+		animation: rl-chip-enter 0.45s ease both;
+	}
+
+	.tdc-rl-active__chip-token {
+		font-family: var(--rl-font-script);
+		font-size: #{'min(1.15em, 28cqi)'};
+		font-weight: 400;
+		line-height: 1.15;
+		color: var(--rl-gold-bright);
+		padding-inline-end: 0.06em;
+		overflow: visible;
+	}
+
+	.tdc-rl-active__chip-sep {
+		color: var(--rl-gold-dim);
+		font-size: 0.82em;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.tdc-rl-active__chip-counter,
+	.tdc-rl-active__chip-time {
+		font-size: #{'min(0.86em, 16cqi)'};
+		letter-spacing: 0.02em;
+		line-height: 1.15;
+		color: var(--rl-text-sub);
+		padding-inline-end: 0.12em;
+		overflow: visible;
+	}
+
+	// < 5 tokens: equal-width row, fluid in-chip text
+	.tdc-rl-active--static {
+		.tdc-rl-active__track {
+			width: 100%;
+			justify-content: stretch;
+			gap: clamp(0.16em, 1.6cqw, 0.3em);
+			padding-inline: 0.06em;
+		}
+
+		.tdc-rl-active__chip {
+			flex: 1 1 0;
+			flex-shrink: 1;
+			width: auto;
+			min-width: 4.6em;
+			padding-inline: clamp(0.28em, 1.6cqw, 0.5em);
+			overflow: visible;
+		}
+	}
+
+	// >= 5 tokens: seamless horizontal marquee
+	.tdc-rl-active--marquee {
+		.tdc-rl-active__viewport {
+			mask-image: linear-gradient(90deg,
+					transparent 0%,
+					#000 4%,
+					#000 96%,
+					transparent 100%);
+			-webkit-mask-image: linear-gradient(90deg,
+					transparent 0%,
+					#000 4%,
+					#000 96%,
+					transparent 100%);
+		}
+
+		.tdc-rl-active__track {
+			width: max-content;
+			animation: rl-active-marquee 24s linear infinite;
+			animation-duration: #{'max(18s, calc(var(--tdc-rl-active-count, 5) * 3.2s))'};
+		}
+
+		.tdc-rl-active__chip {
+			flex: 0 0 auto;
+			min-width: 4.2em;
+		}
+	}
+
+	@container tdc-rl-chip (max-width: 108px) {
+		.tdc-rl-active__chip-token {
+			font-size: #{'min(0.92em, 22cqi)'};
+		}
+
+		.tdc-rl-active__chip-counter,
+		.tdc-rl-active__chip-time {
+			font-size: #{'min(0.78em, 14cqi)'};
+		}
+	}
+}
+
+// Narrow / stacked hero — viewport fallback only (zones use @container above)
+@media (max-width: 420px),
+(max-height: 280px) {
+	.tdc--royal-luxury {
+		.tdc-rl-table__head-long {
+			display: none;
+		}
+
+		.tdc-rl-table__head-short {
+			display: inline;
+		}
+	}
+}
+
+// Fill mode
+.tdc--fill.tdc--royal-luxury {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+
+	.tdc-rl-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-rl-layout {
+			flex: 1 1 0;
+			min-height: 0;
+			padding-bottom: 0.35em;
+		}
+
+		// Extra clearance under the rotated tip above the Active rail
+		.tdc-rl-diamond {
+			padding-bottom: 9%;
+			padding-top: 6%;
+		}
+
+		.tdc-rl-diamond__frame {
+			width: #{'min(94%, 88cqmin)'};
+		}
+
+		.tdc-rl-active {
+			flex-shrink: 0;
+			max-height: min(18%, 4.8em);
+		}
+	}
+
+	// Token size comes from the diamond frame container — avoid double cqh from zone root
+	.tdc-rl-token {
+		font-size: #{'min(2.85em, calc(60cqi / (var(--tdc-token-chars, 2) * 0.55 + 0.15)), 50cqh)'};
+	}
+}
+
+// Compact zones — keep rail slim on short canvases
+@media (max-height: 520px) {
+	.tdc--royal-luxury .tdc-rl-active {
+		padding: 0.22em 0.4em 0.26em;
+		gap: 0.35em;
+	}
+
+	.tdc--royal-luxury .tdc-rl-active__label {
+		font-size: 0.78em;
+		letter-spacing: 0.02em;
+	}
+
+	.tdc--royal-luxury .tdc-rl-active__chip {
+		font-size: 0.52em;
+		padding: 0.14em 0.32em;
+	}
+}
+
+@media (max-width: 640px) {
+	.tdc--royal-luxury .tdc-rl-active__rule {
+		display: none;
+	}
+
+	.tdc--royal-luxury .tdc-rl-active--static .tdc-rl-active__chip {
+		padding-inline: 0.2em;
+	}
+
+	.tdc--royal-luxury .tdc-rl-active__chip-sep {
+		display: none;
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--royal-luxury .tdc-rl-token {
+	font-size: #{'min(3em, calc(62cqi / (var(--tdc-token-chars, 2) * 0.52 + 0.12)), 52cqh)'};
+}
+
+.tdc--preview:not(.tdc--fill).tdc--royal-luxury {
+	.tdc-rl-token {
+		font-size: 2.1em;
+	}
+
+	.tdc-rl-brand__title {
+		font-size: 1.15em;
+	}
+}
+
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--royal-luxury {
+	.tdc-rl-layout {
+		padding: 0.5em 0.65em 0.55em;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tdc--royal-luxury {
+
+		.tdc-rl-backdrop,
+		.tdc-rl-backdrop__dots,
+		.tdc-rl-backdrop__glint,
+		.tdc-rl-backdrop__brush,
+		.tdc-rl-brand__eyebrow,
+		.tdc-rl-brand__title,
+		.tdc-rl-clock,
+		.tdc-rl-meta,
+		.tdc-rl-diamond__frame,
+		.tdc-rl-token,
+		.tdc-rl-diamond__flare,
+		.tdc-rl-table-wrap,
+		.tdc-rl-table__row,
+		.tdc-rl-table-header__count,
+		.tdc-rl-active__chip--enter,
+		.tdc-rl-active--marquee .tdc-rl-active__track {
+			animation: none !important;
+			opacity: 1 !important;
+			transform: none !important;
+			filter: none !important;
+		}
+
+		.tdc-rl-active--marquee .tdc-rl-active__viewport {
+			overflow-x: auto;
+		}
+
+		.tdc-rl-diamond__frame {
+			transform: rotate(45deg) !important;
+		}
+
+		.tdc-rl-diamond__inner {
+			transform: rotate(-45deg) !important;
+		}
+	}
+}

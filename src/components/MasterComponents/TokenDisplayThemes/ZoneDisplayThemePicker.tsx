@@ -3,10 +3,14 @@
  * Drop into the zone properties panel when integrating.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import TokenDisplayThemeCard from './TokenDisplayThemeCard';
+import type { AssignedQueueDisplay } from '../../../utils/zoneQueueResolution';
+// TEMPORARY — sidebar mini preview disabled; main canvas overlay is the live preview.
+// import { THEME_PREVIEW_RECENT_TOKENS } from '../../../utils/zoneQueueResolution';
+// import TokenDisplayThemeCard from './TokenDisplayThemeCard';
 import {
 	createFillAppearance,
 	createThemeAppearance,
+	// getActiveTokensTickerClassForTheme,
 	ZONE_DISPLAY_THEME_CONFIGS,
 	ZONE_DISPLAY_THEME_IDS,
 	type ZoneDisplayAppearance,
@@ -21,6 +25,10 @@ export interface ZoneDisplayThemePickerProps {
 	previewSubtitle?: string;
 	previewTokenDisplay?: string;
 	previewStatus?: string;
+	/** When 2+ queues are assigned, themes with a live board show the tabular layout. */
+	previewAssignedQueues?: AssignedQueueDisplay[];
+	/** Mirrors the zone's saved `is_tabular_view` for board-capable themes. */
+	previewIsTabularView?: boolean;
 	disabled?: boolean;
 	/** Set when save validation fails — theme mode without a swatch selected. */
 	showThemeError?: boolean;
@@ -29,15 +37,21 @@ export interface ZoneDisplayThemePickerProps {
 const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 	value,
 	onChange,
-	previewQueueName = 'Queue A',
-	previewSubtitle = '6th Floor',
-	previewTokenDisplay = '05',
-	previewStatus = 'waiting',
+	// Sidebar preview props — kept for API compatibility; restore with preview block below.
+	// previewQueueName = 'Queue A',
+	// previewSubtitle = '6th Floor',
+	// previewTokenDisplay = '05',
+	// previewStatus = 'waiting',
+	// previewAssignedQueues,
+	// previewIsTabularView = true,
 	disabled = false,
 	showThemeError = false,
 }) => {
 	const themeSelectionMissing = value.mode === 'theme' && !value.displayTheme;
 	const showThemeErrorMessage = showThemeError && themeSelectionMissing;
+	// const usesScreenLevelTicker =
+	// 	value.mode === 'theme' &&
+	// 	Boolean(getActiveTokensTickerClassForTheme(value.displayTheme));
 	const [localFill, setLocalFill] = useState(value.backgroundColor ?? '#22499e');
 
 	useEffect(() => {
@@ -150,6 +164,7 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 				</div>
 			)}
 
+			{/* TEMPORARY — sidebar theme mini-preview (main canvas is the live preview).
 			{value.mode === 'theme' && (
 				<div className='zone-appearance-picker__preview'>
 					<span className='zone-appearance-picker__label'>Preview</span>
@@ -160,12 +175,22 @@ const ZoneDisplayThemePicker: React.FC<ZoneDisplayThemePickerProps> = ({
 							subtitle={previewSubtitle}
 							tokenDisplay={previewTokenDisplay}
 							status={previewStatus}
+							assignedQueues={previewAssignedQueues}
+							isTabularView={previewIsTabularView}
+							recentTokens={
+								usesScreenLevelTicker ||
+								(previewIsTabularView && (previewAssignedQueues?.length ?? 0) > 1)
+									? undefined
+									: THEME_PREVIEW_RECENT_TOKENS
+							}
+							showHistoryTime={false}
 							fillContainer
 							previewMode
 						/>
 					</div>
 				</div>
 			)}
+			*/}
 		</div>
 	);
 };

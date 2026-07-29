@@ -14,7 +14,7 @@ interface ScreenDetailPanelProps {
 	actionLoadingKey: string | null;
 	onActivateToggle: (screen: Screen) => void;
 	onAudioToggle: (screen: Screen) => void;
-	onHeartbeat: (screen: Screen) => void;
+	// onHeartbeat: (screen: Screen) => void;
 	onAssignTemplate: () => void;
 	onEditTemplate: (assignment: ScreenTemplateAssignment) => void;
 	onRemoveTemplate: (assignmentId: number) => void;
@@ -29,7 +29,7 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 	actionLoadingKey,
 	onActivateToggle,
 	onAudioToggle,
-	onHeartbeat,
+	// onHeartbeat,
 	onAssignTemplate,
 	onEditTemplate,
 	onRemoveTemplate,
@@ -86,10 +86,12 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					<span>Audio</span>
 					<span>{screen.enable_audio ? 'Enabled' : 'Disabled'}</span>
 				</div>
+				{/* Heartbeat — hidden for now; restore when needed
 				<div className='screen-detail-row'>
 					<span>Last heartbeat</span>
 					<span>{screen.last_heartbeat ? new Date(screen.last_heartbeat).toLocaleString() : '-'}</span>
 				</div>
+				*/}
 			</div>
 
 			<div className='screen-detail-templates'>
@@ -138,6 +140,7 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					onClick={() => onAudioToggle(screen)}>
 					{screen.enable_audio ? 'Disable Audio' : 'Enable Audio'}
 				</Button>
+				{/* Heartbeat — hidden for now; restore when needed
 				<Button
 					size='sm'
 					color='primary'
@@ -146,6 +149,7 @@ const ScreenDetailPanel: React.FC<ScreenDetailPanelProps> = ({
 					onClick={() => onHeartbeat(screen)}>
 					Send Heartbeat
 				</Button>
+				*/}
 			</div>
 		</div>
 	);

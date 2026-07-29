@@ -13,6 +13,7 @@ import type {
 	UpdateQueuePayload,
 } from '../../../services/queueManagementApi';
 import { queuesApi } from '../../../services/queueManagementApi';
+import { isServingPointListedForSelection } from '../../MasterComponents/QueueManagement/queueManagementUtils';
 
 interface QueueFormModalProps {
 	isOpen: boolean;
@@ -64,6 +65,53 @@ const queueToFormState = (q: Queue): QueueFormState => ({
 	serving_point_ids: (q.serving_points || []).map((point) => point.id),
 	next_queue_ids: extractNextQueueIds(q.next_queues),
 });
+
+const sameIdList = (a: number[], b: number[]) =>
+	a.length === b.length && a.every((id, index) => id === b[index]);
+
+/** Build a PATCH body with only fields that differ from the loaded queue. */
+const buildChangedQueuePayload = (
+	form: QueueFormState,
+	original: Queue,
+	graceMinutes: number,
+): UpdateQueuePayload => {
+	const baseline = queueToFormState(original);
+	const changes: UpdateQueuePayload = {};
+
+	const nextName = form.name.trim();
+	if (nextName !== baseline.name.trim()) changes.name = nextName;
+
+	const nextDescription = form.description.trim();
+	if (nextDescription !== baseline.description.trim()) {
+		changes.description = nextDescription || undefined;
+	}
+
+	const nextLimit = Number(form.limit || 0) || 0;
+	if (nextLimit !== (Number(baseline.limit || 0) || 0)) changes.limit = nextLimit;
+
+	if (graceMinutes !== (Number(baseline.grace_period_minutes || 0) || 0)) {
+		changes.grace_period_minutes = graceMinutes;
+	}
+
+	if (form.allow_postpone !== baseline.allow_postpone) {
+		changes.allow_postpone = form.allow_postpone;
+	}
+
+	if (form.is_reporting_enabled !== baseline.is_reporting_enabled) {
+		changes.is_reporting_enabled = form.is_reporting_enabled;
+	}
+
+	const nextTokenPrefix = form.token_prefix.trim();
+	if (nextTokenPrefix !== baseline.token_prefix.trim()) {
+		changes.token_prefix = nextTokenPrefix || undefined;
+	}
+
+	if (!sameIdList(form.next_queue_ids, baseline.next_queue_ids)) {
+		changes.next_queues = form.next_queue_ids;
+	}
+
+	return changes;
+};
 
 const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	isOpen,
@@ -187,10 +235,12 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 
 	const servingPointOptions = useMemo(
 		() =>
-			servingPoints.map((point) => ({
-				value: point.id,
-				label: point.name,
-			})),
+			servingPoints
+				.filter(isServingPointListedForSelection)
+				.map((point) => ({
+					value: point.id,
+					label: point.name,
+				})),
 		[servingPoints],
 	);
 
@@ -232,19 +282,17 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			return;
 		}
 
+		const updatePayload = isUpdateSubmit
+			? buildChangedQueuePayload(form, loadedEditQueue!, graceMinutes)
+			: null;
+		if (isUpdateSubmit && updatePayload && Object.keys(updatePayload).length === 0) {
+			showNotification('Info', 'No changes to save.', 'info');
+			return;
+		}
+
 		setSubmitting(true);
 		try {
-			if (isUpdateSubmit) {
-				const updatePayload: UpdateQueuePayload = {
-					name: form.name.trim(),
-					description: form.description.trim() || undefined,
-					limit: Number(form.limit || 0) || 0,
-					grace_period_minutes: graceMinutes,
-					allow_postpone: form.allow_postpone,
-					is_reporting_enabled: form.is_reporting_enabled,
-					token_prefix: form.token_prefix.trim() || undefined,
-					next_queues: form.next_queue_ids,
-				};
+			if (isUpdateSubmit && updatePayload) {
 				await queuesApi.update(loadedEditQueue!.id, updatePayload);
 				showSuccessNotification('Queue updated successfully.');
 			} else {

@@ -550,6 +550,10 @@ export const queuesApi = {
 		unwrap<ServingPoint>(authAxios.post('api/queues/serving-points/', payload)),
 	updateServingPoint: (id: number, payload: UpdateServingPointPayload) =>
 		unwrap<ServingPoint>(authAxios.patch(`api/queues/serving-points/${id}/`, payload)),
+	activateServingPoint: (id: number) =>
+		unwrap<ServingPoint>(authAxios.post(`api/queues/serving-points/${id}/activate/`)),
+	deactivateServingPoint: (id: number) =>
+		unwrap<ServingPoint>(authAxios.post(`api/queues/serving-points/${id}/deactivate/`)),
 };
 
 export const schedulesApi = {

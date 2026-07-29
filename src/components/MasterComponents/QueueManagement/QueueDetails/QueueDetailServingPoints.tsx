@@ -13,6 +13,7 @@ import useTablestyle from '../../../../hooks/useTablestyles';
 import type { ServingPoint } from '../../../../services/queueManagementApi';
 import { queuesApi } from '../../../../services/queueManagementApi';
 import { buttonColor } from '../../../../helpers/constants';
+import { isServingPointListedForSelection } from '../queueManagementUtils';
 import swalFire from '../../../../helpers/swalHelper';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
 import usePermissions from '../../../../hooks/usePermissions';
@@ -174,7 +175,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 					merged = [...merged, ...incoming];
 					offset += incoming.length;
 					hasMore = servingPointsHasMore(offset, incoming.length, total);
-					const availableCount = merged.filter((p) => !assigned.has(p.id)).length;
+					const availableCount = merged.filter(
+						(p) => !assigned.has(p.id) && isServingPointListedForSelection(p),
+					).length;
 					if (availableCount >= MODAL_PAGE_SIZE || !hasMore) {
 						setModalServingPoints(merged);
 						setModalOffset(offset);
@@ -248,7 +251,9 @@ const QueueDetailServingPoints: React.FC<QueueDetailServingPointsProps> = ({
 
 	const availableServingPoints = useMemo(() => {
 		const assigned = new Set(assignedServingPointIds);
-		return modalServingPoints.filter((p) => !assigned.has(p.id));
+		return modalServingPoints.filter(
+			(p) => !assigned.has(p.id) && isServingPointListedForSelection(p),
+		);
 	}, [modalServingPoints, assignedServingPointIds]);
 
 	// ── Handlers ────────────────────────────────────────────────────────────

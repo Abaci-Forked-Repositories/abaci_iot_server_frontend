@@ -521,6 +521,14 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 											<div className='d-flex align-items-center gap-2 flex-wrap'>
 												<span className='text-muted small'>Serving point status</span>
 												<StatusBadge status={windowSpStatus || undefined} emptyFallback='—' />
+												{servingPoint && (
+													<>
+														<span className='text-muted small ms-1'>Listing</span>
+														<StatusBadge
+															status={servingPoint.is_active !== false ? 'active' : 'inactive'}
+														/>
+													</>
+												)}
 												{canEditServingPointStatus && (
 													<Tooltip title='Change serving point status'>
 														<span className='d-inline-flex'>
@@ -536,6 +544,7 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 														</span>
 													</Tooltip>
 												)}
+												
 											</div>
 										)}
 									</div>

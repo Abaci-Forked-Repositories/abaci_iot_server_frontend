@@ -9,7 +9,7 @@ import useToasterNotification from '../../../../hooks/useToasterNotification';
 import {
 	type QueueEvent,
 	type Token,
-	type TokenParentSummary,
+	// type TokenParentSummary, // Parent tokens tab — restore with tab below
 	type TokenServingHistory,
 	tokensApi,
 } from '../../../../services/queueManagementApi';
@@ -47,13 +47,14 @@ const formatParentTokenField = (token: Token): string => {
 	return label != null ? `#${label}` : '—';
 };
 
-const parentSummaryDisplayToken = (p: TokenParentSummary): string => {
-	if (p.token_display != null && String(p.token_display).trim() !== '')
-		return String(p.token_display).trim();
-	if (p.token_number != null && String(p.token_number).trim() !== '')
-		return String(p.token_number).trim();
-	return '—';
-};
+// Parent tokens tab — restore with tab below
+// const parentSummaryDisplayToken = (p: TokenParentSummary): string => {
+// 	if (p.token_display != null && String(p.token_display).trim() !== '')
+// 		return String(p.token_display).trim();
+// 	if (p.token_number != null && String(p.token_number).trim() !== '')
+// 		return String(p.token_number).trim();
+// 	return '—';
+// };
 
 const tokenServingHistoryRows = (token: Token): TokenServingHistory[] => {
 	const rows = token.complete_serving_history ?? token.serving_history;
@@ -205,6 +206,7 @@ export interface TokenDetailModalProps {
 const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId, tokens }) => {
 	const [detailToken, setDetailToken] = useState<Token | null>(null);
 	const [loading, setLoading] = useState(false);
+	// 'parents' kept in type for when Parent tokens tab is restored
 	const [activeTab, setActiveTab] = useState<'details' | 'parents' | 'serving'>('details');
 	const { showErrorNotification } = useToasterNotification();
 	const errorNotifierRef = useRef(showErrorNotification);
@@ -260,15 +262,16 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 		});
 	}, [tokens, tokenId]);
 
-	useEffect(() => {
-		if (
-			detailToken &&
-			activeTab === 'parents' &&
-			!(detailToken.parent_tokens && detailToken.parent_tokens.length > 0)
-		) {
-			setActiveTab('details');
-		}
-	}, [detailToken, activeTab]);
+	// Parent tokens tab — restore with tab below
+	// useEffect(() => {
+	// 	if (
+	// 		detailToken &&
+	// 		activeTab === 'parents' &&
+	// 		!(detailToken.parent_tokens && detailToken.parent_tokens.length > 0)
+	// 	) {
+	// 		setActiveTab('details');
+	// 	}
+	// }, [detailToken, activeTab]);
 
 	const modalTitle = useMemo(() => {
 		if (detailToken?.token_number != null && detailToken.token_number !== '') {
@@ -285,7 +288,8 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 		[detailToken],
 	);
 	const servingHistoryCount = detailToken ? tokenServingHistoryRows(detailToken).length : 0;
-	const parentTokensCount = detailToken?.parent_tokens?.length ?? 0;
+	// Parent tokens tab — restore with tab below
+	// const parentTokensCount = detailToken?.parent_tokens?.length ?? 0;
 
 	return (
 		<Modal
@@ -324,6 +328,7 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 									Details
 								</button>
 							</NavItem>
+							{/* Parent tokens tab — hidden for now; uncomment to restore
 							{parentTokensCount > 0 ? (
 								<NavItem isActive={activeTab === 'parents'}>
 									<button
@@ -341,6 +346,7 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 									</button>
 								</NavItem>
 							) : null}
+							*/}
 							<NavItem isActive={activeTab === 'serving'}>
 								<button
 									type='button'
@@ -507,6 +513,7 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 							)}
 						</div>
 
+						{/* Parent tokens panel — hidden for now; uncomment to restore
 						<div
 							id='token-modal-panel-parents'
 							role='tabpanel'
@@ -575,6 +582,7 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({ tokenId, setTokenId
 								</CardBody>
 							</Card>
 						</div>
+						*/}
 
 						<div
 							id='token-modal-panel-serving'

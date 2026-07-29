@@ -1,0 +1,1174 @@
+// ─── Theme · Car Speedometer (slug: car-speedometer) ─────────────────────────
+// Automotive dashboard — pure black OLED, white digital readout, blue waiting accent, red gauge needle.
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@keyframes cs-token-reveal {
+	from {
+		opacity: 0.2;
+		transform: scale(0.92);
+		filter: blur(2px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+		filter: blur(0);
+	}
+}
+
+@keyframes cs-car-headlight-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@keyframes cs-needle-glow {
+	0%,
+	100% {
+		filter: drop-shadow(0 0 3px rgba(255, 0, 0, 0.6));
+	}
+	50% {
+		filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.95));
+	}
+}
+
+@keyframes cs-rim-glaze {
+	0%,
+	100% {
+		stroke: rgba(255, 255, 255, 0.08);
+	}
+	45% {
+		stroke: rgba(255, 255, 255, 0.32);
+	}
+}
+
+@keyframes cs-screen-flicker {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.97;
+	}
+}
+
+@keyframes cs-chip-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.3em);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.tdc--car-speedometer {
+	--cs-bg: rgba(0, 0, 0, #{tdc-zone-a(1)});
+	--cs-text: #ffffff;
+	--cs-text-sub: rgba(255, 255, 255, 0.45);
+	--cs-red: #ff0000;
+	--cs-red-glow: rgba(255, 0, 0, 0.55);
+	--cs-blue: #4da3ff;
+	--cs-blue-glow: rgba(77, 163, 255, 0.55);
+	--cs-screen-border: rgba(255, 255, 255, 0.12);
+	--cs-screen-glow: rgba(255, 255, 255, #{tdc-zone-a(0.04)});
+	--cs-font-display: 'Orbitron', 'Audiowide', sans-serif;
+	--cs-font-ui: 'Rajdhani', 'Barlow Condensed', sans-serif;
+	--cs-font-gauge: 'Share Tech Mono', 'Courier New', monospace;
+	--tdc-bg: var(--cs-bg);
+	--tdc-glow-color: transparent;
+	--tdc-text: var(--cs-text);
+	--tdc-text-sub: var(--cs-text-sub);
+	--tdc-text-label: var(--cs-text-sub);
+	--tdc-token-color: var(--cs-text);
+	--tdc-token-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+	--tdc-border: rgba(255, 255, 255, 0.08);
+	--tdc-badge-bg: transparent;
+	--tdc-badge-text: var(--cs-text);
+	--tdc-badge-border: transparent;
+
+	font-family: var(--cs-font-gauge);
+
+	background: var(--cs-bg);
+	color: var(--cs-text);
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+		inset 0 0 40px rgba(0, 0, 0, #{tdc-zone-a(0.8)});
+	overflow: hidden;
+	isolation: isolate;
+	min-width: 0;
+	min-height: 0;
+
+	.tdc__glow,
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer,
+	.tdc-col-separators,
+	.tdc__history {
+		display: none !important;
+	}
+
+	// ── Dashboard layout ─────────────────────────────────────────────────────
+	.tdc-cs-layout {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		height: 100%;
+		gap: 0.22em;
+		padding: 0.4em 0.45em;
+		container-type: size;
+		container-name: tdc-cs;
+		position: relative;
+		z-index: 2;
+	}
+
+	.tdc-cs-body {
+		display: flex;
+		flex-direction: row;
+		align-items: stretch;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		gap: 0.35em;
+	}
+
+	// ── Digital display panel (left) ─────────────────────────────────────────
+	.tdc-cs-digital {
+		display: flex;
+		flex-direction: column;
+		flex: 0 1 44%;
+		max-width: 48%;
+		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+		gap: 0.2em;
+		container-type: size;
+		container-name: tdc-cs-digital;
+	}
+
+	.tdc-cs-digital__nav {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		flex-shrink: 0;
+		padding: 0.1em 0.15em;
+	}
+
+	.tdc-cs-digital__nav-dot {
+		width: 0.45em;
+		height: 0.45em;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.18);
+		flex-shrink: 0;
+
+		&--active {
+			background: var(--cs-text);
+			box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+		}
+	}
+
+	.tdc-cs-clock {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		align-items: center;
+		gap: 0.35em 0.5em;
+		width: 100%;
+		min-width: 0;
+		flex-shrink: 0;
+		padding: 0 0.06em 0.04em;
+	}
+
+	.tdc-cs-clock__date,
+	.tdc-cs-clock__time {
+		font-family: var(--cs-font-gauge);
+		font-size: clamp(0.32em, min(2.8cqw, 3.2cqh), 0.48em);
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.42);
+		line-height: 1.2;
+		white-space: nowrap;
+		min-width: 0;
+	}
+
+	.tdc-cs-clock__date {
+		grid-column: 1;
+		justify-self: start;
+		text-align: left;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-cs-clock__queue {
+		grid-column: 2;
+		justify-self: center;
+		max-width: 100%;
+		font-family: var(--cs-font-ui);
+		font-size: clamp(0.34em, min(2.6cqw, 3cqh), 0.52em);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--cs-text);
+		line-height: 1.15;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
+
+		&--empty {
+			min-width: 0;
+			min-height: 0;
+			padding: 0;
+			opacity: 0;
+			pointer-events: none;
+		}
+	}
+
+	.tdc-cs-clock__time {
+		grid-column: 3;
+		justify-self: end;
+		text-align: right;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-cs-digital__screen {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		overflow: hidden;
+		padding: 0.32em 0.38em 0.28em;
+		border: 1px solid var(--cs-screen-border);
+		border-radius: 0.2em;
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, #{tdc-zone-a(0.03)}) 0%, transparent 40%),
+			rgba(255, 255, 255, #{tdc-zone-a(0.02)});
+		box-shadow:
+			inset 0 0 20px var(--cs-screen-glow),
+			inset 0 1px 0 rgba(255, 255, 255, 0.06);
+		animation: cs-screen-flicker 4s ease-in-out infinite;
+		container-type: size;
+		container-name: tdc-cs-screen;
+	}
+
+	.tdc-cs-digital__subtitle {
+		font-family: var(--cs-font-ui);
+		font-size: clamp(0.46em, 3.2cqw, 0.68em);
+		font-weight: 600;
+		color: var(--cs-text-sub);
+		line-height: 1.25;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		flex-shrink: 0;
+		margin-bottom: 0.08em;
+	}
+
+	.tdc-cs-digital__readout {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		padding: 0.15em 0;
+		overflow: hidden;
+	}
+
+	.tdc-cs-token {
+		display: block;
+		font-family: var(--cs-font-display);
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		color: var(--cs-text);
+		line-height: 0.95;
+		white-space: nowrap;
+		text-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+		// Responsive: scales with screen container width & height
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 4.2) * 1em),
+			calc(88cqw / (var(--tdc-token-chars, 2) * 0.52 + 0.2)),
+			calc(72cqh)
+		);
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-cs-token--reveal {
+		animation: cs-token-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.tdc-cs-digital__status-gauge {
+		flex: 1 1 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 0;
+		min-width: 0;
+		overflow: hidden;
+		margin-top: 0.04em;
+		padding-top: 0.06em;
+		padding-bottom: 0.08em;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.tdc-cs-status-gauge {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		min-width: 0;
+		min-height: 0;
+	}
+
+	.tdc-cs-status-gauge__svg {
+		// Fit inside the digital screen — scales down on resize, full arc visible at normal size.
+		width: #{'min(90cqw, calc(92cqh * 100 / 90))'};
+		height: auto;
+		aspect-ratio: 100 / 90;
+		max-width: 100%;
+		max-height: 92cqh;
+		display: block;
+		flex-shrink: 1;
+	}
+
+	.tdc-cs-status-gauge__rim {
+		stroke: rgba(255, 255, 255, 0.1);
+		stroke-width: 1.2;
+	}
+
+	.tdc-cs-status-gauge__zone {
+		stroke-width: 3;
+		stroke-linecap: round;
+
+		&--waiting {
+			stroke: rgba(77, 163, 255, 0.45);
+		}
+
+		&--serving {
+			stroke: rgba(255, 0, 0, 0.45);
+		}
+	}
+
+	.tdc-cs-status-gauge__tick {
+		stroke: rgba(255, 255, 255, 0.28);
+		stroke-width: 0.8;
+		stroke-linecap: round;
+
+		&--major {
+			stroke: rgba(255, 255, 255, 0.55);
+			stroke-width: 1.2;
+		}
+	}
+
+	.tdc-cs-status-gauge__label {
+		font-family: var(--cs-font-ui);
+		font-size: 4.8px;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+
+		&--waiting {
+			fill: var(--cs-blue);
+		}
+
+		&--serving {
+			fill: var(--cs-red);
+		}
+	}
+
+	.tdc-cs-status-gauge__face {
+		fill: rgba(0, 0, 0, #{tdc-zone-a(1)});
+	}
+
+	.tdc-cs-status-gauge__hub {
+		fill: rgba(26, 26, 26, #{tdc-zone-a(1)});
+		stroke: rgba(255, 255, 255, 0.25);
+		stroke-width: 0.6;
+	}
+
+	.tdc-cs-status-gauge__needle-group {
+		transition: transform 0.72s cubic-bezier(0.34, 1.15, 0.64, 1);
+	}
+
+	.tdc-cs-status-gauge__needle {
+		stroke: var(--cs-text);
+		stroke-width: 1.6;
+		stroke-linecap: round;
+		filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.35));
+	}
+
+	.tdc-cs-status-gauge__svg--sweep .tdc-cs-status-gauge__needle {
+		filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.55));
+	}
+
+	.tdc-cs-status-gauge__svg--waiting .tdc-cs-status-gauge__needle {
+		stroke: var(--cs-blue);
+		filter: drop-shadow(0 0 3px var(--cs-blue-glow));
+	}
+
+	.tdc-cs-status-gauge__svg--serving .tdc-cs-status-gauge__needle {
+		stroke: var(--cs-red);
+		filter: drop-shadow(0 0 3px var(--cs-red-glow));
+	}
+
+	// ── Speedometer gauge (right) ────────────────────────────────────────────
+	.tdc-cs-gauge-wrap {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex: 1 1 56%;
+		min-width: 0;
+		min-height: 0;
+		padding: 0.05em 0.1em;
+		position: relative;
+		container-type: size;
+		container-name: tdc-cs-gauge;
+	}
+
+	.tdc-cs-gauge__token {
+		position: absolute;
+		left: 50%;
+		top: 52%;
+		transform: translate(-50%, -50%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 36%;
+		max-width: 36%;
+		text-align: center;
+		pointer-events: none;
+		z-index: 1;
+		overflow: hidden;
+		container-type: inline-size;
+		container-name: tdc-cs-gauge-token;
+	}
+
+	.tdc-cs-token--gauge {
+		display: block;
+		width: 100%;
+		max-width: 100%;
+		text-align: center;
+		line-height: 1;
+		letter-spacing: 0.04em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: clip;
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 4.2) * 0.44 * 1em),
+			calc(90cqi / (var(--tdc-token-chars, 2) * 0.68 + 0.38)),
+			calc(22cqh),
+			2em
+		);
+	}
+
+	.tdc-cs-gauge {
+		width: 100%;
+		height: 100%;
+		max-width: 100%;
+		max-height: 100%;
+		display: block;
+	}
+
+	.tdc-cs-gauge__face {
+		fill: rgba(0, 0, 0, #{tdc-zone-a(1)});
+	}
+
+	.tdc-cs-gauge__rim {
+		fill: none;
+		stroke: rgba(255, 255, 255, 0.08);
+		stroke-width: 1.5;
+	}
+
+	.tdc-cs-gauge__rim-sweep {
+		fill: none;
+		stroke: #ffffff;
+		stroke-width: 3.5;
+		stroke-linecap: round;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.tdc-cs-gauge--sweep .tdc-cs-gauge__rim {
+		animation: cs-rim-glaze 0.76s ease-out;
+	}
+
+	.tdc-cs-gauge--sweep .tdc-cs-gauge__arc {
+		animation: cs-rim-glaze 0.76s ease-out;
+	}
+
+	.tdc-cs-gauge__car-body {
+		fill: #f8fafc;
+	}
+
+	.tdc-cs-gauge__car-cabin {
+		fill: rgba(15, 23, 42, #{tdc-zone-a(0.55)});
+	}
+
+	.tdc-cs-gauge__car-wheel {
+		fill: rgba(26, 26, 26, #{tdc-zone-a(1)});
+		stroke: rgba(255, 255, 255, 0.35);
+		stroke-width: 0.35;
+	}
+
+	.tdc-cs-gauge__car-headlight {
+		fill: var(--cs-blue);
+		animation: cs-car-headlight-pulse 2.4s ease-in-out infinite;
+	}
+
+	.tdc-cs-gauge__arc {
+		stroke: rgba(255, 255, 255, 0.06);
+		stroke-width: 1;
+	}
+
+	.tdc-cs-gauge__tick {
+		stroke: rgba(255, 255, 255, 0.35);
+		stroke-width: 1;
+		stroke-linecap: round;
+
+		&--major {
+			stroke: rgba(255, 255, 255, 0.75);
+			stroke-width: 1.5;
+		}
+	}
+
+	.tdc-cs-gauge__label {
+		fill: rgba(255, 255, 255, 0.55);
+		font-family: var(--cs-font-gauge);
+		font-size: 7px;
+		font-weight: 500;
+	}
+
+	.tdc-cs-gauge__unit {
+		fill: rgba(255, 255, 255, 0.35);
+		font-family: var(--cs-font-ui);
+		font-size: 6px;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+	}
+
+	.tdc-cs-gauge__needle-group {
+		transition: transform 0.85s cubic-bezier(0.34, 1.2, 0.64, 1);
+	}
+
+	.tdc-cs-gauge--sweep .tdc-cs-gauge__needle {
+		animation: cs-needle-glow 0.85s ease-out;
+	}
+
+	.tdc-cs-gauge__needle {
+		stroke: var(--cs-red);
+		stroke-width: 2;
+		stroke-linecap: round;
+		// CSS glow only — Chrome hides SVG-filtered lines inside transformed groups at rest.
+		filter: drop-shadow(0 0 3px var(--cs-red-glow));
+	}
+
+	// ── Active tokens rail ───────────────────────────────────────────────────
+	.tdc-cs-active {
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+		flex-shrink: 0;
+		padding: 0.28em 0.5em 0.32em;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.02)});
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.tdc-cs-active__label {
+		font-family: var(--cs-font-ui);
+		font-size: 0.55em;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.28);
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+
+	.tdc-cs-active__scroll {
+		display: flex;
+		align-items: center;
+		gap: 0.35em;
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+
+	.tdc-cs-active__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2em;
+		flex-shrink: 0;
+		padding: 0.18em 0.4em;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.15em;
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.03)});
+		font-family: var(--cs-font-gauge);
+		font-size: 0.58em;
+		white-space: nowrap;
+
+		&--enter {
+			animation: cs-chip-enter 0.4s ease-out both;
+		}
+	}
+
+	.tdc-cs-active__chip-token {
+		font-weight: 700;
+		color: var(--cs-text);
+	}
+
+	.tdc-cs-active__chip-sep {
+		color: rgba(255, 255, 255, 0.2);
+	}
+
+	.tdc-cs-active__chip-counter {
+		color: var(--cs-blue);
+		font-weight: 500;
+	}
+
+	.tdc-cs-active__chip-time {
+		color: rgba(255, 255, 255, 0.28);
+		font-size: 0.9em;
+		margin-left: 0.15em;
+	}
+
+	// Static row (< 5 chips): equal-width cards + fluid in-chip text.
+	.tdc-cs-active--static {
+		.tdc-cs-active__scroll {
+			width: 100%;
+			justify-content: stretch;
+			gap: clamp(0.16em, 1.6cqw, 0.3em);
+			padding-inline: 0.08em;
+			overflow-x: auto;
+			overflow-y: hidden;
+			pointer-events: auto;
+			overscroll-behavior: contain;
+			-webkit-overflow-scrolling: touch;
+			scrollbar-width: thin;
+			scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+
+			&::-webkit-scrollbar {
+				display: block;
+				height: 0.2em;
+			}
+
+			&::-webkit-scrollbar-thumb {
+				background: rgba(255, 255, 255, 0.22);
+				border-radius: 999px;
+			}
+		}
+
+		.tdc-cs-active__chip {
+			flex: 1 1 0;
+			flex-shrink: 1;
+			min-width: 0;
+			max-width: 100%;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 0.06em;
+			padding-inline: clamp(0.1em, 1.2cqw, 0.32em);
+			white-space: nowrap;
+			container-type: inline-size;
+			container-name: tdc-cs-chip;
+		}
+
+		.tdc-cs-active__chip-sep {
+			display: none;
+		}
+
+		.tdc-cs-active__chip-token,
+		.tdc-cs-active__chip-counter,
+		.tdc-cs-active__chip-time {
+			width: 100%;
+			text-align: center;
+			overflow: visible;
+			text-overflow: unset;
+			white-space: nowrap;
+			line-height: 1.05;
+		}
+
+		.tdc-cs-active__chip-token {
+			font-size: #{'min(0.62em, 24cqi)'};
+		}
+
+		.tdc-cs-active__chip-counter {
+			font-size: #{'min(0.5em, 16cqi)'};
+		}
+
+		.tdc-cs-active__chip-time {
+			margin-left: 0;
+			font-size: #{'min(0.38em, 9cqi)'};
+		}
+	}
+
+	@container tdc-cs-chip (max-width: 108px) {
+		.tdc-cs-active--static .tdc-cs-active__chip-token {
+			font-size: #{'min(0.56em, 22cqi)'};
+		}
+
+		.tdc-cs-active--static .tdc-cs-active__chip-counter {
+			font-size: #{'min(0.44em, 15cqi)'};
+		}
+	}
+
+	// ── Multi-queue tabular dashboard ─────────────────────────────────────────
+	.tdc-cs-layout--table {
+		gap: 0.24em;
+	}
+
+	.tdc-cs-table-header {
+		flex-shrink: 0;
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 0.5em;
+		padding: 0.08em 0.28em 0.34em;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.tdc-cs-table-header__copy {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+
+	.tdc-cs-table-header__meta {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		min-width: 0;
+		max-width: 62%;
+	}
+
+	.tdc-cs-table-header__meta .tdc-cs-clock {
+		width: auto;
+		max-width: 100%;
+		padding: 0;
+		justify-content: flex-end;
+		gap: 0.42em;
+	}
+
+	.tdc-cs-table-header__meta .tdc-cs-clock__date,
+	.tdc-cs-table-header__meta .tdc-cs-clock__time {
+		font-size: clamp(0.34em, min(2.6cqw, 3cqh), 0.5em);
+		white-space: nowrap;
+	}
+
+	.tdc-cs-table-header__count {
+		font-family: var(--cs-font-ui);
+		font-size: 0.44em;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--cs-text-sub);
+		padding: 0.26em 0.44em;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.16em;
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.03)});
+	}
+
+	.tdc-cs-table-stage {
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		padding: 0.18em 0.14em 0.1em;
+	}
+
+	.tdc-cs-table-wrap {
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+		overflow: auto;
+		pointer-events: auto;
+		overscroll-behavior: contain;
+		padding-inline-end: 0.18em;
+		scrollbar-gutter: stable;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255, 255, 255, 0.22) rgba(255, 255, 255, #{tdc-zone-a(0.04)});
+
+		&::-webkit-scrollbar {
+			width: 0.28em;
+			height: 0.28em;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: rgba(255, 255, 255, 0.22);
+			border-radius: 999px;
+		}
+
+		&::-webkit-scrollbar-track {
+			background: rgba(255, 255, 255, #{tdc-zone-a(0.04)});
+		}
+	}
+
+	.tdc-cs-table {
+		width: 100%;
+		min-width: max(100%, 16em);
+		border-collapse: separate;
+		border-spacing: 0 0.1em;
+		font-size: clamp(0.32em, 2.4cqw, 0.44em);
+	}
+
+	.tdc-cs-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		padding: 0.24em 0.3em;
+		font-family: var(--cs-font-ui);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		text-align: left;
+		color: rgba(255, 255, 255, 0.38);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.92)});
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.tdc-cs-table__head-short {
+		display: none;
+	}
+
+	.tdc-cs-table__row--even .tdc-cs-table__cell {
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.03)});
+	}
+
+	.tdc-cs-table__row--odd .tdc-cs-table__cell {
+		background: rgba(255, 255, 255, #{tdc-zone-a(0.015)});
+	}
+
+	.tdc-cs-table__cell {
+		padding: 0.34em 0.3em;
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		vertical-align: middle;
+	}
+
+	.tdc-cs-table__row--even .tdc-cs-table__cell:first-child,
+	.tdc-cs-table__row--odd .tdc-cs-table__cell:first-child {
+		border-left: 1px solid rgba(255, 255, 255, 0.05);
+		border-top-left-radius: 0.14em;
+		border-bottom-left-radius: 0.14em;
+	}
+
+	.tdc-cs-table__row--even .tdc-cs-table__cell:last-child,
+	.tdc-cs-table__row--odd .tdc-cs-table__cell:last-child {
+		border-right: 1px solid rgba(255, 255, 255, 0.05);
+		border-top-right-radius: 0.14em;
+		border-bottom-right-radius: 0.14em;
+	}
+
+	.tdc-cs-table__queue,
+	.tdc-cs-table__point {
+		display: block;
+		font-family: var(--cs-font-ui);
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.72);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 9em;
+	}
+
+	.tdc-cs-table__token {
+		display: inline-block;
+		font-family: var(--cs-font-display);
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		color: var(--cs-text);
+		text-shadow: 0 0 8px rgba(255, 255, 255, 0.16);
+		white-space: nowrap;
+	}
+
+	.tdc-cs-table__status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.28em;
+		min-width: 0;
+	}
+
+	.tdc-cs-table__status-gauge {
+		position: relative;
+		width: 1.45em;
+		height: 0.82em;
+		flex-shrink: 0;
+	}
+
+	.tdc-cs-table__status-arc {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0.08em;
+		height: 0.72em;
+		border-radius: 999px 999px 0 0;
+		border: 1.5px solid transparent;
+		border-bottom: none;
+		transform-origin: 50% 100%;
+
+		&--waiting {
+			border-top-color: rgba(77, 163, 255, 0.55);
+			border-left-color: rgba(77, 163, 255, 0.55);
+			transform: rotate(-34deg);
+		}
+
+		&--serving {
+			border-top-color: rgba(255, 0, 0, 0.55);
+			border-right-color: rgba(255, 0, 0, 0.55);
+			transform: rotate(34deg);
+		}
+	}
+
+	.tdc-cs-table__status-needle {
+		position: absolute;
+		left: 50%;
+		bottom: 0.04em;
+		width: 1.5px;
+		height: 0.56em;
+		border-radius: 999px;
+		background: var(--cs-text);
+		transform-origin: 50% 100%;
+		transition: transform 0.45s cubic-bezier(0.34, 1.1, 0.64, 1);
+
+		&--waiting {
+			transform: translateX(-50%) rotate(-38deg);
+			background: var(--cs-blue);
+			box-shadow: 0 0 4px var(--cs-blue-glow);
+		}
+
+		&--serving {
+			transform: translateX(-50%) rotate(38deg);
+			background: var(--cs-red);
+			box-shadow: 0 0 4px var(--cs-red-glow);
+		}
+	}
+
+	.tdc-cs-table__status-label {
+		font-family: var(--cs-font-ui);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	.tdc-cs-table__status--waiting .tdc-cs-table__status-label {
+		color: var(--cs-blue);
+	}
+
+	.tdc-cs-table__status--serving .tdc-cs-table__status-label {
+		color: var(--cs-red);
+	}
+
+	@container tdc-cs (max-width: 220px) {
+		.tdc-cs-table__head-long {
+			display: none;
+		}
+
+		.tdc-cs-table__head-short {
+			display: inline;
+		}
+
+		.tdc-cs-table__col-status,
+		.tdc-cs-table__cell--status {
+			display: none;
+		}
+	}
+
+	@container tdc-cs-digital (max-height: 120px) {
+		.tdc-cs-digital__screen {
+			padding: 0.16em 0.28em 0.12em;
+		}
+
+		.tdc-cs-digital__nav {
+			display: none;
+		}
+	}
+
+	@container tdc-cs-screen (max-height: 72px) {
+		.tdc-cs-digital__screen {
+			padding-block: 0.18em;
+		}
+
+		.tdc-cs-clock__queue {
+			font-size: clamp(0.3em, 2.4cqw, 0.46em);
+		}
+
+		.tdc-cs-digital__status-gauge {
+			margin-top: 0.02em;
+			padding-top: 0.03em;
+			padding-bottom: 0.03em;
+		}
+	}
+
+	@container tdc-cs-digital (max-height: 96px) {
+		.tdc-cs-digital__nav {
+			display: none;
+		}
+	}
+
+	@container tdc-cs (max-height: 220px) {
+		.tdc-cs-digital {
+			flex: 0 1 36%;
+			max-width: 42%;
+		}
+
+		.tdc-cs-gauge-wrap {
+			flex: 1 1 64%;
+		}
+	}
+
+	// ── Narrow / tall zones: stack vertically ──────────────────────────────────
+	@container tdc-cs (max-aspect-ratio: 1.1) {
+		.tdc-cs-body {
+			flex-direction: column;
+		}
+
+		.tdc-cs-digital {
+			flex: 0 1 38%;
+			max-width: 100%;
+		}
+
+		.tdc-cs-gauge-wrap {
+			flex: 1 1 62%;
+		}
+	}
+
+	@container tdc-cs (max-width: 180px) {
+		.tdc-cs-clock__date,
+		.tdc-cs-clock__time {
+			font-size: clamp(0.28em, 2.4cqw, 0.4em);
+			letter-spacing: 0.03em;
+		}
+
+		.tdc-cs-digital__nav {
+			display: none;
+		}
+	}
+}
+
+// ── Fill container mode ──────────────────────────────────────────────────────
+.tdc--fill.tdc--car-speedometer {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	border-radius: inherit;
+
+	.tdc-cs-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+
+	&.tdc--has-history {
+		.tdc-cs-layout {
+			flex: 1 1 0;
+			min-height: 0;
+		}
+
+		.tdc-cs-active {
+			flex-shrink: 0;
+			max-height: min(22%, 5.5em);
+			min-width: 0;
+			overflow: hidden;
+		}
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--car-speedometer .tdc-cs-token--gauge {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 4.2) * 0.48 * 1em),
+		calc(92cqi / (var(--tdc-token-chars, 2) * 0.66 + 0.34)),
+		calc(24cqh),
+		2.1em
+	);
+}
+
+.tdc--preview.tdc--fill.tdc--car-speedometer .tdc-cs-token:not(.tdc-cs-token--gauge) {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 4.2) * 1.05 * 1em),
+		calc(90cqw / (var(--tdc-token-chars, 2) * 0.5 + 0.18)),
+		calc(74cqh)
+	);
+}
+
+.tdc--preview:not(.tdc--fill).tdc--car-speedometer {
+	.tdc-cs-token--gauge {
+		font-size: 1.55em;
+	}
+
+	.tdc-cs-token:not(.tdc-cs-token--gauge) {
+		font-size: 3.8em;
+	}
+
+	.tdc-cs-layout {
+		min-height: 10em;
+		min-width: 14em;
+	}
+}
+
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--car-speedometer {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+
+	.tdc-cs-layout {
+		flex: 1 1 0;
+		min-height: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tdc--car-speedometer {
+		.tdc-cs-token--reveal,
+		.tdc-cs-gauge__needle-group,
+		.tdc-cs-status-gauge__needle-group,
+		.tdc-cs-table__status-needle,
+		.tdc-cs-gauge__car-headlight,
+		.tdc-cs-gauge--sweep .tdc-cs-gauge__needle,
+		.tdc-cs-gauge--sweep .tdc-cs-gauge__rim,
+		.tdc-cs-gauge--sweep .tdc-cs-gauge__arc,
+		.tdc-cs-digital__screen,
+		.tdc-cs-active__chip--enter {
+			animation: none !important;
+			transition: none !important;
+		}
+
+		.tdc-cs-token--reveal {
+			opacity: 1;
+			transform: none;
+			filter: none;
+		}
+	}
+}

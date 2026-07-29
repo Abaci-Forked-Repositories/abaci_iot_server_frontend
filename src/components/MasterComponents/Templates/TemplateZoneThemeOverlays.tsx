@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Queue } from '../../../services/queueManagementApi';
 import { TokenDisplayThemeCard } from '../TokenDisplayThemes';
 import {
+	isSignalBoardTheme,
 	zoneUsesScreenLevelActiveTokensTicker,
 	type ZoneDisplayThemeId,
 } from '../TokenDisplayThemes/tokenDisplayThemes';
@@ -17,14 +18,18 @@ import {
 import { resolveTemplateActiveTokensTickerClass } from '../../../utils/resolveTemplateTickerTheme';
 import { parseTemplateLayoutFromHtml } from '../../../utils/parseTemplateZones';
 import type { RecentQueueToken } from '../../../services/publicScreenApi';
+import {
+	buildEditorPageTurnQueueDisplays,
+	countZoneQueueAssignmentSlots,
+	THEME_PREVIEW_RECENT_TOKENS,
+} from '../../../utils/zoneQueueResolution';
+import {
+	readZoneIsTabularViewFromRect,
+	resolveZoneIsTabularView,
+} from '../../../utils/zoneMultiQueueView';
 
-/** In-zone active tokens preview for themes 1–5 (history strip inside each zone card). */
-const MOCK_RECENT_TOKENS: RecentQueueToken[] = [
-	{ token_display: 'B026', serving_point_name: 'Counter 03' },
-	{ token_display: 'B025', serving_point_name: 'Counter 02' },
-	{ token_display: 'B024', serving_point_name: 'Counter 01' },
-	{ token_display: 'B023', serving_point_name: 'Counter 04' },
-];
+/** Editor canvas mock serving point — matches buildEditorPageTurnQueueDisplays slot 0. */
+const EDITOR_PREVIEW_SERVING_POINT = 'Serving Point 01';
 
 /** Cycles 01→15 in the template editor so Pipboy flip digits are visible without live queue data. */
 const PREVIEW_FLIP_TOKENS = Array.from({ length: 15 }, (_, i) =>
@@ -124,6 +129,32 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		[zones, revision],
 	);
 
+	const hasAnimatedPreviewToken = useMemo(
+		() =>
+			zones.some((rect) => {
+				const theme = getZoneAppearanceFromRect(rect).displayTheme;
+				return (
+					theme === 'oled-pulse' ||
+					theme === 'digital-healthcare' ||
+					theme === 'glass-lobby' ||
+					theme === 'neon-prism' ||
+					theme === 'aurora-nexus' ||
+					isSignalBoardTheme(theme) ||
+					theme === 'paper-flip' ||
+					theme === 'mono-flip' ||
+					theme === 'airport-arrival' ||
+					theme === 'airport-departure' ||
+					theme === 'car-speedometer' ||
+					theme === 'royal-luxury' ||
+					theme === 'galaxy-spiral' ||
+					theme === 'terracotta-olive-sand' ||
+					theme === 'metro-mosaic' ||
+					theme === 'blueprint-atelier'
+				);
+			}),
+		[zones, revision],
+	);
+
 	const useThemedScreenTicker = Boolean(tickerThemeSlug);
 
 	const zonesUnion = useMemo(
@@ -154,7 +185,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 	const activeTokenPoolRef = useRef(0);
 
 	useEffect(() => {
-		if (!useThemedScreenTicker) return undefined;
+		if (!useThemedScreenTicker && !hasAnimatedPreviewToken) return undefined;
 
 		const timer = window.setInterval(() => {
 			setPreviewToken((current) => {
@@ -165,7 +196,7 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 		}, PREVIEW_FLIP_INTERVAL_MS);
 
 		return () => window.clearInterval(timer);
-	}, [useThemedScreenTicker]);
+	}, [useThemedScreenTicker, hasAnimatedPreviewToken]);
 
 	useEffect(() => {
 		if (!useThemedScreenTicker) return undefined;
@@ -199,6 +230,21 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 			'Queue';
 
 		const zoneOpacity = getZoneOpacityFromRect(rect);
+		const zoneQueueSlots = countZoneQueueAssignmentSlots(rect);
+		const editorPreviewDisplays =
+			zoneQueueSlots > 0
+				? buildEditorPageTurnQueueDisplays(rect, queuesById, previewToken)
+				: [];
+		const savedTabularView = readZoneIsTabularViewFromRect(rect);
+		const isTabularView = resolveZoneIsTabularView(
+			appearance.displayTheme,
+			savedTabularView,
+			zoneQueueSlots,
+		);
+		const previewSubtitle =
+			editorPreviewDisplays[0]?.servingPointName ?? EDITOR_PREVIEW_SERVING_POINT;
+		const assignedQueues =
+			zoneQueueSlots > 1 ? editorPreviewDisplays : undefined;
 
 		return (
 			<div
@@ -231,15 +277,44 @@ const TemplateZoneThemeOverlays: React.FC<TemplateZoneThemeOverlaysProps> = ({
 								width: bounds.width,
 								height: bounds.height,
 								borderRadius: bounds.borderRadius,
+								// Galaxy paints full-bleed HTML; keep overlay dark so fabric white never shows.
+								...(appearance.displayTheme === 'galaxy-spiral'
+									? { backgroundColor: '#03010c' }
+									: {}),
 								// opacity moved to backgroundOpacity on TokenDisplayThemeCard
 							}
 				}>
 				<TokenDisplayThemeCard
 					appearance={appearance}
 					queueName={queueName}
-					tokenDisplay={usesScreenTicker ? previewToken : '05'}
+					subtitle={previewSubtitle}
+					tokenDisplay={
+						usesScreenTicker ||
+						appearance.displayTheme === 'oled-pulse' ||
+						appearance.displayTheme === 'digital-healthcare' ||
+						appearance.displayTheme === 'glass-lobby' ||
+						appearance.displayTheme === 'neon-prism' ||
+						appearance.displayTheme === 'aurora-nexus' ||
+						isSignalBoardTheme(appearance.displayTheme) ||
+						appearance.displayTheme === 'paper-flip' ||
+						appearance.displayTheme === 'mono-flip' ||
+						appearance.displayTheme === 'airport-arrival' ||
+						appearance.displayTheme === 'airport-departure' ||
+						appearance.displayTheme === 'car-speedometer' ||
+						appearance.displayTheme === 'royal-luxury' ||
+						appearance.displayTheme === 'galaxy-spiral' ||
+						appearance.displayTheme === 'terracotta-olive-sand' ||
+						appearance.displayTheme === 'metro-mosaic' ||
+						appearance.displayTheme === 'blueprint-atelier'
+							? previewToken
+							: '05'
+					}
+					assignedQueues={assignedQueues}
+					isTabularView={isTabularView}
 					status='waiting'
-					recentTokens={usesScreenTicker ? undefined : MOCK_RECENT_TOKENS}
+					recentTokens={
+						usesScreenTicker || isTabularView ? undefined : THEME_PREVIEW_RECENT_TOKENS
+					}
 					fillContainer
 					showHistoryTime={false}
 					previewMode

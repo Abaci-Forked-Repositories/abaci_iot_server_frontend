@@ -456,12 +456,60 @@
 
 // ─── Header ──────────────────────────────────────────────────────────────────
 .tdc--imperial-court .tdc__header {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding-inline: 0.55em;
+	min-height: 1.2em;
 	border-bottom: 1px solid rgba(255, 215, 0, 0.18);
 	background: rgba(0, 0, 0, 0.35);
 	overflow: hidden;
+}
+
+.tdc--imperial-court .tdc-ic-clock {
+	position: absolute;
+	left: 0.55em;
+	right: 0.55em;
+	top: 50%;
+	z-index: 6;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.45em;
+	transform: translateY(-50%);
+	pointer-events: none;
+	line-height: 1.05;
+}
+
+.tdc--imperial-court .tdc-ic-clock__date {
+	flex: 0 1 auto;
+	max-width: 40%;
+	font-size: 0.36em;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: rgba(190, 220, 205, 0.78);
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tdc--imperial-court .tdc-ic-clock__time {
+	flex: 0 1 auto;
+	max-width: 40%;
+	margin-left: auto;
+	font-size: 0.4em;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	font-variant-numeric: tabular-nums;
+	color: rgba(255, 215, 0, 0.94);
+	text-align: right;
+	text-shadow: 0 0 0.45em rgba(255, 215, 0, 0.22);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .tdc--imperial-court .tdc-ic-header-beam {
@@ -496,6 +544,8 @@
 }
 
 .tdc--imperial-court .tdc__queue-name {
+	position: relative;
+	z-index: 4;
 	font-size: 0.76em;
 	font-weight: 700;
 	letter-spacing: 0.18em;
@@ -662,6 +712,7 @@
 
 	.tdc__header {
 		grid-column: 1 / -1;
+		min-height: 1.15em;
 	}
 
 	.tdc__token {
@@ -739,4 +790,14 @@
 
 .tdc--imperial-court:not(.tdc--fill) {
 	min-height: 200px;
+}
+
+@container (max-width: 220px) {
+	.tdc--imperial-court .tdc-ic-clock__date {
+		display: none;
+	}
+
+	.tdc--imperial-court .tdc-ic-clock__time {
+		max-width: 46%;
+	}
 }

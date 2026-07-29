@@ -180,9 +180,12 @@ const Modal: FC<IModalProps> = ({
 	});
 
 	// Backdrop close function
-	const closeModal = (event: { target: any }) => {
+	const closeModal = (event: { target: unknown }) => {
+		const target = event.target;
+		if (!(target instanceof Node)) return;
+		if (target instanceof Element && target.closest('[data-modal-ignore-backdrop]')) return;
 		// @ts-ignore
-		if (ref.current && !ref.current.contains(event.target) && !isStaticBackdrop) {
+		if (ref.current && !ref.current.contains(target) && !isStaticBackdrop) {
 			setIsOpen(false);
 		}
 	};
@@ -190,9 +193,12 @@ const Modal: FC<IModalProps> = ({
 	useEventListener('touchstart', closeModal); // Touchscreen
 
 	// Backdrop static function
-	const modalStatic = (event: { target: any }) => {
+	const modalStatic = (event: { target: unknown }) => {
+		const target = event.target;
+		if (!(target instanceof Node)) return;
+		if (target instanceof Element && target.closest('[data-modal-ignore-backdrop]')) return;
 		// @ts-ignore
-		if (ref.current && !ref.current.contains(event.target) && isStaticBackdrop) {
+		if (ref.current && !ref.current.contains(target) && isStaticBackdrop) {
 			// @ts-ignore
 			refModal.current.classList.add('modal-static');
 			// @ts-ignore

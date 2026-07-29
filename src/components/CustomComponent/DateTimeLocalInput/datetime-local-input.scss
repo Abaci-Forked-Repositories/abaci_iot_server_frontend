@@ -1,0 +1,54 @@
+.datetime-local-input {
+	width: 100%;
+
+	&__trigger {
+		cursor: pointer;
+		background-color: var(--bs-body-bg, #fff);
+
+		&:disabled {
+			cursor: not-allowed;
+		}
+	}
+
+	&__icon {
+		color: var(--bs-secondary-color, #6c757d);
+		background-color: var(--bs-body-bg, #fff);
+	}
+
+	&--disabled &__icon {
+		opacity: 0.5;
+	}
+
+	&__popover-shell {
+		z-index: 2000;
+		max-width: none;
+		border: 1px solid var(--bs-border-color, #dee2e6);
+		border-radius: 0.5rem;
+		box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+		overflow: hidden;
+	}
+
+	&__popover {
+		background-color: var(--bs-body-bg, #fff);
+	}
+
+	&__time-row {
+		margin-top: -0.25rem;
+		padding-bottom: 0.5rem;
+	}
+
+	&__time-label {
+		margin-bottom: 0.35rem;
+		font-size: 0.875rem;
+	}
+
+	&__time-row input[type='time'] {
+		height: 40px;
+	}
+
+	&__actions {
+		margin-top: 0.5rem;
+		border-top: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.08));
+		padding-top: 0.875rem !important;
+	}
+}

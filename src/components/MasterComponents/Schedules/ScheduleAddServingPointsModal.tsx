@@ -6,6 +6,7 @@ import Spinner from '../../bootstrap/Spinner';
 import type { ServingPoint } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import { isServingPointListedForSelection } from '../QueueManagement/queueManagementUtils';
 
 const MODAL_PAGE_SIZE = 5;
 
@@ -49,7 +50,9 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 
 	const availableServingPoints = useMemo(() => {
 		const onSchedule = currentServingPointIdsRef.current;
-		return modalServingPoints.filter((p) => !onSchedule.has(p.id));
+		return modalServingPoints.filter(
+			(p) => !onSchedule.has(p.id) && isServingPointListedForSelection(p),
+		);
 	}, [modalServingPoints, currentServingPointIds]);
 
 	const fetchModalChunk = useCallback(
@@ -97,7 +100,9 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 					merged = [...merged, ...incoming];
 					offset += incoming.length;
 					hasMore = servingPointsHasMore(offset, incoming.length, total);
-					const availableCount = merged.filter((p) => !onSchedule.has(p.id)).length;
+					const availableCount = merged.filter(
+						(p) => !onSchedule.has(p.id) && isServingPointListedForSelection(p),
+					).length;
 					if (availableCount >= MODAL_PAGE_SIZE || !hasMore) {
 						setModalServingPoints(merged);
 						setModalOffset(offset);

@@ -297,14 +297,27 @@
 
 	.flip-digit__flip {
 		position: absolute;
-		top: 0;
 		left: 0;
 		right: 0;
+		overflow: hidden;
+		transform-style: preserve-3d;
+	}
+
+	.flip-digit__flip--top {
+		top: 0;
 		height: 50%;
 		transform-origin: bottom center;
-		transform-style: preserve-3d;
 		z-index: 3;
 		border-radius: clamp(8px, 1.5cqw, 18px) clamp(8px, 1.5cqw, 18px) 0 0;
+	}
+
+	.flip-digit__flip--bottom {
+		bottom: 0;
+		height: 50%;
+		transform-origin: top center;
+		transform: rotateX(90deg);
+		z-index: 4;
+		border-radius: 0 0 clamp(8px, 1.5cqw, 18px) clamp(8px, 1.5cqw, 18px);
 	}
 
 	.flip-digit__flip-front {
@@ -330,8 +343,12 @@
 		}
 	}
 
-	.flip-digit--flipping .flip-digit__flip {
-		animation: pipboy-digit-flip 0.45s ease-in forwards;
+	.flip-digit--flipping .flip-digit__flip--top {
+		animation: pipboy-digit-flip-top 0.45s ease-in forwards;
+	}
+
+	.flip-digit--flipping-bottom .flip-digit__flip--bottom {
+		animation: pipboy-digit-flip-bottom 0.45s ease-in forwards;
 	}
 
 	// Static top stays visible under the flap so the upper card is never blank.
@@ -356,6 +373,25 @@
 		padding: 0.32em 0.42em;
 		border-radius: 4px;
 		margin: 0;
+		min-width: 0;
+		max-width: 100%;
+		white-space: normal;
+	}
+
+	.tdc__status-subtitle {
+		font-size: 0.52em;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--pip-green);
+		text-shadow: 0 0 4px var(--pip-glow);
+		line-height: 1.15;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+		opacity: 0.9;
 	}
 
 	.tdc__status-icon {
@@ -581,13 +617,23 @@
 }
 
 // Animations
-@keyframes pipboy-digit-flip {
+@keyframes pipboy-digit-flip-top {
 	0% {
 		transform: rotateX(0deg);
 	}
 
 	100% {
 		transform: rotateX(-90deg);
+	}
+}
+
+@keyframes pipboy-digit-flip-bottom {
+	0% {
+		transform: rotateX(90deg);
+	}
+
+	100% {
+		transform: rotateX(0deg);
 	}
 }
 

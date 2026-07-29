@@ -279,6 +279,53 @@
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
 	}
 
+	.tdc-vc-clock {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.45em;
+		width: min(92%, 12em);
+		max-width: 100%;
+		margin-top: 0.2em;
+		flex-shrink: 0;
+		position: relative;
+		z-index: 2;
+		pointer-events: none;
+		line-height: 1.1;
+	}
+
+	.tdc-vc-clock__date {
+		flex: 0 1 auto;
+		max-width: 52%;
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-size: 0.38em;
+		font-weight: 600;
+		font-style: italic;
+		letter-spacing: 0.04em;
+		text-transform: none;
+		color: rgba(245, 222, 179, 0.72);
+		text-align: left;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-vc-clock__time {
+		flex: 0 1 auto;
+		max-width: 48%;
+		margin-left: auto;
+		font-size: 0.4em;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		font-variant-numeric: tabular-nums;
+		color: var(--vc-champagne);
+		text-align: right;
+		text-shadow: 0 0 0.4em var(--vc-gold-glow);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	.tdc__footer {
 		display: flex;
 		align-items: center;
@@ -387,5 +434,21 @@
 		.tdc__status-badge {
 			animation: none;
 		}
+	}
+}
+
+@container (max-width: 200px) {
+	.tdc--velvet-crown .tdc-vc-clock {
+		flex-direction: column;
+		align-items: center;
+		gap: 0.06em;
+		width: 100%;
+	}
+
+	.tdc--velvet-crown .tdc-vc-clock__date,
+	.tdc--velvet-crown .tdc-vc-clock__time {
+		max-width: 100%;
+		text-align: center;
+		margin-left: 0;
 	}
 }

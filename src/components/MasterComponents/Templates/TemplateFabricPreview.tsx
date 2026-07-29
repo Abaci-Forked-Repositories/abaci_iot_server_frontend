@@ -23,6 +23,14 @@ import {
 	getZoneAppearanceFromParsedZone,
 	getZoneAppearanceFromRect,
 } from '../../../utils/zoneAppearanceFabric';
+import {
+	mergeRecentTokensFromQueues,
+	resolveAssignedQueueDisplays,
+	resolvePrimaryQueueForZone,
+	resolveQueuesForZone,
+	countZoneQueueAssignmentSlots,
+} from '../../../utils/zoneQueueResolution';
+import { resolveZoneIsTabularView } from '../../../utils/zoneMultiQueueView';
 
 const ZONE_LABEL_KEY = 'isZoneQueueLabel';
 const ZONE_LABEL_FOR_KEY = 'zoneLabelFor';
@@ -96,38 +104,6 @@ function resolveQueueForRect(
 	}
 
 	const chipName = Array.isArray(rect.queueChipNames) ? rect.queueChipNames[0]?.trim() : '';
-	if (chipName) {
-		const byName = allQueues.find(
-			(q) => q.name === chipName || q.queue_name === chipName,
-		);
-		if (byName) return byName;
-	}
-
-	return null;
-}
-
-function resolveQueueForParsedZone(
-	zone: {
-		queueUuids: string[];
-		queueIds: number[];
-		queueChipNames: string[];
-		name: string;
-	},
-	queuesByUuid: Record<string, PublicQueueStatus>,
-): PublicQueueStatus | null {
-	const allQueues = Object.values(queuesByUuid);
-
-	for (const uuid of zone.queueUuids) {
-		const queue = queuesByUuid[uuid];
-		if (queue) return queue;
-	}
-
-	for (const id of zone.queueIds) {
-		const queue = allQueues.find((q) => q.id === id);
-		if (queue) return queue;
-	}
-
-	const chipName = zone.queueChipNames[0]?.trim();
 	if (chipName) {
 		const byName = allQueues.find(
 			(q) => q.name === chipName || q.queue_name === chipName,
@@ -314,10 +290,7 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 	/** Overlay bounds: clamp only — normalize would expand valid half-width columns to full canvas. */
 	const overlayZones = useMemo(() => {
 		if (!htmlLayout?.zones.length) return [];
-		console.log('htmlLayout.zones', htmlLayout.zones);
-		console.log('configuration', configuration);
 		const enriched = enrichParsedZonesWithConfiguration(htmlLayout.zones, configuration);
-		console.log('enriched', enriched);
 		return enriched.map((zone) => {
 			const geom = clampZoneGeometryToCanvas(
 				{
@@ -517,8 +490,9 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 						);
 						return {
 							name: zone.name,
-							queueUuids: zone.queueUuids.slice(0, 1),
-							queueChipNames: zone.queueChipNames.slice(0, 1),
+							queueUuids: zone.queueUuids,
+							queueChipNames: zone.queueChipNames,
+							queueIds: zone.queueIds,
 							dataQueueIdsAttr: queueIdsAttr,
 							...geom,
 							fill: zone.backgroundColor,
@@ -587,12 +561,23 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 				className={`${hostClassName}${flicker ? ' template-fabric-preview-host--live' : ''}`}>
 				<div className='screen-public-zone-layer'>
 					{overlayZones.map((zone, index) => {
-						const queue = resolveQueueForParsedZone(zone, queuesByUuid);
+						const queue = resolvePrimaryQueueForZone(zone, queuesByUuid);
 						const display = getPublicQueueZoneDisplay(queue, {
 							queueName: zone.queueChipNames[0] ?? zone.name,
 						});
 						const appearance = getZoneAppearanceFromParsedZone(zone);
+						const zoneQueueSlots = countZoneQueueAssignmentSlots(zone);
+						const isTabularView = resolveZoneIsTabularView(
+							appearance.displayTheme,
+							zone.isTabularView,
+							zoneQueueSlots,
+						);
+						const assignedQueues =
+							zoneQueueSlots > 1
+								? resolveAssignedQueueDisplays(zone, queuesByUuid)
+								: undefined;
 						const zoneStyle = toViewportPercentZoneStyle(zone, logicalW, logicalH);
+						const zoneKey = `${zone.name}-${index}`;
 
 						const zoneOpacity = typeof zone.opacity === 'number' ? zone.opacity : 1;
 
@@ -600,14 +585,21 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 							(appearance.mode === 'theme' && appearance.displayTheme) ||
 							appearance.mode === 'fill'
 						) {
-							// Primary: live `other_current_tokens` returned by the API each poll.
-							// Fallback: frontend-tracked history keyed by queue UUID.
+							const zoneQueues = resolveQueuesForZone(zone, queuesByUuid);
 							const zoneRecentTokens =
-								!suppressZoneHistory && queue?.other_tokens?.length
-									? queue.other_tokens
-									: !suppressZoneHistory && queue?.uuid
-										? (recentByQueue[queue.uuid] ?? [])
-										: [];
+								!suppressZoneHistory && !isTabularView
+									? (() => {
+										const merged = mergeRecentTokensFromQueues(zoneQueues);
+										if (merged.length) return merged;
+										const fallback: RecentQueueToken[] = [];
+										for (const q of zoneQueues) {
+											if (q.uuid && recentByQueue[q.uuid]?.length) {
+												fallback.push(...recentByQueue[q.uuid]);
+											}
+										}
+										return fallback;
+									})()
+								: [];
 							return (
 								<div
 									key={`${zone.name}-${index}`}
@@ -619,9 +611,13 @@ const TemplateFabricPreview: React.FC<TemplateFabricPreviewProps> = ({
 										subtitle={display.servingPointName}
 										tokenDisplay={display.tokenDisplay}
 										status={display.tokenStatus}
+										assignedQueues={assignedQueues}
+										isTabularView={isTabularView}
 										recentTokens={zoneRecentTokens.length ? zoneRecentTokens : undefined}
 										fillContainer
 										backgroundOpacity={zoneOpacity < 1 ? zoneOpacity : undefined}
+										zoneKey={zoneKey}
+										primaryQueueUuid={queue?.uuid}
 									/>
 								</div>
 							);

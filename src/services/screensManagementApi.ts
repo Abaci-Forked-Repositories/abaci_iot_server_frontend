@@ -171,7 +171,8 @@ export const screensApi = {
 		unwrap<ScreenGroupDetail>(authAxios.post(`api/screens/groups/${id}/add-screens/`, payload)),
 	removeGroupScreens: (id: number, payload: ScreenIdsPayload) =>
 		unwrap<ScreenGroupDetail>(authAxios.post(`api/screens/groups/${id}/remove-screens/`, payload)),
-	heartbeat: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/heartbeat/`)),
+	// Heartbeat — hidden for now; restore when needed
+	// heartbeat: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/heartbeat/`)),
 	activate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/activate/`)),
 	deactivate: (id: number) => unwrap<Screen>(authAxios.post(`api/screens/${id}/deactivate/`)),
 	toggleAudio: (id: number, enable_audio: boolean) =>

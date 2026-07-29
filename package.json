@@ -36,6 +36,7 @@
 		"@mui/lab": "^6.0.0-beta.16",
 		"@mui/material": "^6.1.8",
 		"@mui/styles": "^5.15.9",
+		"@mui/x-date-pickers": "^6.20.2",
 		"@omtanke/react-use-event-outside": "^1.0.1",
 		"@popperjs/core": "^2.11.8",
 		"@reactour/tour": "^3.6.1",

@@ -1,0 +1,859 @@
+// ─── Theme 11 · Airport Arrival Sign (slug: airport-arrival) ─────────────────
+// Inverted Schiphol wayfinding — black field, yellow typography, sharp signage layout.
+// Typography: DIN-style condensed stack (DIN Next if licensed locally, else Google fallbacks).
+
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Roboto+Condensed:wght@400;500;700&display=swap');
+
+@keyframes tdc-aa-slide-up {
+	from {
+		opacity: 0;
+		transform: translateY(0.28em);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes tdc-aa-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+// Status badge bounces left ↔ right across the full sign width.
+@keyframes tdc-aa-status-drift {
+	0%,
+	8% {
+		left: 0;
+		transform: translateY(-50%) translateX(0);
+	}
+	92%,
+	100% {
+		left: 100%;
+		transform: translateY(-50%) translateX(-100%);
+	}
+}
+
+// Token bounces top ↔ bottom inside the right column (`alternate` reverses each leg).
+@keyframes tdc-aa-token-drift {
+	0%,
+	8% {
+		top: 0;
+		transform: translateX(-50%) translateY(0);
+	}
+	92%,
+	100% {
+		top: 100%;
+		transform: translateX(-50%) translateY(-100%);
+	}
+}
+@keyframes tdc-aa-header-travel {
+	from {
+		transform: translateX(-100%);
+	}
+
+	to {
+		transform: translateX(100vw);
+	}
+}
+
+// Hazard zebra bar — seamless march left → right (period matches background-size).
+@keyframes tdc-aa-stripe-travel {
+	from {
+		background-position: 0 0;
+	}
+
+	to {
+		background-position: -24px 0;
+	}
+}
+
+
+.tdc--airport-arrival {
+	--aa-anim-duration: 300ms;
+	--aa-anim-ease: ease;
+	--aa-token-cycle-duration: 4s;
+	--aa-status-cycle-duration: 4s;
+	--aa-stripe-cycle-duration: 1s;
+	--aa-board-gap: 0.34em;
+	--aa-yellow: #000000;
+	--aa-ink: #ffc107;
+	--aa-ink-bg: rgba(255, 193, 7, #{tdc-zone-a(1)});
+	--aa-bg: rgba(0, 0, 0, #{tdc-zone-a(1)});
+	--aa-ink-soft: rgba(255, 193, 7, 0.62);
+	--aa-frame: rgba(255, 193, 7, #{tdc-zone-a(0.28)});
+	--aa-token-em: 4.4;
+	// Scale cqw to match Onyx Gold body column (58%) while token sits in 64% column.
+	--aa-onyx-cqw-scale: 0.90625;
+	// DIN-style transportation signage — proprietary faces first when installed/licensed.
+	--aa-font-signage:
+		'DIN Next',
+		'DIN 2014',
+		'FF DIN',
+		'Roboto Condensed',
+		'Inter Tight',
+		'Arial Narrow',
+		'Helvetica Neue',
+		sans-serif;
+
+	--tdc-bg: var(--aa-bg);
+	--tdc-glow-color: transparent;
+	--tdc-text: var(--aa-ink);
+	--tdc-text-sub: var(--aa-ink-soft);
+	--tdc-text-label: rgba(255, 193, 7, 0.45);
+	--tdc-token-color: var(--aa-ink);
+	--tdc-token-shadow: none;
+	--tdc-border: var(--aa-frame);
+	--tdc-badge-bg: var(--aa-ink-bg);
+	--tdc-badge-text: var(--aa-yellow);
+	--tdc-badge-border: var(--aa-ink-bg);
+
+	font-family: var(--aa-font-signage);
+	background: var(--aa-bg);
+	color: var(--aa-ink);
+	border: 3px solid var(--aa-frame);
+	border-radius: 0;
+	display: flex;
+	flex-direction: column;
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 193, 7, #{tdc-zone-a(0.08)}),
+		0 6px 24px rgba(0, 0, 0, #{tdc-zone-a(0.45)});
+	overflow: hidden;
+	min-width: 0;
+	min-height: 0;
+
+	.tdc__glow {
+		display: none;
+	}
+
+	.tdc__header,
+	.tdc__body,
+	.tdc__footer {
+		display: none;
+	}
+
+	.tdc-aa-layout {
+		position: relative;
+		z-index: 2;
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		width: 100%;
+		padding: 0.45em 0.5em 0.4em;
+		overflow: hidden;
+	}
+
+	// .tdc-aa-main {
+	// 	position: absolute;
+	// 	inset: 0;
+	// 	display: grid;
+	// 	grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+	// 	grid-template-rows: minmax(0, 1fr);
+	// 	align-items: stretch;
+	// 	align-content: stretch;
+	// 	gap: 0.25em;
+	// 	overflow: hidden;
+	// 	container-type: inline-size;
+	// 	container-name: tdc-aa-sign;
+	// }
+	.tdc-aa-main {
+		position: absolute;
+	
+		top: 0.55em; // reserve space for header
+	
+		left: 0;
+		right: 0;
+		bottom: 0;
+	
+		display: grid;
+		grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+		grid-template-rows: minmax(0, 1fr);
+		align-items: stretch;
+		align-content: stretch;
+		gap: 0.25em;
+		overflow: hidden;
+		container-type: inline-size;
+		container-name: tdc-aa-sign;
+	}
+
+
+
+
+
+
+
+	// .tdc-aa-header {
+	// 	position: absolute;
+	// 	top: 0;
+	// 	left: 0;
+	// 	right: 0;
+	
+	// 	height: 1.4em;
+	
+	// 	display: flex;
+	// 	align-items: center;
+	// 	justify-content: center;
+	
+	// 	font-family: var(--aa-font-signage);
+	// 	font-size: 0.42em;
+	// 	font-weight: 700;
+	
+	// 	letter-spacing: 0.12em;
+	// 	text-transform: uppercase;
+	
+	// 	color: var(--aa-ink);
+	
+	// 	border-bottom: 2px solid rgba(0, 0, 0, 0.18);
+	
+	// 	z-index: 10;
+	// }
+
+	.tdc-aa-header {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+
+		height: 0.7em;
+
+		overflow: hidden;
+
+		z-index: 10;
+
+		// Zebra hazard stripe — repeating-linear-gradient on a pseudo-element (borders can't stripe).
+		&::after {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 5px;
+			background: repeating-linear-gradient(
+				-45deg,
+				var(--aa-ink-bg) 0,
+				var(--aa-ink-bg) 6px,
+				var(--aa-bg) 6px,
+				var(--aa-bg) 12px
+			);
+			background-size: 24px 24px;
+			animation: tdc-aa-stripe-travel var(--aa-stripe-cycle-duration, 1.5s) linear infinite;
+			will-change: background-position;
+			pointer-events: none;
+		}
+	}
+
+
+
+
+
+	.tdc-aa-left {
+		grid-column: 1;
+		grid-row: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: center;
+		gap: 0.22em;
+		min-width: 0;
+		max-width: 100%;
+		padding-left: clamp(0.2em, 1.5cqw, 0.42em);
+		box-sizing: border-box;
+		overflow: hidden;
+		z-index: 2;
+	}
+
+	.tdc-aa-drift-track {
+		position: relative;
+		align-self: stretch;
+		width: 100%;
+		flex-shrink: 0;
+		overflow: hidden;
+		pointer-events: none;
+		z-index: 2;
+	}
+
+	.tdc-aa-queue-track {
+		height: 0.68em;
+	}
+
+	.tdc-aa-subtitle-track {
+		height: 0.52em;
+		margin-top: 0.04em;
+	}
+
+	.tdc-aa-queue {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		display: inline-block;
+		font-weight: 700;
+		font-size: 0.56em;
+		line-height: 1.02;
+		letter-spacing: 0.045em;
+		text-transform: uppercase;
+		color: var(--aa-ink);
+		white-space: nowrap;
+		width: max-content;
+		max-width: none;
+		overflow: visible;
+		transform: translateY(-50%) translateX(0);
+		transform-origin: center center;
+		will-change: left, transform;
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
+
+		&--empty {
+			display: none;
+		}
+	}
+
+	.tdc-aa-subtitle {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		display: inline-block;
+		font-weight: 500;
+		font-size: 0.42em;
+		line-height: 1.12;
+		letter-spacing: 0.06em;
+		color: var(--aa-ink-soft);
+		white-space: nowrap;
+		width: max-content;
+		max-width: none;
+		overflow: visible;
+		transform: translateY(-50%) translateX(0);
+		transform-origin: center center;
+		will-change: left, transform;
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	.tdc-aa-status {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		display: inline-block;
+		margin-top: 0;
+		padding: 0.12em 0.22em;
+		font-weight: 700;
+		font-size: 0.32em;
+		line-height: 1.1;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--aa-yellow);
+		background: var(--aa-ink-bg);
+		border: 2px solid var(--aa-ink-bg);
+		white-space: nowrap;
+		width: max-content;
+		max-width: none;
+		overflow: visible;
+		transform: translateY(-50%) translateX(0);
+		transform-origin: center center;
+		will-change: left, transform;
+		transition: opacity var(--aa-anim-duration) var(--aa-anim-ease);
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	// Left column only — labels bounce horizontally without crossing the token lane.
+	.tdc-aa-status-track {
+		height: 1.6em;
+		margin-top: 0.06em;
+	}
+
+	// Grid column 2 — full yellow sign height (top → bottom limits for token cycle).
+	.tdc-aa-token-track {
+		grid-column: 2;
+		grid-row: 1;
+		align-self: stretch;
+		justify-self: stretch;
+		position: relative;
+		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
+		z-index: 3;
+		isolation: isolate;
+		container-type: inline-size;
+		container-name: tdc-aa-token-col;
+	}
+
+	.tdc-aa-header-text {
+		position: absolute;
+		top: 0;
+	
+		transform: translateY(-50%);
+	
+		font-family: var(--aa-font-signage);
+		font-size: 0.42em;
+		font-weight: 700;
+	
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	
+		color: var(--aa-ink);
+	
+		white-space: nowrap;
+	
+		animation: tdc-aa-header-travel 12s linear infinite;
+	}
+
+	.tdc-aa-token {
+		position: absolute;
+		left: 50%;
+		top: 0;
+		font-family: var(--aa-font-signage);
+		font-weight: 700;
+		font-size: var(--aa-token-em, 4.4em);
+		line-height: 0.88;
+		letter-spacing: 0.02em;
+		color: var(--aa-ink);
+		font-variant-numeric: tabular-nums;
+		font-feature-settings: 'tnum' 1;
+		white-space: nowrap;
+		width: max-content;
+		max-width: 94%;
+		overflow: visible;
+		text-align: center;
+		-webkit-font-smoothing: antialiased;
+		transform: translateX(-50%) translateY(0);
+		transform-origin: center top;
+		will-change: top, transform;
+		animation: tdc-aa-token-drift var(--aa-token-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	// ── Active tokens strip (label sizing matches shared Onyx Gold / fill rules) ─
+	.tdc__history {
+		position: relative;
+		z-index: 2;
+		border-top: 3px solid var(--aa-ink-bg);
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.92)});
+		margin-top: 0;
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.tdc__history-label {
+		background: var(--aa-ink-bg);
+		border-right: 3px solid var(--aa-ink-bg);
+	}
+
+	.tdc__history-label-text {
+		font-family: var(--aa-font-signage);
+		color: var(--aa-yellow);
+		text-shadow: none;
+	}
+
+	.tdc__history-label-divider {
+		background: rgba(0, 0, 0, #{tdc-zone-a(0.35)});
+	}
+
+	.tdc__history-track {
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.tdc__history-scroll {
+		min-width: 0;
+	}
+
+	.tdc__history-card {
+		background: rgba(255, 193, 7, #{tdc-zone-a(0.04)});
+		border: 2px solid rgba(255, 193, 7, #{tdc-zone-a(0.22)});
+		border-radius: 0;
+		color: var(--aa-ink);
+		min-width: 0;
+		flex: 0 1 auto;
+		max-width: min(26cqw, 8.5em);
+	}
+
+	.tdc__history-card--enter {
+		animation: tdc-aa-slide-up var(--aa-anim-duration) var(--aa-anim-ease) both;
+	}
+
+	.tdc__history-token {
+		font-family: var(--aa-font-signage);
+		font-weight: 800;
+		color: var(--aa-ink);
+		letter-spacing: 0.02em;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	// Token chips show serving-point number only — no "Counter" / "Ctr" label.
+	.tdc__history-counter-label {
+		display: none;
+	}
+
+	.tdc__history-counter-num {
+		font-family: var(--aa-font-signage);
+		color: var(--aa-ink);
+		font-weight: 700;
+	}
+
+	.tdc__history-time {
+		color: var(--aa-ink-soft);
+		font-size: 0.3em;
+	}
+
+	// Multi-queue table lives inside .tdc-aa-main (below header, above active tokens).
+	.tdc-aa-layout--multi {
+		.tdc-aa-main {
+			// Header is 0.7em; gap sits between the hazard stripe and the table.
+			top: calc(0.7em + var(--aa-board-gap, 0.34em));
+			display: flex;
+			flex-direction: column;
+			grid-template-columns: unset;
+			grid-template-rows: unset;
+			gap: 0;
+			overflow: hidden;
+			container-type: size;
+			container-name: tdc-aa-board;
+		}
+
+		.tdc-aa-table-wrap {
+			padding-top: 0.08em;
+		}
+	}
+
+	.tdc-aa-table-wrap {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		width: 100%;
+		height: 100%;
+		overflow-x: hidden;
+		overflow-y: auto;
+		pointer-events: auto;
+		overscroll-behavior: contain;
+		touch-action: pan-y;
+		padding-inline-end: 0.12em;
+		scrollbar-gutter: stable;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(255, 193, 7, 0.55) rgba(255, 193, 7, 0.08);
+
+		&::-webkit-scrollbar {
+			width: 0.26em;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: rgba(255, 193, 7, 0.55);
+			border-radius: 999px;
+		}
+
+		&::-webkit-scrollbar-track {
+			background: rgba(255, 193, 7, 0.08);
+		}
+	}
+
+	.tdc-aa-table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		font-size: 0.58em;
+	}
+
+	.tdc-aa-table thead {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--aa-bg);
+	}
+
+	.tdc-aa-table th {
+		padding: 0.24em 0.3em;
+		font-size: 0.78em;
+		font-weight: 700;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		text-align: left;
+		color: var(--aa-ink);
+		border-bottom: 1px solid rgba(255, 193, 7, #{tdc-zone-a(0.28)});
+		white-space: nowrap;
+	}
+
+	.tdc-aa-table__col-queue {
+		width: 30%;
+	}
+
+	.tdc-aa-table__col-point {
+		width: 22%;
+	}
+
+	.tdc-aa-table__col-status {
+		width: 28%;
+	}
+
+	.tdc-aa-table__col-token {
+		width: 20%;
+	}
+
+	.tdc-aa-table__head-short {
+		display: none;
+	}
+
+	.tdc-aa-table__row--odd {
+		background: rgba(255, 193, 7, #{tdc-zone-a(0.03)});
+	}
+
+	.tdc-aa-table__row--even {
+		background: rgba(255, 193, 7, #{tdc-zone-a(0.07)});
+	}
+
+	.tdc-aa-table__row--serving {
+		box-shadow: inset 2px 0 0 var(--aa-ink);
+	}
+
+	.tdc-aa-table__cell {
+		padding: 0.24em 0.3em;
+		vertical-align: middle;
+		border-bottom: 1px solid rgba(255, 193, 7, #{tdc-zone-a(0.12)});
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-aa-table__queue,
+	.tdc-aa-table__point {
+		display: block;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--aa-ink);
+		font-weight: 600;
+		font-size: 1em;
+		letter-spacing: 0.03em;
+	}
+
+	.tdc-aa-table__point {
+		color: var(--aa-ink-soft);
+		font-weight: 500;
+	}
+
+	.tdc-aa-table__token {
+		display: block;
+		font-weight: 800;
+		font-size: 0.98em;
+		letter-spacing: 0.02em;
+		color: var(--aa-ink);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-aa-table__status {
+		display: inline-block;
+		padding: 0.08em 0.16em;
+		font-size: 0.72em;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--aa-yellow);
+		background: var(--aa-ink-bg);
+		border: 1px solid var(--aa-ink-bg);
+		white-space: nowrap;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tdc-aa-table__status--serving {
+		box-shadow: 0 0 0.35em rgba(255, 193, 7, 0.35);
+	}
+
+	@container tdc-aa-board (max-width: 240px) {
+		.tdc-aa-table {
+			font-size: 0.52em;
+		}
+
+		.tdc-aa-table__head-long {
+			display: none;
+		}
+
+		.tdc-aa-table__head-short {
+			display: inline;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.tdc-aa-token {
+			animation: none;
+			top: 50%;
+			transform: translate(-50%, -50%);
+		}
+
+		.tdc-aa-queue,
+		.tdc-aa-subtitle,
+		.tdc-aa-status {
+			animation: none;
+			left: 0;
+			transform: translateY(-50%);
+			transition: none;
+		}
+
+		.tdc-aa-header::after {
+			animation: none;
+		}
+
+		.tdc__history-card--enter {
+			animation: none;
+			transition: none;
+		}
+	}
+}
+
+// ── Fill-container mode (template zones + live screens) ───────────────────────
+.tdc--fill.tdc--airport-arrival {
+	display: flex;
+	flex-direction: column;
+	grid-template-columns: unset;
+	grid-template-rows: unset;
+	grid-template-areas: unset;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	border-radius: inherit;
+
+	.tdc-aa-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	// em + cqw only — cqh from the full zone card made the numeral nearly as tall as the lane.
+	.tdc-aa-token {
+		font-size: min(
+			calc(var(--tdc-token-fill-em, 4.4) * 1em),
+			calc(94cqw * var(--aa-onyx-cqw-scale, 0.90625) / (var(--tdc-token-chars, 2) * 0.54 + 0.32))
+		);
+	}
+
+	&.tdc--has-history {
+		.tdc-aa-layout {
+			flex: 1 1 0;
+		}
+
+		.tdc__history {
+			display: flex;
+			flex-shrink: 0;
+			max-height: min(22%, 7em);
+			min-height: clamp(1.7em, 14%, 2.8em);
+			overflow: hidden;
+		}
+	}
+}
+
+.tdc--preview.tdc--fill.tdc--airport-arrival .tdc-aa-token {
+	font-size: min(
+		calc(var(--tdc-token-fill-em, 4.4) * 1.14 * 1em),
+		calc(94cqw * var(--aa-onyx-cqw-scale, 0.90625) / (var(--tdc-token-chars, 2) * 0.50 + 0.26))
+	);
+}
+
+.tdc--preview:not(.tdc--fill).tdc--airport-arrival {
+	.tdc-aa-token {
+		font-size: 4.95em;
+	}
+}
+
+// Live screen overlays — percentage top/left drift needs the card to fill the zone box.
+.screen-zone-live-overlay--theme .tdc.tdc--fill.tdc--airport-arrival {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+
+	.tdc-aa-layout {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	.tdc-aa-main {
+		min-height: 0;
+	}
+
+	.tdc-aa-token-track {
+		min-height: 0;
+	}
+
+	.tdc-aa-token {
+		animation: tdc-aa-token-drift var(--aa-token-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
+	.tdc-aa-status {
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	.tdc-aa-header::after {
+		animation: tdc-aa-stripe-travel var(--aa-stripe-cycle-duration, 1.5s) linear infinite;
+	}
+}
+
+// Template editor + picker: keep drift animations (generic `.tdc--preview .tdc__token` sets animation:none).
+.tdc--preview.tdc--airport-arrival {
+	.tdc-aa-token {
+		animation: tdc-aa-token-drift var(--aa-token-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
+	.tdc-aa-status {
+		animation: tdc-aa-status-drift var(--aa-status-cycle-duration, 4s) ease-in-out infinite alternate;
+	}
+
+	.tdc-aa-header::after {
+		animation: tdc-aa-stripe-travel var(--aa-stripe-cycle-duration, 1.5s) linear infinite;
+	}
+}
+
+// Zone opacity — sign backgrounds fade; yellow/black typography stays fully legible.
+.tdc--zone-bg-fade.tdc--airport-arrival {
+	.tdc-aa-queue,
+	.tdc-aa-subtitle,
+	.tdc-aa-status,
+	.tdc-aa-header-text,
+	.tdc-aa-token,
+	.tdc__history-label-text,
+	.tdc__history-token,
+	.tdc__history-counter-label,
+	.tdc__history-counter-num,
+	.tdc__history-time,
+	.tdc-aa-table th,
+	.tdc-aa-table__queue,
+	.tdc-aa-table__point,
+	.tdc-aa-table__token,
+	.tdc-aa-table__status {
+		opacity: 1;
+	}
+
+	.tdc-aa-queue,
+	.tdc-aa-header-text,
+	.tdc-aa-token,
+	.tdc__history-token,
+	.tdc__history-counter-num,
+	.tdc-aa-table th,
+	.tdc-aa-table__queue,
+	.tdc-aa-table__token {
+		color: var(--aa-ink);
+	}
+
+	.tdc-aa-subtitle,
+	.tdc-aa-table__point,
+	.tdc__history-counter-label,
+	.tdc__history-time {
+		color: var(--aa-ink-soft);
+	}
+
+	.tdc-aa-status,
+	.tdc-aa-table__status {
+		color: var(--aa-yellow);
+	}
+}

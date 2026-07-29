@@ -8,6 +8,7 @@ import React, {
 	useRef,
 	useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MaterialTable, { MTableToolbar } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
@@ -19,6 +20,7 @@ import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bo
 import Spinner from '../../bootstrap/Spinner';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import usePermissions from '../../../hooks/usePermissions';
 import {
 	type QueueSchedule,
 	type Token,
@@ -89,6 +91,9 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 	onTokensUpdated,
 	onRegisterTableRefresh,
 }) => {
+	const navigate = useNavigate();
+	const { can } = usePermissions();
+	const canReadTokenUsers = can('token_users_read');
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
@@ -226,7 +231,27 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 			{
 				title: 'Customer',
 				field: 'token_user.name',
-				render: (rowData: Token) => rowData.token_user?.name || '—',
+				render: (rowData: Token) => {
+					const name = rowData.token_user?.name?.trim();
+					if (!name) return '—';
+					const userId = rowData.token_user?.id;
+					if (userId == null || !canReadTokenUsers) return name;
+					return (
+						<button
+							type='button'
+							className='btn btn-link p-0 align-baseline fw-semibold'
+							aria-label={`Open token user ${name}`}
+							onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+								e.preventDefault();
+								e.stopPropagation();
+								navigate(`/token-users/${userId}`, {
+									state: { tokenUser: rowData.token_user },
+								});
+							}}>
+							{name}
+						</button>
+					);
+				},
 			},
 			{
 				title: 'Status',
@@ -309,7 +334,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 				},
 			},
 		],
-		[onEditToken, scheduleRecord],
+		[canReadTokenUsers, navigate, onEditToken, scheduleRecord],
 	);
 
 	const tokenStatusFilterOptions = useMemo(

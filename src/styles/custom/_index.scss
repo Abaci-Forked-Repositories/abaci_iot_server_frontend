@@ -768,7 +768,8 @@ border:1px solid #ee511e !important;
 }
 
 // MaterialTable toolbar search — match app-search-modern (shared across all material tables)
-.material_tabel_wrapper .MuiToolbar-root .MuiInputBase-root {
+// Exclude pagination toolbar so its rows-per-page select keeps icon padding.
+.material_tabel_wrapper .MuiToolbar-root:not(.MuiTablePagination-toolbar) .MuiInputBase-root {
 	align-items: center;
 	font-family: inherit;
 	padding: 0.35rem 0.55rem !important;
@@ -804,7 +805,7 @@ border:1px solid #ee511e !important;
 	}
 }
 
-[theme='dark'] .material_tabel_wrapper .MuiToolbar-root .MuiInputBase-root {
+[theme='dark'] .material_tabel_wrapper .MuiToolbar-root:not(.MuiTablePagination-toolbar) .MuiInputBase-root {
 	border-color: rgba(71, 85, 105, 0.8) !important;
 	background: rgba(15, 23, 42, 0.72) !important;
 
@@ -819,16 +820,30 @@ border:1px solid #ee511e !important;
 	}
 }
 
-// Keep pagination row-size select on default MUI styling
+// Keep pagination row-size select on default MUI styling (room for dropdown icon)
 .material_tabel_wrapper .MuiTablePagination-root .MuiInputBase-root {
 	border: none !important;
 	background: transparent !important;
 	box-shadow: none !important;
 	width: auto !important;
+	min-width: 0 !important;
 	height: auto !important;
 	min-height: 0 !important;
 	padding: 0 !important;
 	border-radius: 0 !important;
+
+	.MuiSelect-select,
+	.MuiInputBase-input {
+		padding-top: 0.25rem !important;
+		padding-bottom: 0.25rem !important;
+		padding-left: 0.5rem !important;
+		// Reserve space so the chevron does not overlap "X rows"
+		padding-right: 1.75rem !important;
+	}
+
+	.MuiSelect-icon {
+		right: 0;
+	}
 }
 
 .app-header-controls .btn,
