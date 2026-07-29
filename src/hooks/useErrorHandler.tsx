@@ -1,5 +1,11 @@
-import { useContext, useCallback } from 'react';
+import { useCallback } from 'react';
 // import AuthContext from '../contexts/authContext';
+
+const formatFieldErrorMessages = (entries: [string, unknown][]): string =>
+	entries
+		.map(([, value]) => (Array.isArray(value) ? value.join(', ') : String(value ?? '')))
+		.filter(Boolean)
+		.join('\n');
 
 const useErrorHandler = () => {
 	// const { setLogOut } = useContext(AuthContext);
@@ -17,14 +23,7 @@ const useErrorHandler = () => {
 			const errors = error.response.data?.errors;
 
 			if (errors && typeof errors === 'object' && Object.keys(errors).length > 0) {
-				const messages = Object.entries(errors).map(([key, messagesArray]) => {
-					let errorField = key.replace(/_/g, ' ');
-					errorField = errorField.charAt(0).toUpperCase() + errorField.slice(1);
-					//@ts-ignore
-					return `${errorField} - ${messagesArray.join(', ')}`;
-				});
-
-				errorMsg += messages.join('\n');
+				errorMsg += formatFieldErrorMessages(Object.entries(errors));
 			} else if (error.response.data.error) {
 				errorMsg = error.response.data.error;
 			}
@@ -32,15 +31,7 @@ const useErrorHandler = () => {
 				errorMsg = error.response.data.message || 'Bad request.';
 			}
 			else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-				const messages = Object.entries(data).map(([key, messagesArray]) => {
-					let errorField = key.replace(/_/g, ' ');
-					errorField = errorField.charAt(0).toUpperCase() + errorField.slice(1);
-					const msg = Array.isArray(messagesArray)
-						? messagesArray.join(', ')
-						: messagesArray;
-					return `${errorField} - ${msg}`;
-				});
-				errorMsg += messages.join('\n');
+				errorMsg += formatFieldErrorMessages(Object.entries(data));
 			} else {
 				errorMsg = 'Bad request.';
 			}
