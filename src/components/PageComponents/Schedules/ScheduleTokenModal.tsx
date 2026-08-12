@@ -170,6 +170,7 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 					</div>
 				)}
 			<TokenCreateForm
+				key={`${isOpen}-${mode}-${editingToken?.id ?? 'new'}-${scheduleId}`}
 				tokenForm={tokenForm}
 				setTokenForm={setTokenForm}
 				queues={queues}

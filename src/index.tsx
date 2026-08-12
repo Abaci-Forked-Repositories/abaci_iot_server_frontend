@@ -11,8 +11,10 @@ import { ThemeContextProvider } from './contexts/themeContext';
 import { AuthContextProvider } from './contexts/authContext';
 import './i18n';
 
-import store from "./store";
+import store from './store';
 import { LicenceProvider } from './contexts/LicenceContext';
+import ProductValidation from './components/ProductValidation';
+import { USE_MOCK_SERVICE } from './config';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -27,26 +29,48 @@ const children = (
 	<QueryClientProvider client={queryClient}>
 		<Provider store={store}>
 			<Router>
-				<AuthContextProvider>
-					<LicenceProvider>
-						<ThemeContextProvider>
-							{/* <React.StrictMode> */}
-							<App />
-							{/* </React.StrictMode> */}
-						</ThemeContextProvider>
-					</LicenceProvider>
-				</AuthContextProvider>
+				<ThemeContextProvider>
+					<ProductValidation>
+						<AuthContextProvider>
+							<LicenceProvider>
+								{/* <React.StrictMode> */}
+								<App />
+								{/* </React.StrictMode> */}
+							</LicenceProvider>
+						</AuthContextProvider>
+					</ProductValidation>
+				</ThemeContextProvider>
 			</Router>
 		</Provider>
 	</QueryClientProvider>
 );
 
+async function enableMocking() {
+	if (!USE_MOCK_SERVICE) return;
+
+	try {
+		const { worker } = await import('./mocks/browser');
+		await worker.start({
+			onUnhandledRequest: 'bypass',
+			quiet: false,
+		});
+		console.info(
+			'[MOCK] MSW is ON for forgot-password + settings preview only.\n' +
+				'Login uses the REAL backend.\n' +
+				'Forgot-password OTP: 123456\n' +
+				'Set VITE_USE_MOCK_SERVICE=false to disable all mocks.',
+		);
+	} catch (err) {
+		console.error(
+			'[MOCK] Failed to start MSW. Ensure public/mockServiceWorker.js exists (npx msw init public/ --save).',
+			err,
+		);
+	}
+}
+
 const container = document.getElementById('root');
 
-// ReactDOM.render(children, container); // For React 17
-createRoot(container as Element).render(children); // For React 18
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+enableMocking().then(() => {
+	createRoot(container as Element).render(children);
+	reportWebVitals();
+});

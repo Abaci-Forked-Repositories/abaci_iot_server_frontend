@@ -7,7 +7,7 @@ import React, {
 	useState,
 	useCallback,
 } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { authAxios } from '../axiosInstance';
 import { useTranslation } from 'react-i18next';
 
@@ -58,7 +58,6 @@ interface Props {
 /* ================= PROVIDER ================= */
 
 export const LicenceProvider: FC<Props> = ({ children }) => {
-	const navigate = useNavigate();
 	const location = useLocation();
 	const { t } = useTranslation();
 	const [loading, setLoading] = useState(true);
@@ -71,7 +70,7 @@ export const LicenceProvider: FC<Props> = ({ children }) => {
 	const [showWarning, setShowWarning] = useState(false);
 	const [warningMessage, setWarningMessage] = useState('');
 
-	const SAFE_ROUTES = useMemo(() => ['/login', '/licence_setup', '/admin_setup'], []);
+	const SAFE_ROUTES = useMemo(() => ['/login', '/licence_setup', '/admin_setup', '/createsuperadmin'], []);
 
 	const WEEKLY_KEY = 'licence_warning_week';
 	const DAILY_KEY = 'licence_warning_day';
@@ -151,24 +150,19 @@ export const LicenceProvider: FC<Props> = ({ children }) => {
 				unique_id: uniqueID,
 			});
 
-
-			if (!license || !license.is_valid) {
-				navigate('/licence_setup', { replace: true });
-				return;
+			// Activation / first-admin is owned by ProductValidation (app-wide gate).
+			// Do not redirect to /licence_setup or /createsuperadmin here — that raced Auth
+			// and fought the new onboarding flow. Still load feature flags when possible.
+			if (license?.is_valid) {
+				await fetchFeatureStatus();
 			}
-
-			if (!details?.admin_users_exist) {
-				navigate('/createsuperadmin', { replace: true });
-				return;
-			}
-			await fetchFeatureStatus();
 		} catch (error) {
 			console.error('System status check failed:', error);
 			resetLicenceState();
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate]);
+	}, []);
 
 	/* ================= WARNING LOGIC ================= */
 

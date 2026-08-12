@@ -42,7 +42,13 @@ const PROFILE_URL = 'api/users/profile/';
 /** Routes that must work without a logged-in user (no profile fetch on boot). */
 function shouldSkipAuthBoot(pathname: string): boolean {
 	return (
-		pathname.includes('public') || pathname.startsWith('/screenstokenstatus')
+		pathname.includes('public') ||
+		pathname.startsWith('/screenstokenstatus') ||
+		pathname === '/login' ||
+		pathname === '/customer-login' ||
+		pathname === '/licence_setup' ||
+		pathname === '/createsuperadmin' ||
+		pathname === '/admin_setup'
 	);
 }
 
@@ -98,10 +104,7 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 	 * outer scope to avoid stale-closure issues. The fetch is inlined directly.
 	 */
 	useEffect(() => {
-		if (
-			location.pathname.includes('public') ||
-			location.pathname.startsWith('/screenstokenstatus')
-		) {
+		if (shouldSkipAuthBoot(location.pathname)) {
 			setUserData({});
 			setLoading(false);
 			return;

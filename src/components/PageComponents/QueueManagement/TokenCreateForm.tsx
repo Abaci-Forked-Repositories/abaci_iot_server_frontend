@@ -1,4 +1,4 @@
-import React, { type FormEvent } from 'react';
+import React, { type FormEvent, useEffect, useState } from 'react';
 import type { CreateTokenPayload, Queue, QueueSchedule, ServingPoint } from '../../../services/queueManagementApi';
 import Button from '../../bootstrap/Button';
 
@@ -43,13 +43,31 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 	showTokenNumber = false,
 	tokenNumberLoading = false,
 }) => {
+	const [nameError, setNameError] = useState<string | undefined>();
+
+	useEffect(() => {
+		if (tokenForm.name.trim()) {
+			setNameError(undefined);
+		}
+	}, [tokenForm.name]);
+
 	const scheduleOptions =
 		fixedScheduleId != null
 			? schedules.filter((s) => s.id === fixedScheduleId)
 			: schedules.filter((s) => s.queue === selectedQueueId);
 
+	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!tokenForm.name.trim()) {
+			setNameError('*This field is required');
+			return;
+		}
+		setNameError(undefined);
+		onSubmit(event);
+	};
+
 	return (
-	<form onSubmit={onSubmit} className='row g-3'>
+	<form onSubmit={handleSubmit} className='row g-3'>
 		{showTokenNumber && (
 			<div className='col-md-6'>
 				<label className='form-label'>Token Number</label>
@@ -125,13 +143,21 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 				</div>
 			)}
 			<div className='col-md-6'>
-				<label className='form-label'>Customer Name</label>
+				<label className='form-label'>Customer Name *</label>
 				<input
-					className='form-control'
-					required
+					className={`form-control${nameError ? ' is-invalid' : ''}`}
 					value={tokenForm.name}
-					onChange={(e) => setTokenForm((p) => ({ ...p, name: e.target.value }))}
+					onChange={(e) => {
+						const value = e.target.value;
+						setTokenForm((p) => ({ ...p, name: value }));
+						if (nameError && value.trim()) {
+							setNameError(undefined);
+						}
+					}}
 				/>
+				{nameError && (
+					<span style={{ color: 'red', fontSize: '0.875rem' }}>{nameError}</span>
+				)}
 			</div>
 			<div className='col-md-6'>
 				<label className='form-label'>Email</label>
@@ -202,7 +228,14 @@ const TokenCreateForm: React.FC<TokenCreateFormProps> = ({
 			)}
 			<div className='col-12 d-flex justify-content-end align-items-center gap-2'>
 				{onCancel && (
-					<Button color='light' isLight type='button' onClick={onCancel}>
+					<Button
+						color='light'
+						isLight
+						type='button'
+						onClick={() => {
+							setNameError(undefined);
+							onCancel();
+						}}>
 						Cancel
 					</Button>
 				)}
