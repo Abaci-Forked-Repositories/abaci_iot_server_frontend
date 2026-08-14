@@ -4,7 +4,7 @@ import Spinner from '../../bootstrap/Spinner';
 import Alert from '../../bootstrap/Alert';
 import usePermissions from '../../../hooks/usePermissions';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import StatusBadge from '../../BadgeWithIcon.jsx';
+// import StatusBadge from '../../BadgeWithIcon.jsx';
 import {
 	ConfigOutboxSummary,
 	getCloudSync,
@@ -159,6 +159,7 @@ const CloudSynchronizationTabContent: FC = () => {
 					<div className='text-muted small'>
 						Sync configuration and data with the cloud platform.
 					</div>
+					{/* Hidden for now — Cloud Online/Offline is already shown in System Overview.
 					{enabled && (
 						<div className='mt-2'>
 							<StatusBadge
@@ -166,6 +167,7 @@ const CloudSynchronizationTabContent: FC = () => {
 							/>
 						</div>
 					)}
+					*/}
 				</div>
 				<div className='d-flex align-items-center gap-2'>
 					{toggling && <Spinner isSmall />}

@@ -2,7 +2,7 @@ import { Button } from 'reactstrap';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 
@@ -15,7 +15,6 @@ import AbaciLoader from '../../components/AbaciLoader/AbaciLoader';
 
 import useDarkMode from '../../hooks/useDarkMode';
 import { setLicenceState, setLicenceStatus } from '../../store/licence';
-import { LicenceContext } from '../../contexts/LicenceContext';
 import showConfirmationDialog from '../../helpers/swalAlerts';
 import useToasterNotification from '../../hooks/useToasterNotification';
 import svgLight from '../../assets/Abaci Logo Dark mode SVG.svg';
@@ -31,8 +30,7 @@ const LicenceSetup = ({ width = 220, height = 65 }) => {
 	const [key, setKey] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-	const { license } = useContext(LicenceContext);
+	const [deviceUniqueId, setDeviceUniqueId] = useState<string | null>(null);
 
 	const formatServerId = (id?: string | null) => {
 		if (!id) return 'N/A';
@@ -48,6 +46,7 @@ const LicenceSetup = ({ width = 220, height = 65 }) => {
 		const checkLicenseStatus = async () => {
 			try {
 				const res = await publicAxios.get('/api/license/status/');
+				setDeviceUniqueId(res.data.unique_id ?? null);
 
 				dispatch(
 					setLicenceStatus({
@@ -140,7 +139,7 @@ const LicenceSetup = ({ width = 220, height = 65 }) => {
 										{/* Device ID */}
 										<div className='d-flex justify-content-center'>
 											<CopyToClipboard
-												text={license?.unique_id ?? ''}
+												text={deviceUniqueId ?? ''}
 												onCopy={() =>
 													showSuccessNotification('Device ID copied!')
 												}>
@@ -154,7 +153,7 @@ const LicenceSetup = ({ width = 220, height = 65 }) => {
 															width: '50%',
 															cursor: 'pointer',
 														}}
-														value={formatServerId(license?.unique_id)}
+														value={formatServerId(deviceUniqueId)}
 													/>
 												</Tooltip>
 											</CopyToClipboard>

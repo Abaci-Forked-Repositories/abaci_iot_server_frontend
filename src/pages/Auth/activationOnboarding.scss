@@ -120,6 +120,11 @@
 	background: var(--ao-input-bg);
 	color: var(--ao-input-text);
 
+	&--readonly {
+		display: block;
+		word-break: break-all;
+	}
+
 	&:focus {
 		outline: none;
 		border-color: var(--ao-primary);

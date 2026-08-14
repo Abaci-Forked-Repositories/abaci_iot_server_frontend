@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AbaciLoader from './AbaciLoader/AbaciLoader';
 import {
@@ -6,10 +6,10 @@ import {
 	type ActivationStatus,
 	type ActivateLicenseResponse,
 } from '../api/administration/activation.api';
-import ActivationPage from '../pages/Auth/ActivationPage';
 import ActivationSuccessPanel from '../pages/Auth/ActivationSuccessPanel';
 import SuperAdminPage from '../pages/Auth/SuperAdminPage';
 import ConfigErrorPage from '../pages/Auth/ConfigErrorPage';
+import SystemStatusBlockedPage from '../pages/Auth/SystemStatusBlockedPage';
 
 interface Props {
 	children: ReactNode;
@@ -24,6 +24,9 @@ function isPublicScreenPath(pathname: string): boolean {
  * App-wide gate: until system_activated + admin_user_availability,
  * replace the entire UI with Activation or First Admin.
  * Login and the rest of the app only mount after both flags pass.
+ *
+ * activation-status is fetched on every route change.
+ * Full-page loader only on first load (no cached status); later navigations refresh quietly.
  */
 const ProductValidation: FC<Props> = ({ children }) => {
 	const location = useLocation();
@@ -34,31 +37,46 @@ const ProductValidation: FC<Props> = ({ children }) => {
 	/** Hold success panel until Continue — prevents refetch skipping it. */
 	const [activationSuccessPending, setActivationSuccessPending] =
 		useState<ActivateLicenseResponse | null>(null);
+	const statusRef = useRef<ActivationStatus | null>(null);
 
-	const loadStatus = useCallback(async () => {
-		setLoading(true);
-		setError(null);
+	useEffect(() => {
+		statusRef.current = status;
+	}, [status]);
+
+	const loadStatus = useCallback(async (options?: { showLoader?: boolean }) => {
+		const showLoader = options?.showLoader ?? !statusRef.current;
+		if (showLoader) {
+			setLoading(true);
+			setError(null);
+		}
 		try {
 			const { data, usedMock: mock } = await fetchActivationStatus();
 			setStatus(data);
 			setUsedMock(mock);
+			setError(null);
 		} catch (err) {
 			const message =
 				(err as { message?: string })?.message || 'Failed to load activation status.';
-			setError(message);
-			setStatus(null);
+			// Background refresh failures keep last known status (no full-page error flash).
+			if (showLoader || !statusRef.current) {
+				setError(message);
+				setStatus(null);
+			}
 		} finally {
-			setLoading(false);
+			if (showLoader) {
+				setLoading(false);
+			}
 		}
 	}, []);
 
+	// Fetch on every route change; full-page loader only when no status cached yet.
 	useEffect(() => {
 		if (isPublicScreenPath(location.pathname)) {
 			setLoading(false);
 			return;
 		}
-		loadStatus();
-	}, [loadStatus, location.pathname]);
+		void loadStatus({ showLoader: !statusRef.current });
+	}, [location.pathname, loadStatus]);
 
 	const handleActivationSuccess = useCallback((result: ActivateLicenseResponse) => {
 		setActivationSuccessPending(result);
@@ -66,11 +84,15 @@ const ProductValidation: FC<Props> = ({ children }) => {
 
 	const handleContinueAfterActivation = useCallback(() => {
 		setActivationSuccessPending(null);
-		loadStatus();
+		void loadStatus({ showLoader: true });
 	}, [loadStatus]);
 
 	const handleAdminCreated = useCallback(async () => {
-		await loadStatus();
+		await loadStatus({ showLoader: true });
+	}, [loadStatus]);
+
+	const handleRetry = useCallback(() => {
+		void loadStatus({ showLoader: true });
 	}, [loadStatus]);
 
 	if (isPublicScreenPath(location.pathname)) {
@@ -88,7 +110,7 @@ const ProductValidation: FC<Props> = ({ children }) => {
 					error ||
 					'Activation status is unavailable. Confirm the backend is running and try again.'
 				}
-				onRetry={loadStatus}
+				onRetry={handleRetry}
 			/>
 		);
 	}
@@ -100,7 +122,7 @@ const ProductValidation: FC<Props> = ({ children }) => {
 				: status.message ||
 					status.detail ||
 					'Database is not available. Check the edge device configuration.';
-		return <ConfigErrorPage title='Database unavailable' message={dbMessage} onRetry={loadStatus} />;
+		return <ConfigErrorPage title='Database unavailable' message={dbMessage} onRetry={handleRetry} />;
 	}
 
 	if (activationSuccessPending) {
@@ -123,13 +145,25 @@ const ProductValidation: FC<Props> = ({ children }) => {
 		);
 	}
 
+	if (status.is_a_deactivated_system) {
+		return (
+			<SystemStatusBlockedPage
+				title='System deactivated'
+				message='This system has been deactivated. Please contact your administrator.'
+				deviceId={status.system_unique_id}
+				deactivationDate={status.deactivation_date}
+				onRetry={handleRetry}
+			/>
+		);
+	}
+
 	if (!status.system_activated) {
 		return (
-			<ActivationPage
-				productId={status.system_unique_id}
-				isDeactivated={Boolean(status.is_a_deactivated_system)}
-				usedMock={usedMock}
-				onActivationSuccess={handleActivationSuccess}
+			<SystemStatusBlockedPage
+				title='System not activated'
+				message='This system is not activated. Please contact your administrator.'
+				deviceId={status.system_unique_id}
+				onRetry={handleRetry}
 			/>
 		);
 	}

@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://threatening-complete-suburban-links.trycloudflare.com';
+		return 'https://contributor-dam-idol-warcraft.trycloudflare.com';
 	}
 	return url;
 };
