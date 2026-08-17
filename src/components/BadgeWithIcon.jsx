@@ -8,17 +8,22 @@ import Icon from './icon/Icon';
 /** Bootstrap semantic colors (aligned with former `StatusBadge` Button colors). */
 const STATUS_COLOR_MAP = {
 	active: 'success',
+	activated: 'success',
 	assigned: 'success',
 	available: 'success',
+	online: 'success',
+	connected: 'success',
 	running: 'success',
 	scheduled: 'primary',
 	onhold: 'warning',
 	on_hold: 'warning',
+	connectivity_unavailable: 'warning',
 	completed: 'info',
 	cancelled: 'danger',
 	canceled: 'danger',
 	busy: 'danger',
 	inactive: 'danger',
+	offline: 'danger',
 	unassigned: 'secondary',
 	disabled: 'secondary',
 	registred: 'secondary',
@@ -33,17 +38,22 @@ const STATUS_COLOR_MAP = {
 /** Material icon names. */
 const STATUS_ICON_MAP = {
 	active: 'CheckCircle',
+	activated: 'CheckCircle',
 	assigned: 'AssignmentInd',
 	available: 'EventAvailable',
+	online: 'CloudDone',
+	connected: 'CloudDone',
 	running: 'PlayCircle',
 	scheduled: 'Schedule',
 	onhold: 'PauseCircle',
 	on_hold: 'PauseCircle',
+	connectivity_unavailable: 'CloudOff',
 	completed: 'TaskAlt',
 	cancelled: 'Cancel',
 	canceled: 'Cancel',
 	busy: 'DoNotDisturbOn',
 	inactive: 'Block',
+	offline: 'CloudOff',
 	unassigned: 'PersonOff',
 	disabled: 'Block',
 	unknown: 'HelpOutline',
@@ -58,6 +68,11 @@ const STATUS_ICON_MAP = {
 const STATUS_LABEL_OVERRIDE = {
 	registred: 'Registered',
 	waiting: 'Waiting',
+	activated: 'Activated',
+	online: 'Online',
+	offline: 'Offline',
+	connected: 'Connected',
+	connectivity_unavailable: 'Connectivity unavailable',
 };
 
 const normalizeStatusKey = (value) =>

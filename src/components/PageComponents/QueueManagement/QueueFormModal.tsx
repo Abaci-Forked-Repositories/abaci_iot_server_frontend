@@ -129,6 +129,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	const [allQueues, setAllQueues] = useState<Queue[]>([]);
 	const [loadingQueues, setLoadingQueues] = useState(false);
 	const [form, setForm] = useState<QueueFormState>(defaultFormState);
+	const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
 	const { showErrorNotification, showSuccessNotification, showNotification } = useToasterNotification();
 
 	const setIsOpenRef = useRef(setIsOpen);
@@ -145,6 +146,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 		if (!isOpen) {
 			setLoadedEditQueue(null);
 			setLoadingEditQueue(false);
+			setFieldErrors({});
 			return;
 		}
 
@@ -152,11 +154,13 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			setLoadedEditQueue(null);
 			setLoadingEditQueue(false);
 			setForm(defaultFormState());
+			setFieldErrors({});
 			return;
 		}
 
 		setLoadingEditQueue(true);
 		setLoadedEditQueue(null);
+		setFieldErrors({});
 
 		void queuesApi
 			.get(editQueueId as number)
@@ -266,8 +270,13 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+
+		const nextFieldErrors: { name?: string } = {};
 		if (!form.name.trim()) {
-			showNotification('Error', 'Queue name is required.', 'danger');
+			nextFieldErrors.name = '*This field is required';
+		}
+		setFieldErrors(nextFieldErrors);
+		if (Object.keys(nextFieldErrors).length > 0) {
 			return;
 		}
 
@@ -337,17 +346,25 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 						<div className='row g-3'>
 							<div className='col-12'>
 								<label className='form-label fw-semibold' htmlFor='queue-name'>
-									Queue Name
+									Queue Name *
 								</label>
 								<input
 									id='queue-name'
-									className='form-control'
+									className={`form-control${fieldErrors.name ? ' is-invalid' : ''}`}
 									value={form.name}
-									onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+									onChange={(e) => {
+										const value = e.target.value;
+										setForm((prev) => ({ ...prev, name: value }));
+										if (fieldErrors.name && value.trim()) {
+											setFieldErrors((prev) => ({ ...prev, name: undefined }));
+										}
+									}}
 									placeholder='Enter queue name'
-									required
 									disabled={!formReady}
 								/>
+								{fieldErrors.name && (
+									<span style={{ color: 'red', fontSize: '0.875rem' }}>{fieldErrors.name}</span>
+								)}
 							</div>
 							<div className='col-12'>
 								<label className='form-label fw-semibold' htmlFor='queue-description'>

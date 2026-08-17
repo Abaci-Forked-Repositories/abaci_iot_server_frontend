@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Button from '../../bootstrap/Button';
-import Icon from '../../icon/Icon';
 import Card, {
 	CardActions,
 	CardBody,
@@ -13,17 +12,34 @@ import RolesTabContent from './RolesTabContent';
 import RoleModal, { Role } from './RoleModal';
 import ApiKeysTabContent from './ApiKeysTabContent';
 import ApiKeyModal, { DeviceCredential } from './ApiKeyModal';
+import GeneralSettingsTabContent from './GeneralSettingsTabContent';
+import CloudSynchronizationTabContent from './CloudSynchronizationTabContent';
+import CloudSyncHistoryOffCanvas from './CloudSyncHistoryOffCanvas';
+import LicensingTabContent from './LicensingTabContent';
+import LicensingHistoryOffCanvas from './LicensingHistoryOffCanvas';
+import EmailSettingsTabContent from './EmailSettingsTabContent';
+import SystemOverviewPanel from './SystemOverviewPanel';
 import usePermissions from '../../../hooks/usePermissions';
 
-type SettingsTab = 'Roles' | 'API Keys';
+type SettingsTab =
+	| 'General Settings'
+	| 'Cloud Synchronization'
+	| 'Licensing'
+	| 'Email Settings'
+	| 'Roles'
+	| 'API Keys';
 
 const tabsData: { name: SettingsTab; icon: string }[] = [
+	{ name: 'General Settings', icon: 'Tune' },
+	{ name: 'Cloud Synchronization', icon: 'Cloud' },
+	{ name: 'Licensing', icon: 'Verified' },
+	{ name: 'Email Settings', icon: 'Email' },
 	{ name: 'Roles', icon: 'ManageAccounts' },
 	{ name: 'API Keys', icon: 'VpnKey' },
 ];
 
 const SettingsWorkspace: React.FC = () => {
-	const [activeTab, setActiveTab] = useState<SettingsTab>('Roles');
+	const [activeTab, setActiveTab] = useState<SettingsTab>('General Settings');
 
 	// Roles state
 	const [showRoleModal, setShowRoleModal] = useState(false);
@@ -34,6 +50,8 @@ const SettingsWorkspace: React.FC = () => {
 	const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 	const [editingCredential, setEditingCredential] = useState<DeviceCredential | null>(null);
 	const [apiKeysRefreshSignal, setApiKeysRefreshSignal] = useState(0);
+	const [showCloudSyncHistory, setShowCloudSyncHistory] = useState(false);
+	const [showLicensingHistory, setShowLicensingHistory] = useState(false);
 
 	const { can } = usePermissions();
 	const canWrite = can('settings_write');
@@ -68,11 +86,21 @@ const SettingsWorkspace: React.FC = () => {
 	};
 
 	const activeTabData = tabsData.find((t) => t.name === activeTab);
+	const showSystemOverview =
+		activeTab === 'General Settings' ||
+		activeTab === 'Cloud Synchronization' ||
+		activeTab === 'Licensing' ||
+		activeTab === 'Email Settings';
+
+	const navColClass = 'col-xxl-2 col-xl-3 col-lg-3';
+	const contentColClass = showSystemOverview
+		? 'col-xxl-7 col-xl-6 col-lg-6'
+		: 'col-xxl-10 col-xl-9 col-lg-9';
 
 	return (
 		<>
 			<div className='row h-100'>
-				<div className='col-xxl-2 col-xl-3 col-lg-3'>
+				<div className={navColClass}>
 					<Card stretch>
 						<CardHeader>
 							<CardLabel icon='Settings' iconColor='primary'>
@@ -103,13 +131,52 @@ const SettingsWorkspace: React.FC = () => {
 					</Card>
 				</div>
 
-				<div className='col-xxl-10 col-xl-9 col-lg-9'>
+				<div className={contentColClass}>
 					<Card stretch>
 						<CardHeader>
 							<CardLabel icon={activeTabData?.icon || 'Settings'} iconColor='primary'>
 								<CardTitle tag='div' className='h5'>{activeTab}</CardTitle>
+								{activeTab === 'General Settings' && (
+									<CardSubTitle tag='div' className='h6'>
+										Site configuration and retention
+									</CardSubTitle>
+								)}
+								{activeTab === 'Cloud Synchronization' && (
+									<CardSubTitle tag='div' className='h6'>
+										Cloud sync and connectivity
+									</CardSubTitle>
+								)}
+								{activeTab === 'Licensing' && (
+									<CardSubTitle tag='div' className='h6'>
+										Device and sensor entitlements
+									</CardSubTitle>
+								)}
+								{activeTab === 'Email Settings' && (
+									<CardSubTitle tag='div' className='h6'>
+										SMTP and notification email
+									</CardSubTitle>
+								)}
 							</CardLabel>
 							<CardActions>
+								{activeTab === 'Cloud Synchronization' && (
+									<Button
+										color='primary'
+										isLight
+										icon='History'
+										onClick={() => setShowCloudSyncHistory(true)}>
+										History
+									</Button>
+								)}
+								{activeTab === 'Licensing' && (
+									<Button
+										color='primary'
+										isLight
+										icon='History'
+										className='rounded-circle'
+										aria-label='License history'
+										onClick={() => setShowLicensingHistory(true)}
+									/>
+								)}
 								{activeTab === 'Roles' && canWrite && (
 									<Button color='primary' icon='Add' onClick={handleOpenAddRole}>
 										Add Role
@@ -123,7 +190,19 @@ const SettingsWorkspace: React.FC = () => {
 							</CardActions>
 						</CardHeader>
 
-						<CardBody className='table-responsive'>
+						<CardBody
+							className={
+								activeTab === 'General Settings' ||
+								activeTab === 'Cloud Synchronization' ||
+								activeTab === 'Licensing' ||
+								activeTab === 'Email Settings'
+									? ''
+									: 'table-responsive'
+							}>
+							{activeTab === 'General Settings' && <GeneralSettingsTabContent />}
+							{activeTab === 'Cloud Synchronization' && <CloudSynchronizationTabContent />}
+							{activeTab === 'Licensing' && <LicensingTabContent />}
+							{activeTab === 'Email Settings' && <EmailSettingsTabContent />}
 							{activeTab === 'Roles' && (
 								<RolesTabContent
 									onEditRole={(role) => {
@@ -142,6 +221,12 @@ const SettingsWorkspace: React.FC = () => {
 						</CardBody>
 					</Card>
 				</div>
+
+				{showSystemOverview && (
+					<div className='col-xxl-3 col-xl-3 col-lg-3'>
+						<SystemOverviewPanel />
+					</div>
+				)}
 			</div>
 
 			<RoleModal
@@ -159,6 +244,16 @@ const SettingsWorkspace: React.FC = () => {
 				}}
 				editing={editingCredential}
 				onSaved={handleApiKeySaved}
+			/>
+
+			<CloudSyncHistoryOffCanvas
+				isOpen={showCloudSyncHistory}
+				setOpen={setShowCloudSyncHistory}
+			/>
+
+			<LicensingHistoryOffCanvas
+				isOpen={showLicensingHistory}
+				setOpen={setShowLicensingHistory}
 			/>
 		</>
 	);

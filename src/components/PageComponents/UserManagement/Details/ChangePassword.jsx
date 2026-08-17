@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { useFormik } from 'formik';
 import { Spinner } from 'reactstrap';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 import Card, {
   CardBody,
@@ -18,8 +20,32 @@ import { authAxios } from '../../../../axiosInstance';
 import showNotification from '../../../extras/showNotification';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
 
+const PasswordVisibilityToggle = ({ visible, onToggle, label }) => (
+  <button
+    type='button'
+    onClick={onToggle}
+    style={{
+      position: 'absolute',
+      right: '12px',
+      top: '14px',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      color: '#6c757d',
+      padding: 0,
+      lineHeight: 1,
+      zIndex: 2,
+    }}
+    aria-label={visible ? `Hide ${label}` : `Show ${label}`}>
+    {visible ? <VisibilityOffIcon fontSize='small' /> : <VisibilityIcon fontSize='small' />}
+  </button>
+);
+
 const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
   const [waitingForAxios, setWaitingForAxios] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { showErrorNotification } = useToasterNotification();
 
   const formik = useFormik({
@@ -80,6 +106,9 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
         setWaitingForAxios(false);
         showNotification('Success', 'Your password has been updated !!', 'success');
         formik.resetForm();
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
       })
       .catch((error) => {
         setWaitingForAxios(false);
@@ -103,51 +132,72 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
             <>
               <div className='row mb-4'>
                 <div className='col-12   mb-2'>
-                  <FormGroup id='currentPassword' label='Current password *' isFloating>
-                    <Input
-                      type='password'
-                      className='form-control'
-                      style={{ height: '40px' }}
-                      value={formik.values.currentPassword}
-                      isTouched={formik.touched.currentPassword}
-                      invalidFeedback={formik.errors.currentPassword}
-                      isValid={formik.isValid}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                  <div style={{ position: 'relative' }}>
+                    <FormGroup id='currentPassword' label='Current password *' isFloating>
+                      <Input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        className='form-control'
+                        style={{ height: '40px', paddingRight: '40px' }}
+                        value={formik.values.currentPassword}
+                        isTouched={formik.touched.currentPassword}
+                        invalidFeedback={formik.errors.currentPassword}
+                        isValid={formik.isValid}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                      />
+                    </FormGroup>
+                    <PasswordVisibilityToggle
+                      visible={showCurrentPassword}
+                      onToggle={() => setShowCurrentPassword((prev) => !prev)}
+                      label='current password'
                     />
-                  </FormGroup>
+                  </div>
                 </div>
               </div>
               <div className='row'>
                 <div className='col-12 col-md-6 mb-2'>
-                  <FormGroup id='newPassword' label='New password *' isFloating>
-                    <Input
-                      type='password'
-                      className='form-control'
-                      style={{ height: '40px' }}
-                      value={formik.values.newPassword}
-                      isTouched={formik.touched.newPassword}
-                      invalidFeedback={formik.errors.newPassword}
-                      isValid={formik.isValid}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                  <div style={{ position: 'relative' }}>
+                    <FormGroup id='newPassword' label='New password *' isFloating>
+                      <Input
+                        type={showNewPassword ? 'text' : 'password'}
+                        className='form-control'
+                        style={{ height: '40px', paddingRight: '40px' }}
+                        value={formik.values.newPassword}
+                        isTouched={formik.touched.newPassword}
+                        invalidFeedback={formik.errors.newPassword}
+                        isValid={formik.isValid}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                      />
+                    </FormGroup>
+                    <PasswordVisibilityToggle
+                      visible={showNewPassword}
+                      onToggle={() => setShowNewPassword((prev) => !prev)}
+                      label='new password'
                     />
-                  </FormGroup>
+                  </div>
                 </div>
                 <div className='col-12 col-md-6 mb-2'>
-                  <FormGroup id='confirmPassword' label='Confirm password *' isFloating>
-                    <Input
-                      type='password'
-                      className='form-control'
-                      style={{ height: '40px' }}
-                      value={formik.values.confirmPassword}
-                      isTouched={formik.touched.confirmPassword}
-                      invalidFeedback={formik.errors.confirmPassword}
-                      isValid={formik.isValid}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                  <div style={{ position: 'relative' }}>
+                    <FormGroup id='confirmPassword' label='Confirm password *' isFloating>
+                      <Input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        className='form-control'
+                        style={{ height: '40px', paddingRight: '40px' }}
+                        value={formik.values.confirmPassword}
+                        isTouched={formik.touched.confirmPassword}
+                        invalidFeedback={formik.errors.confirmPassword}
+                        isValid={formik.isValid}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                      />
+                    </FormGroup>
+                    <PasswordVisibilityToggle
+                      visible={showConfirmPassword}
+                      onToggle={() => setShowConfirmPassword((prev) => !prev)}
+                      label='confirm password'
                     />
-                  </FormGroup>
+                  </div>
                 </div>
               </div>
             </>
@@ -156,34 +206,48 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
             <div className='row'>
 
               <div className='col-12 col-md-6 mb-2'>
-                <FormGroup id='newPassword' label='New password *' isFloating>
-                  <Input
-                    type='password'
-                    className='form-control'
-                    style={{ height: '40px' }}
-                    value={formik.values.newPassword}
-                    isTouched={formik.touched.newPassword}
-                    invalidFeedback={formik.errors.newPassword}
-                    isValid={formik.isValid}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
+                <div style={{ position: 'relative' }}>
+                  <FormGroup id='newPassword' label='New password *' isFloating>
+                    <Input
+                      type={showNewPassword ? 'text' : 'password'}
+                      className='form-control'
+                      style={{ height: '40px', paddingRight: '40px' }}
+                      value={formik.values.newPassword}
+                      isTouched={formik.touched.newPassword}
+                      invalidFeedback={formik.errors.newPassword}
+                      isValid={formik.isValid}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                    />
+                  </FormGroup>
+                  <PasswordVisibilityToggle
+                    visible={showNewPassword}
+                    onToggle={() => setShowNewPassword((prev) => !prev)}
+                    label='new password'
                   />
-                </FormGroup>
+                </div>
               </div>
               <div className='col-12 col-md-6 mb-2'>
-                <FormGroup id='confirmPassword' label='Confirm password *' isFloating>
-                  <Input
-                    type='password'
-                    className='form-control'
-                    style={{ height: '40px' }}
-                    value={formik.values.confirmPassword}
-                    isTouched={formik.touched.confirmPassword}
-                    invalidFeedback={formik.errors.confirmPassword}
-                    isValid={formik.isValid}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
+                <div style={{ position: 'relative' }}>
+                  <FormGroup id='confirmPassword' label='Confirm password *' isFloating>
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      className='form-control'
+                      style={{ height: '40px', paddingRight: '40px' }}
+                      value={formik.values.confirmPassword}
+                      isTouched={formik.touched.confirmPassword}
+                      invalidFeedback={formik.errors.confirmPassword}
+                      isValid={formik.isValid}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                    />
+                  </FormGroup>
+                  <PasswordVisibilityToggle
+                    visible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((prev) => !prev)}
+                    label='confirm password'
                   />
-                </FormGroup>
+                </div>
               </div>
             </div>
           )}

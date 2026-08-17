@@ -22,7 +22,7 @@ import EnterOtpComponent from '../../components/CustomComponent/Fields/EnterOtpC
 import showNotification from '../../components/extras/showNotification';
 import AnimatedInputs from '../../components/CustomComponent/Fields/AnimatedInputs';
 import AnimatedPasswordConfirmation from '../../components/CustomComponent/Fields/AnimatedPasswordConfirmation';
-import Logo from '../../components/Logo';
+import QueIconLogo from '../../assets/que-icon-logo.svg';
 
 const AnimatedText = ({ text, className, delay = 0 }) => {
 	const words = text.split(' ');
@@ -170,6 +170,12 @@ const Login = ({ isSignUp }) => {
 			if (isForgotPassword && forgotPasswordStep === 1 && emailError) {
 				errors.loginUsername = emailError;
 			}
+			if (isForgotPassword && forgotPasswordStep === 2) {
+				const code = (otp || []).join('');
+				if (code.length < 6 || (otp || []).some((d) => d === '' || d == null)) {
+					errors.otp = 'OTP is required';
+				}
+			}
 			if (forgotPasswordStep === 3) {
 				if (!values.newPassword) {
 					errors.newPassword = 'Required';
@@ -269,7 +275,8 @@ const Login = ({ isSignUp }) => {
 				action: 'request_otp',
 			})
 			.then(() => {
-				showNotification('Success', 'OTP has been sent to your email', 'success');
+				showNotification('Success', 'OTP has been sent to your email address.', 'success');
+				setOtp(['', '', '', '', '', '']);
 				setForgotPasswordStep(2);
 			})
 			.catch((error) => {
@@ -368,9 +375,9 @@ const Login = ({ isSignUp }) => {
 			case 2:
 				return 'Enter the OTP sent to your email';
 			case 3:
-				return 'Enter your new password';
+				return 'Enter your new password and confirm it';
 			case 4:
-				return 'Enter your new password';
+				return 'Enter your new password and confirm it';
 			default:
 				return '';
 		}
@@ -394,10 +401,7 @@ const Login = ({ isSignUp }) => {
 	const getInputFields = () => {
 		if (isForgotPassword) {
 			if (forgotPasswordStep === 1) {
-				return [
-					{ label: 'Email', name: 'loginUsername' },
-					{ label: 'Password', name: 'loginPassword' },
-				];
+				return [{ label: 'Email', name: 'loginUsername' }];
 			} else if (forgotPasswordStep === 3 || forgotPasswordStep === 4) {
 				return [
 					{ label: 'New Password', name: 'newPassword' },
@@ -459,7 +463,14 @@ const Login = ({ isSignUp }) => {
 											},
 										)}
 										aria-label='ABACI'>
-										<Logo width={180} height={60} dark={false} />
+										<img
+											src={QueIconLogo}
+											alt='Queue Management'
+											width={160}
+											height={130}
+											decoding='async'
+											style={{ display: 'inline-block', verticalAlign: 'middle' }}
+										/>
 
 										{/* <Player
                                             src={Lottie}
@@ -519,10 +530,7 @@ const Login = ({ isSignUp }) => {
 															togglePasswordVisibility
 														}
 														disbled={waitingForAxios}
-														isStacked={
-															isForgotPassword &&
-															forgotPasswordStep === 1
-														}
+														isStacked={false}
 													/>
 												)}
 												{forgotPasswordStep === 2 && (
@@ -615,28 +623,22 @@ const Login = ({ isSignUp }) => {
 											)}
 										</Button>
 									</div>
-									{/* <div className='text-center'>
-										<p className='user-select-none'>
-											{isForgotPassword ? (
-												<u
-													className='cursor-pointer'
-													onClick={handleBackToLogin}>
-													Back to Login
-												</u>
-											) 
-											: (
-												<>
-													<u
-														className='cursor-pointer me-2'
-														onClick={handleForgotPasswordClick}>
-														Forgot password ?
-													</u>
 
-												</>
-											)
-										}
-										</p>
-									</div> */}
+									<div className='col-12 mt-3 text-center'>
+										{isForgotPassword ? (
+											<u
+												className='cursor-pointer text-primary'
+												onClick={handleBackToLogin}>
+												Back to login
+											</u>
+										) : (
+											<u
+												className='cursor-pointer text-primary'
+												onClick={handleForgotPasswordClick}>
+												Forgot password?
+											</u>
+										)}
+									</div>
 									{/* </AnimatedHeightWrapper> */}
 								</form>
 							</CardBody>

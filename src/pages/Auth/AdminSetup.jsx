@@ -21,7 +21,6 @@ import { publicAxios, updateToken } from '../../axiosInstance';
 import validateEmail from '../../helpers/emailValidator';
 import AbaciLoader from '../../components/AbaciLoader/AbaciLoader';
 import useToasterNotification from '../../hooks/useToasterNotification';
-import { LicenceContext } from '../../contexts/LicenceContext';
 import Logo from '../../components/Logo';
 
 // Simple debounce function
@@ -47,7 +46,6 @@ const AdminSetup = ({ isSignUp }) => {
 	const navigate = useNavigate();
 	const { setUser, setUserData } = useContext(AuthContext);
 	const hasCheckedRef = useRef(false);
-	const { checkSystemStatus, license, loading } = useContext(LicenceContext);
 
 	const togglePasswordVisibility = () => {
 		setShowPassword(!showPassword);
@@ -61,13 +59,12 @@ const AdminSetup = ({ isSignUp }) => {
 	const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/; // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
 	const phoneRegex = /^\+?[0-9]{8,15}$/; // Allow +, numbers
 
-	// Check if admin already exists on component mount
+	// Legacy page — activation gate is handled by ProductValidation.
 	useEffect(() => {
 		if (hasCheckedRef.current) return;
-
 		hasCheckedRef.current = true;
-		checkSystemStatus();
-	}, [checkSystemStatus]);
+		setIsLoading(false);
+	}, []);
 	// Check username availability
 	// const checkUsernameAvailability = async (username) => {
 	// 	if (!username || username.length < 3 || !usernameRegex.test(username)) {
@@ -231,7 +228,7 @@ const AdminSetup = ({ isSignUp }) => {
 		const trimmedValue = e.target.value.replace(/\s+/g, ''); // Remove spaces from the input
 		formik.setFieldValue('username', trimmedValue);
 	};
-	if (loading) {
+	if (isLoading) {
 		return <AbaciLoader />;
 	}
 

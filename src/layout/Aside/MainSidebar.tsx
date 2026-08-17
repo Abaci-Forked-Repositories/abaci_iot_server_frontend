@@ -8,7 +8,7 @@ import { AdminRoutes } from '../../routes/RoutesMenu';
 import usePermissions from '../../hooks/usePermissions';
 
 const MainSidebar = () => {
-	const { asideStatus, setAsideStatus } = useContext(ThemeContext);
+	const { asideStatus, setAsideStatus , darkModeStatus } = useContext(ThemeContext);
 	const { can, isAdmin } = usePermissions();
 
 	/**

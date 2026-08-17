@@ -451,7 +451,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 						<div className='queue-detail-panel-divider' />
 
-						<div className='p-4' style={{ flexBasis: '40%', minWidth: '320px' }}>
+						{/* <div className='p-4' style={{ flexBasis: '40%', minWidth: '320px' }}> */}
+						<div className='p-4 flex-grow-1' style={{ flexBasis: '40%', minWidth: 0 }}>
+
 							<div className='d-flex align-items-center justify-content-between mb-3 gap-3'>
 								<div className='h5 mb-0 fw-semibold d-flex align-items-center gap-2'>
 									<Icon icon='Insights' color='warning' />
