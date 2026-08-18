@@ -90,13 +90,17 @@ const ServingPointsWorkspace: React.FC = () => {
 										onClick={(ev) => {
 											ev.preventDefault();
 											ev.stopPropagation();
-											navigate(`/queue-management/${queue.id}`);
+											navigate(`/queue-management/${queue.id}`, {
+												state: { from: 'serving-points' as const },
+											});
 										}}
 										onKeyDown={(ev) => {
 											if (ev.key === 'Enter' || ev.key === ' ') {
 												ev.preventDefault();
 												ev.stopPropagation();
-												navigate(`/queue-management/${queue.id}`);
+												navigate(`/queue-management/${queue.id}`, {
+													state: { from: 'serving-points' as const },
+												});
 											}
 										}}>
 										{queue.name}

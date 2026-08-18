@@ -339,7 +339,11 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								e.preventDefault();
 								e.stopPropagation();
 								navigate(`/queue-management/schedules/${rowData.schedule}`, {
-									state: { from: 'schedules-list' as const },
+									state: {
+										from: 'token-user' as const,
+										tokenUserId: id,
+										tokenUserName: tokenUser?.name ?? undefined,
+									},
 								});
 							}}>
 							#{rowData.schedule}
@@ -539,6 +543,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		[
 			canReadSchedule,
 			navigate,
+			id,
+			tokenUser?.name,
 			handleTokenStatusTransition,
 			handleSetPrioritizedQueue,
 			prioritizingTokenId,
@@ -584,7 +590,7 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 							</Button>
 							)}
 							<Button
-								color='light'
+								color='dark'
 								isLight
 								icon='ArrowBack'
 								onClick={() => navigate('/token-users')}>

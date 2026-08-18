@@ -179,9 +179,14 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 
 	const openQueueDetail = useCallback(
 		(queueId: number) => {
-			navigate(`/queue-management/${queueId}`);
+			navigate(`/queue-management/${queueId}`, {
+				state: {
+					from: 'serving-point-detail' as const,
+					servingPointId,
+				},
+			});
 		},
-		[navigate],
+		[navigate, servingPointId],
 	);
 
 	const triggerWindowAction = async (

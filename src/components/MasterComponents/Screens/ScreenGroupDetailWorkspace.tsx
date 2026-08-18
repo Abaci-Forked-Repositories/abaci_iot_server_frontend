@@ -65,7 +65,7 @@ const ScreenGroupDetailWorkspace: React.FC = () => {
 						</CardTitle>
 					</CardLabel>
 					<CardActions>
-						<Button color='light' icon='ArrowBack' onClick={() => navigate('/screens')}>
+						<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate('/screens')}>
 							Back to Screens
 						</Button>
 						{group && (

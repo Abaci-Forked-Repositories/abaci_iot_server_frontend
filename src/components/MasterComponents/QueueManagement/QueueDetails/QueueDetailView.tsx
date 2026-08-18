@@ -44,11 +44,19 @@ const ICON_BG_BY_COLOR: Record<TColor, string> = {
 	light: 'rgba(245, 248, 250, 0.24)',
 };
 
+export type QueueDetailEntryFrom = 'queues-list' | 'serving-points' | 'serving-point-detail';
+
+export type QueueDetailNavState = {
+	from?: QueueDetailEntryFrom;
+	servingPointId?: number;
+};
+
 const QueueDetailView: React.FC = () => {
 	const { queueId } = useParams<{ queueId: string }>();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const id = Number(queueId);
+	const navState = location.state as QueueDetailNavState | null;
 
 	const [loading, setLoading] = useState(true);
 	const [queue, setQueue] = useState<Queue | null>(null);
@@ -109,6 +117,17 @@ const QueueDetailView: React.FC = () => {
 		return withGroupName.group_name ?? (queue.group != null ? String(queue.group) : '-');
 	}, [queue]);
 
+	const backNav = useMemo(() => {
+		const from = navState?.from;
+		if (from === 'serving-point-detail' && navState?.servingPointId) {
+			return `/serving-points/${navState.servingPointId}`;
+		}
+		if (from === 'serving-points') {
+			return '/serving-points';
+		}
+		return '/queue-management';
+	}, [navState?.from, navState?.servingPointId]);
+
 	const statValue = (key: string): number => {
 		if (key === 'total_tokens') return stats?.total_tokens ?? 0;
 		if (key === 'waiting') return stats?.waiting ?? 0;
@@ -129,7 +148,10 @@ const QueueDetailView: React.FC = () => {
 
 	if (!loading && !queue) {
 		return (
-			<div className='d-flex justify-content-center align-items-center py-5'>
+			<div className='d-flex justify-content-center align-items-center py-5 gap-2 flex-wrap'>
+				<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate(backNav)}>
+					Back
+				</Button>
 				<Button color='primary' icon='Refresh' onClick={() => void load()}>
 					Try again
 				</Button>
@@ -218,7 +240,15 @@ const QueueDetailView: React.FC = () => {
 												<div className='text-muted small mt-1'>{queueData.description || 'Service queue'}</div>
 											</div>
 										</div>
-										<div className='d-flex align-items-center gap-2 flex-shrink-0'>
+										<div className='d-flex align-items-center gap-2 flex-wrap flex-shrink-0'>
+											<Button
+												color='dark'
+												isLight
+												size='sm'
+												icon='ArrowBack'
+												onClick={() => navigate(backNav)}>
+												Back
+											</Button>
 											<span className={`queue-modern-card__status ${queueData.is_active ? 'queue-modern-card__status--active' : 'queue-modern-card__status--inactive'}`}>
 												{queueData.is_active ? 'Active' : 'Inactive'}
 												<span className='queue-modern-card__status-dot' />

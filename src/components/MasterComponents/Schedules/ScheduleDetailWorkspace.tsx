@@ -1,5 +1,5 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import Card, { CardBody } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
@@ -35,18 +35,21 @@ const getNextAllowedStatuses = (status?: string) => {
 	return [];
 };
 
-export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail';
+export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail' | 'token-user';
 
 export type ScheduleDetailNavState = {
 	from?: ScheduleDetailEntryFrom;
 	queueId?: number;
 	queueName?: string;
 	queueDetailPath?: string;
+	tokenUserId?: number;
+	tokenUserName?: string;
 };
 
 const ScheduleDetailWorkspace: React.FC = () => {
 	const { scheduleId } = useParams<{ scheduleId: string }>();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const dispatch = useDispatch();
 	const navState = location.state as ScheduleDetailNavState | null;
 	const queueIdFromState = navState?.queueId;
@@ -69,16 +72,24 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const canReadQueueManagement = can('queue_management_read');
 	const canReadSchedules = can('schedules_read');
 	const canCreateToken = can('token_users_write');
+	const canReadTokenUsers = can('token_users_read');
 
 	const entryFrom = useMemo((): ScheduleDetailEntryFrom => {
-		if (navState?.from === 'schedules-list' || navState?.from === 'queue-detail') {
+		if (
+			navState?.from === 'schedules-list' ||
+			navState?.from === 'queue-detail' ||
+			navState?.from === 'token-user'
+		) {
 			return navState.from;
+		}
+		if (navState?.tokenUserId != null) {
+			return 'token-user';
 		}
 		if (navState?.queueDetailPath != null || navState?.queueId != null) {
 			return 'queue-detail';
 		}
 		return 'schedules-list';
-	}, [navState?.from, navState?.queueDetailPath, navState?.queueId]);
+	}, [navState?.from, navState?.queueDetailPath, navState?.queueId, navState?.tokenUserId]);
 
 	const refreshTokensTableRef = useRef<() => void>(() => {});
 
@@ -114,6 +125,28 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		return '/queue-management';
 	}, [queueDetailPathFromState, scheduleRecord?.queue]);
 
+	const backNav = useMemo(() => {
+		if (entryFrom === 'token-user' && navState?.tokenUserId) {
+			return `/token-users/${navState.tokenUserId}`;
+		}
+		if (entryFrom === 'queue-detail' && canReadQueueManagement) {
+			return queueDetailPath;
+		}
+		if (canReadSchedules) {
+			return '/schedules';
+		}
+		if (canReadQueueManagement) {
+			return queueDetailPath;
+		}
+		return '/';
+	}, [
+		canReadQueueManagement,
+		canReadSchedules,
+		entryFrom,
+		navState?.tokenUserId,
+		queueDetailPath,
+	]);
+
 	const tokenFormQueues = useMemo((): Queue[] => {
 		if (!scheduleRecord?.queue) return [];
 		const name =
@@ -135,7 +168,19 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		};
 
 		let breadcrumbs: { label: string; path: string }[];
-		if (entryFrom === 'schedules-list') {
+		if (entryFrom === 'token-user' && navState?.tokenUserId) {
+			const userLabel = navState.tokenUserName?.trim() || `User #${navState.tokenUserId}`;
+			breadcrumbs = canReadTokenUsers
+				? [
+						{ label: 'Token Users', path: '/token-users' },
+						{ label: userLabel, path: `/token-users/${navState.tokenUserId}` },
+						scheduleDetailsCrumb,
+					]
+				: [
+						{ label: userLabel, path: `/token-users/${navState.tokenUserId}` },
+						scheduleDetailsCrumb,
+					];
+		} else if (entryFrom === 'schedules-list') {
 			breadcrumbs = canReadSchedules
 				? [{ label: 'Schedules', path: '/schedules' }, scheduleDetailsCrumb]
 				: [scheduleDetailsCrumb];
@@ -156,10 +201,13 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	}, [
 		canReadQueueManagement,
 		canReadSchedules,
+		canReadTokenUsers,
 		dispatch,
 		entryFrom,
 		location.pathname,
 		location.search,
+		navState?.tokenUserId,
+		navState?.tokenUserName,
 		queueDetailPath,
 		queueNameFromState,
 		scheduleRecord,
@@ -274,7 +322,10 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	if (!loading && !scheduleRecord) {
 		return (
-			<div className='d-flex justify-content-center align-items-center py-5'>
+			<div className='d-flex justify-content-center align-items-center py-5 gap-2 flex-wrap'>
+				<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate(backNav)}>
+					Back
+				</Button>
 				<Button color='primary' icon='Refresh' onClick={() => void load()}>
 					Try again
 				</Button>
@@ -312,6 +363,14 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='d-flex align-items-center gap-2 flex-wrap justify-content-end'>
+									<Button
+										color='dark'
+										isLight
+										size='sm'
+										icon='ArrowBack'
+										onClick={() => navigate(backNav)}>
+										Back
+									</Button>
 									{schedule.status ? (
 										<StatusBadge status={schedule.status} />
 									) : (

@@ -1,0 +1,66 @@
+// Keep the app chrome (header + footer) on screen.
+// Scroll long content inside `.page` or a stretch card body — not the document.
+
+html,
+body {
+	max-height: 100dvh;
+	overflow: hidden;
+}
+
+#root {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	max-height: 100dvh;
+	overflow: hidden;
+}
+
+.app {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+.wrapper {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.content,
+.page-wrapper {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.page {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+}
+
+.footer {
+	flex-shrink: 0;
+}
+
+// Stretch cards fill the page and scroll internally.
+.card.card-stretch-full {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	max-height: 100%;
+	overflow: hidden;
+
+	> .card-header,
+	> .card-footer {
+		flex-shrink: 0;
+	}
+
+	> .card-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: auto;
+	}
+}

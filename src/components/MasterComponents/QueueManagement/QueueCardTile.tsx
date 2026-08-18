@@ -33,7 +33,7 @@ const QueueCardTile: React.FC<QueueCardTileProps> = ({
 			onClick={() => onSelect(queue.id)}
 			role='button'>
 			<div className='queue-modern-card__header'>
-				<div className='queue-modern-card__header-main d-flex align-items-center gap-3'>
+				<div className='queue-modern-card__header-main d-flex align-items-start gap-3'>
 					<div className='queue-modern-card__icon-box'>
 						<Icon icon='Layers' className='queue-modern-card__icon' />
 					</div>

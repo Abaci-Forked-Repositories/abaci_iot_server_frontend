@@ -214,7 +214,7 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 				{searchTerm.trim() ? <span className='text-muted'> (filtered by search)</span> : null}.
 			</span>
 			{onBackToGroups ? (
-				<Button color='primary' isLight icon='ArrowBack' onClick={onBackToGroups}>
+				<Button color='dark' isLight icon='ArrowBack' onClick={onBackToGroups}>
 					Back
 				</Button>
 			) : null}
@@ -249,7 +249,11 @@ const QueuesTabContent: React.FC<QueuesTabContentProps> = ({
 							queue={queue}
 							groupName={queue.group_name || queue.group || '-'}
 							selected={false}
-							onSelect={(id) => navigate(`/queue-management/${id}`)}
+							onSelect={(id) =>
+								navigate(`/queue-management/${id}`, {
+									state: { from: 'queues-list' as const },
+								})
+							}
 							onEditQueue={onEditQueue}
 							onToggleQueue={onToggleQueue}
 							isActionLoading={isQueueActionLoading(queue.id)}

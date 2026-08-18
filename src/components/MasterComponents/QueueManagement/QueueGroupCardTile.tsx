@@ -34,7 +34,7 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 		onClick={() => onSelect(group)}
 		role='button'>
 		<div className='queue-modern-card__header'>
-			<div className='queue-modern-card__header-main d-flex align-items-center gap-3'>
+			<div className='queue-modern-card__header-main d-flex align-items-start gap-3'>
 				<div className='queue-modern-card__icon-box'>
 					<Icon icon='Groups' className='queue-modern-card__icon' />
 				</div>
