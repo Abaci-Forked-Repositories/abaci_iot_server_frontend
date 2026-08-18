@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://schedule-additional-luggage-yeast.trycloudflare.com';
+		return 'https://arbor-replacing-collector-corner.trycloudflare.com';
 	}
 	return url;
 };

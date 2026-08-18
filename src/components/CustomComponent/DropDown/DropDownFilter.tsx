@@ -2,6 +2,13 @@ import React from 'react'
 import Button from '../../bootstrap/Button'
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../bootstrap/Dropdown'
 
+const getOptionKey = (option: any, labelField: string) => {
+	if (option == null) return undefined;
+	if (option.value !== undefined && option.value !== null) return option.value;
+	if (labelField) return option[labelField];
+	return option;
+};
+
 function DropDownFilter({
 	options,
 	onChange,
@@ -17,6 +24,8 @@ function DropDownFilter({
         return label.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
     }
 
+    const selectedKey = getOptionKey(selectedOption, labelField);
+
     return (
         <Dropdown direction={direction}>
             <DropdownToggle hasIcon>
@@ -29,14 +38,22 @@ function DropDownFilter({
 
             >
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {options.map((option, index) => (
-                        <DropdownItem
-                            key={index}
-                            onClick={() => onChange(option)}
-                        >
-                            {formattingLabel(option[labelField])}
-                        </DropdownItem>
-                    ))}
+                    {options.map((option, index) => {
+                        const isSelected = getOptionKey(option, labelField) === selectedKey;
+                        return (
+                            <DropdownItem
+                                key={option?.value ?? index}
+                                onClick={() => {
+                                    if (isSelected) return;
+                                    onChange(option);
+                                }}
+                            >
+                                <span className={isSelected ? 'active' : undefined}>
+                                    {formattingLabel(option[labelField])}
+                                </span>
+                            </DropdownItem>
+                        );
+                    })}
                 </div>
             </DropdownMenu>
         </Dropdown>

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import MaterialTable from '@material-table/core';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MaterialTable, { type Query, type QueryResult } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Tooltip from '@mui/material/Tooltip';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import Card, { CardActions, CardBody, CardHeader } from '../../bootstrap/Card';
 import Button from '../../bootstrap/Button';
 import Icon from '../../icon/Icon';
@@ -10,9 +11,12 @@ import StatusBadge from '../../BadgeWithIcon.jsx';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import usePermissions from '../../../hooks/usePermissions';
+import useDarkMode from '../../../hooks/useDarkMode';
+import swalFire from '../../../helpers/swalHelper';
 import ServingPointModal from '../../PageComponents/ServingPoints/ServingPointModal';
 import ServingPointStatusModal from '../../PageComponents/ServingPoints/ServingPointStatusModal';
 import {
+	type QueryParams,
 	type ServingPoint,
 	queuesApi,
 } from '../../../services/queueManagementApi';
@@ -21,6 +25,68 @@ import {
 	getNextAllowedServingPointStatuses,
 } from '../QueueManagement/queueManagementUtils';
 
+const SERVING_POINT_STATUS_LOOKUP: Record<string, string> = {
+	scheduled: 'Scheduled',
+	running: 'Running',
+	on_hold: 'On Hold',
+	completed: 'Completed',
+	cancelled: 'Cancelled',
+	un_assigned: 'Un Assigned',
+};
+
+const SERVING_POINT_LISTING_LOOKUP: Record<string, string> = {
+	true: 'Active',
+	false: 'Inactive',
+};
+
+const hasFilterValue = (value: unknown) => {
+	if (value == null || value === '') return false;
+	if (Array.isArray(value) && value.length === 0) return false;
+	return true;
+};
+
+const toFilterDate = (value: unknown): string | undefined => {
+	if (!value) return undefined;
+	const date = value instanceof Date ? value : new Date(String(value));
+	if (Number.isNaN(date.getTime())) return undefined;
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
+
+const buildServingPointListParams = (
+	query: Query<ServingPoint>,
+	applyColumnFilters: boolean,
+): QueryParams => {
+	const params: QueryParams = {
+		limit: query.pageSize,
+		offset: query.pageSize * query.page,
+	};
+	const search = query.search?.trim();
+	if (search) params.search = search;
+	if (!applyColumnFilters) return params;
+
+	for (const filter of query.filters ?? []) {
+		const field = String(filter.column?.field ?? '');
+		const value = filter.value;
+		if (!hasFilterValue(value)) continue;
+
+		if (field === 'status') {
+			params.status = String(value);
+		} else if (field === 'is_active') {
+			params.is_active = String(value) === 'true';
+		} else if (field === 'name') {
+			params.name__icontains = String(value).trim();
+		} else if (field === 'created_at') {
+			const day = toFilterDate(value);
+			if (day) params.created_at__date = day;
+		}
+	}
+
+	return params;
+};
+
 const ServingPointsWorkspace: React.FC = () => {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
@@ -28,6 +94,7 @@ const ServingPointsWorkspace: React.FC = () => {
 
 	const [pageSize] = useState(10);
 	const [totalCount, setTotalCount] = useState(0);
+	const [filterEnabled, setFilterEnabled] = useState(false);
 	const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 	const [showModal, setShowModal] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -36,13 +103,58 @@ const ServingPointsWorkspace: React.FC = () => {
 	const [statusModalPoint, setStatusModalPoint] = useState<ServingPoint | null>(null);
 
 	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
-	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const skipFilterToggleRefreshRef = useRef(true);
+	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('serving_point_write');
 	const canViewQueue = can('queue_management_read');
+	const { themeStatus } = useDarkMode();
 	const showErrorRef = useRef(showErrorNotification);
 	showErrorRef.current = showErrorNotification;
+
+	useEffect(() => {
+		if (skipFilterToggleRefreshRef.current) {
+			skipFilterToggleRefreshRef.current = false;
+			return;
+		}
+		tableRef.current?.onQueryChange?.();
+	}, [filterEnabled]);
+
+	const handleToggleServingPointListing = useCallback(
+		async (point: ServingPoint) => {
+			const isActive = point.is_active ?? point.is_available ?? false;
+			const result = await swalFire({
+				title: `${isActive ? 'Disable' : 'Enable'} serving point?`,
+				text: isActive
+					? `Disable "${point.name}"? It will no longer be listed as available.`
+					: `Enable "${point.name}"? It will be listed as available.`,
+				icon: isActive ? 'warning' : 'question',
+				showCancelButton: true,
+				theme: themeStatus === 'dark' ? 'dark' : 'light',
+				confirmButtonText: isActive ? 'Disable' : 'Enable',
+				cancelButtonText: 'Cancel',
+				reverseButtons: true,
+			});
+			if (!result.isConfirmed) return;
+
+			setStatusUpdatingId(point.id);
+			try {
+				await (isActive
+					? queuesApi.deactivateServingPoint(point.id)
+					: queuesApi.activateServingPoint(point.id));
+				showSuccessNotification(
+					`Serving point ${isActive ? 'disabled' : 'enabled'} successfully.`,
+				);
+				tableRef.current?.onQueryChange?.();
+			} catch (err) {
+				showErrorNotification(err);
+			} finally {
+				setStatusUpdatingId(null);
+			}
+		},
+		[showErrorNotification, showSuccessNotification, themeStatus],
+	);
 
 	const columns = useMemo(() => {
 		const baseColumns = [
@@ -55,6 +167,7 @@ const ServingPointsWorkspace: React.FC = () => {
 				title: 'Queue',
 				field: 'queue',
 				sorting: false,
+				filtering: false,
 				render: (rowData: ServingPoint) => {
 					const queues = rowData.queue || [];
 
@@ -114,11 +227,13 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Description',
 				field: 'description',
+				filtering: false,
 				render: (rowData: ServingPoint) => rowData.description || '—',
 			},
 			{
 				title: 'Status',
 				field: 'status',
+				lookup: SERVING_POINT_STATUS_LOOKUP,
 				render: (rowData: ServingPoint) => (
 					<StatusBadge status={rowData.status} isAvailable={rowData.is_available} />
 				),
@@ -126,6 +241,7 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Listing',
 				field: 'is_active',
+				lookup: SERVING_POINT_LISTING_LOOKUP,
 				render: (rowData: ServingPoint) => {
 					const listedOn = rowData.is_active ?? rowData.is_available ?? false;
 					return <StatusBadge status={listedOn ? 'active' : 'inactive'} />;
@@ -134,6 +250,7 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Created at',
 				field: 'created_at',
+				type: 'date' as const,
 				render: (rowData: ServingPoint) => formatDate(rowData.created_at),
 			},
 		];
@@ -195,23 +312,10 @@ const ServingPointsWorkspace: React.FC = () => {
 									size='sm'
 									icon={isActive ? 'Block' : 'CheckCircle'}
 									isDisable={statusUpdatingId === rowData.id}
-									onClick={async (event: React.MouseEvent<HTMLButtonElement>) => {
+									onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
 										event.preventDefault();
 										event.stopPropagation();
-										setStatusUpdatingId(rowData.id);
-										try {
-											await (isActive
-												? queuesApi.deactivateServingPoint(rowData.id)
-												: queuesApi.activateServingPoint(rowData.id));
-											showSuccessNotification(
-												`Serving point ${isActive ? 'disabled' : 'enabled'} successfully.`,
-											);
-											tableRef.current?.onQueryChange?.();
-										} catch (err) {
-											showErrorNotification(err);
-										} finally {
-											setStatusUpdatingId(null);
-										}
+										void handleToggleServingPointListing(rowData);
 									}}
 								/>
 							</Tooltip>
@@ -220,7 +324,7 @@ const ServingPointsWorkspace: React.FC = () => {
 				},
 			},
 		];
-	}, [canViewQueue, canWrite, navigate, showErrorNotification, showSuccessNotification, statusUpdatingId]);
+	}, [canViewQueue, canWrite, handleToggleServingPointListing, navigate, statusUpdatingId]);
 
 	const defaultQueueId =
 		Number.isNaN(queueIdFromQuery) || !queueIdFromQuery ? null : queueIdFromQuery;
@@ -259,15 +363,10 @@ const ServingPointsWorkspace: React.FC = () => {
 									tableRef={tableRef}
 									// @ts-ignore
 									columns={columns}
-									data={(query) =>
+									data={(query: Query<ServingPoint>): Promise<QueryResult<ServingPoint>> =>
 										new Promise((resolve) => {
-											const search = query.search?.trim();
 											queuesApi
-												.servingPoints({
-													limit: query.pageSize,
-													offset: query.pageSize * query.page,
-													...(search ? { search } : {}),
-												})
+												.servingPoints(buildServingPointListParams(query, filterEnabled))
 												.then((res) => {
 													const count = res.count ?? res.results?.length ?? 0;
 													setTotalCount(count);
@@ -291,12 +390,22 @@ const ServingPointsWorkspace: React.FC = () => {
 									options={{
 										headerStyle: headerStyles(),
 										rowStyle: rowStyles(),
+										searchFieldStyle: searchFieldStyle(),
 										debounceInterval: 500,
 										search: true,
+										filtering: filterEnabled,
 										pageSize,
 										pageSizeOptions: [10, 20, 50],
 										emptyRowsWhenPaging: false,
 									}}
+									actions={[
+										{
+											icon: FilterListIcon,
+											tooltip: filterEnabled ? 'Hide filters' : 'Show filters',
+											isFreeAction: true,
+											onClick: () => setFilterEnabled((prev) => !prev),
+										},
+									]}
 									localization={{
 										pagination: {
 											labelRowsPerPage: '',

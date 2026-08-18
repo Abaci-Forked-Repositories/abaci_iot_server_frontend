@@ -1,22 +1,73 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import MaterialTable from '@material-table/core';
+import MaterialTable, { type Query, type QueryResult } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import Card, { CardBody, CardHeader } from '../../bootstrap/Card';
 import Icon from '../../icon/Icon';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import { type TokenUser, tokensApi } from '../../../services/queueManagementApi';
+import { type QueryParams, type TokenUser, tokensApi } from '../../../services/queueManagementApi';
 import { formatDate } from '../QueueManagement/queueManagementUtils';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+const hasFilterValue = (value: unknown) => {
+	if (value == null || value === '') return false;
+	if (Array.isArray(value) && value.length === 0) return false;
+	return true;
+};
+
+const toFilterDate = (value: unknown): string | undefined => {
+	if (!value) return undefined;
+	const date = value instanceof Date ? value : new Date(String(value));
+	if (Number.isNaN(date.getTime())) return undefined;
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
+
+const buildTokenUserListParams = (
+	query: Query<TokenUser>,
+	applyColumnFilters: boolean,
+): QueryParams => {
+	const params: QueryParams = {
+		limit: query.pageSize,
+		offset: query.pageSize * query.page,
+	};
+	const search = query.search?.trim();
+	if (search) params.search = search;
+	if (!applyColumnFilters) return params;
+
+	for (const filter of query.filters ?? []) {
+		const field = String(filter.column?.field ?? '');
+		const value = filter.value;
+		if (!hasFilterValue(value)) continue;
+
+		if (field === 'name') {
+			params.name__icontains = String(value).trim();
+		} else if (field === 'email') {
+			params.email__icontains = String(value).trim();
+		} else if (field === 'phone') {
+			params.phone__icontains = String(value).trim();
+		} else if (field === 'created_at') {
+			const day = toFilterDate(value);
+			if (day) params.created_at__date = day;
+		}
+	}
+
+	return params;
+};
 
 const TokenUsersWorkspace: React.FC = () => {
 	const navigate = useNavigate();
 	const [totalCount, setTotalCount] = useState(0);
 	const [pageSize] = useState(10);
+	const [filterEnabled, setFilterEnabled] = useState(false);
 
 	const tableRef = useRef<{ onQueryChange: () => void } | null>(null);
+	const skipFilterToggleRefreshRef = useRef(true);
 
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { showErrorNotification } = useToasterNotification();
@@ -25,21 +76,19 @@ const TokenUsersWorkspace: React.FC = () => {
 		showErrorRef.current = showErrorNotification;
 	}, [showErrorNotification]);
 
-	const fetchUserData = useCallback(
-		(query: {
-			page: number;
-			pageSize: number;
-			search?: string;
-		}): Promise<{ data: TokenUser[]; page: number; totalCount: number }> => {
-			return new Promise((resolve) => {
-				const search = query.search?.trim() ?? '';
+	useEffect(() => {
+		if (skipFilterToggleRefreshRef.current) {
+			skipFilterToggleRefreshRef.current = false;
+			return;
+		}
+		tableRef.current?.onQueryChange?.();
+	}, [filterEnabled]);
 
+	const fetchUserData = useCallback(
+		(query: Query<TokenUser>): Promise<QueryResult<TokenUser>> => {
+			return new Promise((resolve) => {
 				tokensApi
-					.users({
-						limit: query.pageSize,
-						offset: query.pageSize * query.page,
-						...(search ? { search } : {}),
-					})
+					.users(buildTokenUserListParams(query, filterEnabled))
 					.then((res) => {
 						const count = res.count ?? res.results?.length ?? 0;
 						setTotalCount(count);
@@ -60,7 +109,7 @@ const TokenUsersWorkspace: React.FC = () => {
 					});
 			});
 		},
-		[],
+		[filterEnabled],
 	);
 
 	const columns = useMemo(
@@ -83,6 +132,7 @@ const TokenUsersWorkspace: React.FC = () => {
 			{
 				title: 'Created at',
 				field: 'created_at',
+				type: 'date' as const,
 				render: (rowData: TokenUser) => formatDate(rowData.created_at),
 			},
 		],
@@ -121,13 +171,21 @@ const TokenUsersWorkspace: React.FC = () => {
 									rowStyle: { ...rowStyles(), cursor: 'pointer' },
 									searchFieldStyle: searchFieldStyle(),
 									search: true,
-									filtering: false,
+									filtering: filterEnabled,
 									sorting: false,
 									pageSize,
 									pageSizeOptions: [...PAGE_SIZE_OPTIONS],
 									emptyRowsWhenPaging: false,
 									debounceInterval: 400,
 								}}
+								actions={[
+									{
+										icon: FilterListIcon,
+										tooltip: filterEnabled ? 'Hide filters' : 'Show filters',
+										isFreeAction: true,
+										onClick: () => setFilterEnabled((prev) => !prev),
+									},
+								]}
 								localization={{
 									pagination: {
 										labelRowsPerPage: '',

@@ -131,6 +131,7 @@ const QueueManagementWorkspace: React.FC = () => {
 								{ label: 'Queue Groups', value: 'groups' as const },
 							]}
 							onChange={(option: { value: 'queues' | 'groups' }) => {
+								if (option.value === queueDisplayMode) return;
 								setQueueDisplayMode(option.value);
 								setQueueRefreshKey((v) => v + 1);
 							}}

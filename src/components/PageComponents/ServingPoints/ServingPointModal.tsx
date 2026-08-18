@@ -210,7 +210,7 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 					<div className='row g-3'>
 						<div className='col-12'>
 							<label className='form-label fw-semibold' htmlFor='sp-name'>
-								Name
+								Name *
 							</label>
 							<input
 								id='sp-name'

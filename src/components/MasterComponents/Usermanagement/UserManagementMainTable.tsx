@@ -1,20 +1,49 @@
-import { useState, FC, useMemo } from 'react';
+import { useState, FC, useMemo, useEffect, useRef, useCallback } from 'react';
 import MaterialTable from '@material-table/core';
 import PropTypes from 'prop-types';
 import { ThemeProvider } from '@mui/material/styles';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import useTablestyle from '../../../hooks/useTablestyles';
-import CustomBadgeWithIcon from '../../CustomComponent/BadgeWithIcon';
 import DeleteButton from '../../CustomComponent/Buttons/DeleteButton';
 import EditUser from './EditUserOffCanvas';
 import { authAxios } from '../../../axiosInstance';
-import { formatFiltersWithOptions } from '../../../helpers/functions';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import usePermissions from '../../../hooks/usePermissions';
-import CustomButtonWithNoName from '../../CustomComponent/Buttons/CustomButtonWithNoName';
 import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
 import StatusBadge from '../../BadgeWithIcon';
 import Button from '../../bootstrap/Button';
+
+const USER_STATUS_LOOKUP: Record<string, string> = {
+	true: 'Active',
+	false: 'Inactive',
+};
+
+const hasFilterValue = (value: unknown) => {
+	if (value == null || value === '') return false;
+	if (Array.isArray(value) && value.length === 0) return false;
+	return true;
+};
+
+const buildUserColumnFilters = (filters: any[] | undefined) => {
+	let otherFilters = '';
+	(filters ?? []).forEach((filteredItem: any) => {
+		const field = String(filteredItem?.column?.field ?? '');
+		const value = filteredItem?.value;
+		if (!hasFilterValue(value)) return;
+
+		if (field === 'full_name') {
+			otherFilters += `&first_name__icontains=${encodeURIComponent(String(value).trim())}`;
+		} else if (field === 'email') {
+			otherFilters += `&email__icontains=${encodeURIComponent(String(value).trim())}`;
+		} else if (field === 'role') {
+			otherFilters += `&role=${encodeURIComponent(String(value))}`;
+		} else if (field === 'is_active') {
+			otherFilters += `&is_active=${String(value) === 'true'}`;
+		}
+	});
+	return otherFilters;
+};
 
 interface UserManagementTableComponentProps {
 	tableRef: any;
@@ -24,99 +53,132 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 	tableRef,
 	urlBackup,
 }) => {
-	const [pageSize, setPageSize] = useState(5);
+	const [pageSize] = useState(5);
+	const [filterEnabled, setFilterEnabled] = useState(false);
+	const [roleLookup, setRoleLookup] = useState<Record<string, string>>({});
 	const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 	const [itemToBeEdited, setItemToBeEdited] = useState(null);
 	const [editModalShow, setEditModalShow] = useState(false);
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('users_write');
-	const staticColumns = [
-		{
-			title: 'Full Name',
-			field: 'full_name',
-			render: (rowData: any) => {
-				return `${rowData?.first_name} ${rowData?.last_name}` || '----';
-			},
-		},
-		{
-			title: 'Email',
-			field: 'email',
-			render: (rowData: any) => {
-				const Email = rowData?.email;
-				if (!Email) return '----';
+	const skipFilterToggleRefreshRef = useRef(true);
+	const filterEnabledRef = useRef(filterEnabled);
+	filterEnabledRef.current = filterEnabled;
+	const showErrorRef = useRef(showErrorNotification);
+	showErrorRef.current = showErrorNotification;
+	const rolesLoadedRef = useRef(false);
 
-				// Check if it's deleted
-				if (Email.includes('_deleted_')) {
-					// Extract only the part before "_DELETED_"
-					const cleanEmail = Email.split('_deleted_')[0];
-					return <span style={{ color: 'red' }}>{cleanEmail} (Deleted)</span>;
-				}
-
-				// Normal registration number
-				return Email;
-			},
-		},
-		{
-			title: 'Role',
-			field: 'role',
-			render: (rowData: any) => {
-				return rowData?.role?.name || '----';
-			},
-		},
-		// {
-		// 	title: 'Status',
-		// 	field: 'status',
-		// 	render: (rowData) => (
-		// 		<StatusBadge status={rowData.status} />
-		// 	),
-		// },
-		{
-			title: 'Status',
-			field: 'status',
-			render: (rowData) => (
-				<StatusBadge status={rowData.is_active ? 'Active' : 'Inactive'} />
-			),
-		},
-	];
-	const handleEdit = (item: any) => {
-		setItemToBeEdited(item);
-		setEditModalShow(!editModalShow);
-	};
-
-	const handleBulkDelete = async (selectedRows: any[]) => {
-		if (!selectedRows.length) return;
-
-		try {
-			const result = await swalFire({
-				title: 'Are you sure?',
-				text: `You want to delete ${selectedRows.length} user(s)?`,
-				icon: 'info',
-				iconColor: buttonColor[0],
-				showCancelButton: true,
-				confirmButtonColor: buttonColor[0],
-				cancelButtonColor: buttonColor[1],
-				confirmButtonText: 'Delete',
-				cancelButtonText: 'Cancel',
-			});
-
-			if (result.isConfirmed) {
-				await Promise.all(
-					selectedRows.map((row) =>
-						authAxios.delete(`api/users/${row.id}/`).catch((err) => {
-							showErrorNotification(err);
-						}),
-					),
-				);
-				if (tableRef) {
-					tableRef.current.onQueryChange();
-				}
-				showSuccessNotification('Success! Selected users deleted successfully');
-			}
-		} catch (error) {
-			showErrorNotification(error);
+	useEffect(() => {
+		if (skipFilterToggleRefreshRef.current) {
+			skipFilterToggleRefreshRef.current = false;
+			return;
 		}
-	};
+		tableRef.current?.onQueryChange?.();
+	}, [filterEnabled, tableRef]);
+
+	useEffect(() => {
+		if (rolesLoadedRef.current) return;
+		rolesLoadedRef.current = true;
+
+		authAxios
+			.get('api/users/roles/')
+			.then((res) => {
+				const results: any[] = res.data?.results ?? res.data ?? [];
+				const lookup: Record<string, string> = {};
+				if (Array.isArray(results)) {
+					results.forEach((role) => {
+						if (role?.id == null) return;
+						lookup[String(role.id)] = role.name || String(role.id);
+					});
+				}
+				setRoleLookup(lookup);
+			})
+			.catch((err) => showErrorRef.current(err));
+	}, []);
+
+	const fetchData = useCallback(
+		(query: any) =>
+			new Promise<any>((resolve) => {
+				let orderBy = '';
+				const otherFilters = filterEnabledRef.current
+					? buildUserColumnFilters(query.filters)
+					: '';
+				if (query.orderBy) {
+					orderBy =
+						query.orderDirection === 'asc'
+							? `&ordering=-${String(query.orderBy?.field)}`
+							: `&ordering=${String(query.orderBy?.field)}`;
+				}
+
+				const url = `api/users/?limit=${query.pageSize}&offset=${query.pageSize * query.page}&search=${query.search}${orderBy}${otherFilters}`;
+				urlBackup.current = url;
+
+				authAxios
+					.get(url)
+					.then((response) => {
+						resolve({
+							data: response.data?.results,
+							page: query.page,
+							totalCount: response.data?.count,
+						});
+					})
+					.catch((error) => {
+						showErrorRef.current(error);
+						resolve({ data: [], page: query.page, totalCount: 0 });
+					});
+			}),
+		[urlBackup],
+	);
+
+	const handleEdit = useCallback((item: any) => {
+		setItemToBeEdited(item);
+		setEditModalShow(true);
+	}, []);
+
+	const staticColumns = useMemo(
+		() => [
+			{
+				title: 'Full Name',
+				field: 'full_name',
+				render: (rowData: any) => {
+					return `${rowData?.first_name} ${rowData?.last_name}` || '----';
+				},
+			},
+			{
+				title: 'Email',
+				field: 'email',
+				render: (rowData: any) => {
+					const Email = rowData?.email;
+					if (!Email) return '----';
+
+					if (Email.includes('_deleted_')) {
+						const cleanEmail = Email.split('_deleted_')[0];
+						return <span style={{ color: 'red' }}>{cleanEmail} (Deleted)</span>;
+					}
+
+					return Email;
+				},
+			},
+			{
+				title: 'Role',
+				field: 'role',
+				lookup: roleLookup,
+				render: (rowData: any) => {
+					return rowData?.role?.name || '----';
+				},
+			},
+			{
+				title: 'Status',
+				field: 'is_active',
+				lookup: USER_STATUS_LOOKUP,
+				render: (rowData: any) => (
+					<StatusBadge status={rowData.is_active ? 'Active' : 'Inactive'} />
+				),
+			},
+		],
+		[roleLookup],
+	);
 
 	const columns = useMemo(() => {
 		if (!canWrite) {
@@ -155,7 +217,37 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 				),
 			},
 		];
-	}, [canWrite, tableRef]);
+	}, [canWrite, handleEdit, staticColumns, tableRef]);
+
+	const tableOptions = useMemo(
+		() => ({
+			headerStyle: headerStyles(),
+			rowStyle: rowStyles(),
+			searchFieldStyle: searchFieldStyle(),
+			actionsColumnIndex: -1,
+			search: true,
+			filtering: filterEnabled,
+			sorting: false,
+			debounceInterval: 400,
+			pageSize,
+			pageSizeOptions: [5, 10, 25, 50],
+			emptyRowsWhenPaging: false,
+		}),
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- style helpers are stable enough for table options
+		[filterEnabled, pageSize],
+	);
+
+	const tableActions = useMemo(
+		() => [
+			{
+				icon: FilterListIcon,
+				tooltip: filterEnabled ? 'Hide filters' : 'Show filters',
+				isFreeAction: true,
+				onClick: () => setFilterEnabled((prev) => !prev),
+			},
+		],
+		[filterEnabled],
+	);
 
 	return (
 		<>
@@ -176,69 +268,9 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 							//@ts-ignore
 							columns={columns}
 							tableRef={tableRef}
-							// data={data}
-							data={(query) => {
-								return new Promise((resolve, reject) => {
-									// let statusTypes = '&status__in=Active,Disabled,Completed,Yet to start';
-									// if (activeTab !== "All") {
-									//     statusTypes = `&status__in=${activeTab}`
-									// }
-
-									let orderBy = '';
-									const otherFilters = formatFiltersWithOptions(query.filters);
-									if (query.orderBy) {
-										orderBy =
-											query.orderDirection === 'asc'
-												? `&ordering=-${String(query.orderBy?.field)}`
-												: `&ordering=${String(query.orderBy?.field)}`;
-									}
-
-									let url = `api/users/?limit=${query.pageSize}&offset=${query.pageSize * query.page}&search=${query.search}${orderBy}&${otherFilters}`;
-
-									// Check if date range and selected item are defined
-									// if (
-									// 	date &&
-									// 	date?.selection?.startDateFilter &&
-									// 	date?.selection?.endDateFilter &&
-									// 	selectedItem
-									// ) {
-									// 	url += `&start_date=${date.selection.startDateFilter}&end_date=${date.selection.endDateFilter}&filter_type=${selectedItem}`;
-									// }
-									urlBackup.current = url;
-									authAxios
-										.get(url)
-										.then((response) => {
-											resolve({
-												data: response.data?.results,
-												page: query.page,
-												totalCount: response.data?.count,
-											});
-										})
-										.catch((error) => {
-											showErrorNotification(error);
-											// eslint-disable-next-line prefer-promise-reject-errors
-											resolve({
-												data: [],
-												page: query.page,
-												totalCount: 0,
-											});
-										});
-								});
-							}}
-							options={{
-								headerStyle: headerStyles(),
-								rowStyle: rowStyles(),
-								searchFieldStyle: searchFieldStyle(),
-								actionsColumnIndex: -1,
-								search: true,
-								filtering: false,
-								sorting: false,
-								debounceInterval: 400,
-								pageSize,
-								pageSizeOptions: [5, 10, 25, 50],
-								emptyRowsWhenPaging: false,
-							}}
-
+							data={fetchData}
+							options={tableOptions}
+							actions={tableActions}
 							localization={{
 								pagination: {
 									labelRowsPerPage: '',

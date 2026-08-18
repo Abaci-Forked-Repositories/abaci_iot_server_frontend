@@ -44,6 +44,17 @@
 		color: var(--#{$prefix}dropdown-link-hover-color);
 	}
 
+	&.active {
+		background-color: tint-color($dropdown-item-active-bg-color, 72%);
+		color: shade-color($dropdown-item-active-bg-color, 10%);
+		font-weight: 600;
+
+		&:hover {
+			background-color: tint-color($dropdown-item-active-bg-color, 64%);
+			color: shade-color($dropdown-item-active-bg-color, 10%);
+		}
+	}
+
 	// Status
 	&#{&}-text {
 		white-space: normal;
