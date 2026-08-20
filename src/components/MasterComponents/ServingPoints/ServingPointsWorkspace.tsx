@@ -13,6 +13,10 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import usePermissions from '../../../hooks/usePermissions';
 import useDarkMode from '../../../hooks/useDarkMode';
 import swalFire from '../../../helpers/swalHelper';
+import ModernTableDateFilter from '../../CustomComponent/Filters/ModernTableDateFilter';
+import ModernTableSelectFilter from '../../CustomComponent/Filters/ModernTableSelectFilter';
+import ModernTableTextFilter from '../../CustomComponent/Filters/ModernTableTextFilter';
+import { asMaterialTableFilterProps } from '../../CustomComponent/Filters/materialTableFilterTypes';
 import ServingPointModal from '../../PageComponents/ServingPoints/ServingPointModal';
 import ServingPointStatusModal from '../../PageComponents/ServingPoints/ServingPointStatusModal';
 import {
@@ -161,6 +165,12 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Name',
 				field: 'name',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter name'
+					/>
+				),
 				render: (rowData: ServingPoint) => rowData.name || '—',
 			},
 			{
@@ -234,6 +244,13 @@ const ServingPointsWorkspace: React.FC = () => {
 				title: 'Status',
 				field: 'status',
 				lookup: SERVING_POINT_STATUS_LOOKUP,
+				filterComponent: (props: unknown) => (
+					<ModernTableSelectFilter
+						{...asMaterialTableFilterProps(props)}
+						lookup={SERVING_POINT_STATUS_LOOKUP}
+						placeholder='All statuses'
+					/>
+				),
 				render: (rowData: ServingPoint) => (
 					<StatusBadge status={rowData.status} isAvailable={rowData.is_available} />
 				),
@@ -242,6 +259,13 @@ const ServingPointsWorkspace: React.FC = () => {
 				title: 'Listing',
 				field: 'is_active',
 				lookup: SERVING_POINT_LISTING_LOOKUP,
+				filterComponent: (props: unknown) => (
+					<ModernTableSelectFilter
+						{...asMaterialTableFilterProps(props)}
+						lookup={SERVING_POINT_LISTING_LOOKUP}
+						placeholder='All listings'
+					/>
+				),
 				render: (rowData: ServingPoint) => {
 					const listedOn = rowData.is_active ?? rowData.is_available ?? false;
 					return <StatusBadge status={listedOn ? 'active' : 'inactive'} />;
@@ -250,7 +274,9 @@ const ServingPointsWorkspace: React.FC = () => {
 			{
 				title: 'Created at',
 				field: 'created_at',
-				type: 'date' as const,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
 				render: (rowData: ServingPoint) => formatDate(rowData.created_at),
 			},
 		];

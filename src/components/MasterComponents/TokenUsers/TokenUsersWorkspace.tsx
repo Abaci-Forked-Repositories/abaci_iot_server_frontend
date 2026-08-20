@@ -9,6 +9,9 @@ import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import { type QueryParams, type TokenUser, tokensApi } from '../../../services/queueManagementApi';
 import { formatDate } from '../QueueManagement/queueManagementUtils';
+import ModernTableDateFilter from '../../CustomComponent/Filters/ModernTableDateFilter';
+import ModernTableTextFilter from '../../CustomComponent/Filters/ModernTableTextFilter';
+import { asMaterialTableFilterProps } from '../../CustomComponent/Filters/materialTableFilterTypes';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
@@ -117,22 +120,42 @@ const TokenUsersWorkspace: React.FC = () => {
 			{
 				title: 'Name',
 				field: 'name',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter name'
+					/>
+				),
 				render: (rowData: TokenUser) => rowData.name || '—',
 			},
 			{
 				title: 'Email',
 				field: 'email',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter email'
+					/>
+				),
 				render: (rowData: TokenUser) => rowData.email || '—',
 			},
 			{
 				title: 'Phone',
 				field: 'phone',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter phone'
+					/>
+				),
 				render: (rowData: TokenUser) => rowData.phone || '—',
 			},
 			{
 				title: 'Created at',
 				field: 'created_at',
-				type: 'date' as const,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
 				render: (rowData: TokenUser) => formatDate(rowData.created_at),
 			},
 		],

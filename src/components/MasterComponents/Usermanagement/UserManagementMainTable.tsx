@@ -13,6 +13,9 @@ import { buttonColor } from '../../../helpers/constants';
 import swalFire from '../../../helpers/swalHelper';
 import StatusBadge from '../../BadgeWithIcon';
 import Button from '../../bootstrap/Button';
+import ModernTableTextFilter from '../../CustomComponent/Filters/ModernTableTextFilter';
+import ModernTableSelectFilter from '../../CustomComponent/Filters/ModernTableSelectFilter';
+import { asMaterialTableFilterProps } from '../../CustomComponent/Filters/materialTableFilterTypes';
 
 const USER_STATUS_LOOKUP: Record<string, string> = {
 	true: 'Active',
@@ -141,6 +144,12 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 			{
 				title: 'Full Name',
 				field: 'full_name',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter name'
+					/>
+				),
 				render: (rowData: any) => {
 					return `${rowData?.first_name} ${rowData?.last_name}` || '----';
 				},
@@ -148,6 +157,12 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 			{
 				title: 'Email',
 				field: 'email',
+				filterComponent: (props: unknown) => (
+					<ModernTableTextFilter
+						{...asMaterialTableFilterProps(props)}
+						placeholder='Filter email'
+					/>
+				),
 				render: (rowData: any) => {
 					const Email = rowData?.email;
 					if (!Email) return '----';
@@ -164,6 +179,13 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 				title: 'Role',
 				field: 'role',
 				lookup: roleLookup,
+				filterComponent: (props: unknown) => (
+					<ModernTableSelectFilter
+						{...asMaterialTableFilterProps(props)}
+						lookup={roleLookup}
+						placeholder='All roles'
+					/>
+				),
 				render: (rowData: any) => {
 					return rowData?.role?.name || '----';
 				},
@@ -172,6 +194,13 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 				title: 'Status',
 				field: 'is_active',
 				lookup: USER_STATUS_LOOKUP,
+				filterComponent: (props: unknown) => (
+					<ModernTableSelectFilter
+						{...asMaterialTableFilterProps(props)}
+						lookup={USER_STATUS_LOOKUP}
+						placeholder='All statuses'
+					/>
+				),
 				render: (rowData: any) => (
 					<StatusBadge status={rowData.is_active ? 'Active' : 'Inactive'} />
 				),
