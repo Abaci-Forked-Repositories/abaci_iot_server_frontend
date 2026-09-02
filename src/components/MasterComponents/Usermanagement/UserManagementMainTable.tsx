@@ -5,7 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import useTablestyle from '../../../hooks/useTablestyles';
 import DeleteButton from '../../CustomComponent/Buttons/DeleteButton';
-import EditUser from './EditUserOffCanvas';
+import UserFormModal from './UserFormModal';
 import { authAxios } from '../../../axiosInstance';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import usePermissions from '../../../hooks/usePermissions';
@@ -280,13 +280,13 @@ const UserManagementTableComponent: FC<UserManagementTableComponentProps> = ({
 
 	return (
 		<>
-			{editModalShow && (
-				<EditUser
+			{editModalShow && itemToBeEdited?.id != null && (
+				<UserFormModal
 					isOpen={editModalShow}
 					setIsOpen={setEditModalShow}
 					tableRef={tableRef}
-					title='Edit User'
-					id={itemToBeEdited?.id}
+					mode='edit'
+					userId={itemToBeEdited.id}
 				/>
 			)}
 			<div className='material_tabel_wrapper'>

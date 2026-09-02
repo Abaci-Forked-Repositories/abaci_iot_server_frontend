@@ -136,6 +136,9 @@
 }
 
 // Queue cards (modern card style with clean dark-mode support)
+$queue-card-hover-lift: 6px;
+$queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
+
 .queue-cards-scroll {
 	overflow-x: hidden;
 	overflow-y: auto;
@@ -154,6 +157,12 @@
 	&::-webkit-scrollbar-thumb {
 		background: rgba($primary, 0.35);
 		border-radius: 9999px;
+	}
+
+	// Room for hover lift on queue / group card grids
+	> .row {
+		padding-top: $queue-card-hover-lift-room;
+		padding-bottom: 0.75rem;
 	}
 }
 
@@ -197,83 +206,157 @@
 
 .queue-modern-card {
 	position: relative;
-	z-index: 0;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
 	height: 100%;
-	padding: 0.95rem;
-	border-radius: 0.8rem;
-	border: 1px solid rgba(#cbd5e1, 0.72);
-	background: linear-gradient(
-		155deg,
-		color-mix(in srgb, #f8fafc 55%, #eef2f7) 0%,
-		color-mix(in srgb, #f1f5f9 55%, #e6edf5) 100%
-	);
+	overflow: hidden;
+	border-radius: 0.9rem;
+	border: 1px solid rgba(#cbd5e1, 0.55);
+	background: #ffffff;
 	box-shadow:
-		7px 7px 14px rgba(#94a3b8, 0.18),
-		-7px -7px 14px rgba(#ffffff, 0.82),
-		inset 0 1px 0 rgba(#ffffff, 0.72);
-	transition: box-shadow 0.2s ease, border-color 0.2s ease;
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 4px 14px rgba(#0f172a, 0.05);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease,
+		border-color 0.2s ease;
 	cursor: pointer;
 
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		z-index: 3;
+		pointer-events: none;
+		border-radius: 0.9rem 0.9rem 0 0;
+		background: linear-gradient(90deg, $primary 0%, rgba($primary, 0.45) 100%);
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
+
 	@include dark-mode {
-		border-color: rgba(#ffffff, 0.08);
-		background: linear-gradient(
-			155deg,
-			rgba(#1c2333, 0.95) 0%,
-			rgba(#172033, 0.96) 100%
-		);
+		border-color: rgba(#ffffff, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
 		box-shadow:
-			9px 9px 18px rgba(#000000, 0.45),
-			-7px -7px 14px rgba(#2c3a52, 0.5),
-			inset 0 1px 0 rgba(#ffffff, 0.06);
+			0 2px 8px rgba(#000000, 0.32),
+			0 8px 22px rgba(#000000, 0.18);
 	}
 
 	&:hover {
-		z-index: 2;
-		border-color: rgba($primary, 0.45);
+		transform: translateY(-#{$queue-card-hover-lift});
+		z-index: 4;
+		border-color: rgba($primary, 0.35);
 		box-shadow:
-			10px 10px 18px rgba(#64748b, 0.2),
-			-8px -8px 16px rgba(#ffffff, 0.85),
-			inset 0 1px 0 rgba(#ffffff, 0.8);
+			0 4px 14px rgba($primary, 0.12),
+			0 16px 36px rgba(#0f172a, 0.12);
+
+		&::before {
+			opacity: 1;
+		}
+
+		.queue-modern-card__icon-box {
+			transform: scale(1.04);
+			box-shadow: 0 6px 16px rgba($primary, 0.18);
+		}
 
 		@include dark-mode {
-			border-color: rgba($primary-soft, 0.5);
+			border-color: rgba($primary-soft, 0.45);
 			box-shadow:
-				12px 12px 22px rgba(#000000, 0.52),
-				-9px -9px 16px rgba(#31405a, 0.58),
-				inset 0 1px 0 rgba(#ffffff, 0.1);
+				0 6px 18px rgba(#000000, 0.42),
+				0 0 0 1px rgba($primary-soft, 0.12);
 		}
 	}
 }
 
 .queue-modern-card--selected {
-	border-color: rgba($primary, 0.65);
+	border-color: rgba($primary, 0.5);
+	z-index: 3;
 	box-shadow:
-		0 0 0 2px rgba($primary, 0.14),
-		10px 10px 18px rgba(#64748b, 0.16),
-		-8px -8px 16px rgba(#ffffff, 0.82);
+		0 0 0 2px rgba($primary, 0.12),
+		0 8px 22px rgba($primary, 0.1);
+
+	&::before {
+		opacity: 1;
+	}
+
+	&:hover {
+		transform: translateY(-#{$queue-card-hover-lift});
+		z-index: 4;
+	}
 
 	@include dark-mode {
-		border-color: rgba($primary-soft, 0.7);
+		border-color: rgba($primary-soft, 0.6);
 		box-shadow:
-			0 0 0 2px rgba($primary-soft, 0.2),
-			12px 12px 22px rgba(#000000, 0.52),
-			-9px -9px 16px rgba(#31405a, 0.58);
+			0 0 0 2px rgba($primary-soft, 0.18),
+			0 10px 28px rgba(#000000, 0.38);
 	}
 }
 
-.queue-modern-card__title {
+.queue-modern-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+	padding: 1rem 1rem 0.85rem;
+	min-width: 0;
+	flex: 1;
+	min-height: 118px;
+}
+
+.queue-modern-card__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+.queue-modern-card__identity {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
 	flex: 1;
 	min-width: 0;
-	font-size: 1.35rem;
+}
+
+.queue-modern-card__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	flex-shrink: 0;
+}
+
+.queue-modern-card__copy {
+	flex: 1;
+	min-width: 0;
+}
+
+.queue-modern-card__title {
+	font-size: 1rem;
 	font-weight: 700;
-	line-height: 1.3;
+	line-height: 1.35;
 	overflow-wrap: anywhere;
 	word-break: break-word;
 	color: #0f172a;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 
 	@include dark-mode {
 		color: #f1f5f9;
 	}
+}
+
+.queue-modern-card__toolbar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.35rem;
+	flex-shrink: 0;
 }
 
 .queue-modern-card__header {
@@ -294,10 +377,14 @@
 }
 
 .queue-modern-card__desc {
-	font-size: 0.82rem;
-	margin-top: 0.55rem;
+	font-size: 0.8rem;
+	margin: 0.35rem 0 0;
 	color: #64748b;
-	line-height: 1.35;
+	line-height: 1.45;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 
 	@include dark-mode {
 		color: #94a3b8;
@@ -305,24 +392,27 @@
 }
 
 .queue-modern-card__icon-box {
-	width: 42px;
-	height: 42px;
-	border-radius: 0.65rem;
+	width: 40px;
+	height: 40px;
+	border-radius: 0.7rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba($primary, 0.1);
-	border: 1px solid rgba($primary, 0.2);
+	background: linear-gradient(145deg, rgba($primary, 0.14) 0%, rgba($primary, 0.06) 100%);
+	border: 1px solid rgba($primary, 0.16);
 	flex-shrink: 0;
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease;
 
 	@include dark-mode {
-		background: rgba($primary-soft, 0.16);
-		border-color: rgba($primary-soft, 0.22);
+		background: linear-gradient(145deg, rgba($primary-soft, 0.22) 0%, rgba($primary-soft, 0.08) 100%);
+		border-color: rgba($primary-soft, 0.24);
 	}
 }
 
 .queue-modern-card__icon {
-	font-size: 1.1rem !important;
+	font-size: 1.15rem !important;
 	color: $primary !important;
 
 	@include dark-mode {
@@ -334,73 +424,130 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.22rem 0.62rem;
-	border-radius: 0.62rem;
-	font-size: 0.72rem;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	font-size: 0.68rem;
 	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
 	border: 1px solid transparent;
+	white-space: nowrap;
 }
 
 .queue-modern-card__status--active {
-	background: rgba(#10b981, 0.12);
-	color: #0f9f6d;
-	border-color: rgba(#10b981, 0.28);
+	background: rgba(#10b981, 0.1);
+	color: #059669;
+	border-color: rgba(#10b981, 0.22);
+
+	.queue-modern-card__status-dot {
+		box-shadow: 0 0 0 2px rgba(#10b981, 0.2);
+		animation: queue-status-pulse 2s ease-in-out infinite;
+	}
 }
 
 .queue-modern-card__status--inactive {
-	background: rgba(#94a3b8, 0.14);
+	background: rgba(#94a3b8, 0.12);
 	color: #64748b;
-	border-color: rgba(#94a3b8, 0.28);
+	border-color: rgba(#94a3b8, 0.22);
 
 	@include dark-mode {
-		background: rgba(#94a3b8, 0.2);
+		background: rgba(#94a3b8, 0.18);
 		color: #cbd5e1;
 	}
 }
 
+@keyframes queue-status-pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.65;
+		transform: scale(0.92);
+	}
+}
+
 .queue-modern-card__status-dot {
-	width: 7px;
-	height: 7px;
+	width: 6px;
+	height: 6px;
 	border-radius: 50%;
 	background: currentColor;
-	opacity: 0.95;
+	flex-shrink: 0;
 }
 
 .queue-modern-card__menu-btn {
-	width: 30px;
-	height: 30px;
-	border-radius: 0.62rem;
+	width: 32px;
+	height: 32px;
+	border-radius: 0.55rem !important;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: 0;
-	cursor: pointer;
-	transition: all 0.16s ease;
+	padding: 0 !important;
+	border: 1px solid transparent !important;
+	background: transparent !important;
+	color: #64748b !important;
+	box-shadow: none !important;
+	transition:
+		background 0.18s ease,
+		border-color 0.18s ease,
+		color 0.18s ease,
+		transform 0.18s ease;
 
 	@include dark-mode {
-		color: $light;
+		color: #94a3b8 !important;
 	}
 
-	
 	&:hover {
-		border-color: rgba($primary, 0.35);
-		background: rgba($primary, 0.12);
-		color: $primary;
+		border-color: rgba($primary, 0.2) !important;
+		background: rgba($primary, 0.08) !important;
+		color: $primary !important;
+		transform: scale(1.05);
 
 		@include dark-mode {
-			border-color: rgba($primary-soft, 0.35);
-			background: rgba($primary-soft, 0.22);
-			color: #ffffff;
+			border-color: rgba($primary-soft, 0.28) !important;
+			background: rgba($primary-soft, 0.14) !important;
+			color: #ffffff !important;
 		}
 	}
 }
 
 .queue-modern-card__divider {
-	margin: 0.8rem 0;
-	border-color: rgba(#cbd5e1, 0.75);
+	display: none;
+}
+
+.queue-modern-card__footer {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.65rem;
+	padding: 0.75rem 1rem 0.95rem;
+	margin-top: auto;
+	border-top: 1px solid rgba(#cbd5e1, 0.4);
+	background: rgba(#f8fafc, 0.55);
 
 	@include dark-mode {
-		border-color: rgba(#ffffff, 0.12);
+		border-top-color: rgba(#ffffff, 0.08);
+		background: rgba(#ffffff, 0.02);
+	}
+}
+
+.queue-modern-card__meta-item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	transition: none;
+
+	@include dark-mode {
+		background: transparent;
+		border: none;
+	}
+
+	.queue-modern-card:hover & {
+		border-color: transparent;
 	}
 }
 
@@ -422,8 +569,9 @@
 }
 
 .queue-modern-card__meta-icon {
-	font-size: 0.92rem !important;
-	color: rgba($primary, 0.9);
+	font-size: 0.85rem !important;
+	color: rgba($primary, 0.85);
+	flex-shrink: 0;
 
 	@include dark-mode {
 		color: rgba($primary-soft, 0.95);
@@ -431,29 +579,47 @@
 }
 
 .queue-modern-card__meta-label {
-	font-size: 0.68rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.62rem;
 	font-weight: 700;
-	letter-spacing: 0.02em;
-	color: rgba(#334155, 0.9);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #64748b;
 
 	@include dark-mode {
-		color: #cbd5e1;
+		color: #94a3b8;
 	}
 }
 
 .queue-modern-card__meta-value {
-	font-size: 0.82rem;
+	font-size: 0.84rem;
 	font-weight: 700;
-	color: $primary;
+	color: #0f172a;
 	min-width: 0;
 	overflow-wrap: anywhere;
+	word-break: break-word;
 
 	@include dark-mode {
-		color: #ffffff;
+		color: #f1f5f9;
 	}
 }
 
+.queue-modern-card__footer--single {
+	grid-template-columns: 1fr;
+}
+
 @media (max-width: 575.98px) {
+	.queue-modern-card__head {
+		flex-wrap: wrap;
+	}
+
+	.queue-modern-card__actions {
+		width: 100%;
+		justify-content: space-between;
+	}
+
 	.queue-modern-card__header {
 		flex-wrap: wrap;
 	}
@@ -467,217 +633,133 @@
 	}
 }
 
-// ── Schedule list tiles (distinct from queue cards; status-tinted surface) ──
-.schedule-tile {
-	position: relative;
-	height: 100%;
-	padding: 1rem 1rem 1rem 1.1rem;
-	border-radius: 1rem;
-	overflow: hidden;
-	border: 1px solid var(--schedule-tile-border, rgba(#94a3b8, 0.35));
-	background: var(
-		--schedule-tile-bg,
-		color-mix(in srgb, #ffffff 94%, #64748b 6%)
-	);
-	box-shadow:
-		0 1px 0 rgba(#ffffff, 0.55) inset,
-		0 8px 24px rgba(#0f172a, 0.055);
-	cursor: pointer;
-	transition: border-color 0.18s ease, box-shadow 0.18s ease;
-	text-align: left;
+// ── Schedule cards (queue-modern-card layout + status accent on hover) ──
+@mixin schedule-modern-accent($accent) {
+	--schedule-accent: #{$accent};
+}
 
-	@include dark-mode {
-		box-shadow:
-			0 1px 0 rgba(#ffffff, 0.04) inset,
-			0 10px 28px rgba(#000000, 0.32);
+.schedule-modern-card {
+	// Disable pseudo accent — schedule hover uses inset shadow (avoids scroll/overflow clip glitches).
+	&.queue-modern-card::before {
+		display: none;
 	}
 
-	&::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 0.65rem;
-		bottom: 0.65rem;
-		width: 4px;
-		border-radius: 999px;
-		background: var(--schedule-tile-accent, rgba($primary, 0.85));
-	}
-
-	&:hover {
-		border-color: var(--schedule-tile-accent, rgba($primary, 0.45));
+	&.queue-modern-card:hover {
+		transform: translateY(-#{$queue-card-hover-lift});
+		z-index: 4;
+		border-color: color-mix(in srgb, var(--schedule-accent, $primary) 35%, #cbd5e1 65%);
 		box-shadow:
-			0 1px 0 rgba(#ffffff, 0.55) inset,
-			0 12px 32px rgba(#0f172a, 0.095);
+			inset 0 3px 0 0 var(--schedule-accent, $primary),
+			0 4px 14px color-mix(in srgb, var(--schedule-accent, $primary) 12%, transparent),
+			0 16px 36px rgba(#0f172a, 0.12);
+
+		.queue-modern-card__icon-box {
+			transform: scale(1.04);
+			box-shadow: 0 6px 16px color-mix(in srgb, var(--schedule-accent, $primary) 18%, transparent);
+		}
 
 		@include dark-mode {
+			border-color: color-mix(in srgb, var(--schedule-accent, $primary-soft) 45%, transparent);
 			box-shadow:
-				0 1px 0 rgba(#ffffff, 0.04) inset,
-				0 14px 36px rgba(#000000, 0.42);
+				inset 0 3px 0 0 var(--schedule-accent, $primary-soft),
+				0 6px 18px rgba(#000000, 0.42),
+				0 0 0 1px color-mix(in srgb, var(--schedule-accent, $primary-soft) 12%, transparent);
 		}
 	}
-
-	&:focus-visible {
-		outline: 2px solid var(--schedule-tile-accent, $primary);
-		outline-offset: 2px;
-	}
 }
 
-@mixin schedule-tile-palette($accent, $mix-light: 10%, $mix-dark: 14%) {
-	--schedule-tile-accent: #{$accent};
-	--schedule-tile-border: color-mix(in srgb, #{$accent} 32%, #cbd5e1 68%);
-	--schedule-tile-bg: color-mix(in srgb, #ffffff calc(100% - #{$mix-light}), #{$accent} #{$mix-light});
-
-	@include dark-mode {
-		--schedule-tile-border: color-mix(in srgb, #{$accent} 42%, #0f172a 58%);
-		--schedule-tile-bg: color-mix(in srgb, #111827 calc(100% - #{$mix-dark}), #{$accent} #{$mix-dark});
-	}
+.schedule-modern-card--scheduled {
+	@include schedule-modern-accent(#2563eb);
 }
 
-.schedule-tile--scheduled {
-	@include schedule-tile-palette(#2563eb, 9%, 12%);
+.schedule-modern-card--running {
+	@include schedule-modern-accent(#059669);
 }
 
-.schedule-tile--running {
-	@include schedule-tile-palette(#059669, 9%, 12%);
+.schedule-modern-card--on_hold {
+	@include schedule-modern-accent(#d97706);
 }
 
-.schedule-tile--on_hold {
-	@include schedule-tile-palette(#d97706, 10%, 13%);
+.schedule-modern-card--completed {
+	@include schedule-modern-accent(#6366f1);
 }
 
-.schedule-tile--completed {
-	@include schedule-tile-palette(#6366f1, 9%, 12%);
+.schedule-modern-card--cancelled {
+	@include schedule-modern-accent(#dc2626);
 }
 
-.schedule-tile--cancelled {
-	@include schedule-tile-palette(#dc2626, 9%, 12%);
+.schedule-modern-card--default {
+	@include schedule-modern-accent(#64748b);
 }
 
-.schedule-tile--default {
-	@include schedule-tile-palette(#64748b, 8%, 11%);
+.schedule-modern-card__body {
+	min-height: 0;
+	gap: 0.5rem;
 }
 
-.schedule-tile__eyebrow {
-	font-size: 0.68rem;
-	font-weight: 700;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: rgba(#475569, 0.95);
-
-	@include dark-mode {
-		color: rgba(#cbd5e1, 0.9);
-	}
-}
-
-.schedule-tile__queue {
-	font-size: 1.2rem;
-	font-weight: 800;
-	line-height: 1.2;
-	color: #0f172a;
+.schedule-modern-card__window {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.55rem;
 	margin-top: 0.15rem;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	padding: 0.6rem 0.7rem;
+	border-radius: 0.65rem;
+	background: rgba(#f8fafc, 0.9);
+	border: 1px solid rgba(#cbd5e1, 0.55);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease,
+		border-color 0.2s ease;
+
+	.schedule-modern-card:hover & {
+		transform: scale(1.012);
+		border-color: color-mix(in srgb, var(--schedule-accent, $primary) 22%, #cbd5e1 78%);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--schedule-accent, $primary) 8%, transparent);
+	}
 
 	@include dark-mode {
-		color: #f8fafc;
+		background: rgba(#ffffff, 0.04);
+		border-color: rgba(#ffffff, 0.1);
 	}
 }
 
-.schedule-tile__desc {
-	font-size: 0.8rem;
+.schedule-modern-card__window-icon {
+	flex-shrink: 0;
+	margin-top: 0.12rem;
+	color: var(--schedule-accent, $primary) !important;
+	transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+
+	.schedule-modern-card:hover & {
+		transform: scale(1.06);
+	}
+
+	@include dark-mode {
+		color: var(--schedule-accent, $primary-soft) !important;
+	}
+}
+
+.schedule-modern-card__window-label {
+	font-size: 0.62rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
 	color: #64748b;
-	margin-top: 0.25rem;
-	line-height: 1.35;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	margin-bottom: 0.18rem;
 
 	@include dark-mode {
 		color: #94a3b8;
 	}
 }
 
-.schedule-tile__range {
-	display: flex;
-	align-items: flex-start;
-	gap: 0.55rem;
-	margin-top: 0.85rem;
-	padding: 0.55rem 0.65rem;
-	border-radius: 0.75rem;
-	background: color-mix(in srgb, var(--schedule-tile-accent, $primary) 7%, #ffffff 93%);
-	border: 1px solid color-mix(in srgb, var(--schedule-tile-accent, $primary) 18%, #e2e8f0 82%);
+.schedule-modern-card__window-value {
 	font-size: 0.8rem;
 	font-weight: 600;
+	line-height: 1.45;
 	color: #0f172a;
 
 	@include dark-mode {
-		background: color-mix(in srgb, var(--schedule-tile-accent, $primary-soft) 14%, #0f172a 86%);
-		border-color: color-mix(in srgb, var(--schedule-tile-accent, $primary-soft) 28%, #1e293b 72%);
 		color: #e2e8f0;
 	}
-}
-
-.schedule-tile__range-icon {
-	flex-shrink: 0;
-	margin-top: 0.1rem;
-	color: var(--schedule-tile-accent, $primary) !important;
-
-	@include dark-mode {
-		color: var(--schedule-tile-accent, $primary-soft) !important;
-	}
-}
-
-.schedule-tile__range-label {
-	font-size: 0.65rem;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	color: rgba(#64748b, 0.95);
-	margin-bottom: 0.2rem;
-
-	@include dark-mode {
-		color: rgba(#94a3b8, 0.95);
-	}
-}
-
-.schedule-tile__footer {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.45rem;
-	margin-top: 0.85rem;
-}
-
-.schedule-tile__chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.28rem;
-	padding: 0.22rem 0.55rem;
-	border-radius: 999px;
-	font-size: 0.72rem;
-	font-weight: 700;
-	background: rgba(#ffffff, 0.72);
-	border: 1px solid rgba(#cbd5e1, 0.85);
-	color: #334155;
-
-	@include dark-mode {
-		background: rgba(#0f172a, 0.55);
-		border-color: rgba(#ffffff, 0.12);
-		color: #e2e8f0;
-	}
-}
-
-.schedule-tile__chip-value {
-	color: var(--schedule-tile-accent, $primary);
-}
-
-.schedule-tile__head {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	gap: 0.4rem 0.6rem;
-	flex-wrap: wrap;
-	min-width: 0;
 }
 
 // ── Sticky top-bar — stays visible while grid scrolls ──

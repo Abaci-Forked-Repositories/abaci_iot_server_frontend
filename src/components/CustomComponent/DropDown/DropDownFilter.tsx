@@ -37,7 +37,9 @@ function DropDownFilter({
                 color={color}
 
             >
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <div
+                    className='d-flex flex-column gap-2'
+                    style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {options.map((option, index) => {
                         const isSelected = getOptionKey(option, labelField) === selectedKey;
                         return (

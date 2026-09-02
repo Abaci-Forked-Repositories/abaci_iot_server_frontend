@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
+import Icon from '../../icon/Icon';
 import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
+import ModernMultiSelect from '../../CustomComponent/Select/ModernMultiSelect';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	type CreateServingPointPayload,
@@ -59,6 +61,8 @@ export interface ServingPointModalProps {
 	defaultQueueId?: number | null;
 	onSuccess?: (point: ServingPoint, mode: 'add' | 'edit') => void;
 }
+
+const fieldLabelClass = 'form-label text-muted small text-uppercase fw-semibold mb-2';
 
 const ServingPointModal: React.FC<ServingPointModalProps> = ({
 	isOpen,
@@ -191,11 +195,29 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 		}
 	};
 
+	const formDisabled = isSubmitting || optionsLoading;
+
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered size='lg' isAnimation={false}>
 			<ModalHeader setIsOpen={setIsOpen}>
 				<ModalTitle id='serving-point-modal-title'>
-					{isEdit ? 'Edit Serving Point' : 'Add Serving Point'}
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon={isEdit ? 'Edit' : 'Add'} color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>
+								{isEdit ? 'Edit Serving Point' : 'Add Serving Point'}
+							</div>
+							<div className='text-muted small fw-normal mt-1'>
+								{isEdit
+									? 'Update name, queues, users, and listing for this counter'
+									: 'Set up a new counter and link it to your queues'}
+							</div>
+						</div>
+					</div>
 				</ModalTitle>
 			</ModalHeader>
 			<form
@@ -203,100 +225,159 @@ const ServingPointModal: React.FC<ServingPointModalProps> = ({
 					event.preventDefault();
 					void handleSubmit();
 				}}>
-				<ModalBody>
+				<ModalBody className='pt-2 pb-4'>
 					{optionsLoading && queues.length === 0 ? (
-						<div className='text-muted small py-2'>Loading form options…</div>
-					) : null}
-					<div className='row g-3'>
-						<div className='col-12'>
-							<label className='form-label fw-semibold' htmlFor='sp-name'>
-								Name *
-							</label>
-							<input
-								id='sp-name'
-								className={`form-control${nameError ? ' is-invalid' : ''}`}
-								value={form.name}
-								onChange={(e) => {
-									setForm((prev) => ({ ...prev, name: e.target.value }));
-									if (nameError) setNameError('');
-								}}
-								placeholder='Enter serving point name'
-								disabled={isSubmitting}
-								aria-invalid={Boolean(nameError)}
-								aria-describedby={nameError ? 'sp-name-error' : undefined}
-							/>
-							{nameError ? (
-								<div id='sp-name-error' className='invalid-feedback d-block'>
-									{nameError}
+						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
+							<Spinner color='primary' />
+							<span>Loading form options…</span>
+						</div>
+					) : (
+						<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3 p-md-4'>
+							<div className='row g-4'>
+								<div className='col-12'>
+									<label className={fieldLabelClass} htmlFor='sp-name'>
+										Name *
+									</label>
+									<input
+										id='sp-name'
+										className={`form-control form-control-lg rounded-3${nameError ? ' is-invalid' : ''}`}
+										value={form.name}
+										onChange={(e) => {
+											setForm((prev) => ({ ...prev, name: e.target.value }));
+											if (nameError) setNameError('');
+										}}
+										placeholder='Enter serving point name'
+										disabled={formDisabled}
+										aria-invalid={Boolean(nameError)}
+										aria-describedby={nameError ? 'sp-name-error' : undefined}
+									/>
+									{nameError ? (
+										<div id='sp-name-error' className='invalid-feedback d-block'>
+											{nameError}
+										</div>
+									) : null}
 								</div>
-							) : null}
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold'>Queues</label>
-							<ReactSelectWithState
-								options={queueOptions}
-								value={selectedQueueOptions}
-								setValue={(selected: Array<{ value: number; label: string }> | null) =>
-									setForm((prev) => ({
-										...prev,
-										queue_ids: (selected || []).map((option) => option.value),
-									}))
-								}
-								isMulti
-								placeholder='Select one or more queues'
-							/>
-						</div>
-						<div className='col-md-6 d-flex align-items-end'>
-							<div className='form-check form-switch mb-2'>
-								<input
-									className='form-check-input'
-									type='checkbox'
-									id='sp-active'
-									checked={form.is_active}
-									disabled={isSubmitting}
-									onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-								/>
-								<label className='form-check-label fw-semibold' htmlFor='sp-active'>
-									Active
-								</label>
+
+								<div className='col-12'>
+									<label className={fieldLabelClass}>Queues</label>
+									<ModernMultiSelect
+										options={queueOptions}
+										value={selectedQueueOptions}
+										onChange={(selected) =>
+											setForm((prev) => ({
+												...prev,
+												queue_ids: selected.map((option) => option.value as number),
+											}))
+										}
+										placeholder='Select one or more queues'
+										isDisabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-12'>
+									<label className={fieldLabelClass} htmlFor='sp-active'>
+										Active
+									</label>
+									<div
+										className={[
+											'd-flex align-items-center justify-content-between gap-3 p-3 rounded-3 border transition-all',
+											form.is_active
+												? 'border-success bg-success bg-opacity-10'
+												: 'border-secondary border-opacity-25 bg-body',
+										].join(' ')}>
+										<div className='d-flex align-items-center gap-3 min-w-0'>
+											<span
+												className={[
+													'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+													form.is_active
+														? 'bg-success bg-opacity-15'
+														: 'bg-body-secondary',
+												].join(' ')}
+												style={{ width: 36, height: 36 }}>
+												<Icon
+													icon={form.is_active ? 'CheckCircle' : 'Block'}
+													color={form.is_active ? 'success' : 'secondary'}
+													size='sm'
+												/>
+											</span>
+											<div className='min-w-0'>
+												<div
+													className={`fw-semibold small ${form.is_active ? 'text-success' : 'text-body'}`}>
+													{form.is_active ? 'Listed as active' : 'Listed as inactive'}
+												</div>
+												<div className='text-muted small'>
+													{form.is_active
+														? 'This counter is available in selection lists'
+														: 'This counter is hidden from selection lists'}
+												</div>
+											</div>
+										</div>
+										<div className='form-check form-switch m-0 flex-shrink-0'>
+											<input
+												className='form-check-input'
+												type='checkbox'
+												role='switch'
+												id='sp-active'
+												checked={form.is_active}
+												disabled={formDisabled}
+												onChange={(e) =>
+													setForm((prev) => ({ ...prev, is_active: e.target.checked }))
+												}
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div className='col-12'>
+									<label className={fieldLabelClass}>Assigned Users</label>
+									<ReactSelectWithState
+										options={userOptions}
+										value={selectedUserOptions}
+										setValue={(selected: Array<{ value: number; label: string }> | null) =>
+											setForm((prev) => ({
+												...prev,
+												assigned_users: (selected || []).map((option) => option.value),
+											}))
+										}
+										isMulti
+										placeholder='Select users'
+									/>
+								</div>
+
+								<div className='col-12'>
+									<label className={fieldLabelClass} htmlFor='sp-description'>
+										Description
+									</label>
+									<textarea
+										id='sp-description'
+										className='form-control rounded-3'
+										rows={3}
+										value={form.description}
+										disabled={formDisabled}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, description: e.target.value }))
+										}
+										placeholder='Short description'
+									/>
+								</div>
 							</div>
 						</div>
-						<div className='col-12'>
-							<label className='form-label fw-semibold'>Assigned Users</label>
-							<ReactSelectWithState
-								options={userOptions}
-								value={selectedUserOptions}
-								setValue={(selected: Array<{ value: number; label: string }> | null) =>
-									setForm((prev) => ({
-										...prev,
-										assigned_users: (selected || []).map((option) => option.value),
-									}))
-								}
-								isMulti
-								placeholder='Select users'
-							/>
-						</div>
-						<div className='col-12'>
-							<label className='form-label fw-semibold' htmlFor='sp-description'>
-								Description
-							</label>
-							<textarea
-								id='sp-description'
-								className='form-control'
-								rows={3}
-								value={form.description}
-								disabled={isSubmitting}
-								onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-								placeholder='Short description'
-							/>
-						</div>
-					</div>
+					)}
 				</ModalBody>
-				<ModalFooter>
-					<Button color='secondary' isLight type='button' isDisable={isSubmitting} onClick={handleClose}>
+				<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+					<Button
+						color='secondary'
+						isLight
+						type='button'
+						isDisable={isSubmitting}
+						onClick={handleClose}>
 						Cancel
 					</Button>
-					<Button color='primary' type='submit' isDisable={isSubmitting || optionsLoading}>
+					<Button
+						color='primary'
+						type='submit'
+						icon={isEdit ? 'Save' : 'Add'}
+						isDisable={isSubmitting || optionsLoading}>
 						{isSubmitting ? (
 							<>
 								<Spinner isSmall inButton />

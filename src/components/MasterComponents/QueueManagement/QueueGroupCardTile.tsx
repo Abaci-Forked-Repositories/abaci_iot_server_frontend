@@ -33,25 +33,27 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 		className={`queue-modern-card ${selected ? 'queue-modern-card--selected' : ''}`}
 		onClick={() => onSelect(group)}
 		role='button'>
-		<div className='queue-modern-card__header'>
-			<div className='queue-modern-card__header-main d-flex align-items-start gap-3'>
-				<div className='queue-modern-card__icon-box'>
-					<Icon icon='Groups' className='queue-modern-card__icon' />
+		<div className='queue-modern-card__body'>
+			<div className='queue-modern-card__head'>
+				<div className='queue-modern-card__identity'>
+					<div className='queue-modern-card__icon-box' aria-hidden>
+						<Icon icon='Groups' className='queue-modern-card__icon' />
+					</div>
+					<div className='queue-modern-card__title' title={group.name || undefined}>
+						{group.name || `Group ${group.id}`}
+					</div>
 				</div>
-				<div className='queue-modern-card__title'>{group.name || `Group ${group.id}`}</div>
-			</div>
-			<div className='queue-modern-card__header-actions d-flex align-items-center gap-2'>
-				<Badge color='info' isLight>
-					Group
-				</Badge>
-				{canWrite && (
+				<div className='queue-modern-card__actions'>
+					<Badge color='info' isLight className='rounded-pill px-2 py-1'>
+						Group
+					</Badge>
+					{canWrite && (
 					<div onClick={(e) => e.stopPropagation()} role='presentation'>
 						<Dropdown>
 							<DropdownToggle hasIcon={false}>
 								<Button
 									type='button'
-									color='primary'
-									isLight
+									color='light'
 									size='sm'
 									className='queue-modern-card__menu-btn'
 									aria-label='Group actions'>
@@ -82,14 +84,14 @@ const QueueGroupCardTile: React.FC<QueueGroupCardTileProps> = ({
 						</Dropdown>
 					</div>
 				)}
+				</div>
 			</div>
+			<p className='queue-modern-card__desc'>
+				{group.description || 'Click to open queues in this group'}
+			</p>
 		</div>
-		<div className='queue-modern-card__desc'>
-			{group.description || 'Click to open queues in this group'}
-		</div>
-		<hr className='queue-modern-card__divider' />
-		<div className='d-flex flex-wrap gap-2'>
-			<div className='queue-modern-card__meta-pill'>
+		<div className='queue-modern-card__footer queue-modern-card__footer--single'>
+			<div className='queue-modern-card__meta-item'>
 				<span className='queue-modern-card__meta-label'>Queues</span>
 				<span className='queue-modern-card__meta-value'>{queueCount}</span>
 			</div>

@@ -124,6 +124,7 @@ export const SP_STATUS_LABELS: Record<string, string> = {
 	on_hold: 'On Hold',
 	completed: 'Completed',
 	cancelled: 'Cancelled',
+	un_assigned: 'Un Assigned',
 };
 
 export const SP_STATUS_COLORS: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'secondary'> = {
@@ -131,6 +132,7 @@ export const SP_STATUS_COLORS: Record<string, 'primary' | 'success' | 'warning' 
 	on_hold: 'warning',
 	completed: 'success',
 	cancelled: 'danger',
+	un_assigned: 'secondary',
 };
 
 /** True while the schedule window’s `to_datetime` is still strictly in the future (invalid/missing end → false). */

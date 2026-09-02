@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import FormGroup from '../../../components/bootstrap/forms/FormGroup';
+import React, { useMemo, useState } from 'react';
+import { useWatch } from 'react-hook-form';
 import ReactSelectComponent from '../../CustomComponent/Select/ReactSelectComponent';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import Icon from '../../icon/Icon';
+import {
+	USER_PASSWORD_POLICY_INLINE_ERROR,
+	getUserPasswordRequirements,
+	meetsUserPasswordCharacterMix,
+	meetsUserPasswordLength,
+} from '../../../helpers/userPasswordPolicy';
 
 /** React-select option: label = role name, value = role id */
 export type UserRoleSelectOption = {
@@ -54,7 +61,107 @@ interface FieldsProps {
 	edit?: boolean;
 	roleOptions: UserRoleSelectOption[];
 	roleOptionsLoading?: boolean;
+	disabled?: boolean;
 }
+
+const fieldLabelClass = 'form-label text-muted small text-uppercase fw-semibold mb-2';
+
+const passwordInputStyle: React.CSSProperties = {
+	paddingRight: '2.75rem',
+	backgroundImage: 'none',
+};
+
+type PasswordRequirement = {
+	id: string;
+	label: string;
+	met: boolean;
+};
+
+const PasswordRequirementsList: React.FC<{
+	requirements: PasswordRequirement[];
+	highlightUnmet?: boolean;
+}> = ({ requirements, highlightUnmet = false }) => (
+	<div className='mt-2 rounded-3 border border-secondary border-opacity-25 bg-body p-2 p-md-3'>
+		<div className='text-muted small fw-semibold mb-2'>Password requirements</div>
+		<ul className='list-unstyled mb-0 d-flex flex-column gap-2'>
+			{requirements.map((requirement) => (
+				<li
+					key={requirement.id}
+					className={`d-flex align-items-start gap-2 small w-100 ${
+						requirement.met
+							? 'text-success'
+							: highlightUnmet
+								? 'text-danger'
+								: 'text-muted'
+					}`}>
+					<span
+						className={[
+							'd-inline-flex align-items-center justify-content-center rounded-1 flex-shrink-0 border mt-1',
+							requirement.met
+								? 'bg-success border-success text-white'
+								: highlightUnmet
+									? 'border-danger'
+									: 'bg-body border-secondary border-opacity-50',
+						].join(' ')}
+						style={{ width: 16, height: 16 }}>
+						{requirement.met ? <Icon icon='Check' size='sm' color='light' /> : null}
+					</span>
+					<span className='lh-sm flex-grow-1'>{requirement.label}</span>
+				</li>
+			))}
+		</ul>
+	</div>
+);
+
+interface PasswordFieldProps {
+	id: string;
+	label: string;
+	showPassword: boolean;
+	onToggle: () => void;
+	error?: { message?: string };
+	disabled?: boolean;
+	registerProps: Record<string, unknown>;
+}
+
+const PasswordField: React.FC<PasswordFieldProps> = ({
+	id,
+	label,
+	showPassword,
+	onToggle,
+	error,
+	disabled,
+	registerProps,
+}) => (
+	<div className='col-md-6'>
+		<label className={fieldLabelClass} htmlFor={id}>
+			{label}
+		</label>
+		<div className='position-relative'>
+			<input
+				id={id}
+				type={showPassword ? 'text' : 'password'}
+				autoComplete='new-password'
+				disabled={disabled}
+				className={`form-control rounded-3${error ? ' is-invalid' : ''}`}
+				style={passwordInputStyle}
+				{...registerProps}
+			/>
+			<button
+				type='button'
+				onClick={onToggle}
+				className='btn btn-link position-absolute top-50 translate-middle-y text-muted p-2 border-0'
+				style={{ right: '0.35rem' }}
+				aria-label={showPassword ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}>
+				{showPassword ? (
+					<VisibilityIcon fontSize='small' />
+				) : (
+					<VisibilityOffIcon fontSize='small' />
+				)}
+			</button>
+		</div>
+		{error?.message ? <div className='invalid-feedback d-block'>{error.message}</div> : null}
+	</div>
+);
 
 const Fields = ({
 	register,
@@ -65,63 +172,86 @@ const Fields = ({
 	edit = false,
 	roleOptions,
 	roleOptionsLoading = false,
+	disabled = false,
 }: FieldsProps) => {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showPassword2, setShowPassword2] = useState(false);
 	const showPasswordFields = !edit;
+	const passwordValue = useWatch({ control, name: 'password', defaultValue: '' }) ?? '';
+	const passwordRequirements = useMemo(
+		() => getUserPasswordRequirements(String(passwordValue)),
+		[passwordValue],
+	);
+	const passwordPolicyError =
+		errors?.password &&
+		errors.password.type !== 'required' &&
+		String(passwordValue).length > 0;
 
 	return (
-		<>
-			<div className='col-12 mb-3'>
-				<FormGroup label='First Name *'>
-					<input
-						type='text'
-						className={errors?.first_name ? 'form-control is-invalid' : 'form-control'}
-						{...register('first_name', {
-							required: 'First name is required',
-							onChange: () => trigger('first_name'),
-						})}
-					/>
-					{errors?.first_name && (
-						<span style={{ color: 'red' }}>{errors.first_name.message}</span>
-					)}
-				</FormGroup>
+		<div className='row g-3'>
+			<div className='col-md-6'>
+				<label className={fieldLabelClass} htmlFor='user-first-name'>
+					First Name *
+				</label>
+				<input
+					id='user-first-name'
+					type='text'
+					disabled={disabled}
+					className={`form-control rounded-3${errors?.first_name ? ' is-invalid' : ''}`}
+					{...register('first_name', {
+						required: 'First name is required',
+						onChange: () => trigger('first_name'),
+					})}
+				/>
+				{errors?.first_name ? (
+					<div className='invalid-feedback d-block'>{errors.first_name.message}</div>
+				) : null}
 			</div>
-			<div className='col-12 mb-3'>
-				<FormGroup label='Last Name *'>
-					<input
-						type='text'
-						className={errors?.last_name ? 'form-control is-invalid' : 'form-control'}
-						{...register('last_name', {
-							required: 'Last name is required',
-							onChange: () => trigger('last_name'),
-						})}
-					/>
-					{errors?.last_name && (
-						<span style={{ color: 'red' }}>{errors.last_name.message}</span>
-					)}
-				</FormGroup>
+
+			<div className='col-md-6'>
+				<label className={fieldLabelClass} htmlFor='user-last-name'>
+					Last Name *
+				</label>
+				<input
+					id='user-last-name'
+					type='text'
+					disabled={disabled}
+					className={`form-control rounded-3${errors?.last_name ? ' is-invalid' : ''}`}
+					{...register('last_name', {
+						required: 'Last name is required',
+						onChange: () => trigger('last_name'),
+					})}
+				/>
+				{errors?.last_name ? (
+					<div className='invalid-feedback d-block'>{errors.last_name.message}</div>
+				) : null}
 			</div>
-			<div className='col-12 mb-3'>
-				<FormGroup label='Email *'>
-					<input
-						disabled={edit}
-						type='email'
-						autoComplete='email'
-						className={errors?.email ? 'form-control is-invalid' : 'form-control'}
-						{...register('email', {
-							required: 'Email is required',
-							pattern: {
-								value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-								message: 'Invalid email address',
-							},
-							onChange: () => trigger('email'),
-						})}
-					/>
-					{errors?.email && <span style={{ color: 'red' }}>{errors.email.message}</span>}
-				</FormGroup>
+
+			<div className='col-12'>
+				<label className={fieldLabelClass} htmlFor='user-email'>
+					Email *
+				</label>
+				<input
+					id='user-email'
+					disabled={edit || disabled}
+					type='email'
+					autoComplete='email'
+					className={`form-control rounded-3${errors?.email ? ' is-invalid' : ''}`}
+					{...register('email', {
+						required: 'Email is required',
+						pattern: {
+							value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+							message: 'Invalid email address',
+						},
+						onChange: () => trigger('email'),
+					})}
+				/>
+				{errors?.email ? (
+					<div className='invalid-feedback d-block'>{errors.email.message}</div>
+				) : null}
 			</div>
-			<div className='col-12 mb-3'>
+
+			<div className='col-12'>
 				<ReactSelectComponent
 					control={control}
 					name='Role *'
@@ -131,106 +261,78 @@ const Fields = ({
 					options={roleOptions}
 					isRequired={true}
 					isClearable={false}
-					isLoading={roleOptionsLoading}
+					isDisable={disabled}
 					placeholder={roleOptionsLoading ? 'Loading roles…' : 'Select role'}
 				/>
 			</div>
+
 			{showPasswordFields && (
 				<>
-					<div className='col-12 mb-3'>
-						<FormGroup label='Password *'>
-							<div style={{ position: 'relative' }}>
-								<input
-									type={showPassword ? 'text' : 'password'}
-									autoComplete='new-password'
-									className={
-										errors?.password ? 'form-control is-invalid' : 'form-control'
-									}
-									style={{ paddingRight: '40px' }}
-									{...register('password', {
-										required: 'Password is required',
-										minLength: {
-											value: 8,
-											message: 'Password must be at least 8 characters',
-										},
-										onChange: () => trigger(['password', 'password2']),
-									})}
-								/>
-								<button
-									type='button'
-									onClick={() => setShowPassword(!showPassword)}
-									style={{
-										position: 'absolute',
-										right: '10px',
-										top: '50%',
-										transform: 'translateY(-50%)',
-										background: 'none',
-										border: 'none',
-										cursor: 'pointer',
-										color: '#6c757d',
-									}}
-									aria-label={showPassword ? 'Hide password' : 'Show password'}>
-									{showPassword ? (
-										<VisibilityIcon fontSize='small' />
-									) : (
-										<VisibilityOffIcon fontSize='small' />
-									)}
-								</button>
-							</div>
-							{errors?.password && (
-								<span style={{ color: 'red' }}>{errors.password.message}</span>
-							)}
-						</FormGroup>
+					<div className='col-md-6'>
+						<label className={fieldLabelClass} htmlFor='user-password'>
+							Password *
+						</label>
+						<div className='position-relative'>
+							<input
+								id='user-password'
+								type={showPassword ? 'text' : 'password'}
+								autoComplete='new-password'
+								disabled={disabled}
+								className={`form-control rounded-3${errors?.password ? ' is-invalid' : ''}`}
+								style={passwordInputStyle}
+								{...register('password', {
+									required: 'Password is required',
+									validate: {
+										length: (value: string) =>
+											meetsUserPasswordLength(value) ||
+											USER_PASSWORD_POLICY_INLINE_ERROR,
+										characterMix: (value: string) =>
+											meetsUserPasswordCharacterMix(value) ||
+											USER_PASSWORD_POLICY_INLINE_ERROR,
+									},
+									onChange: () => trigger(['password', 'password2']),
+								})}
+							/>
+							<button
+								type='button'
+								onClick={() => setShowPassword(!showPassword)}
+								className='btn btn-link position-absolute top-50 translate-middle-y text-muted p-2 border-0'
+								style={{ right: '0.35rem' }}
+								aria-label={showPassword ? 'Hide password' : 'Show password'}>
+								{showPassword ? (
+									<VisibilityIcon fontSize='small' />
+								) : (
+									<VisibilityOffIcon fontSize='small' />
+								)}
+							</button>
+						</div>
+						{errors?.password?.type === 'required' ? (
+							<div className='invalid-feedback d-block'>{errors.password.message}</div>
+						) : null}
 					</div>
-					<div className='col-12 mb-3'>
-						<FormGroup label='Confirm password *'>
-							<div style={{ position: 'relative' }}>
-								<input
-									type={showPassword2 ? 'text' : 'password'}
-									autoComplete='new-password'
-									className={
-										errors?.password2 ? 'form-control is-invalid' : 'form-control'
-									}
-									style={{ paddingRight: '40px' }}
-									{...register('password2', {
-										required: 'Please confirm the password',
-										validate: (value: string) =>
-											value === getValues('password') ||
-											'Passwords do not match',
-										onChange: () => trigger('password2'),
-									})}
-								/>
-								<button
-									type='button'
-									onClick={() => setShowPassword2(!showPassword2)}
-									style={{
-										position: 'absolute',
-										right: '10px',
-										top: '50%',
-										transform: 'translateY(-50%)',
-										background: 'none',
-										border: 'none',
-										cursor: 'pointer',
-										color: '#6c757d',
-									}}
-									aria-label={
-										showPassword2 ? 'Hide confirm password' : 'Show confirm password'
-									}>
-									{showPassword2 ? (
-										<VisibilityIcon fontSize='small' />
-									) : (
-										<VisibilityOffIcon fontSize='small' />
-									)}
-								</button>
-							</div>
-							{errors?.password2 && (
-								<span style={{ color: 'red' }}>{errors.password2.message}</span>
-							)}
-						</FormGroup>
+					<PasswordField
+						id='user-password2'
+						label='Confirm password *'
+						showPassword={showPassword2}
+						onToggle={() => setShowPassword2(!showPassword2)}
+						error={errors?.password2}
+						disabled={disabled}
+						registerProps={register('password2', {
+							required: 'Please confirm the password',
+							validate: (value: string) =>
+								value === getValues('password') || 'Passwords do not match',
+							onChange: () => trigger('password2'),
+						})}
+					/>
+					<div className='col-12'>
+						<PasswordRequirementsList
+							requirements={passwordRequirements}
+							highlightUnmet={Boolean(passwordPolicyError)}
+						/>
 					</div>
 				</>
 			)}
-		</>
+		</div>
 	);
 };
 

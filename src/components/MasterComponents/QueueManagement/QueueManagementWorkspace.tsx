@@ -123,8 +123,8 @@ const QueueManagementWorkspace: React.FC = () => {
 						<span>Queue Management</span>
 					</div>
 				</div>
-				<CardActions className='d-flex flex-wrap gap-2 w-100'>
-					<div className='d-flex align-items-center gap-2 flex-wrap'>
+				<CardActions className='ms-auto'>
+					<div className='d-flex align-items-center gap-2 flex-wrap justify-content-end'>
 						<DropDownFilter
 							options={[
 								{ label: 'Queues', value: 'queues' as const },

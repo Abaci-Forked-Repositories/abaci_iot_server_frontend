@@ -257,8 +257,8 @@ const TemplatesWorkspace: React.FC = () => {
 						<ThumbnailCardGridSkeleton
 							count={12}
 							layout='flex'
-							tileWidth={thumbSize + 10}
-							tileMinHeight={thumbSize + 10}
+							tileWidth={thumbSize + 24}
+							tileMinHeight={thumbSize + 76}
 						/>
 					) : !templates.length ? (
 						<div className='tpl-empty'>
@@ -272,7 +272,7 @@ const TemplatesWorkspace: React.FC = () => {
 						</div>
 					) : (
 						<div className='queue-cards-scroll' onScroll={handleScroll}>
-							<div className='tpl-grid pt-1'>
+							<div className='tpl-grid'>
 								{templates.map((tpl) => (
 									<TemplateCardTile
 										key={tpl.id}
@@ -290,8 +290,8 @@ const TemplatesWorkspace: React.FC = () => {
 									<ThumbnailCardGridSkeleton
 										count={4}
 										layout='flex'
-										tileWidth={thumbSize + 10}
-										tileMinHeight={thumbSize + 10}
+										tileWidth={thumbSize + 24}
+										tileMinHeight={thumbSize + 76}
 									/>
 								</div>
 							)}

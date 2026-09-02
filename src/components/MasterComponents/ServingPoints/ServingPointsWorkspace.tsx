@@ -27,7 +27,17 @@ import {
 import {
 	formatDate,
 	getNextAllowedServingPointStatuses,
+	normalizeServingPointStatus,
 } from '../QueueManagement/queueManagementUtils';
+
+const getServingPointListStatusOptions = (status?: string): string[] => {
+	const allowed = getNextAllowedServingPointStatuses(status);
+	if (allowed.length > 0) return allowed;
+	if (normalizeServingPointStatus(status) === 'completed') {
+		return ['un_assigned', 'running'];
+	}
+	return [];
+};
 
 const SERVING_POINT_STATUS_LOOKUP: Record<string, string> = {
 	scheduled: 'Scheduled',
@@ -295,7 +305,7 @@ const ServingPointsWorkspace: React.FC = () => {
 				render: (rowData: ServingPoint) => {
 					const isActive = rowData.is_active ?? rowData.is_available ?? false;
 					const canChangeCounterStatus =
-						getNextAllowedServingPointStatuses(rowData.status).length > 0;
+						getServingPointListStatusOptions(rowData.status).length > 0;
 					return (
 						<div className='d-flex align-items-center gap-2'>
 							{canChangeCounterStatus && (
@@ -467,6 +477,11 @@ const ServingPointsWorkspace: React.FC = () => {
 				isOpen={showStatusModal}
 				setIsOpen={setShowStatusModal}
 				servingPoint={statusModalPoint}
+				allowedStatuses={
+					statusModalPoint
+						? getServingPointListStatusOptions(statusModalPoint.status)
+						: undefined
+				}
 				onSuccess={() => {
 					tableRef.current?.onQueryChange?.();
 					setStatusModalPoint(null);
