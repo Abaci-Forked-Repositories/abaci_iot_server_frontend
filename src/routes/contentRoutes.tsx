@@ -20,6 +20,7 @@ const MAINROUTE = {
 	TemplateDetail: lazy(() => import('../pages/Templates/Detail')),
 	Profile: lazy(() => import('../pages/Profile/Index')),
 	Users: lazy(() => import('../pages/UserManagement/index')),
+	Knowledge: lazy(() => import('../pages/Knowledge/index')),
 	Settings: lazy(() => import('../pages/Settings/index')),
 };
 
@@ -115,6 +116,10 @@ const RouteConfig: CustomRouteConfig[] = [
 		path: allRoutesObject.usermanagement.path,
 		element: <MAINROUTE.Users />,
 		permissionKey: 'users_read',
+	},
+	{
+		path: allRoutesObject.knowledge.path,
+		element: <MAINROUTE.Knowledge />,
 	},
 	{
 		path: allRoutesObject.settings.path,

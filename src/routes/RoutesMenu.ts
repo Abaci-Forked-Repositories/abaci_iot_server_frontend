@@ -115,6 +115,13 @@ export const allRoutesObject: Record<string, RouteMenuItem & { path: string }> =
 		subMenu: null,
 		permissionKey: 'schedules_read',
 	},
+	knowledge: {
+		id: 'knowledge',
+		text: 'Knowledge',
+		icon: 'MenuBook',
+		path: '/knowledge',
+		subMenu: null,
+	},
 	settings: {
 		id: 'settings',
 		text: 'Settings',
@@ -193,6 +200,13 @@ export const AdminRoutes: Record<string, RouteMenuItem> = {
 		path: '/users',
 		subMenu: null,
 		permissionKey: 'users_read',
+	},
+	knowledge: {
+		id: 'knowledge',
+		text: 'Knowledge',
+		icon: 'MenuBook',
+		path: '/knowledge',
+		subMenu: null,
 	},
 	settings: {
 		id: 'settings',

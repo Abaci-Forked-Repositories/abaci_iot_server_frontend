@@ -65,38 +65,49 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 					if (!open) handleClose();
 				}}>
 				<ModalTitle id='complete-next-queue-modal'>
-					<div className='d-flex align-items-center gap-2'>
+					<div className='d-flex align-items-center gap-3'>
 						<span
-							className='d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 flex-shrink-0'
-							style={{ width: 32, height: 32 }}>
-							<Icon icon='TaskAlt' color='success' size='sm' />
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-success bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon='TaskAlt' color='success' />
 						</span>
-						Complete service
+						<div>
+							<div className='fw-bold lh-sm'>Complete service</div>
+							<div className='text-muted small fw-normal mt-1'>
+								{nextQueues.length > 0
+									? 'Finish this visit, optionally redirect to a follow-up queue'
+									: 'Confirm completion for this token'}
+							</div>
+						</div>
 					</div>
 				</ModalTitle>
 			</ModalHeader>
 
-			<ModalBody>
+			<ModalBody className='pt-2 pb-3'>
 				{(tokenDisplay || customerName) && (
-					<div className='d-flex align-items-center gap-3 p-3 rounded-3 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
+					<div className='d-flex align-items-center gap-3 p-3 rounded-4 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
 						<span
-							className='d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 flex-shrink-0'
-							style={{ width: 44, height: 44 }}>
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 48, height: 48 }}>
 							<Icon icon='ConfirmationNumber' color='primary' />
 						</span>
-						<div className='min-w-0'>
+						<div className='min-w-0 flex-grow-1'>
+							<div className='text-muted small text-uppercase fw-semibold mb-1'>Token</div>
 							{tokenDisplay && (
-								<div className='fw-bold fs-5 text-primary lh-sm'>{tokenDisplay}</div>
+								<div className='fw-bold fs-5 text-body lh-sm text-truncate'>{tokenDisplay}</div>
 							)}
 							{customerName && (
-								<div className='text-muted small text-truncate'>{customerName}</div>
+								<div className='text-muted small mt-1 text-truncate'>{customerName}</div>
 							)}
 						</div>
 					</div>
 				)}
 
 				{nextQueues.length > 0 ? (
-					<>
+					<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+						<div className='text-muted small text-uppercase fw-semibold mb-2'>
+							Follow-up queue
+						</div>
 						<p className='text-muted small mb-3 lh-base'>
 							This queue has follow-up queues configured. Select an active queue to redirect the
 							customer, or complete without redirecting.
@@ -115,12 +126,12 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 											setSelectedQueueId(isSelected ? null : queue.id);
 										}}
 										className={[
-											'd-flex align-items-center gap-3 p-3 rounded-3 border text-start w-100 transition-all',
+											'd-flex align-items-center gap-3 p-3 rounded-3 border text-start w-100',
 											!isActive
-												? 'border-secondary border-opacity-25 bg-body-secondary opacity-75'
+												? 'border-secondary border-opacity-25 bg-body opacity-75'
 												: isSelected
 													? 'border-success bg-success bg-opacity-10'
-													: 'border-secondary border-opacity-25 bg-transparent',
+													: 'border-secondary border-opacity-25 bg-body',
 										].join(' ')}
 										style={{ cursor: isActive ? 'pointer' : 'not-allowed' }}>
 										<span
@@ -131,26 +142,19 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 													: 'bg-body border-secondary border-opacity-50',
 											].join(' ')}
 											style={{ width: 22, height: 22 }}>
-											{isSelected && (
-												<Icon icon='Check' size='sm' color='light' />
-											)}
+											{isSelected && <Icon icon='Check' size='sm' color='light' />}
 										</span>
-
 										<span
 											className={[
-												'd-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0',
-												isSelected
-													? 'bg-success bg-opacity-15'
-													: 'bg-body-secondary',
+												'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+												isSelected ? 'bg-success bg-opacity-15' : 'bg-body-secondary',
 											].join(' ')}
-											style={{ width: 36, height: 36 }}>
+											style={{ width: 40, height: 40 }}>
 											<Icon
 												icon='Queue'
-												size='sm'
 												color={isSelected ? 'success' : 'secondary'}
 											/>
 										</span>
-
 										<div className='flex-grow-1 min-w-0'>
 											<div className='d-flex align-items-center gap-2 flex-wrap mb-1'>
 												<div
@@ -178,23 +182,29 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 												</div>
 											)}
 										</div>
-
 										{isSelected && (
-											<Icon icon='ArrowForward' color='success' size='sm' className='flex-shrink-0' />
+											<Icon
+												icon='ArrowForward'
+												color='success'
+												size='sm'
+												className='flex-shrink-0'
+											/>
 										)}
 									</button>
 								);
 							})}
 						</div>
-					</>
+					</div>
 				) : (
-					<p className='text-muted small mb-0'>
-						Confirm completion of service for this token.
-					</p>
+					<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+						<p className='text-muted small mb-0 lh-base'>
+							Confirm completion of service for this token.
+						</p>
+					</div>
 				)}
 			</ModalBody>
 
-			<ModalFooter>
+			<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
 				<Button
 					color='secondary'
 					isLight
@@ -203,7 +213,6 @@ const CompleteWithNextQueueModal: React.FC<CompleteWithNextQueueModalProps> = ({
 					onClick={() => onComplete(undefined)}>
 					Complete only
 				</Button>
-
 				{nextQueues.length > 0 && (
 					<Button
 						color='success'

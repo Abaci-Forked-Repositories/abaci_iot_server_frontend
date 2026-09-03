@@ -36,10 +36,18 @@ const ShareTokenModal: React.FC<ShareTokenModalProps> = ({
 		let cancelled = false;
 		setQrLoading(true);
 		void QRCode.toDataURL(publicUrl, { width: 200, margin: 2, errorCorrectionLevel: 'M' })
-			.then((url) => { if (!cancelled) setQrDataUrl(url); })
-			.catch(() => { if (!cancelled) setQrDataUrl(null); })
-			.finally(() => { if (!cancelled) setQrLoading(false); });
-		return () => { cancelled = true; };
+			.then((url) => {
+				if (!cancelled) setQrDataUrl(url);
+			})
+			.catch(() => {
+				if (!cancelled) setQrDataUrl(null);
+			})
+			.finally(() => {
+				if (!cancelled) setQrLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, [isOpen, publicUrl]);
 
 	const handleCopy = async () => {
@@ -59,19 +67,17 @@ const ShareTokenModal: React.FC<ShareTokenModalProps> = ({
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered isAnimation={false}>
-			<ModalHeader setIsOpen={setIsOpen} className='border-0 pb-0'>
+			<ModalHeader setIsOpen={setIsOpen}>
 				<ModalTitle id='share-token-modal'>
-					<div className='d-flex align-items-center gap-2'>
+					<div className='d-flex align-items-center gap-3'>
 						<span
-							className='d-inline-flex align-items-center justify-content-center rounded-2 bg-info bg-opacity-10 flex-shrink-0'
-							style={{ width: 34, height: 34 }}>
-							<Icon icon='QrCode2' color='info' size='sm' />
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon='QrCode2' color='primary' />
 						</span>
 						<div>
-							<div className='fw-bold' style={{ fontSize: '0.95rem', lineHeight: 1.2 }}>
-								Share Token Status
-							</div>
-							<div className='text-muted' style={{ fontSize: '0.72rem', fontWeight: 400 }}>
+							<div className='fw-bold lh-sm'>Share Token Status</div>
+							<div className='text-muted small fw-normal mt-1'>
 								Let the customer track their position
 							</div>
 						</div>
@@ -79,100 +85,92 @@ const ShareTokenModal: React.FC<ShareTokenModalProps> = ({
 				</ModalTitle>
 			</ModalHeader>
 
-			<ModalBody className='pt-2'>
-
-				{/* ── Token chip ── */}
+			<ModalBody className='pt-2 pb-3'>
 				{(tokenDisplay || customerName) && (
-					<div className='d-flex align-items-center gap-3 p-3 rounded-3 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
+					<div className='d-flex align-items-center gap-3 p-3 rounded-4 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
 						<span
-							className='d-inline-flex align-items-center justify-content-center rounded-2 bg-primary bg-opacity-10 flex-shrink-0'
-							style={{ width: 42, height: 42 }}>
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 48, height: 48 }}>
 							<Icon icon='ConfirmationNumber' color='primary' />
 						</span>
-						<div className='min-w-0'>
+						<div className='min-w-0 flex-grow-1'>
+							<div className='text-muted small text-uppercase fw-semibold mb-1'>Token</div>
 							{tokenDisplay && (
-								<div className='fw-bold fs-5 text-primary lh-sm'>{tokenDisplay}</div>
+								<div className='fw-bold fs-5 text-body lh-sm text-truncate'>{tokenDisplay}</div>
 							)}
 							{customerName && (
-								<div className='text-muted small text-truncate'>{customerName}</div>
+								<div className='text-muted small mt-1 text-truncate'>{customerName}</div>
 							)}
 						</div>
 					</div>
 				)}
 
-				{/* ── QR Code ── */}
-				<div className='d-flex flex-column align-items-center mb-4'>
-					<div
-						className='p-3 rounded-3 border'
-						style={{
-							background: 'var(--bs-body-bg)',
-							boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-							display: 'inline-flex',
-						}}>
-						{qrLoading ? (
-							<div
-								className='d-flex align-items-center justify-content-center'
-								style={{ width: 200, height: 200 }}>
-								<Spinner color='primary' />
-							</div>
-						) : qrDataUrl ? (
-							<img
-								src={qrDataUrl}
-								alt='QR code for token status link'
-								width={200}
-								height={200}
-								style={{ display: 'block', borderRadius: 4 }}
-							/>
-						) : (
-							<div
-								className='d-flex align-items-center justify-content-center text-muted small text-center px-2'
-								style={{ width: 200, height: 200 }}>
-								Could not generate QR code
-							</div>
-						)}
+				<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3 mb-4'>
+					<div className='text-muted small text-uppercase fw-semibold mb-3 text-center'>
+						Scan QR code
 					</div>
-
-					<div
-						className='d-flex align-items-center gap-1 text-muted mt-2'
-						style={{ fontSize: '0.75rem' }}>
-						<Icon icon='PhoneIphone' style={{ fontSize: '0.9rem' }} />
-						Scan with any phone camera
+					<div className='d-flex flex-column align-items-center'>
+						<div className='p-3 rounded-4 border border-secondary border-opacity-25 bg-body shadow-sm'>
+							{qrLoading ? (
+								<div
+									className='d-flex align-items-center justify-content-center'
+									style={{ width: 200, height: 200 }}>
+									<Spinner color='primary' />
+								</div>
+							) : qrDataUrl ? (
+								<img
+									src={qrDataUrl}
+									alt='QR code for token status link'
+									width={200}
+									height={200}
+									className='rounded-2 d-block'
+								/>
+							) : (
+								<div
+									className='d-flex align-items-center justify-content-center text-muted small text-center px-2'
+									style={{ width: 200, height: 200 }}>
+									Could not generate QR code
+								</div>
+							)}
+						</div>
+						<div className='d-inline-flex align-items-center gap-2 text-muted small mt-3 px-3 py-2 rounded-pill bg-body border border-secondary border-opacity-25'>
+							<Icon icon='PhoneIphone' size='sm' color='primary' />
+							Scan with any phone camera
+						</div>
 					</div>
 				</div>
 
-				{/* ── Divider ── */}
 				<div className='d-flex align-items-center gap-2 mb-3'>
-					<div className='flex-fill border-top' />
-					<span
-						className='text-muted'
-						style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-						or share link
-					</span>
-					<div className='flex-fill border-top' />
+					<div className='flex-fill border-top border-secondary border-opacity-25' />
+					<span className='text-muted small text-uppercase fw-semibold px-1'>or share link</span>
+					<div className='flex-fill border-top border-secondary border-opacity-25' />
 				</div>
 
-				{/* ── Copy URL bar ── */}
 				<div
-					className={`d-flex align-items-center gap-2 p-2 rounded-3 border ${copied ? 'border-success bg-success bg-opacity-10' : 'bg-body-secondary'}`}>
+					className={[
+						'd-flex align-items-stretch gap-2 p-2 rounded-3 border',
+						copied
+							? 'border-success bg-success bg-opacity-10'
+							: 'border-secondary border-opacity-25 bg-body-secondary bg-opacity-50',
+					].join(' ')}>
 					<div
-						className='text-muted flex-grow-1'
-						style={{ wordBreak: 'break-all', fontSize: '0.7rem', fontFamily: 'monospace', lineHeight: 1.5 }}>
+						className='flex-grow-1 min-w-0 align-self-center px-2 text-muted small'
+						style={{ wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.5 }}>
 						{publicUrl}
 					</div>
-					<button
+					<Button
+						color={copied ? 'success' : 'primary'}
 						type='button'
-						onClick={handleCopy}
-						className={`btn btn-sm flex-shrink-0 ${copied ? 'btn-success' : 'btn-primary'}`}
-						style={{ minWidth: 90 }}>
-						<Icon icon={copied ? 'Check' : 'ContentCopy'} size='sm' />
-						{' '}
+						icon={copied ? 'Check' : 'ContentCopy'}
+						className='flex-shrink-0 align-self-center'
+						onClick={() => void handleCopy()}>
 						{copied ? 'Copied!' : 'Copy link'}
-					</button>
+					</Button>
 				</div>
 			</ModalBody>
 
-			<ModalFooter>
-				<Button color='dark' isLight type='button' onClick={() => setIsOpen(false)}>
+			<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+				<Button color='secondary' isLight type='button' onClick={() => setIsOpen(false)}>
 					Close
 				</Button>
 			</ModalFooter>

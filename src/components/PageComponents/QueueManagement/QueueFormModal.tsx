@@ -30,6 +30,7 @@ interface QueueFormState {
 	description: string;
 	limit: string;
 	grace_period_minutes: string;
+	noshow_recall_interval: string;
 	allow_postpone: boolean;
 	is_reporting_enabled: boolean;
 	token_prefix: string;
@@ -42,12 +43,19 @@ const defaultFormState = (): QueueFormState => ({
 	description: '',
 	limit: '50',
 	grace_period_minutes: '15',
+	noshow_recall_interval: '5',
 	allow_postpone: true,
 	is_reporting_enabled: false,
 	token_prefix: '',
 	serving_point_ids: [],
 	next_queue_ids: [],
 });
+
+const DEFAULT_NOSHOW_RECALL_MINUTES = 5;
+
+/** API stores seconds; form displays minutes. */
+const secondsToMinutes = (seconds: number) => Math.round(seconds / 60);
+const minutesToSeconds = (minutes: number) => minutes * 60;
 
 const extractNextQueueIds = (nextQueues?: Queue[] | number[]): number[] => {
 	if (!nextQueues?.length) return [];
@@ -60,6 +68,11 @@ const queueToFormState = (q: Queue): QueueFormState => ({
 	description: q.description || '',
 	limit: String(q.limit ?? 50),
 	grace_period_minutes: String(q.grace_period_minutes ?? 15),
+	noshow_recall_interval: String(
+		q.noshow_recall_interval != null
+			? secondsToMinutes(q.noshow_recall_interval)
+			: DEFAULT_NOSHOW_RECALL_MINUTES,
+	),
 	allow_postpone: q.allow_postpone ?? true,
 	is_reporting_enabled: q.is_reporting_enabled ?? false,
 	token_prefix: q.token_prefix || '',
@@ -75,6 +88,7 @@ const buildChangedQueuePayload = (
 	form: QueueFormState,
 	original: Queue,
 	graceMinutes: number,
+	noshowRecallMinutes: number,
 ): UpdateQueuePayload => {
 	const baseline = queueToFormState(original);
 	const changes: UpdateQueuePayload = {};
@@ -92,6 +106,10 @@ const buildChangedQueuePayload = (
 
 	if (graceMinutes !== (Number(baseline.grace_period_minutes || 0) || 0)) {
 		changes.grace_period_minutes = graceMinutes;
+	}
+
+	if (noshowRecallMinutes !== (Number(baseline.noshow_recall_interval || 0) || 0)) {
+		changes.noshow_recall_interval = minutesToSeconds(noshowRecallMinutes);
 	}
 
 	if (form.allow_postpone !== baseline.allow_postpone) {
@@ -373,8 +391,23 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			return;
 		}
 
+		const noshowRaw = form.noshow_recall_interval.trim();
+		if (noshowRaw === '') {
+			showNotification('Error', 'No-show recall interval (minutes) is required.', 'danger');
+			return;
+		}
+		const noshowRecallMinutes = Number(noshowRaw);
+		if (!Number.isInteger(noshowRecallMinutes) || noshowRecallMinutes < 0) {
+			showNotification(
+				'Error',
+				'No-show recall interval must be a whole number of 0 or greater.',
+				'danger',
+			);
+			return;
+		}
+
 		const updatePayload = isUpdateSubmit
-			? buildChangedQueuePayload(form, loadedEditQueue!, graceMinutes)
+			? buildChangedQueuePayload(form, loadedEditQueue!, graceMinutes, noshowRecallMinutes)
 			: null;
 		if (isUpdateSubmit && updatePayload && Object.keys(updatePayload).length === 0) {
 			showNotification('Info', 'No changes to save.', 'info');
@@ -392,6 +425,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					description: form.description.trim() || undefined,
 					limit: Number(form.limit || 0) || 0,
 					grace_period_minutes: graceMinutes,
+					noshow_recall_interval: minutesToSeconds(noshowRecallMinutes),
 					allow_postpone: form.allow_postpone,
 					is_reporting_enabled: form.is_reporting_enabled,
 					token_prefix: form.token_prefix.trim() || undefined,
@@ -544,7 +578,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 									/>
 								</div>
 
-								<div className='col-12'>
+								<div className='col-md-6'>
 									<label className={fieldLabelClass} htmlFor='queue-grace-period-minutes'>
 										Grace period (minutes)
 									</label>
@@ -559,6 +593,38 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 											setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
 										}
 										placeholder='e.g. 15'
+										disabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<label
+										className={`${fieldLabelClass} d-flex align-items-center gap-1`}
+										htmlFor='queue-noshow-recall-interval'>
+										No-show recall interval (minutes)
+										<Tooltip
+											arrow
+											placement='top'
+											title='How many minutes to wait after a no-show before the token can be recalled again.'>
+											<InfoOutlinedIcon
+												style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }}
+											/>
+										</Tooltip>
+									</label>
+									<input
+										id='queue-noshow-recall-interval'
+										type='number'
+										min={0}
+										step={1}
+										className='form-control rounded-3'
+										value={form.noshow_recall_interval}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												noshow_recall_interval: e.target.value,
+											}))
+										}
+										placeholder='e.g. 5'
 										disabled={formDisabled}
 									/>
 								</div>

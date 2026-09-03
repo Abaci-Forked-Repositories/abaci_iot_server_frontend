@@ -32,6 +32,7 @@ import {
 	SP_STATUS_LABELS,
 } from '../QueueManagement/queueManagementUtils';
 import usePermissions from '../../../hooks/usePermissions';
+import CurrentVisitorPanel from './CurrentVisitorPanel';
 
 export interface ServingPointCurrentServingCardProps {
 	servingPointId: number;
@@ -551,69 +552,19 @@ const ServingPointCurrentServingCard: React.FC<ServingPointCurrentServingCardPro
 
 
 									<div className='row g-4 align-items-start'>
-										<div className={canWrite ? 'col-12 col-lg-4' : 'col-12'}>
-											<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
-											{user?.name?.trim() ? (
-												<div className='fs-4 fw-semibold text-body-emphasis mb-3'>
-													{user.name.trim()}
-												</div>
-											) : null}
-											<div className='d-flex flex-wrap align-items-center gap-2 mb-3'>
-												<span className='text-muted small'>Token status</span>
-												<StatusBadge status={tokStatus || undefined} />
-											</div>
-											<div className='d-flex align-items-center gap-2'>
-												<Icon icon='Queue' className='text-primary' size='md' />
-												{currentQueueLink ? (
-													canViewQueue ? (
-														<Tooltip title='View queue details' arrow placement='top'>
-															<span
-																role='button'
-																tabIndex={0}
-																className='rounded-2 px-2 py-1 small fw-semibold bg-primary bg-opacity-10 text-body border border-primary border-opacity-25'
-																style={{ cursor: 'pointer' }}
-																onClick={() => openQueueDetail(currentQueueLink.id)}
-																onKeyDown={(ev) => {
-																	if (ev.key === 'Enter' || ev.key === ' ') {
-																		ev.preventDefault();
-																		openQueueDetail(currentQueueLink.id);
-																	}
-																}}>
-																Queue: {currentQueueLink.name}
-															</span>
-														</Tooltip>
-													) : (
-														<span className='small text-uppercase fw-semibold text-muted'>
-															Queue: {currentQueueLink.name}
-														</span>
-													)
-												) : (
-													<span className='small text-uppercase fw-semibold text-muted'>
-														Queue: —
-													</span>
-												)}
-											</div>
-											{detailRows.length > 0 && (
-												<ul className='list-unstyled mb-0 d-flex flex-column gap-2'>
-													{detailRows.map((row) => (
-														<li key={row.label} className='d-flex align-items-start gap-2'>
-															<Icon
-																icon={row.icon}
-																color='primary'
-																size='sm'
-																className='mt-1 flex-shrink-0'
-															/>
-															<div>
-																<span className='text-muted small'>{row.label}: </span>
-																<span className='fw-medium text-break'>{row.value}</span>
-															</div>
-														</li>
-													))}
-												</ul>
-											)}
+										<div className={canWrite ? 'col-12 col-lg-5' : 'col-12'}>
+											<CurrentVisitorPanel
+												tokenDisplay={tokenDisplay}
+												visitorName={user?.name?.trim() || null}
+												tokenStatus={tokStatus}
+												queueLink={currentQueueLink}
+												canViewQueue={canViewQueue}
+												onOpenQueue={openQueueDetail}
+												detailRows={detailRows}
+											/>
 										</div>
 										{canWrite ? (
-											<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
+											<div className='col-12 col-lg-7 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 												{visibleTokenActions.map((a) => {
 													if (a.key === 'start') {
 														return (

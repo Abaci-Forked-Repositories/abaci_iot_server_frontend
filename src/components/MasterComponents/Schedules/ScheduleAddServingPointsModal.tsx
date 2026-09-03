@@ -7,6 +7,7 @@ import type { ServingPoint } from '../../../services/queueManagementApi';
 import { queuesApi, schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import { isServingPointListedForSelection } from '../QueueManagement/queueManagementUtils';
+import ServingPointPickCard from '../../PageComponents/ServingPoints/ServingPointPickCard';
 
 const MODAL_PAGE_SIZE = 5;
 
@@ -207,107 +208,115 @@ const ScheduleAddServingPointsModal: React.FC<ScheduleAddServingPointsModalProps
 	return (
 		<Modal isOpen={isOpen} setIsOpen={(open) => !open && close()} size='lg' isCentered isAnimation={false}>
 			<ModalHeader setIsOpen={(open) => !open && close()}>
-				<ModalTitle id='schedule-add-serving-points-title'>Add serving points</ModalTitle>
-			</ModalHeader>
-			<ModalBody>
-				<p className='text-muted small mb-3'>
-					Select counters from this queue to attach to the schedule. Your selection is merged with counters
-					already on this schedule and saved in one update.
-				</p>
-				<div className='position-relative mb-3'>
-					<span
-						className='position-absolute top-50 translate-middle-y text-muted ps-3'
-						style={{ zIndex: 1, pointerEvents: 'none' }}>
-						<Icon icon='Search' />
-					</span>
-					<input
-						type='search'
-						className='form-control ps-5'
-						placeholder='Search by name or description'
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						autoComplete='off'
-						disabled={modalLoading}
-					/>
-				</div>
-				{selectedIds.length > 0 && (
-					<div className='d-flex flex-wrap align-items-center gap-2 mb-3'>
-						<span className='text-muted small'>Selected</span>
-						<span className='badge bg-primary rounded-pill'>{selectedIds.length}</span>
-					</div>
-				)}
-				{modalLoading && availableServingPoints.length === 0 ? (
-					<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
-						<Spinner color='primary' />
-						<span>Loading serving points…</span>
-					</div>
-				) : availableServingPoints.length === 0 ? (
-					<div className='text-center text-muted py-5 px-3 border rounded-3 bg-light'>
-						<Icon icon='Monitor' size='3x' className='mb-3 opacity-50' />
-						<div className='fw-semibold text-body'>No matches</div>
-						<div className='small mt-1'>
-							All serving points for this queue may already be on this schedule, or nothing matches your
-							search.
+				<ModalTitle id='schedule-add-serving-points-title'>
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon='Add' color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>Add serving points</div>
+							<div className='text-muted small fw-normal mt-1'>
+								Select counters from this queue to attach to the schedule
+							</div>
 						</div>
 					</div>
-				) : (
-					<div
-						className='d-flex flex-column gap-2'
-						style={{ maxHeight: 360, overflowY: 'auto' }}
-						onScroll={handleModalScroll}>
-						{availableServingPoints.map((point) => {
-							const selected = selectedIds.includes(point.id);
-							return (
-								<button
-									key={point.id}
-									type='button'
-									className={`w-100 text-start border rounded-3 p-3 d-flex align-items-center gap-3 ${
-										selected ?
-											'border-primary shadow-sm bg-primary bg-opacity-10'
-										:	'border-light bg-white'
-									}`}
-									style={{ cursor: 'pointer' }}
-									onClick={() => toggleSelection(point.id)}>
-									<div
-										className={`d-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0 ${
-											selected ? 'bg-primary text-white' : 'bg-light text-muted'
-										}`}
-										style={{ width: 44, height: 44 }}>
-										<Icon icon='Monitor' size='lg' />
-									</div>
-									<div className='flex-grow-1 min-w-0'>
-										<div className='fw-semibold text-truncate'>{point.name}</div>
-										{point.description ?
-											<div className='small text-muted text-truncate'>{point.description}</div>
-										:	null}
-									</div>
-									<div className='flex-shrink-0' aria-hidden>
-										{selected ?
-											<Icon icon='CheckCircle' color='success' size='2x' />
-										:	<span className='d-inline-block rounded-circle border border-2 border-light-subtle p-2' />}
-									</div>
-								</button>
-							);
-						})}
-						{modalLoadingMore && (
-							<div className='d-flex justify-content-center py-2 text-muted'>
-								<Spinner color='primary' isSmall />
-							</div>
+				</ModalTitle>
+			</ModalHeader>
+			<ModalBody className='pt-2 pb-3'>
+				<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+					<div className='d-flex align-items-center justify-content-between gap-2 mb-3'>
+						<label
+							className='form-label text-muted small text-uppercase fw-semibold mb-0'
+							htmlFor='schedule-add-sp-search'>
+							Available counters
+						</label>
+						{selectedIds.length > 0 && (
+							<span className='badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2'>
+								{selectedIds.length} selected
+							</span>
 						)}
 					</div>
-				)}
+					<div className='position-relative mb-3'>
+						<span
+							className='position-absolute top-50 translate-middle-y text-muted ps-3'
+							style={{ zIndex: 1, pointerEvents: 'none' }}>
+							<Icon icon='Search' />
+						</span>
+						<input
+							id='schedule-add-sp-search'
+							type='search'
+							className='form-control rounded-3 ps-5'
+							placeholder='Search by name or description'
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							autoComplete='off'
+							disabled={modalLoading || saving}
+						/>
+					</div>
+					{modalLoading && availableServingPoints.length === 0 ? (
+						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
+							<Spinner color='primary' />
+							<span>Loading serving points…</span>
+						</div>
+					) : availableServingPoints.length === 0 ? (
+						<div className='d-flex flex-column align-items-center justify-content-center text-center py-5 px-3'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 mb-3'
+								style={{ width: 56, height: 56 }}>
+								<Icon icon='Monitor' color='primary' size='2x' />
+							</span>
+							<div className='fw-semibold text-body'>No matches</div>
+							<div className='text-muted small mt-1'>
+								All serving points for this queue may already be on this schedule, or nothing matches
+								your search.
+							</div>
+						</div>
+					) : (
+						<div
+							className='row g-2 sp-pick-grid'
+							style={{ maxHeight: 360, overflowY: 'auto' }}
+							onScroll={handleModalScroll}>
+							{availableServingPoints.map((point, index) => (
+								<div className='col-6 col-md-4' key={point.id}>
+									<ServingPointPickCard
+										name={point.name}
+										description={point.description}
+										selected={selectedIds.includes(point.id)}
+										disabled={saving}
+										index={index}
+										onClick={() => toggleSelection(point.id)}
+									/>
+								</div>
+							))}
+							{modalLoadingMore && (
+								<div className='col-12 d-flex justify-content-center py-2 text-muted'>
+									<Spinner color='primary' isSmall />
+								</div>
+							)}
+						</div>
+					)}
+				</div>
 			</ModalBody>
-			<ModalFooter>
-				<Button color='light' isOutline onClick={close} isDisable={saving}>
+			<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+				<Button color='secondary' isLight type='button' onClick={close} isDisable={saving}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={() => void handleSave()} isDisable={saving || selectedIds.length === 0}>
-					{saving ?
+				<Button
+					color='primary'
+					type='button'
+					icon='Add'
+					onClick={() => void handleSave()}
+					isDisable={saving || selectedIds.length === 0}>
+					{saving ? (
 						<>
 							<Spinner isSmall inButton />
 							Saving…
 						</>
-					:	`Add to schedule (${selectedIds.length})`}
+					) : (
+						`Add to schedule (${selectedIds.length})`
+					)}
 				</Button>
 			</ModalFooter>
 		</Modal>

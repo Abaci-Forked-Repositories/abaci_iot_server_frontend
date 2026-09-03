@@ -5,6 +5,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
+import Icon from '../../icon/Icon';
 import type { QueueSchedule } from '../../../services/queueManagementApi';
 import { schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -38,7 +39,13 @@ export interface ScheduleFormState {
 	token_prefix: string;
 	is_reporting_enabled: boolean;
 	allow_postpone: boolean;
+	/** Edit only — minutes in the form; API expects seconds. Create uses the queue default. */
+	noshow_recall_interval: string;
 }
+
+const DEFAULT_NOSHOW_RECALL_MINUTES = 5;
+const secondsToMinutes = (seconds: number) => Math.round(seconds / 60);
+const minutesToSeconds = (minutes: number) => minutes * 60;
 
 function queueScheduleRowToForm(rec: QueueSchedule): ScheduleFormState {
 	const start = rec.from_datetime ? new Date(rec.from_datetime) : new Date();
@@ -56,6 +63,11 @@ function queueScheduleRowToForm(rec: QueueSchedule): ScheduleFormState {
 				: '',
 		is_reporting_enabled: rec.is_reporting_enabled ?? true,
 		allow_postpone: rec.allow_postpone ?? true,
+		noshow_recall_interval: String(
+			rec.noshow_recall_interval != null
+				? secondsToMinutes(rec.noshow_recall_interval)
+				: DEFAULT_NOSHOW_RECALL_MINUTES,
+		),
 	};
 }
 
@@ -70,6 +82,7 @@ function defaultCreateForm(): ScheduleFormState {
 		token_prefix: '',
 		is_reporting_enabled: true,
 		allow_postpone: true,
+		noshow_recall_interval: String(DEFAULT_NOSHOW_RECALL_MINUTES),
 	};
 }
 
@@ -84,6 +97,87 @@ export interface ScheduleFormModalProps {
 	initialEnd?: string;
 	onSaved?: () => void | Promise<void>;
 }
+
+const fieldLabelClass = 'form-label text-muted small text-uppercase fw-semibold mb-2';
+
+interface ToggleSettingCardProps {
+	id: string;
+	label: string;
+	checked: boolean;
+	disabled?: boolean;
+	onChange: (checked: boolean) => void;
+	enabledTitle: string;
+	disabledTitle: string;
+	enabledHint: string;
+	disabledHint: string;
+	iconOn: string;
+	iconOff: string;
+	activeBorderClass: string;
+	activeIconWrapClass: string;
+	activeTextClass: string;
+	iconColorOn: 'primary' | 'success' | 'info';
+}
+
+const ToggleSettingCard: React.FC<ToggleSettingCardProps> = ({
+	id,
+	label,
+	checked,
+	disabled,
+	onChange,
+	enabledTitle,
+	disabledTitle,
+	enabledHint,
+	disabledHint,
+	iconOn,
+	iconOff,
+	activeBorderClass,
+	activeIconWrapClass,
+	activeTextClass,
+	iconColorOn,
+}) => (
+	<div className='h-100 d-flex flex-column'>
+		<label className={fieldLabelClass} htmlFor={id}>
+			{label}
+		</label>
+		<div
+			className={[
+				'flex-grow-1 d-flex align-items-center justify-content-between gap-2 p-2 p-md-3 rounded-3 border',
+				checked ? activeBorderClass : 'border-secondary border-opacity-25 bg-body',
+			].join(' ')}>
+			<div className='d-flex align-items-center gap-2 min-w-0'>
+				<span
+					className={[
+						'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+						checked ? activeIconWrapClass : 'bg-body-secondary',
+					].join(' ')}
+					style={{ width: 32, height: 32 }}>
+					<Icon
+						icon={checked ? iconOn : iconOff}
+						color={checked ? iconColorOn : 'secondary'}
+						size='sm'
+					/>
+				</span>
+				<div className='min-w-0'>
+					<div className={`fw-semibold small ${checked ? activeTextClass : 'text-body'}`}>
+						{checked ? enabledTitle : disabledTitle}
+					</div>
+					<div className='text-muted small lh-sm'>{checked ? enabledHint : disabledHint}</div>
+				</div>
+			</div>
+			<div className='form-check form-switch m-0 flex-shrink-0'>
+				<input
+					className='form-check-input'
+					type='checkbox'
+					role='switch'
+					id={id}
+					checked={checked}
+					disabled={disabled}
+					onChange={(e) => onChange(e.target.checked)}
+				/>
+			</div>
+		</div>
+	</div>
+);
 
 const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 	isOpen,
@@ -178,6 +272,23 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 			return;
 		}
 
+		let noshowRecallSeconds: number | undefined;
+		if (isEditMode) {
+			const noshowRaw = scheduleForm.noshow_recall_interval.trim();
+			if (noshowRaw === '') {
+				showErrorNotification('No-show recall interval (minutes) is required.');
+				return;
+			}
+			const noshowRecallMinutes = Number(noshowRaw);
+			if (!Number.isInteger(noshowRecallMinutes) || noshowRecallMinutes < 0) {
+				showErrorNotification(
+					'No-show recall interval must be a whole number of 0 or greater.',
+				);
+				return;
+			}
+			noshowRecallSeconds = minutesToSeconds(noshowRecallMinutes);
+		}
+
 		if (!isEditMode && !queueId) return;
 
 		setSavingSchedule(true);
@@ -190,6 +301,9 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 					description: scheduleForm.description.trim() || undefined,
 					is_reporting_enabled: scheduleForm.is_reporting_enabled,
 					allow_postpone: scheduleForm.allow_postpone,
+					...(noshowRecallSeconds != null
+						? { noshow_recall_interval: noshowRecallSeconds }
+						: {}),
 					...(tokenPrefix ? { token_prefix: tokenPrefix } : {}),
 					...(tokenFromNum != null ? { token_from: tokenFromNum } : {}),
 					...(tokenToNum != null ? { token_to: tokenToNum } : {}),
@@ -221,183 +335,273 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={(open) => !open && closeModal()} isCentered size='lg' isAnimation={false}>
+		<Modal
+			isOpen={isOpen}
+			setIsOpen={(open) => !open && closeModal()}
+			isCentered
+			size='lg'
+			isAnimation={false}>
 			<ModalHeader setIsOpen={(open) => !open && closeModal()}>
-				<ModalTitle id='schedule-form-modal'>{isEditMode ? 'Edit Schedule' : 'Create Schedule'}</ModalTitle>
+				<ModalTitle id='schedule-form-modal'>
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon={isEditMode ? 'Edit' : 'Add'} color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>{isEditMode ? 'Edit Schedule' : 'Create Schedule'}</div>
+							<div className='text-muted small fw-normal mt-1'>
+								{isEditMode
+									? 'Update time window, token range, and schedule behaviour'
+									: 'Set the time window and token range for this queue'}
+							</div>
+						</div>
+					</div>
+				</ModalTitle>
 			</ModalHeader>
 			<form onSubmit={handleScheduleFormSubmit}>
-				<ModalBody>
-					<div className='row g-3'>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='schedule-start'>
-								Start Date & Time
-							</label>
-							<input
-								id='schedule-start'
-								type='datetime-local'
-								className='form-control'
-								min={isEditMode ? undefined : toDateTimeLocalValue(new Date())}
-								value={scheduleForm.start}
-								onChange={(e) => {
-									const nextStart = e.target.value;
-									setScheduleForm((prev) => {
-										const ns = new Date(nextStart);
-										const ne = new Date(prev.end);
-										let nextEnd = prev.end;
-										if (
-											nextStart &&
-											!Number.isNaN(ns.getTime()) &&
-											prev.end &&
-											!Number.isNaN(ne.getTime()) &&
-											ne <= ns
-										) {
-											nextEnd = toDateTimeLocalValue(dayjs(ns).add(1, 'minute').toDate());
-										}
-										return { ...prev, start: nextStart, end: nextEnd };
-									});
-								}}
-								required
-							/>
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='schedule-end'>
-								End Date & Time
-							</label>
-							<input
-								id='schedule-end'
-								type='datetime-local'
-								className='form-control'
-								min={endDateTimeMin}
-								value={scheduleForm.end}
-								onChange={(e) => setScheduleForm((prev) => ({ ...prev, end: e.target.value }))}
-								required
-							/>
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='schedule-token-from'>
-								Token from
-							</label>
-							<input
-								id='schedule-token-from'
-								type='number'
-								min={1}
-								className='form-control'
-								value={scheduleForm.token_from}
-								onChange={(e) => setScheduleForm((prev) => ({ ...prev, token_from: e.target.value }))}
-							/>
-						</div>
-						<div className='col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='schedule-token-to'>
-								Token to
-							</label>
-							<input
-								id='schedule-token-to'
-								type='number'
-								min={1}
-								className='form-control'
-								value={scheduleForm.token_to}
-								onChange={(e) => setScheduleForm((prev) => ({ ...prev, token_to: e.target.value }))}
-							/>
-						</div>
-						<div className='col-12 col-md-6'>
-							<label className='form-label fw-semibold' htmlFor='schedule-token-limit'>
-								Token limit
-							</label>
-							<input
-								id='schedule-token-limit'
-								type='number'
-								min={1}
-								step={1}
-								className='form-control'
-								value={scheduleForm.token_limit}
-								onChange={(e) => setScheduleForm((prev) => ({ ...prev, token_limit: e.target.value }))}
-								placeholder='Optional — maps to schedule limit'
-							/>
-						</div>
-						{isEditMode && (
-							<div className='col-12 col-md-6'>
-								<label
-									className='form-label fw-semibold d-flex align-items-center gap-1'
-									htmlFor='schedule-token-prefix'>
-									Token prefix
-									<Tooltip
-										arrow
-										placement='top'
-										title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
-										<InfoOutlinedIcon style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }} />
-									</Tooltip>
+				<ModalBody className='pt-2 pb-3'>
+					<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+						<div className='row g-3'>
+							<div className='col-md-6'>
+								<label className={fieldLabelClass} htmlFor='schedule-start'>
+									Start Date & Time
 								</label>
 								<input
-									id='schedule-token-prefix'
-									type='text'
-									className='form-control'
-									value={scheduleForm.token_prefix}
-									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, token_prefix: e.target.value }))
-									}
-									placeholder='Optional — e.g. A'
-									maxLength={10}
-									autoComplete='off'
+									id='schedule-start'
+									type='datetime-local'
+									className='form-control rounded-3'
+									min={isEditMode ? undefined : toDateTimeLocalValue(new Date())}
+									value={scheduleForm.start}
+									onChange={(e) => {
+										const nextStart = e.target.value;
+										setScheduleForm((prev) => {
+											const ns = new Date(nextStart);
+											const ne = new Date(prev.end);
+											let nextEnd = prev.end;
+											if (
+												nextStart &&
+												!Number.isNaN(ns.getTime()) &&
+												prev.end &&
+												!Number.isNaN(ne.getTime()) &&
+												ne <= ns
+											) {
+												nextEnd = toDateTimeLocalValue(dayjs(ns).add(1, 'minute').toDate());
+											}
+											return { ...prev, start: nextStart, end: nextEnd };
+										});
+									}}
+									required
+									disabled={savingSchedule}
 								/>
 							</div>
-						)}
-						<div className='col-md-6'>
-							<div className='form-check form-switch pt-md-4'>
+							<div className='col-md-6'>
+								<label className={fieldLabelClass} htmlFor='schedule-end'>
+									End Date & Time
+								</label>
 								<input
-									id='schedule-is-reporting-enabled'
-									type='checkbox'
-									className='form-check-input'
-									role='switch'
-									checked={scheduleForm.is_reporting_enabled}
+									id='schedule-end'
+									type='datetime-local'
+									className='form-control rounded-3'
+									min={endDateTimeMin}
+									value={scheduleForm.end}
+									onChange={(e) => setScheduleForm((prev) => ({ ...prev, end: e.target.value }))}
+									required
+									disabled={savingSchedule}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className={fieldLabelClass} htmlFor='schedule-token-from'>
+									Token from
+								</label>
+								<input
+									id='schedule-token-from'
+									type='number'
+									min={1}
+									className='form-control rounded-3'
+									value={scheduleForm.token_from}
 									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_from: e.target.value }))
+									}
+									disabled={savingSchedule}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label className={fieldLabelClass} htmlFor='schedule-token-to'>
+									Token to
+								</label>
+								<input
+									id='schedule-token-to'
+									type='number'
+									min={1}
+									className='form-control rounded-3'
+									value={scheduleForm.token_to}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_to: e.target.value }))
+									}
+									disabled={savingSchedule}
+								/>
+							</div>
+							<div className={isEditMode ? 'col-md-6' : 'col-12'}>
+								<label className={fieldLabelClass} htmlFor='schedule-token-limit'>
+									Token limit
+								</label>
+								<input
+									id='schedule-token-limit'
+									type='number'
+									min={1}
+									step={1}
+									className='form-control rounded-3'
+									value={scheduleForm.token_limit}
+									onChange={(e) =>
+										setScheduleForm((prev) => ({ ...prev, token_limit: e.target.value }))
+									}
+									placeholder='Optional — maps to schedule limit'
+									disabled={savingSchedule}
+								/>
+							</div>
+							{isEditMode && (
+								<div className='col-md-6'>
+									<label
+										className={`${fieldLabelClass} d-flex align-items-center gap-1`}
+										htmlFor='schedule-token-prefix'>
+										Token prefix
+										<Tooltip
+											arrow
+											placement='top'
+											title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
+											<InfoOutlinedIcon
+												style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }}
+											/>
+										</Tooltip>
+									</label>
+									<input
+										id='schedule-token-prefix'
+										type='text'
+										className='form-control rounded-3'
+										value={scheduleForm.token_prefix}
+										onChange={(e) =>
+											setScheduleForm((prev) => ({ ...prev, token_prefix: e.target.value }))
+										}
+										placeholder='Optional — e.g. A'
+										maxLength={10}
+										autoComplete='off'
+										disabled={savingSchedule}
+									/>
+								</div>
+							)}
+							{isEditMode && (
+								<div className='col-12'>
+									<label
+										className={`${fieldLabelClass} d-flex align-items-center gap-1`}
+										htmlFor='schedule-noshow-recall-interval'>
+										No-show recall interval (minutes)
+										<Tooltip
+											arrow
+											placement='top'
+											title='How many minutes to wait after a no-show before the token can be recalled again. Stored as seconds on the server.'>
+											<InfoOutlinedIcon
+												style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }}
+											/>
+										</Tooltip>
+									</label>
+									<input
+										id='schedule-noshow-recall-interval'
+										type='number'
+										min={0}
+										step={1}
+										className='form-control rounded-3'
+										value={scheduleForm.noshow_recall_interval}
+										onChange={(e) =>
+											setScheduleForm((prev) => ({
+												...prev,
+												noshow_recall_interval: e.target.value,
+											}))
+										}
+										placeholder='e.g. 5'
+										disabled={savingSchedule}
+									/>
+								</div>
+							)}
+							<div className='col-md-6'>
+								<ToggleSettingCard
+									id='schedule-allow-postpone'
+									label='Allow Postpone'
+									checked={scheduleForm.allow_postpone}
+									disabled={savingSchedule}
+									onChange={(checked) =>
+										setScheduleForm((prev) => ({ ...prev, allow_postpone: checked }))
+									}
+									enabledTitle='Allowed'
+									disabledTitle='Disabled'
+									enabledHint='Customers can postpone tokens'
+									disabledHint='Postpone not allowed'
+									iconOn='Update'
+									iconOff='Block'
+									activeBorderClass='border-primary bg-primary bg-opacity-10'
+									activeIconWrapClass='bg-primary bg-opacity-15'
+									activeTextClass='text-primary'
+									iconColorOn='primary'
+								/>
+							</div>
+							<div className='col-md-6'>
+								<ToggleSettingCard
+									id='schedule-is-reporting-enabled'
+									label='Reporting Enabled'
+									checked={scheduleForm.is_reporting_enabled}
+									disabled={savingSchedule}
+									onChange={(checked) =>
 										setScheduleForm((prev) => ({
 											...prev,
-											is_reporting_enabled: e.target.checked,
+											is_reporting_enabled: checked,
 										}))
 									}
+									enabledTitle='Enabled'
+									disabledTitle='Disabled'
+									enabledHint='Included in reports'
+									disabledHint='Excluded from reports'
+									iconOn='Assessment'
+									iconOff='Block'
+									activeBorderClass='border-info bg-info bg-opacity-10'
+									activeIconWrapClass='bg-info bg-opacity-15'
+									activeTextClass='text-info'
+									iconColorOn='info'
 								/>
-								<label className='form-check-label fw-semibold' htmlFor='schedule-is-reporting-enabled'>
-									Reporting enabled
-								</label>
 							</div>
-						</div>
-						<div className='col-md-6'>
-							<div className='form-check form-switch pt-md-4'>
-								<input
-									id='schedule-allow-postpone'
-									type='checkbox'
-									className='form-check-input'
-									role='switch'
-									checked={scheduleForm.allow_postpone}
+							<div className='col-12'>
+								<label className={fieldLabelClass} htmlFor='schedule-description'>
+									Description
+								</label>
+								<textarea
+									id='schedule-description'
+									className='form-control rounded-3'
+									rows={3}
+									value={scheduleForm.description}
 									onChange={(e) =>
-										setScheduleForm((prev) => ({ ...prev, allow_postpone: e.target.checked }))
+										setScheduleForm((prev) => ({ ...prev, description: e.target.value }))
 									}
+									placeholder='Optional notes for this schedule'
+									disabled={savingSchedule}
 								/>
-								<label className='form-check-label fw-semibold' htmlFor='schedule-allow-postpone'>
-									Allow postpone
-								</label>
 							</div>
-						</div>
-						<div className='col-12'>
-							<label className='form-label fw-semibold' htmlFor='schedule-description'>
-								Description
-							</label>
-							<textarea
-								id='schedule-description'
-								className='form-control'
-								rows={3}
-								value={scheduleForm.description}
-								onChange={(e) => setScheduleForm((prev) => ({ ...prev, description: e.target.value }))}
-								placeholder='Optional notes for this schedule'
-							/>
 						</div>
 					</div>
 				</ModalBody>
-				<ModalFooter>
-					<Button color='secondary' isLight type='button' onClick={closeModal}>
+				<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+					<Button
+						color='secondary'
+						isLight
+						type='button'
+						isDisable={savingSchedule}
+						onClick={closeModal}>
 						Cancel
 					</Button>
-					<Button color='primary' type='submit' isDisable={savingSchedule}>
+					<Button
+						color='primary'
+						type='submit'
+						icon={isEditMode ? 'Save' : 'Add'}
+						isDisable={savingSchedule}>
 						{savingSchedule ? (
 							<>
 								<Spinner isSmall inButton />

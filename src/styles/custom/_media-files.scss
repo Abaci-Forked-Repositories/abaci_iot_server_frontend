@@ -1900,6 +1900,7 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 .queue-detail-info-panel {
 	flex: 0 0 auto;
 	width: 100%;
+	overflow: visible;
 
 	@media (min-width: 1200px) {
 		width: 420px;
@@ -1934,6 +1935,8 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 	gap: 0.55rem;
 	flex-wrap: nowrap;
 	overflow-x: auto;
+	padding-top: calc(5px + 12px);
+	padding-bottom: 0.25rem;
 
 	// Hide scrollbar while allowing scroll on very small screens
 	scrollbar-width: none;
@@ -1942,18 +1945,166 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 
 .queue-detail-stat-tile {
 	flex: 1 1 0;
-	min-width: 80px;
+	min-width: 92px;
 }
 
-// Meta pills inside queue info panel
-.queue-detail-meta-pill {
-	padding: 0.45rem 0.75rem;
+// Schedule details info + quick-stats cards (scoped — does not affect dashboard/queue overview)
+.schedule-detail-hover-grid {
+	padding-top: 10px;
+}
+
+.schedule-detail-hover-card {
+	--schedule-hover-accent: #{$primary};
+	position: relative;
+	z-index: 1;
+	overflow: hidden;
 	border: 1px solid rgba(203, 213, 225, 0.65);
-	border-radius: 0.65rem;
-	min-width: 90px;
+	border-radius: 0.75rem;
+	background: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 3px 10px rgba(#0f172a, 0.04);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease,
+		border-color 0.2s ease;
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		z-index: 2;
+		pointer-events: none;
+		border-radius: 0.75rem 0.75rem 0 0;
+		background: linear-gradient(
+			90deg,
+			var(--schedule-hover-accent) 0%,
+			color-mix(in srgb, var(--schedule-hover-accent) 40%, transparent) 100%
+		);
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
 
 	@include dark-mode {
 		border-color: rgba(255, 255, 255, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+		box-shadow:
+			0 2px 8px rgba(#000000, 0.28),
+			0 6px 16px rgba(#000000, 0.14);
+	}
+
+	&:hover {
+		z-index: 3;
+		transform: translateY(-5px);
+		border-color: color-mix(in srgb, var(--schedule-hover-accent) 35%, #cbd5e1 65%);
+		box-shadow:
+			0 4px 12px color-mix(in srgb, var(--schedule-hover-accent) 14%, transparent),
+			0 14px 26px rgba(#0f172a, 0.1);
+
+		&::before {
+			opacity: 1;
+		}
+
+		@include dark-mode {
+			border-color: color-mix(in srgb, var(--schedule-hover-accent) 45%, transparent);
+			box-shadow:
+				0 6px 16px rgba(#000000, 0.4),
+				0 0 0 1px color-mix(in srgb, var(--schedule-hover-accent) 12%, transparent);
+		}
+	}
+}
+
+.schedule-detail-hover-card--primary {
+	--schedule-hover-accent: #{$primary};
+}
+
+.schedule-detail-hover-card--info {
+	--schedule-hover-accent: #{$info};
+}
+
+.schedule-detail-hover-card--success {
+	--schedule-hover-accent: #{$success};
+}
+
+.schedule-detail-hover-card--warning {
+	--schedule-hover-accent: #{$warning};
+}
+
+.schedule-detail-hover-card--danger {
+	--schedule-hover-accent: #{$danger};
+}
+
+.schedule-detail-hover-card--secondary {
+	--schedule-hover-accent: #{$secondary};
+}
+
+// Opt out of the top accent bar on hover (serving-history cards)
+.schedule-detail-hover-card--no-top-accent {
+	&::before {
+		content: none;
+		display: none;
+	}
+}
+
+// Slide left instead of lift up (main serving-history entry cards)
+.schedule-detail-hover-card--lift-left {
+	&:hover {
+		transform: translateX(-6px);
+	}
+}
+
+// Meta pills inside queue info panel
+.queue-detail-meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+	padding-top: 10px;
+	overflow: visible;
+}
+
+.queue-detail-meta-pill {
+	position: relative;
+	z-index: 1;
+	padding: 0.5rem 0.8rem 0.55rem;
+	border: 1px solid rgba(203, 213, 225, 0.65);
+	border-radius: 0.65rem;
+	min-width: 90px;
+	background: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 3px 10px rgba(#0f172a, 0.04);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease,
+		border-color 0.2s ease;
+
+	@include dark-mode {
+		border-color: rgba(255, 255, 255, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+		box-shadow:
+			0 2px 8px rgba(#000000, 0.28),
+			0 6px 16px rgba(#000000, 0.14);
+	}
+
+	&:hover {
+		z-index: 3;
+		transform: translateY(-4px);
+		border-color: color-mix(in srgb, $primary 35%, #cbd5e1 65%);
+		box-shadow:
+			0 4px 12px color-mix(in srgb, $primary 12%, transparent),
+			0 12px 24px rgba(#0f172a, 0.1);
+
+		@include dark-mode {
+			border-color: color-mix(in srgb, $primary-soft 45%, transparent);
+			box-shadow:
+				0 6px 16px rgba(#000000, 0.4),
+				0 0 0 1px color-mix(in srgb, $primary-soft 12%, transparent);
+		}
 	}
 }
 
@@ -1970,4 +2121,342 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 	font-weight: 600;
 	display: inline-flex;
 	align-items: center;
+}
+
+// Serving-point picker tiles (add-to-schedule / add-to-queue modals)
+.sp-pick-grid {
+	padding-top: 10px;
+}
+
+.sp-pick-card {
+	--sp-pick-accent: #{$primary};
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.7rem;
+	width: 100%;
+	height: 100%;
+	min-height: 148px;
+	padding: 1.35rem 0.85rem 1rem;
+	overflow: hidden;
+	appearance: none;
+	text-align: center;
+	border-radius: 0.9rem;
+	border: 1px solid rgba(#cbd5e1, 0.55);
+	background: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 4px 14px rgba(#0f172a, 0.05);
+	cursor: pointer;
+	transition:
+		box-shadow 0.28s ease,
+		border-color 0.2s ease,
+		background 0.2s ease;
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		z-index: 2;
+		pointer-events: none;
+		border-radius: 0.9rem 0.9rem 0 0;
+		background: linear-gradient(90deg, var(--sp-pick-accent) 0%, rgba($primary, 0.45) 100%);
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
+
+	@include dark-mode {
+		--sp-pick-accent: #{$primary-soft};
+		border-color: rgba(#ffffff, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+		box-shadow:
+			0 2px 8px rgba(#000000, 0.32),
+			0 8px 22px rgba(#000000, 0.18);
+	}
+
+	&:hover:not(:disabled),
+	&.is-selected {
+		z-index: 4;
+		border-color: rgba($primary, 0.4);
+		box-shadow:
+			0 4px 14px rgba($primary, 0.12),
+			0 16px 32px rgba(#0f172a, 0.1);
+
+		&::before {
+			opacity: 1;
+		}
+
+		.sp-pick-card__icon {
+			transform: scale(1.06);
+			box-shadow: 0 6px 16px rgba($primary, 0.2);
+		}
+
+		@include dark-mode {
+			border-color: rgba($primary-soft, 0.5);
+			box-shadow:
+				0 6px 18px rgba(#000000, 0.42),
+				0 0 0 1px rgba($primary-soft, 0.12);
+		}
+	}
+
+	&.is-selected {
+		background: color-mix(in srgb, $primary 8%, #ffffff);
+		box-shadow:
+			0 0 0 2px rgba($primary, 0.12),
+			0 8px 22px rgba($primary, 0.1);
+
+		@include dark-mode {
+			background: color-mix(in srgb, $primary-soft 14%, #171c28);
+		}
+	}
+
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+}
+
+.sp-pick-card__check {
+	position: absolute;
+	top: 0.7rem;
+	right: 0.7rem;
+	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 2px solid rgba(#94a3b8, 0.55);
+	background: #ffffff;
+	transition:
+		border-color 0.2s ease,
+		background 0.2s ease;
+
+	.sp-pick-card.is-selected & {
+		border-color: $primary;
+		background: $primary;
+	}
+
+	@include dark-mode {
+		background: #171c28;
+		border-color: rgba(#ffffff, 0.28);
+
+		.sp-pick-card.is-selected & {
+			border-color: $primary-soft;
+			background: $primary-soft;
+		}
+	}
+}
+
+.sp-pick-card__check-mark {
+	display: inline-flex;
+	line-height: 0;
+}
+
+.sp-pick-card__icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	background: color-mix(in srgb, $primary 12%, #ffffff 88%);
+	border: 1px solid color-mix(in srgb, $primary 18%, transparent);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease;
+
+	@include dark-mode {
+		background: color-mix(in srgb, $primary-soft 18%, #0f172a 82%);
+		border-color: color-mix(in srgb, $primary-soft 28%, transparent);
+	}
+}
+
+.sp-pick-card__icon-svg {
+	font-size: 1.35rem !important;
+	color: $primary !important;
+
+	@include dark-mode {
+		color: $primary-soft !important;
+	}
+}
+
+.sp-pick-card__copy {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.15rem;
+	width: 100%;
+	min-width: 0;
+}
+
+.sp-pick-card__name {
+	display: block;
+	width: 100%;
+	font-size: 0.95rem;
+	font-weight: 700;
+	line-height: 1.3;
+	color: #0f172a;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	.sp-pick-card.is-selected & {
+		color: $primary;
+	}
+
+	@include dark-mode {
+		color: #f1f5f9;
+
+		.sp-pick-card.is-selected & {
+			color: $primary-soft;
+		}
+	}
+}
+
+.sp-pick-card__desc {
+	display: block;
+	width: 100%;
+	font-size: 0.75rem;
+	line-height: 1.3;
+	color: #64748b;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	@include dark-mode {
+		color: #94a3b8;
+	}
+}
+
+// Serving window detail — identity header only (does not affect other pages)
+.sw-detail-hero__icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, $primary 12%, #ffffff 88%);
+	border: 1px solid color-mix(in srgb, $primary 18%, transparent);
+	color: $primary;
+
+	svg,
+	i {
+		font-size: 1.35rem;
+	}
+
+	@include dark-mode {
+		background: color-mix(in srgb, $primary-soft 18%, #0f172a 82%);
+		border-color: color-mix(in srgb, $primary-soft 28%, transparent);
+		color: $primary-soft;
+	}
+}
+
+.sw-detail-hero__eyebrow {
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #94a3b8;
+	margin-bottom: 0.35rem;
+}
+
+.sw-detail-hero__title-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+	margin-bottom: 0.7rem;
+}
+
+.sw-detail-hero__title {
+	font-size: 1.45rem;
+	font-weight: 700;
+	line-height: 1.2;
+	color: #0f172a;
+
+	@include dark-mode {
+		color: #f1f5f9;
+	}
+}
+
+.sw-detail-hero__id {
+	display: inline-flex;
+	align-items: center;
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1;
+	color: $primary;
+	background: color-mix(in srgb, $primary 10%, #ffffff);
+	border: 1px solid color-mix(in srgb, $primary 18%, transparent);
+	border-radius: 999px;
+	padding: 0.28rem 0.65rem;
+
+	@include dark-mode {
+		color: $primary-soft;
+		background: color-mix(in srgb, $primary-soft 16%, #171c28);
+		border-color: color-mix(in srgb, $primary-soft 28%, transparent);
+	}
+}
+
+.sw-detail-hero__date {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	max-width: 100%;
+	margin-bottom: 0.85rem;
+	padding: 0.45rem 0.75rem;
+	border-radius: 0.65rem;
+	background: color-mix(in srgb, $primary 7%, #ffffff);
+	border: 1px solid color-mix(in srgb, $primary 14%, transparent);
+	color: #334155;
+	font-size: 0.8125rem;
+	line-height: 1.35;
+
+	@include dark-mode {
+		background: color-mix(in srgb, $primary-soft 12%, #171c28);
+		border-color: color-mix(in srgb, $primary-soft 22%, transparent);
+		color: #cbd5e1;
+	}
+}
+
+.sw-detail-hero__facts {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 0.65rem;
+}
+
+.sw-detail-hero__fact {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.35rem;
+	min-width: 148px;
+	padding: 0.55rem 0.8rem 0.6rem;
+	border: 1px solid rgba(#cbd5e1, 0.65);
+	border-radius: 0.65rem;
+	background: #ffffff;
+
+	@include dark-mode {
+		border-color: rgba(#ffffff, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+	}
+}
+
+.sw-detail-hero__fact-label {
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: #94a3b8;
 }

@@ -87,6 +87,8 @@ export interface Queue {
 	group_name?: string;
 	limit?: number;
 	grace_period_minutes?: number;
+	/** No-show recall interval in seconds (UI shows minutes). */
+	noshow_recall_interval?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
@@ -318,6 +320,7 @@ export interface CreateQueuePayload {
 	description?: string;
 	limit?: number;
 	grace_period_minutes?: number;
+	noshow_recall_interval?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
@@ -331,6 +334,7 @@ export interface UpdateQueuePayload {
 	group?: number | null;
 	limit?: number;
 	grace_period_minutes?: number;
+	noshow_recall_interval?: number;
 	allow_postpone?: boolean;
 	is_reporting_enabled?: boolean;
 	token_prefix?: string;
@@ -389,6 +393,8 @@ export interface QueueSchedule {
 	allow_postpone?: boolean;
 	/** From schedule detail API; gates registered → waiting in schedule token UI. */
 	is_reporting_enabled?: boolean;
+	/** No-show recall interval in seconds (UI shows minutes). Inherited from queue unless overridden. */
+	noshow_recall_interval?: number | null;
 	serving_point_windows?: ScheduleServingPoint[];
 	created_at?: string;
 	updated_at?: string;
@@ -418,6 +424,8 @@ export interface PatchSchedulePayload {
 	token_prefix?: string | null;
 	is_reporting_enabled?: boolean;
 	allow_postpone?: boolean;
+	/** Seconds. */
+	noshow_recall_interval?: number;
 }
 
 export interface ScheduleServingPoint {

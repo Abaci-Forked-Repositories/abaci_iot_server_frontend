@@ -33,17 +33,6 @@ const STAT_TILES: Array<{
 	{ key: 'cancelled', label: 'Cancelled', icon: 'Cancel', color: 'secondary' },
 ];
 
-const ICON_BG_BY_COLOR: Record<TColor, string> = {
-	primary: 'rgba(54, 153, 255, 0.14)',
-	secondary: 'rgba(125, 138, 156, 0.14)',
-	success: 'rgba(27, 197, 189, 0.14)',
-	info: 'rgba(114, 57, 234, 0.14)',
-	warning: 'rgba(255, 168, 0, 0.14)',
-	danger: 'rgba(246, 78, 96, 0.14)',
-	dark: 'rgba(24, 28, 50, 0.14)',
-	light: 'rgba(245, 248, 250, 0.24)',
-};
-
 export type QueueDetailEntryFrom = 'queues-list' | 'serving-points' | 'serving-point-detail';
 
 export type QueueDetailNavState = {
@@ -277,7 +266,7 @@ const QueueDetailView: React.FC = () => {
 									</div>
 
 									{/* Meta pills row */}
-									<div className='d-flex flex-wrap gap-3 mb-4 align-items-center'>
+									<div className='queue-detail-meta-row'>
 										{infoMeta.map((m) => (
 											<div key={m.label} className='queue-detail-meta-pill'>
 												<span className='queue-detail-meta-label'>{m.label}</span>
@@ -322,19 +311,18 @@ const QueueDetailView: React.FC = () => {
 											{STAT_TILES.map((m) => (
 												<div
 													key={m.label}
-													className='queue-detail-stat-tile border rounded-3 p-4 text-center d-flex flex-column align-items-center justify-content-center'
-													style={{ minHeight: 94 }}>
-													<div
-														className='d-inline-flex align-items-center justify-content-center rounded-circle mb-2'
-														style={{
-															width: 54,
-															height: 54,
-															backgroundColor: ICON_BG_BY_COLOR[m.color],
-														}}>
-														<Icon icon={m.icon} color={m.color} size='2x' className='mb-0 opacity-90' />
+													className={`dashboard-stat-card dashboard-stat-card--${m.color} queue-detail-stat-tile`}>
+													<div className='dashboard-stat-card__body dashboard-stat-card__body--stacked'>
+														<div className='dashboard-stat-card__icon-box' aria-hidden>
+															<Icon icon={m.icon} className='dashboard-stat-card__icon' />
+														</div>
+														<div className='dashboard-stat-card__copy'>
+															<span className='dashboard-stat-card__label'>{m.label}</span>
+															<span className='dashboard-stat-card__value'>
+																{statValue(m.key).toLocaleString()}
+															</span>
+														</div>
 													</div>
-													<div className='text-muted small'>{m.label}</div>
-													<div className='fs-3 fw-bold'>{statValue(m.key)}</div>
 												</div>
 											))}
 										</div>
