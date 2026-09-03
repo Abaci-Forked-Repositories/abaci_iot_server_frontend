@@ -218,8 +218,8 @@ const ScreenDetailWorkspace: React.FC = () => {
 				<CardLabel icon='SmartScreen'>
 					<CardTitle tag='h4'>Screen Detail</CardTitle>
 				</CardLabel>
-				<CardActions>
-					<Button color='light' icon='ArrowBack' onClick={() => navigate('/screens')}>
+				<CardActions className='d-flex flex-wrap gap-2'>
+					<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate('/screens')}>
 						Back to Screens
 					</Button>
 					{screen?.uuid && (

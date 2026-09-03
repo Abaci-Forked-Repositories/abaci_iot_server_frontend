@@ -1,5 +1,5 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import Card, { CardBody } from '../../bootstrap/Card';
 import Badge from '../../bootstrap/Badge';
@@ -35,18 +35,99 @@ const getNextAllowedStatuses = (status?: string) => {
 	return [];
 };
 
-export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail';
+const SCHEDULE_STATUS_OPTION_META: Record<
+	string,
+	{
+		icon: string;
+		color: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'secondary';
+		selectedCard: string;
+		selectedRadio: string;
+		selectedIconWrap: string;
+		selectedText: string;
+	}
+> = {
+	scheduled: {
+		icon: 'Schedule',
+		color: 'primary',
+		selectedCard: 'border-primary bg-primary bg-opacity-10',
+		selectedRadio: 'bg-primary border-primary',
+		selectedIconWrap: 'bg-primary bg-opacity-15',
+		selectedText: 'text-primary',
+	},
+	running: {
+		icon: 'PlayCircle',
+		color: 'success',
+		selectedCard: 'border-success bg-success bg-opacity-10',
+		selectedRadio: 'bg-success border-success',
+		selectedIconWrap: 'bg-success bg-opacity-15',
+		selectedText: 'text-success',
+	},
+	on_hold: {
+		icon: 'PauseCircle',
+		color: 'warning',
+		selectedCard: 'border-warning bg-warning bg-opacity-10',
+		selectedRadio: 'bg-warning border-warning',
+		selectedIconWrap: 'bg-warning bg-opacity-15',
+		selectedText: 'text-warning',
+	},
+	onhold: {
+		icon: 'PauseCircle',
+		color: 'warning',
+		selectedCard: 'border-warning bg-warning bg-opacity-10',
+		selectedRadio: 'bg-warning border-warning',
+		selectedIconWrap: 'bg-warning bg-opacity-15',
+		selectedText: 'text-warning',
+	},
+	completed: {
+		icon: 'TaskAlt',
+		color: 'info',
+		selectedCard: 'border-info bg-info bg-opacity-10',
+		selectedRadio: 'bg-info border-info',
+		selectedIconWrap: 'bg-info bg-opacity-15',
+		selectedText: 'text-info',
+	},
+	cancelled: {
+		icon: 'Cancel',
+		color: 'danger',
+		selectedCard: 'border-danger bg-danger bg-opacity-10',
+		selectedRadio: 'bg-danger border-danger',
+		selectedIconWrap: 'bg-danger bg-opacity-15',
+		selectedText: 'text-danger',
+	},
+	canceled: {
+		icon: 'Cancel',
+		color: 'danger',
+		selectedCard: 'border-danger bg-danger bg-opacity-10',
+		selectedRadio: 'bg-danger border-danger',
+		selectedIconWrap: 'bg-danger bg-opacity-15',
+		selectedText: 'text-danger',
+	},
+};
+
+const DEFAULT_SCHEDULE_STATUS_META = {
+	icon: 'TrackChanges',
+	color: 'primary' as const,
+	selectedCard: 'border-primary bg-primary bg-opacity-10',
+	selectedRadio: 'bg-primary border-primary',
+	selectedIconWrap: 'bg-primary bg-opacity-15',
+	selectedText: 'text-primary',
+};
+
+export type ScheduleDetailEntryFrom = 'schedules-list' | 'queue-detail' | 'token-user';
 
 export type ScheduleDetailNavState = {
 	from?: ScheduleDetailEntryFrom;
 	queueId?: number;
 	queueName?: string;
 	queueDetailPath?: string;
+	tokenUserId?: number;
+	tokenUserName?: string;
 };
 
 const ScheduleDetailWorkspace: React.FC = () => {
 	const { scheduleId } = useParams<{ scheduleId: string }>();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const dispatch = useDispatch();
 	const navState = location.state as ScheduleDetailNavState | null;
 	const queueIdFromState = navState?.queueId;
@@ -69,16 +150,24 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	const canReadQueueManagement = can('queue_management_read');
 	const canReadSchedules = can('schedules_read');
 	const canCreateToken = can('token_users_write');
+	const canReadTokenUsers = can('token_users_read');
 
 	const entryFrom = useMemo((): ScheduleDetailEntryFrom => {
-		if (navState?.from === 'schedules-list' || navState?.from === 'queue-detail') {
+		if (
+			navState?.from === 'schedules-list' ||
+			navState?.from === 'queue-detail' ||
+			navState?.from === 'token-user'
+		) {
 			return navState.from;
+		}
+		if (navState?.tokenUserId != null) {
+			return 'token-user';
 		}
 		if (navState?.queueDetailPath != null || navState?.queueId != null) {
 			return 'queue-detail';
 		}
 		return 'schedules-list';
-	}, [navState?.from, navState?.queueDetailPath, navState?.queueId]);
+	}, [navState?.from, navState?.queueDetailPath, navState?.queueId, navState?.tokenUserId]);
 
 	const refreshTokensTableRef = useRef<() => void>(() => {});
 
@@ -114,6 +203,28 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		return '/queue-management';
 	}, [queueDetailPathFromState, scheduleRecord?.queue]);
 
+	const backNav = useMemo(() => {
+		if (entryFrom === 'token-user' && navState?.tokenUserId) {
+			return `/token-users/${navState.tokenUserId}`;
+		}
+		if (entryFrom === 'queue-detail' && canReadQueueManagement) {
+			return queueDetailPath;
+		}
+		if (canReadSchedules) {
+			return '/schedules';
+		}
+		if (canReadQueueManagement) {
+			return queueDetailPath;
+		}
+		return '/';
+	}, [
+		canReadQueueManagement,
+		canReadSchedules,
+		entryFrom,
+		navState?.tokenUserId,
+		queueDetailPath,
+	]);
+
 	const tokenFormQueues = useMemo((): Queue[] => {
 		if (!scheduleRecord?.queue) return [];
 		const name =
@@ -135,7 +246,19 @@ const ScheduleDetailWorkspace: React.FC = () => {
 		};
 
 		let breadcrumbs: { label: string; path: string }[];
-		if (entryFrom === 'schedules-list') {
+		if (entryFrom === 'token-user' && navState?.tokenUserId) {
+			const userLabel = navState.tokenUserName?.trim() || `User #${navState.tokenUserId}`;
+			breadcrumbs = canReadTokenUsers
+				? [
+						{ label: 'Token Users', path: '/token-users' },
+						{ label: userLabel, path: `/token-users/${navState.tokenUserId}` },
+						scheduleDetailsCrumb,
+					]
+				: [
+						{ label: userLabel, path: `/token-users/${navState.tokenUserId}` },
+						scheduleDetailsCrumb,
+					];
+		} else if (entryFrom === 'schedules-list') {
 			breadcrumbs = canReadSchedules
 				? [{ label: 'Schedules', path: '/schedules' }, scheduleDetailsCrumb]
 				: [scheduleDetailsCrumb];
@@ -156,10 +279,13 @@ const ScheduleDetailWorkspace: React.FC = () => {
 	}, [
 		canReadQueueManagement,
 		canReadSchedules,
+		canReadTokenUsers,
 		dispatch,
 		entryFrom,
 		location.pathname,
 		location.search,
+		navState?.tokenUserId,
+		navState?.tokenUserName,
 		queueDetailPath,
 		queueNameFromState,
 		scheduleRecord,
@@ -274,7 +400,10 @@ const ScheduleDetailWorkspace: React.FC = () => {
 
 	if (!loading && !scheduleRecord) {
 		return (
-			<div className='d-flex justify-content-center align-items-center py-5'>
+			<div className='d-flex justify-content-center align-items-center py-5 gap-2 flex-wrap'>
+				<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate(backNav)}>
+					Back
+				</Button>
 				<Button color='primary' icon='Refresh' onClick={() => void load()}>
 					Try again
 				</Button>
@@ -312,6 +441,14 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='d-flex align-items-center gap-2 flex-wrap justify-content-end'>
+									<Button
+										color='dark'
+										isLight
+										size='sm'
+										icon='ArrowBack'
+										onClick={() => navigate(backNav)}>
+										Back
+									</Button>
 									{schedule.status ? (
 										<StatusBadge status={schedule.status} />
 									) : (
@@ -340,9 +477,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 								</div>
 							</div>
 
-							<div className='row g-3'>
+							<div className='row g-3 schedule-detail-hover-grid'>
 								<div className='col-md-6'>
-									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--success p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(27, 197, 189, 0.16)' }}>
@@ -357,7 +494,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='col-md-6'>
-									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--danger p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(246, 78, 96, 0.16)' }}>
@@ -371,8 +508,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
-								<div className='col-md-4'>
-									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--secondary p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(125, 138, 156, 0.14)' }}>
@@ -392,8 +529,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
-								<div className='col-md-4'>
-									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(54, 153, 255, 0.14)' }}>
@@ -415,8 +552,8 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
-								<div className='col-md-4'>
-									<div className='border rounded-3 p-3 h-100 d-flex align-items-center gap-3'>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 h-100 d-flex align-items-center gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(114, 57, 234, 0.14)' }}>
@@ -433,8 +570,25 @@ const ScheduleDetailWorkspace: React.FC = () => {
 										</div>
 									</div>
 								</div>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--danger p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(243, 84, 33, 0.14)' }}>
+											<Icon icon='Replay' color='danger' />
+										</div>
+										<div>
+											<div className='text-muted small mb-1'>No-show recall interval</div>
+											<div className='fw-semibold'>
+												{schedule.noshow_recall_interval != null
+													? `${Math.round(schedule.noshow_recall_interval / 60)} min`
+													: '—'}
+											</div>
+										</div>
+									</div>
+								</div>
 								<div className='col-12'>
-									<div className='border rounded-3 p-3 d-flex align-items-start gap-3'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 d-flex align-items-start gap-3'>
 										<div
 											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 											style={{ width: 34, height: 34, backgroundColor: 'rgba(54, 153, 255, 0.14)' }}>
@@ -469,9 +623,9 @@ const ScheduleDetailWorkspace: React.FC = () => {
 								</Button>
 								)}
 							</div>
-							<div className='row g-3'>
+							<div className='row g-3 schedule-detail-hover-grid'>
 								<div className='col-6'>
-									<div className='queue-detail-stat-tile border rounded-3 p-3 h-100'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 h-100'>
 										<div className='d-flex align-items-center gap-2 mb-2'>
 											<div
 												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -484,7 +638,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='col-6'>
-									<div className='queue-detail-stat-tile border rounded-3 p-3 h-100'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--secondary p-3 h-100'>
 										<div className='d-flex align-items-center gap-2 mb-2'>
 											<div
 												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -497,7 +651,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='col-6'>
-									<div className='queue-detail-stat-tile border rounded-3 p-3 h-100'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--warning p-3 h-100'>
 										<div className='d-flex align-items-center gap-2 mb-2'>
 											<div
 												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -510,7 +664,7 @@ const ScheduleDetailWorkspace: React.FC = () => {
 									</div>
 								</div>
 								<div className='col-6'>
-									<div className='queue-detail-stat-tile border rounded-3 p-3 h-100'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--success p-3 h-100'>
 										<div className='d-flex align-items-center gap-2 mb-2'>
 											<div
 												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
@@ -576,51 +730,179 @@ const ScheduleDetailWorkspace: React.FC = () => {
 				onSaved={() => void load()}
 			/>
 
-			<Modal isOpen={showStatusModal} setIsOpen={setShowStatusModal} isCentered size='sm' isAnimation={false}>
+			<Modal
+				isOpen={showStatusModal}
+				setIsOpen={setShowStatusModal}
+				isCentered
+				size='lg'
+				isAnimation={false}>
 				<ModalHeader setIsOpen={setShowStatusModal}>
-					<ModalTitle id='update-schedule-status-modal'>Update Schedule Status</ModalTitle>
+					<ModalTitle id='update-schedule-status-modal'>
+						<div className='d-flex align-items-center gap-3'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+								style={{ width: 40, height: 40 }}>
+								<Icon icon='TrackChanges' color='primary' />
+							</span>
+							<div>
+								<div className='fw-bold lh-sm'>Update schedule status</div>
+								<div className='text-muted small fw-normal mt-1'>
+									Choose the next operational state for this schedule
+								</div>
+							</div>
+						</div>
+					</ModalTitle>
 				</ModalHeader>
 				<form onSubmit={handleUpdateScheduleStatus}>
-					<ModalBody>
-						<div className='text-muted small mb-2 d-flex align-items-center flex-wrap gap-2'>
-							<span>Current status:</span>
-							{schedule.status ? (
-								<StatusBadge status={schedule.status} />
+					<ModalBody className='pt-2 pb-4'>
+						<div className='d-flex align-items-center gap-3 p-3 p-md-4 rounded-4 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+								style={{ width: 48, height: 48 }}>
+								<Icon icon='Event' color='primary' />
+							</span>
+							<div className='min-w-0 flex-grow-1'>
+								<div className='text-muted small text-uppercase fw-semibold mb-1'>
+									Schedule
+								</div>
+								<div className='fw-bold fs-5 text-body lh-sm text-truncate'>
+									{queueName}
+								</div>
+								{(schedule.from_datetime || schedule.to_datetime) && (
+									<div className='text-muted small mt-2 lh-base'>
+										{schedule.from_datetime ? formatDate(schedule.from_datetime) : '—'}
+										{' — '}
+										{schedule.to_datetime ? formatDate(schedule.to_datetime) : '—'}
+									</div>
+								)}
+							</div>
+						</div>
+
+						<div className='d-flex align-items-center justify-content-between gap-3 flex-wrap mb-4 px-1'>
+							<div className='d-flex flex-column gap-2'>
+								<span className='text-muted small text-uppercase fw-semibold'>
+									Current status
+								</span>
+								{schedule.status ? (
+									<StatusBadge status={schedule.status} />
+								) : (
+									<span className='text-muted small'>—</span>
+								)}
+							</div>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary border border-secondary border-opacity-25 flex-shrink-0'
+								style={{ width: 36, height: 36 }}>
+								<Icon icon='ArrowForward' color='secondary' size='sm' />
+							</span>
+							<div className='d-flex flex-column gap-2'>
+								<span className='text-muted small text-uppercase fw-semibold'>
+									New status
+								</span>
+								{statusFormValue ? (
+									<StatusBadge status={statusFormValue} />
+								) : (
+									<span className='text-muted small'>Select below</span>
+								)}
+							</div>
+						</div>
+
+						<div className='mb-1'>
+							<div className='text-muted small text-uppercase fw-semibold mb-3 px-1'>
+								Select new status
+							</div>
+							{nextScheduleStatusOptions.length === 0 ? (
+								<div className='text-muted small px-1'>No status transitions available.</div>
 							) : (
-								<span className='fw-semibold'>—</span>
+								<div className='d-flex flex-column gap-2'>
+									{nextScheduleStatusOptions.map((option) => {
+										const meta =
+											SCHEDULE_STATUS_OPTION_META[option.value] ?? DEFAULT_SCHEDULE_STATUS_META;
+										const isSelected = statusFormValue === option.value;
+										return (
+											<button
+												key={option.value}
+												type='button'
+												disabled={statusSaving}
+												onClick={() => setStatusFormValue(option.value)}
+												className={[
+													'd-flex align-items-center gap-3 p-3 rounded-3 border text-start w-100',
+													isSelected
+														? meta.selectedCard
+														: 'border-secondary border-opacity-25 bg-transparent',
+												].join(' ')}
+												style={{ cursor: statusSaving ? 'not-allowed' : 'pointer' }}>
+												<span
+													className={[
+														'd-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 border',
+														isSelected
+															? meta.selectedRadio
+															: 'bg-body border-secondary border-opacity-50',
+													].join(' ')}
+													style={{ width: 22, height: 22 }}>
+													{isSelected && <Icon icon='Check' size='sm' color='light' />}
+												</span>
+												<span
+													className={[
+														'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+														isSelected ? meta.selectedIconWrap : 'bg-body-secondary',
+													].join(' ')}
+													style={{ width: 40, height: 40 }}>
+													<Icon icon={meta.icon} color={meta.color} />
+												</span>
+												<div className='flex-grow-1 min-w-0'>
+													<div
+														className={`fw-semibold ${isSelected ? meta.selectedText : 'text-body'}`}>
+														{option.label}
+													</div>
+													<div className='text-muted small'>
+														Set schedule to {option.label.toLowerCase()}
+													</div>
+												</div>
+												{isSelected && (
+													<Icon
+														icon='ArrowForward'
+														color={meta.color}
+														size='sm'
+														className='flex-shrink-0'
+													/>
+												)}
+											</button>
+										);
+									})}
+								</div>
 							)}
 						</div>
-						<label className='form-label fw-semibold' htmlFor='schedule-status'>
-							Change to
-						</label>
-						<select
-							id='schedule-status'
-							className='form-select'
-							value={statusFormValue}
-							disabled={statusSaving || nextScheduleStatusOptions.length === 0}
-							onChange={(e) => setStatusFormValue(e.target.value)}>
-							{nextScheduleStatusOptions.map((option) => (
-								<option key={option.value} value={option.value}>
-									{option.label}
-								</option>
-							))}
-						</select>
-						{nextScheduleStatusOptions.length === 0 && (
-							<div className='text-muted small mt-2'>No status transitions available.</div>
-						)}
 					</ModalBody>
-					<ModalFooter>
-						<Button color='secondary' isLight onClick={() => setShowStatusModal(false)}>
+					<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+						<Button
+							color='secondary'
+							isLight
+							type='button'
+							isDisable={statusSaving}
+							onClick={() => setShowStatusModal(false)}>
 							Cancel
 						</Button>
-						<Button color='primary' type='submit' isDisable={statusSaving || nextScheduleStatusOptions.length === 0}>
+						<Button
+							color={
+								(SCHEDULE_STATUS_OPTION_META[statusFormValue] ?? DEFAULT_SCHEDULE_STATUS_META)
+									.color
+							}
+							type='submit'
+							icon={
+								(SCHEDULE_STATUS_OPTION_META[statusFormValue] ?? DEFAULT_SCHEDULE_STATUS_META)
+									.icon
+							}
+							isDisable={statusSaving || nextScheduleStatusOptions.length === 0 || !statusFormValue}>
 							{statusSaving ? (
 								<>
 									<Spinner isSmall inButton />
-									Updating...
+									Updating…
 								</>
 							) : (
-								'Update Status'
+								`Confirm ${
+									nextScheduleStatusOptions.find((o) => o.value === statusFormValue)?.label ??
+									statusFormValue
+								}`
 							)}
 						</Button>
 					</ModalFooter>

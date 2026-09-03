@@ -1,0 +1,267 @@
+// ── Dashboard summary stat cards ─────────────────────────────────────────────
+$dashboard-stat-hover-lift: 5px;
+$dashboard-stat-hover-lift-room: calc(#{$dashboard-stat-hover-lift} + 12px);
+
+.dashboard-stat-grid {
+	padding-top: $dashboard-stat-hover-lift-room;
+	padding-bottom: 0.25rem;
+}
+
+.dashboard-stat-card {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 0.9rem;
+	border: 1px solid rgba(#cbd5e1, 0.55);
+	background: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 4px 14px rgba(#0f172a, 0.05);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease,
+		border-color 0.2s ease;
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		z-index: 2;
+		pointer-events: none;
+		border-radius: 0.9rem 0.9rem 0 0;
+		background: linear-gradient(
+			90deg,
+			var(--dashboard-stat-accent, $primary) 0%,
+			color-mix(in srgb, var(--dashboard-stat-accent, $primary) 45%, transparent) 100%
+		);
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
+
+	@include dark-mode {
+		border-color: rgba(#ffffff, 0.1);
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+		box-shadow:
+			0 2px 8px rgba(#000000, 0.32),
+			0 8px 22px rgba(#000000, 0.18);
+	}
+
+	&:hover {
+		transform: translateY(-#{$dashboard-stat-hover-lift});
+		z-index: 4;
+		border-color: color-mix(in srgb, var(--dashboard-stat-accent, $primary) 35%, #cbd5e1 65%);
+		box-shadow:
+			0 4px 14px color-mix(in srgb, var(--dashboard-stat-accent, $primary) 12%, transparent),
+			0 16px 32px rgba(#0f172a, 0.1);
+
+		&::before {
+			opacity: 1;
+		}
+
+		.dashboard-stat-card__icon-box {
+			transform: scale(1.06);
+			box-shadow: 0 6px 16px color-mix(in srgb, var(--dashboard-stat-accent, $primary) 20%, transparent);
+		}
+
+		.dashboard-stat-card__value {
+			color: var(--dashboard-stat-accent, $primary);
+		}
+
+		@include dark-mode {
+			border-color: color-mix(in srgb, var(--dashboard-stat-accent, $primary-soft) 45%, transparent);
+			box-shadow:
+				0 6px 18px rgba(#000000, 0.42),
+				0 0 0 1px color-mix(in srgb, var(--dashboard-stat-accent, $primary-soft) 12%, transparent);
+		}
+	}
+}
+
+@mixin dashboard-stat-accent($accent) {
+	--dashboard-stat-accent: #{$accent};
+}
+
+.dashboard-stat-card--primary {
+	@include dashboard-stat-accent($primary);
+}
+
+.dashboard-stat-card--info {
+	@include dashboard-stat-accent($info);
+}
+
+.dashboard-stat-card--warning {
+	@include dashboard-stat-accent($warning);
+}
+
+.dashboard-stat-card--success {
+	@include dashboard-stat-accent($success);
+}
+
+.dashboard-stat-card--secondary {
+	@include dashboard-stat-accent($secondary);
+}
+
+.dashboard-stat-card--danger {
+	@include dashboard-stat-accent($danger);
+}
+
+.dashboard-stat-card__body {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	padding: 1rem 1.05rem;
+	min-width: 0;
+	flex: 1;
+}
+
+.dashboard-stat-card__body--stacked {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 0.95rem 0.7rem 1rem;
+	gap: 0.65rem;
+}
+
+.dashboard-stat-card__body--stacked .dashboard-stat-card__copy {
+	align-items: center;
+}
+
+.dashboard-stat-card__body--stacked .dashboard-stat-card__value {
+	font-size: 1.45rem;
+}
+
+.dashboard-stat-card__icon-box {
+	width: 46px;
+	height: 46px;
+	border-radius: 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	background: color-mix(in srgb, var(--dashboard-stat-accent, $primary) 12%, #ffffff 88%);
+	border: 1px solid color-mix(in srgb, var(--dashboard-stat-accent, $primary) 18%, transparent);
+	transition:
+		transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.28s ease;
+
+	@include dark-mode {
+		background: color-mix(in srgb, var(--dashboard-stat-accent, $primary-soft) 18%, #0f172a 82%);
+		border-color: color-mix(in srgb, var(--dashboard-stat-accent, $primary-soft) 28%, transparent);
+	}
+}
+
+.dashboard-stat-card__icon {
+	font-size: 1.35rem !important;
+	color: var(--dashboard-stat-accent, $primary) !important;
+
+	@include dark-mode {
+		color: var(--dashboard-stat-accent, $primary-soft) !important;
+	}
+}
+
+.dashboard-stat-card__copy {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.dashboard-stat-card__label {
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #64748b;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+
+	@include dark-mode {
+		color: #94a3b8;
+	}
+}
+
+.dashboard-stat-card__value {
+	font-size: 1.65rem;
+	font-weight: 800;
+	line-height: 1.1;
+	color: #0f172a;
+	transition: color 0.22s ease;
+
+	@include dark-mode {
+		color: #f1f5f9;
+	}
+}
+
+// ── Dashboard donut chart cards (static container — chart handles its own hover) ─
+.dashboard-donut-card--static {
+	position: relative;
+	overflow: visible;
+	border: 1px solid rgba(#cbd5e1, 0.55) !important;
+	border-radius: 0.9rem !important;
+	background: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(#0f172a, 0.04),
+		0 4px 14px rgba(#0f172a, 0.05) !important;
+
+	@include dark-mode {
+		border-color: rgba(#ffffff, 0.1) !important;
+		background: linear-gradient(165deg, rgba(#1e2433, 0.98) 0%, rgba(#171c28, 1) 100%);
+		box-shadow:
+			0 2px 8px rgba(#000000, 0.32),
+			0 8px 22px rgba(#000000, 0.18) !important;
+	}
+}
+
+.dashboard-donut-card__header {
+	border-bottom: 1px solid rgba(#cbd5e1, 0.45);
+
+	@include dark-mode {
+		border-bottom-color: rgba(#ffffff, 0.08);
+	}
+}
+
+.dashboard-donut-card__body {
+	min-height: 360px;
+	overflow: visible;
+}
+
+.dashboard-donut-chart__stage {
+	width: 100%;
+	max-width: 420px;
+	margin: 0 auto;
+	padding: 1rem;
+	overflow: visible;
+}
+
+.dashboard-donut-chart {
+	width: 100%;
+	overflow: visible;
+
+	.apexcharts-canvas {
+		margin: 0 auto;
+		overflow: visible !important;
+	}
+
+	.apexcharts-svg {
+		overflow: visible !important;
+	}
+
+	.apexcharts-pie-series path {
+		cursor: pointer;
+	}
+
+	.apexcharts-tooltip {
+		border-radius: 0.55rem !important;
+		box-shadow: 0 8px 24px rgba(#0f172a, 0.14) !important;
+		border: 1px solid rgba(#cbd5e1, 0.55) !important;
+	}
+}

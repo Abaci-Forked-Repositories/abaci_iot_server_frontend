@@ -101,93 +101,95 @@ const SystemOverviewPanel: FC = () => {
 					</CardTitle>
 				</CardLabel>
 			</CardHeader>
-			<CardBody className='pt-0'>
+			<CardBody className='pt-0 d-flex flex-column h-100'>
 				{loading && !config ? (
-					<div className='d-flex justify-content-center py-5'>
+					<div className='d-flex justify-content-center align-items-center flex-grow-1 py-5'>
 						<Spinner color='primary' />
 					</div>
 				) : (
 					<>
-						<div className='d-flex align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom'>
-							<div className='d-flex align-items-center gap-2'>
-								<img
-									src={QueIconLogo}
-									alt='ABACI'
-									width={40}
-									height={32}
-									decoding='async'
-								/>
-								<div>
-									<div className='fw-bold'>ABACI</div>
-									<div className='text-muted small'>Queue Management</div>
+						<div className='flex-grow-1'>
+							<div className='d-flex align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom'>
+								<div className='d-flex align-items-center gap-2'>
+									<img
+										src={QueIconLogo}
+										alt='ABACI'
+										width={40}
+										height={32}
+										decoding='async'
+									/>
+									<div>
+										<div className='fw-bold'>ABACI</div>
+										<div className='text-muted small'>Queue Management</div>
+									</div>
+								</div>
+								<div className='text-end'>
+									<div className='fw-bold'>v{config?.version || '—'}</div>
+									<div className='text-muted small'>Edge</div>
 								</div>
 							</div>
-							<div className='text-end'>
-								<div className='fw-bold'>v{config?.version || '—'}</div>
-								<div className='text-muted small'>Edge</div>
-							</div>
-						</div>
 
-						<div className='text-uppercase text-muted small fw-semibold mb-2'>System</div>
-						<OverviewRow label='Activation'>
-							<StatusBadge
-								status={config?.is_activated ? 'Activated' : 'Inactive'}
-								emptyFallback='—'
-							/>
-						</OverviewRow>
-						<OverviewRow label='Max Serving Points'>
-							{config?.no_of_serving_point_license ?? '—'}
-						</OverviewRow>
-						<OverviewRow label='Server Time'>
-							<div>
-								{serverTime ? formatServerTime(serverTime) : '—'}
-								{serverTimezone && (
-									<div className='text-muted fw-normal'>{serverTimezone}</div>
-								)}
-							</div>
-						</OverviewRow>
-						{/* Future: Adaptor field — GET api/administration/adaptor-check/
-						<OverviewRow label='Adaptor'>
-							<div className='d-flex flex-column align-items-end gap-1'>
+							<div className='text-uppercase text-muted small fw-semibold mb-2'>System</div>
+							<OverviewRow label='Activation'>
 								<StatusBadge
-									status={adaptorStatusLabel(adaptor)}
+									status={config?.is_activated ? 'Activated' : 'Inactive'}
 									emptyFallback='—'
 								/>
-								<span className='text-muted fw-normal'>
-									{formatAdaptorVersion(adaptor?.version)}
-								</span>
+							</OverviewRow>
+							<OverviewRow label='Max Serving Points'>
+								{config?.no_of_serving_point_license ?? '—'}
+							</OverviewRow>
+							<OverviewRow label='Server Time'>
+								<div>
+									{serverTime ? formatServerTime(serverTime) : '—'}
+									{serverTimezone && (
+										<div className='text-muted fw-normal'>{serverTimezone}</div>
+									)}
+								</div>
+							</OverviewRow>
+							{/* Future: Adaptor field — GET api/administration/adaptor-check/
+							<OverviewRow label='Adaptor'>
+								<div className='d-flex flex-column align-items-end gap-1'>
+									<StatusBadge
+										status={adaptorStatusLabel(adaptor)}
+										emptyFallback='—'
+									/>
+									<span className='text-muted fw-normal'>
+										{formatAdaptorVersion(adaptor?.version)}
+									</span>
+								</div>
+							</OverviewRow>
+							*/}
+
+							<div className='text-uppercase text-muted small fw-semibold mt-4 mb-2'>
+								Connectivity
 							</div>
-						</OverviewRow>
-						*/}
-
-						<div className='text-uppercase text-muted small fw-semibold mt-4 mb-2'>
-							Connectivity
+							<OverviewRow label='Database'>
+								<StatusBadge
+									status={
+										databaseAvailable === null
+											? undefined
+											: databaseAvailable
+												? 'Online'
+												: 'Offline'
+									}
+									emptyFallback='—'
+								/>
+							</OverviewRow>
+							<OverviewRow label='Cloud'>
+								<StatusBadge
+									status={config?.cloud_connectivity_status ? 'Online' : 'Offline'}
+									emptyFallback='—'
+								/>
+							</OverviewRow>
+							<OverviewRow label='Device ID'>
+								<span className='font-monospace' style={{ fontSize: '0.75rem' }}>
+									{config?.system_unique_id || '—'}
+								</span>
+							</OverviewRow>
 						</div>
-						<OverviewRow label='Database'>
-							<StatusBadge
-								status={
-									databaseAvailable === null
-										? undefined
-										: databaseAvailable
-											? 'Online'
-											: 'Offline'
-								}
-								emptyFallback='—'
-							/>
-						</OverviewRow>
-						<OverviewRow label='Cloud'>
-							<StatusBadge
-								status={config?.cloud_connectivity_status ? 'Online' : 'Offline'}
-								emptyFallback='—'
-							/>
-						</OverviewRow>
-						<OverviewRow label='Device ID'>
-							<span className='font-monospace' style={{ fontSize: '0.75rem' }}>
-								{config?.system_unique_id || '—'}
-							</span>
-						</OverviewRow>
 
-						<div className='text-center text-muted small mt-4 pt-3'>
+						<div className='text-center text-muted small mt-auto pt-3 border-top'>
 							© {new Date().getFullYear()} Abaci Technologies
 						</div>
 					</>

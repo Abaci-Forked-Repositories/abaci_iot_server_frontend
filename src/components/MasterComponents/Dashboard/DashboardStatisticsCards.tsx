@@ -6,30 +6,23 @@ import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	buildDashboardStatTiles,
 	buildStatusDonutFromByStatus,
-	getIconBgByColor,
 	type DashboardStatTile,
 } from './dashboardStatisticsConfig';
 import DashboardStatusDonutChart from './DashboardStatusDonutChart';
 import DashboardSkeleton from '../../CustomComponent/Skeleton/DashboardSkeleton';
 
 const StatTile = ({ tile }: { tile: DashboardStatTile }) => (
-	<Card  className='h-100 w-100 shadow-sm'>
-		<CardBody className='d-flex align-items-center gap-3 py-3 px-3'>
-			<div
-				className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
-				style={{
-					width: 48,
-					height: 48,
-					backgroundColor: getIconBgByColor(tile.color),
-				}}>
-				<Icon icon={tile.icon} color={tile.color} size='lg' className='mb-0 opacity-90' />
+	<div className={`dashboard-stat-card dashboard-stat-card--${tile.color} h-100 w-100`}>
+		<div className='dashboard-stat-card__body'>
+			<div className='dashboard-stat-card__icon-box' aria-hidden>
+				<Icon icon={tile.icon} className='dashboard-stat-card__icon' />
 			</div>
-			<div className='flex-grow-1 min-w-0'>
-				<div className='text-muted small text-truncate'>{tile.label}</div>
-				<div className='fs-4 fw-bold lh-1 mb-0'>{tile.value}</div>
+			<div className='dashboard-stat-card__copy'>
+				<span className='dashboard-stat-card__label'>{tile.label}</span>
+				<span className='dashboard-stat-card__value'>{tile.value.toLocaleString()}</span>
 			</div>
-		</CardBody>
-	</Card>
+		</div>
+	</div>
 );
 
 const DashboardStatisticsCards: React.FC = () => {
@@ -72,7 +65,7 @@ const DashboardStatisticsCards: React.FC = () => {
 	);
 
 	const renderSummaryGrid = (children: React.ReactNode) => (
-		<div className='row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 align-items-stretch'>
+		<div className='row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 align-items-stretch dashboard-stat-grid'>
 			{children}
 		</div>
 	);

@@ -1,0 +1,798 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Abaci Queue Management System — Manager User Manual</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; max-width: 840px; margin: 40px auto; }
+h1 { font-size: 22pt; color: #1e3a5f; border-bottom: 2px solid #3699ff; padding-bottom: 8px; }
+h2 { font-size: 16pt; color: #1e3a5f; margin-top: 28px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+h3 { font-size: 13pt; color: #333; margin-top: 20px; }
+h4 { font-size: 11.5pt; color: #444; margin-top: 16px; }
+p { margin: 8px 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+th, td { border: 1px solid #bbb; padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background-color: #e8f4ff; font-weight: bold; }
+.cover { text-align: center; margin: 80px 0 60px 0; }
+.cover h1 { border: none; font-size: 28pt; }
+.cover .subtitle { font-size: 14pt; color: #555; margin-top: 12px; }
+.cover .meta { font-size: 11pt; color: #777; margin-top: 40px; }
+.tip { background: #f0f7ff; border-left: 4px solid #3699ff; padding: 12px 16px; margin: 16px 0; }
+.note { background: #fff8e6; border-left: 4px solid #f5a623; padding: 12px 16px; margin: 16px 0; }
+.flow { background: #f9f9f9; border: 1px solid #ddd; padding: 16px; margin: 16px 0; }
+.page-break { page-break-before: always; }
+.shot { border: 2px dashed #9ca3af; min-height: 200px; background: #f9fafb; text-align: center; padding: 48px 16px; margin: 16px 0; color: #6b7280; }
+.shot strong { display: block; color: #374151; font-size: 12pt; margin-bottom: 8px; }
+.shot .hint { font-size: 10pt; color: #9ca3af; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+<h1>Abaci Queue Management System</h1>
+<div class="subtitle">Manager User Manual</div>
+<div class="meta">
+Version 1.2<br>
+Prepared for: Managers and Supervisors<br>
+Language: Simple English
+</div>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Table of Contents</h2>
+<ol>
+<li>Introduction and recommended order</li>
+<li>Dashboard</li>
+<li>Serving Points</li>
+<li>Queue Management</li>
+<li>Schedules (inside a queue)</li>
+<li>Tokens and Token Users</li>
+<li>Serving a token (status and actions)</li>
+<li>Screens</li>
+<li>Templates (zones, queues, display mode)</li>
+<li>User Management</li>
+<li>Settings</li>
+<li>Glossary</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2>1. Introduction and recommended order</h2>
+<p>
+This manual explains how the system is set up and used, in the same order you should work in real life. You do not need deep technical knowledge. Each section lists the create/edit screens (modals) and what each field means. Empty boxes are left for screenshots you can paste later.
+</p>
+
+<div class="flow">
+<strong>After login</strong><br>
+You land on the <strong>Dashboard</strong> — use it to see how the system is running before you go into setup or daily work.<br><br>
+<strong>Recommended setup order</strong><br><br>
+1. Create <strong>Serving Points</strong> (counters)<br>
+2. Create a <strong>Queue</strong> and attach serving points to it<br>
+3. Open the queue and create a <strong>Schedule</strong> (time window)<br>
+4. Inside the schedule, create <strong>Tokens</strong> for customers<br>
+5. Staff at a serving window <strong>start serving</strong> — the system then assigns the token to that counter<br>
+6. Create <strong>Templates</strong> (how the TV looks)<br>
+7. Create <strong>Screens</strong>, assign templates, open the public display<br>
+8. Add staff in <strong>User Management</strong> and configure <strong>Settings</strong>
+</div>
+
+<div class="note">
+<strong>Important (checked in the frontend):</strong><br>
+• When you create a token, the frontend does <em>not</em> pick a serving point. Serving points are only shown as a read-only list. The backend assigns a token to a counter when staff clicks <strong>Start serving</strong> on a serving window.<br>
+• When you create a token, the frontend sends customer details (name, email, phone, and so on) to the token-create API. It does <em>not</em> call a separate “create token user” API. The backend creates or links the <strong>token user</strong> from those fields.
+</div>
+
+<div class="shot">
+<strong>Screenshot: Login page (optional)</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>2. Dashboard</h2>
+<p>
+After you log in, the <strong>Dashboard</strong> is your home page. It gives a quick overview of the whole system — you do not configure anything here. Use it at the start of the day or during busy hours to see if queues, counters, and tokens look normal before opening other menus.
+</p>
+<p>
+Open <strong>Dashboard</strong> from the left menu (first item). You need the <strong>Dashboard read</strong> permission to see this page.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Dashboard — full page</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>2.1 Summary cards (top row)</h3>
+<p>
+Five cards show <strong>total counts</strong> loaded from the server when the page opens:
+</p>
+<table>
+<tr><th>Card</th><th>What the number means</th></tr>
+<tr><td>Queues</td><td>How many queues exist in the system.</td></tr>
+<tr><td>Serving Points</td><td>How many counters / desks are registered.</td></tr>
+<tr><td>Tokens</td><td>How many tokens exist (all statuses combined).</td></tr>
+<tr><td>Schedules</td><td>How many schedule sessions exist.</td></tr>
+<tr><td>Users</td><td>How many staff user accounts exist.</td></tr>
+</table>
+<p>
+Each card shows a label and a large number. These are totals, not “live waiting count” alone — use the charts below for status breakdown.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Dashboard — summary cards row</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>2.2 Serving Points by Status (donut chart)</h3>
+<p>
+The left chart breaks serving points down by <strong>status</strong>. Labels and colours come from the server (for example Running, On Hold, Completed, Cancelled, Scheduled). The centre shows the total count; each slice shows a percentage and count in the legend.
+</p>
+<p>
+<strong>Why managers use this:</strong> See at a glance how many counters are actively serving, on hold, or finished — without opening the Serving Points list.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Serving Points by Status chart</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>2.3 Tokens by Status (donut chart)</h3>
+<p>
+The right chart breaks tokens down by <strong>status</strong> (for example Waiting, Serving, Completed, Cancelled, Postponed, No Show — exact labels come from the server). Same layout as the serving-points chart: total in the centre, slices and legend below.
+</p>
+<p>
+<strong>Why managers use this:</strong> Answer questions like “How many people are still waiting?” or “How many tokens were completed today?” without opening each queue or schedule.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Tokens by Status chart</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>2.4 Loading and empty states</h3>
+<ul>
+<li>While data is loading, the page shows a skeleton placeholder.</li>
+<li>If statistics cannot be loaded or there is no data, you see a message such as <strong>No dashboard statistics available.</strong></li>
+</ul>
+
+<div class="tip">
+<strong>Tip:</strong> The Dashboard is for <em>monitoring</em>. To create or change queues, counters, tokens, or screens, use the menus described in the sections after this one. Refresh the browser or return to Dashboard later if you need an updated snapshot.
+</div>
+
+<div class="page-break"></div>
+
+<h2>3. Serving Points</h2>
+<p>
+A serving point is a counter or desk where staff serve customers. Create these first so you can attach them to queues later.
+</p>
+<p>
+Open <strong>Serving Points</strong> in the left menu. You see a list with name, linked queue, description, status, listing, created date, and actions (view, edit, enable/disable, change counter status).
+</p>
+
+<div class="shot">
+<strong>Screenshot: Serving Points list page</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>3.1 Add Serving Point modal</h3>
+<p>
+Click <strong>Add Serving Point</strong>. The modal title is <strong>Add Serving Point</strong> (or <strong>Edit Serving Point</strong> when editing).
+</p>
+
+<div class="shot">
+<strong>Screenshot: Add Serving Point modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>Name</td><td>Yes</td><td>Counter name, for example “Counter 1” or “Billing Desk”.</td></tr>
+<tr><td>Queues</td><td>No</td><td>One or more queues this counter can serve. You can leave this empty and attach the counter later from the queue.</td></tr>
+<tr><td>Active</td><td>—</td><td>Switch. On = the counter can be used. Off = it is disabled.</td></tr>
+<tr><td>Assigned Users</td><td>No</td><td>Staff who work at this counter.</td></tr>
+<tr><td>Description</td><td>No</td><td>Short note for your team.</td></tr>
+</table>
+<p>Buttons: <strong>Cancel</strong> and <strong>Create Serving Point</strong> (or <strong>Update Serving Point</strong>).</p>
+
+<h3>3.2 Enable / disable and listing</h3>
+<p>
+You can enable or disable a serving point from the list without deleting it. Disabled counters do not take new work. <strong>Listing</strong> controls whether the counter appears in selection lists when you set up schedules.
+</p>
+
+<h3>3.3 Update serving point status modal</h3>
+<p>
+Use this to change the <em>operational</em> status of a counter (not the same as Active/Disabled). Only some next statuses are allowed.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Update serving point status modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Current status</th><th>You can change to</th></tr>
+<tr><td>Scheduled</td><td>Running, Cancelled</td></tr>
+<tr><td>Running</td><td>On Hold, Completed, Cancelled</td></tr>
+<tr><td>On Hold</td><td>Running, Completed, Cancelled</td></tr>
+</table>
+<p>Field in the modal: <strong>Change to</strong> (dropdown). Current status is shown as a badge.</p>
+
+<div class="page-break"></div>
+
+<h2>4. Queue Management</h2>
+<p>
+A queue is a waiting line for one service (for example Billing or Consultation). After serving points exist, create a queue and attach those counters.
+</p>
+<p>
+Open <strong>Queue Management</strong>. You can switch between <strong>Queues</strong> and <strong>Queue Groups</strong>. Search and filter as needed.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Queue Management list (Queues tab)</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>4.1 Add Queue modal</h3>
+<p>Click <strong>Add Queue</strong>. Modal title: <strong>Add Queue</strong>.</p>
+
+<div class="shot">
+<strong>Screenshot: Add Queue modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>Queue Name</td><td>Yes</td><td>Name of the waiting line.</td></tr>
+<tr><td>Description</td><td>No</td><td>Short explanation.</td></tr>
+<tr><td>Token Prefix</td><td>No</td><td>Letters before the number, for example “A” makes A001, A002. Leave blank for plain numbers.</td></tr>
+<tr><td>Token Limit</td><td>No</td><td>Maximum tokens this queue can hold (default 50).</td></tr>
+<tr><td>Grace period (minutes)</td><td>Yes</td><td>Extra minutes a customer can be late before the token expires (default 15). Must be 0 or more.</td></tr>
+<tr><td>Allow Postpone</td><td>—</td><td>Switch. On = staff can postpone a token so the customer can be called later.</td></tr>
+<tr><td>Reporting Enabled</td><td>—</td><td>Switch. On = this queue is included in reports.</td></tr>
+<tr><td>Next queue</td><td>No</td><td>Other queues a customer can move to after this service (for example Registration → Consultation).</td></tr>
+<tr><td>Serving Points</td><td>No</td><td>Shown only when creating (not on edit in this modal). Multi-select counters to attach now.</td></tr>
+</table>
+<p>Buttons: <strong>Cancel</strong> and <strong>Create Queue</strong>.</p>
+<p>
+You can also attach serving points later on the <strong>queue detail</strong> page (Serving Points section). Edit queue uses the same fields, except serving points are managed on the detail page rather than in the edit modal.
+</p>
+
+<h3>4.2 Queue Groups</h3>
+<p>
+Queue groups help you organise related queues. Modal title: <strong>Add Queue Group</strong> / <strong>Edit Queue Group</strong>.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Add Queue Group modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Name</td><td>Group name.</td></tr>
+<tr><td>Description</td><td>Optional note.</td></tr>
+<tr><td>Queues</td><td>Select which queues belong to this group.</td></tr>
+</table>
+
+<h3>4.3 Queue detail page</h3>
+<p>
+Open a queue to see its settings, serving points, and schedules. From here you create schedules for that queue.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Queue detail page</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>5. Schedules (inside a queue)</h2>
+<p>
+A schedule is a planned time period for one queue: when tokens can be issued and which counters are open. Create it from the queue (or from the Schedules list).
+</p>
+
+<div class="shot">
+<strong>Screenshot: Schedules on queue detail / Schedules list</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>5.1 Create Schedule modal</h3>
+<p>Modal title: <strong>Create Schedule</strong> (or <strong>Edit Schedule</strong>).</p>
+
+<div class="shot">
+<strong>Screenshot: Create Schedule modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>Start Date &amp; Time</td><td>Yes</td><td>When this session starts. On create, start cannot be in the past.</td></tr>
+<tr><td>End Date &amp; Time</td><td>Yes</td><td>Must be later than start.</td></tr>
+<tr><td>Token from</td><td>No</td><td>First token number in the range (default 1). Must be 1 or greater.</td></tr>
+<tr><td>Token to</td><td>No</td><td>Last token number in the range (default 100). Must be ≥ Token from.</td></tr>
+<tr><td>Token limit</td><td>No</td><td>How many tokens this schedule can issue (whole number, 1 or more).</td></tr>
+<tr><td>Token prefix</td><td>No</td><td>Shown on <em>edit</em> only. Overrides prefix for this schedule (for example “A”).</td></tr>
+<tr><td>Reporting enabled</td><td>—</td><td>Switch.</td></tr>
+<tr><td>Allow postpone</td><td>—</td><td>Switch. Whether postpone is allowed for this schedule.</td></tr>
+<tr><td>Description</td><td>No</td><td>Label for this session, for example “Morning billing”.</td></tr>
+</table>
+<p>
+Completed or cancelled schedules cannot change dates, token range, or description from this form.
+</p>
+
+<h3>5.2 Schedule detail — attach serving points</h3>
+<p>
+Open the schedule. Add the counters that will work during this window. Modal: <strong>Add serving points</strong>. You select counters from this queue that are not already on the schedule. The selection is saved together with counters already attached.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Schedule detail — serving points</strong>
+<p class="hint">Paste image here later</p>
+</div>
+<div class="shot">
+<strong>Screenshot: Add serving points to schedule modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<p>
+Each attached counter becomes a <strong>serving window</strong> (a time slot at that counter). Staff work from the serving window page to call tokens.
+</p>
+
+<div class="page-break"></div>
+
+<h2>6. Tokens and Token Users</h2>
+<p>
+A token is a ticket number for one customer in one schedule. Create tokens from the schedule detail page (<strong>Create Token</strong>).
+</p>
+
+<h3>6.1 Create Token modal / form</h3>
+
+<div class="shot">
+<strong>Screenshot: Create Token modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>Token Number</td><td>Usually auto</td><td>Filled from “next token number” for this schedule. Must be less than 1000. You can change it if needed.</td></tr>
+<tr><td>Queue</td><td>Yes*</td><td>Shown only if the schedule is not already fixed. Pick the queue.</td></tr>
+<tr><td>Schedule</td><td>Yes*</td><td>Shown only if not already on a schedule page. Pick the session.</td></tr>
+<tr><td>Customer Name</td><td>Yes</td><td>Person waiting.</td></tr>
+<tr><td>Email</td><td>No</td><td>Optional contact.</td></tr>
+<tr><td>Phone</td><td>No</td><td>Optional contact.</td></tr>
+<tr><td>Age</td><td>No</td><td>Optional.</td></tr>
+<tr><td>Place</td><td>No</td><td>Optional location / area.</td></tr>
+<tr><td>Remarks</td><td>No</td><td>Notes for staff.</td></tr>
+<tr><td>Serving points on this queue</td><td>—</td><td><strong>Display only.</strong> Lists counters and Available/Busy. You do not assign a counter here.</td></tr>
+</table>
+<p>* On the schedule detail page, queue and schedule are already set, so those dropdowns are hidden.</p>
+
+<h3>6.2 How a token user is created</h3>
+<div class="tip">
+The frontend sends one request: <strong>create token</strong>, with customer fields (name, email, phone, age, place, remarks) plus schedule and token number.<br>
+There is <strong>no separate “create token user” button</strong> in this flow. The backend creates or reuses a token user from those fields and attaches it to the token.<br>
+Later you can view people under <strong>Token Users</strong> and edit their details. That is viewing/updating, not the original create step.
+</div>
+
+<div class="shot">
+<strong>Screenshot: Token Users list / Token User detail</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>6.3 How a token is assigned to a serving point</h3>
+<div class="tip">
+The frontend does <strong>not</strong> assign a serving point when the token is created.<br>
+Assignment happens when staff on a serving window clicks <strong>Start serving</strong>. The frontend calls the serving-window “start serving” API. The backend picks the next waiting token and links it to that counter.
+</div>
+
+<h2>7. Serving a token (status and actions)</h2>
+<p>
+Open a serving point → serving window (or from the schedule). You see the current token (if any), status, and action buttons.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Serving window / current serving card</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>7.1 Typical token statuses (what you see)</h3>
+<table>
+<tr><th>Status</th><th>Meaning</th></tr>
+<tr><td>Registered</td><td>Token created.</td></tr>
+<tr><td>Waiting</td><td>In queue, not yet at a counter.</td></tr>
+<tr><td>Serving</td><td>A counter has started this token.</td></tr>
+<tr><td>Completed</td><td>Service finished.</td></tr>
+<tr><td>Postponed</td><td>Turn delayed; a new token may be issued.</td></tr>
+<tr><td>No Show</td><td>Customer was not present when called.</td></tr>
+<tr><td>Cancelled</td><td>Token is no longer valid.</td></tr>
+</table>
+
+<h3>7.2 Actions on the serving window</h3>
+<p>
+These buttons send requests to the backend. The frontend does not invent the next token assignment itself.
+</p>
+<table>
+<tr><th>Action</th><th>What happens</th></tr>
+<tr><td>Start serving</td><td>Backend assigns the next waiting token to this window and marks it as serving.</td></tr>
+<tr><td>Complete</td><td>Service finished. If a next queue is set, the backend can create a token there. You may choose a next queue and optionally set the counter status.</td></tr>
+<tr><td>Cancel</td><td>Token cancelled. Optional: set counter status at the same time.</td></tr>
+<tr><td>No show</td><td>Customer missed the call. Optional: set counter status.</td></tr>
+<tr><td>Postpone</td><td>Only if postpone is allowed. Backend issues a new token; a popup can show the new number.</td></tr>
+<tr><td>Skip</td><td>Skip the current token (window skip API), with optional counter status.</td></tr>
+</table>
+
+<div class="shot">
+<strong>Screenshot: Complete / next-queue modal (if used)</strong>
+<p class="hint">Paste image here later</p>
+</div>
+<div class="shot">
+<strong>Screenshot: New token issued after postpone or complete</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>7.3 Token status from Token Users</h3>
+<p>
+On a token user’s detail page, staff with permission can change some statuses:
+</p>
+<ul>
+<li>From <strong>Registered</strong> → Waiting, Cancelled, or Postponed</li>
+<li>From <strong>Waiting</strong> → Cancelled or Postponed</li>
+</ul>
+<p>
+These call token APIs (cancel / postpone / mark waiting). Serving and complete still happen at the serving window.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Token user detail — token list and status actions</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>8. Screens</h2>
+<p>
+A screen is a TV or monitor in the waiting area. Create the screen, open its detail page, assign a template, then open the public display.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Screens list</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>8.1 Add screen modal</h3>
+<p>Modal title: <strong>Add screen</strong>.</p>
+
+<div class="shot">
+<strong>Screenshot: Add screen modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>Name</td><td>Yes</td><td>Screen name.</td></tr>
+<tr><td>Location</td><td>No</td><td>Where it is placed, for example “Lobby”.</td></tr>
+<tr><td>Description</td><td>No</td><td>Notes.</td></tr>
+<tr><td>Screen background image</td><td>No</td><td>Crop and upload a background picture.</td></tr>
+<tr><td>IP address</td><td>No</td><td>Device IP, for example 192.168.1.100.</td></tr>
+<tr><td>IP bind</td><td>—</td><td>Switch. If on, the screen is tied to that IP.</td></tr>
+<tr><td>Active</td><td>—</td><td>Switch. On = screen is in use.</td></tr>
+</table>
+
+<h3>8.2 Screen groups</h3>
+<p>
+You can group screens. Modal fields: <strong>Name</strong>, <strong>Description</strong>, and which screens belong to the group.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Screen group modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>8.3 Screen details page</h3>
+<p>
+Here you see name, location, online/offline, audio on/off, assigned templates, and actions.
+</p>
+<ul>
+<li><strong>Open display</strong> — opens the public page <code>/screenstokenstatus/&lt;screen-uuid&gt;</code> on a TV browser.</li>
+<li><strong>Enable / Disable Audio</strong> — spoken announcements when a new token is called (the display may ask to allow sound).</li>
+<li><strong>Assign template</strong> — attach a layout (see below).</li>
+</ul>
+
+<div class="shot">
+<strong>Screenshot: Screen details page</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>8.4 Assign template modal</h3>
+<p>Modal title: <strong>Assign template</strong>.</p>
+
+<div class="shot">
+<strong>Screenshot: Assign template modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Select a template</td><td>Click a template card to choose it.</td></tr>
+<tr><td>Interval (minutes)</td><td>How long this template stays on screen before the next one in the cycle (default 30, minimum 1).</td></tr>
+<tr><td>Order</td><td>Position in the rotation (1, 2, 3…).</td></tr>
+</table>
+<p>
+You can assign more than one template. The public display cycles through them using interval and order.
+</p>
+
+<h3>8.5 Open display page</h3>
+<p>
+The display page is for waiting customers. It shows live token numbers, counters, and (if designed that way) recently called tokens. It refreshes automatically. Staff should not edit this page; they only open it on the TV.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Public display page</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>9. Templates (zones, queues, display mode)</h2>
+<p>
+A template is the layout shown on a screen. Create a template, then open it to draw <strong>zones</strong> and choose which queues each zone shows.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Templates list</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>9.1 New Template modal</h3>
+<p>Modal title: <strong>New Template</strong>.</p>
+
+<div class="shot">
+<strong>Screenshot: New Template modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Template name</td><td>Required. For example “Main lobby display”.</td></tr>
+<tr><td>Description</td><td>Optional notes.</td></tr>
+<tr><td>Resolution / orientation</td><td>Preview of landscape or portrait size (Full HD, HD, or custom width/height). Used as a visual guide when creating.</td></tr>
+</table>
+
+<h3>9.2 Template editor — zones</h3>
+<p>
+A zone is a rectangle on the canvas. Each zone can show one or more queues. You can add, move, resize, and delete zones. In read-only view, zones cannot be selected.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Template editor with zones</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<p>Typical zone editing:</p>
+<ul>
+<li>Draw or place a zone on the canvas.</li>
+<li>Drag to move; resize from the edges.</li>
+<li>Select a zone to open <strong>Zone properties</strong>.</li>
+<li>Set appearance: solid fill colour, or a <strong>display theme</strong> (designed token look).</li>
+<li>Set <strong>opacity</strong> so the zone can sit over a background image.</li>
+</ul>
+
+<div class="shot">
+<strong>Screenshot: Zone properties panel</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>9.3 Multiple queues on one zone</h3>
+<p>
+In zone properties, <strong>Queues</strong> is a multi-select. Assign one queue, or several queues, to the same zone.
+</p>
+<ul>
+<li><strong>One queue</strong> — the zone shows that queue’s current token and related info.</li>
+<li><strong>Several queues</strong> — the zone can show more than one line. If the chosen theme supports it, you get <strong>Display mode</strong>.</li>
+</ul>
+
+<h3>9.4 Display mode</h3>
+<p>
+Display mode appears when:
+</p>
+<ul>
+<li>the zone uses a theme that supports a multi-queue table, and</li>
+<li>more than one queue is assigned to that zone.</li>
+</ul>
+<table>
+<tr><th>Mode</th><th>What the visitor sees</th></tr>
+<tr><td>Singular</td><td>One combined / rotating view rather than a full table.</td></tr>
+<tr><td>Tabular</td><td>A table/board listing multiple queues (live multi-queue board).</td></tr>
+</table>
+
+<div class="shot">
+<strong>Screenshot: Display mode — Singular vs Tabular</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<p>
+Save the template, then assign it to a screen (section 8.4) and open the display.
+</p>
+
+<div class="page-break"></div>
+
+<h2>10. User Management</h2>
+<p>
+This is for <strong>staff accounts</strong> (people who log into the admin app), not for waiting customers.
+</p>
+
+<div class="shot">
+<strong>Screenshot: User Management list</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>10.1 Add user</h3>
+<p>
+Add user opens a side panel (off-canvas), not a small popup. Typical fields:
+</p>
+
+<div class="shot">
+<strong>Screenshot: Add user panel</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<table>
+<tr><th>Field</th><th>Required?</th><th>What it means</th></tr>
+<tr><td>First Name</td><td>Yes</td><td>Staff first name.</td></tr>
+<tr><td>Last Name</td><td>No</td><td>Staff last name.</td></tr>
+<tr><td>Email</td><td>Yes</td><td>Login / invite email. Usually locked after invite except while status is Invited.</td></tr>
+<tr><td>Contact number</td><td>Yes</td><td>At least 10 digits.</td></tr>
+<tr><td>User Type</td><td>Yes</td><td>Superuser (if allowed), Admin, Assistant User, or User.</td></tr>
+<tr><td>Role</td><td>Usually</td><td>Permission set from Settings → Roles.</td></tr>
+</table>
+<p>
+Give each person only the access they need. Front-desk staff often need serving points and queues, not full Settings.
+</p>
+
+<div class="page-break"></div>
+
+<h2>11. Settings</h2>
+<p>
+Settings is for organisation and system configuration. Open <strong>Settings</strong> in the menu. Tabs on the left:
+</p>
+<ul>
+<li>General Settings</li>
+<li>Cloud Synchronization</li>
+<li>Licensing</li>
+<li>Email Settings</li>
+<li>Roles</li>
+<li>API Keys</li>
+</ul>
+
+<div class="shot">
+<strong>Screenshot: Settings — tab navigation</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.1 General Settings</h3>
+<table>
+<tr><th>Field / item</th><th>What it means</th></tr>
+<tr><td>Site name</td><td>Organisation / site name shown in the product.</td></tr>
+<tr><td>Timezone</td><td>Local time for schedules and reports.</td></tr>
+<tr><td>Week start day</td><td>Monday or Sunday.</td></tr>
+<tr><td>Reset time</td><td>Daily reset time (stored as HH:mm:ss).</td></tr>
+<tr><td>Data retention</td><td>How many days to keep data (30–1825 days).</td></tr>
+<tr><td>Logo</td><td>JPEG or PNG, under 2 MB.</td></tr>
+</table>
+
+<div class="shot">
+<strong>Screenshot: General Settings</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.2 Cloud Synchronization</h3>
+<p>
+Used if this site syncs data with cloud services. You can view sync history from this tab.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Cloud Synchronization</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.3 Licensing</h3>
+<p>
+Shows licence status, serving-point licence counts (allowed, currently active, remaining), and upgrade / history. Serving point licences limit how many counters you can keep active.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Licensing</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.4 Email Settings</h3>
+<p>
+Used for system emails (invites, notifications). Typical fields:
+</p>
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Email Protocol</td><td>How mail is sent.</td></tr>
+<tr><td>SMTP Host</td><td>Mail server address.</td></tr>
+<tr><td>SMTP Port</td><td>Port number.</td></tr>
+<tr><td>Encryption Type</td><td>Security for the mail connection.</td></tr>
+<tr><td>Sender Email</td><td>From address.</td></tr>
+<tr><td>Password</td><td>Mail account password.</td></tr>
+</table>
+<p>You can send a test email from a small modal after saving.</p>
+
+<div class="shot">
+<strong>Screenshot: Email Settings</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.5 Roles modal</h3>
+<p>
+Roles control what each staff type can see (Read) and change (Write). Modal fields: <strong>Name</strong>, <strong>Description</strong>, then permission ticks per area (Dashboard, Queue Management, Serving Point, Schedules, Users, Screens, Templates, Settings, Controllers, Token Users). Dashboard is usually read-only.
+</p>
+
+<div class="shot">
+<strong>Screenshot: Add / Edit Role modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<h3>11.6 API Keys modal</h3>
+<p>
+API keys (device credentials) let devices talk to the system. Fields typically include:
+</p>
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Name</td><td>Label for this key.</td></tr>
+<tr><td>Description</td><td>Optional note.</td></tr>
+<tr><td>Valid from / Valid until</td><td>Date-time range when the key works.</td></tr>
+</table>
+<p>
+After create, the secret may be shown once — store it safely. Do not share it in the user manual copies you give to visitors.
+</p>
+
+<div class="shot">
+<strong>Screenshot: API Keys / create key modal</strong>
+<p class="hint">Paste image here later</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>12. Glossary</h2>
+<table>
+<tr><th>Term</th><th>Simple meaning</th></tr>
+<tr><td>Dashboard</td><td>Home overview page with total counts and status charts.</td></tr>
+<tr><td>Serving Point</td><td>A counter or desk.</td></tr>
+<tr><td>Serving Window</td><td>A counter during one schedule time slot.</td></tr>
+<tr><td>Queue</td><td>A waiting line for one service.</td></tr>
+<tr><td>Schedule</td><td>A planned time period for a queue.</td></tr>
+<tr><td>Token</td><td>A ticket number for a customer.</td></tr>
+<tr><td>Token User</td><td>The person record created from token customer fields (backend).</td></tr>
+<tr><td>Grace period</td><td>Extra minutes if the customer is a little late.</td></tr>
+<tr><td>Postpone</td><td>Delay the turn; backend may issue a new token.</td></tr>
+<tr><td>Screen</td><td>TV/monitor that shows live queue info.</td></tr>
+<tr><td>Template</td><td>Layout used on a screen.</td></tr>
+<tr><td>Zone</td><td>A rectangle on a template that shows one or more queues.</td></tr>
+<tr><td>Display mode</td><td>Singular or Tabular view when a zone has several queues.</td></tr>
+<tr><td>Role</td><td>A set of Read/Write permissions for staff.</td></tr>
+</table>
+
+<br><br>
+<hr>
+<p style="text-align: center; color: #777; font-size: 10pt;">
+Abaci Queue Management System — Manager User Manual v1.2<br>
+Screenshots to be added by the author. For internal use.
+</p>
+
+</body>
+</html>

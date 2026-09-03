@@ -123,14 +123,15 @@ const QueueManagementWorkspace: React.FC = () => {
 						<span>Queue Management</span>
 					</div>
 				</div>
-				<CardActions>
-					<div className='d-flex align-items-center gap-2 flex-wrap'>
+				<CardActions className='ms-auto'>
+					<div className='d-flex align-items-center gap-2 flex-wrap justify-content-end'>
 						<DropDownFilter
 							options={[
 								{ label: 'Queues', value: 'queues' as const },
 								{ label: 'Queue Groups', value: 'groups' as const },
 							]}
 							onChange={(option: { value: 'queues' | 'groups' }) => {
+								if (option.value === queueDisplayMode) return;
 								setQueueDisplayMode(option.value);
 								setQueueRefreshKey((v) => v + 1);
 							}}

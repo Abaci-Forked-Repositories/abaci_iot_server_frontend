@@ -190,7 +190,7 @@ const SchedulesListWorkspace: React.FC = () => {
 								</div>
 							</div>
 						) : (
-							<Row className='g-3 mx-0 pt-1'>
+							<Row className='g-3 mx-0'>
 								{schedules.map((sch) => (
 									<Col xs={12} sm={6} lg={4} xl={3} className='px-2' key={sch.id}>
 										<ScheduleCardTile schedule={sch} onSelect={handleOpenSchedule} />

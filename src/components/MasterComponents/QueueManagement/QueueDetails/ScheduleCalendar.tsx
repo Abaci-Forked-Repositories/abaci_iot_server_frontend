@@ -126,21 +126,42 @@ function getScheduleEventLabels(
 }
 
 function formatScheduleStatusLabel(status?: QueueScheduleEvent['status']) {
-	if (!status) return 'unknown';
-	if (status === 'onhold') return 'on hold';
-	return status;
+	if (!status) return 'Unknown';
+	if (status === 'onhold') return 'On hold';
+	if (status === 'canceled') return 'Canceled';
+	return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function getScheduleTooltipTitle(event: QueueScheduleEvent) {
+	const status = event.status ?? 'scheduled';
+	const statusLabel = formatScheduleStatusLabel(status);
 	return (
-		<div className='queue-schedule-tooltip-card'>
-			<div className='queue-schedule-tooltip-title'>Schedule</div>
-			<div className='queue-schedule-tooltip-time'>
-				Start: {formatScheduleStartLabel(event.start)}
+		<div className={`queue-schedule-tooltip-card queue-schedule-tooltip-card--${status}`}>
+			<div className='queue-schedule-tooltip-head'>
+				<span className='queue-schedule-tooltip-icon' aria-hidden>
+					<Icon icon='Event' size='sm' />
+				</span>
+				<div className='queue-schedule-tooltip-head-copy'>
+					<div className='queue-schedule-tooltip-kicker'>Schedule</div>
+					<div className='queue-schedule-tooltip-title'>
+						{event.title?.trim() || 'Untitled'}
+					</div>
+				</div>
+				<span className='queue-schedule-tooltip-badge'>{statusLabel}</span>
 			</div>
-			<div className='queue-schedule-tooltip-time'>End: {formatScheduleEndLabel(event.end)}</div>
-			<div className='queue-schedule-tooltip-status text-capitalize'>
-				Status: {formatScheduleStatusLabel(event.status)}
+			<div className='queue-schedule-tooltip-rows'>
+				<div className='queue-schedule-tooltip-row'>
+					<span className='queue-schedule-tooltip-row-label'>Start</span>
+					<span className='queue-schedule-tooltip-row-value'>
+						{formatScheduleStartLabel(event.start)}
+					</span>
+				</div>
+				<div className='queue-schedule-tooltip-row'>
+					<span className='queue-schedule-tooltip-row-label'>End</span>
+					<span className='queue-schedule-tooltip-row-value'>
+						{formatScheduleEndLabel(event.end)}
+					</span>
+				</div>
 			</div>
 		</div>
 	);
@@ -197,11 +218,12 @@ function ScheduleEventContent({
 	endLabel: string;
 	actions?: React.ReactNode;
 }) {
+	const label = startLabel || endLabel;
 	const tooltipProps = {
 		title: getScheduleTooltipTitle(event),
 		followCursor: true,
-		enterDelay: 150,
-		leaveDelay: 50,
+		enterDelay: 120,
+		leaveDelay: 40,
 		slotProps: {
 			popper: {
 				className: 'queue-schedule-tooltip',
@@ -221,26 +243,13 @@ function ScheduleEventContent({
 
 	return (
 		<Tooltip {...tooltipProps}>
-			<div
-				className='d-flex align-items-center gap-1 w-100 min-w-0'
-				style={{ minHeight: '1.25em' }}>
-				{startLabel ? (
-					<span className='queue-schedule-event-title text-truncate flex-grow-1 min-w-0 text-start'>
-						{startLabel}
-					</span>
+			<div className='queue-schedule-event'>
+				{label ? (
+					<span className='queue-schedule-event__label'>{label}</span>
 				) : (
-					<span className='flex-grow-1 min-w-0' />
+					<span className='queue-schedule-event__spacer' />
 				)}
-				{(endLabel || actions) && (
-					<div className='d-flex align-items-center gap-1 flex-shrink-0 ms-auto min-w-0'>
-						{endLabel && (
-							<span className='queue-schedule-event-title text-truncate queue-schedule-event-end-label'>
-								{endLabel}
-							</span>
-						)}
-						{actions}
-					</div>
-				)}
+				{actions ? <span className='queue-schedule-event__actions'>{actions}</span> : null}
 			</div>
 		</Tooltip>
 	);
@@ -575,7 +584,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 										));
 								const isLastSegment = !isMonthView || !continuesAfter;
 								const showEndLabel = isLastSegment;
-								const showEditOnSegment = canEditSchedule && isLastSegment;
+								// Pin edit on the titled (usually wider) segment; also keep it on the
+								// last segment so schedules that only continue into this month stay editable.
+								const showEditOnSegment =
+									canEditSchedule && (showTitle || isLastSegment);
 								const { startLabel, endLabel } = getScheduleEventLabels(
 									ev,
 									showTitle,
@@ -591,7 +603,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 											showEditOnSegment ? (
 												<button
 													type='button'
-													className='btn btn-link btn-sm p-0 ms-1 flex-shrink-0 text-white shadow-none border-0 lh-1'
+													className='queue-schedule-event__edit btn btn-link btn-sm p-0 text-white shadow-none border-0 lh-1'
 													title='Edit schedule'
 													aria-label='Edit schedule'
 													onMouseDown={(e) => {

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Button from '../../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../../bootstrap/Modal';
+import Spinner from '../../../bootstrap/Spinner';
+import Icon from '../../../icon/Icon';
 import useToasterNotification from '../../../../hooks/useToasterNotification';
 import {
 	type PatchTokenUserPayload,
@@ -35,6 +37,8 @@ const tokenUserToDraft = (tokenUser: TokenUser): EditDraft => ({
 	remarks: tokenUser.remarks ?? '',
 });
 
+const fieldLabelClass = 'form-label text-muted small text-uppercase fw-semibold mb-2';
+
 export interface EditTokenUserModalProps {
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
@@ -60,8 +64,9 @@ const EditTokenUserModal: React.FC<EditTokenUserModalProps> = ({
 	}, [isOpen, tokenUser]);
 
 	const closeModal = useCallback(() => {
+		if (saving) return;
 		setIsOpen(false);
-	}, [setIsOpen]);
+	}, [saving, setIsOpen]);
 
 	const handleSave = useCallback(async () => {
 		const name = editDraft.name.trim();
@@ -93,7 +98,7 @@ const EditTokenUserModal: React.FC<EditTokenUserModalProps> = ({
 		try {
 			const updated = await tokensApi.patchUser(userId, payload);
 			onSaved(updated);
-			closeModal();
+			setIsOpen(false);
 			showSuccessNotification('Token user updated.');
 		} catch (err) {
 			showErrorNotification(err);
@@ -101,9 +106,9 @@ const EditTokenUserModal: React.FC<EditTokenUserModalProps> = ({
 			setSaving(false);
 		}
 	}, [
-		closeModal,
 		editDraft,
 		onSaved,
+		setIsOpen,
 		showErrorNotification,
 		showSuccessNotification,
 		userId,
@@ -119,105 +124,152 @@ const EditTokenUserModal: React.FC<EditTokenUserModalProps> = ({
 			size='lg'
 			isAnimation={false}
 			titleId='token-user-edit-modal-title'>
-			<ModalHeader setIsOpen={closeModal}>
-				<ModalTitle id='token-user-edit-modal-title'>Edit token user</ModalTitle>
+			<ModalHeader setIsOpen={(open) => !open && closeModal()}>
+				<ModalTitle id='token-user-edit-modal-title'>
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon='Edit' color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>Edit Token User</div>
+							<div className='text-muted small fw-normal mt-1'>
+								Update customer contact details and notes
+							</div>
+						</div>
+					</div>
+				</ModalTitle>
 			</ModalHeader>
-			<ModalBody>
-				<form
-					className='d-grid gap-3'
-					onSubmit={(e) => {
-						e.preventDefault();
-						void handleSave();
-					}}>
-					<div>
-						<label htmlFor='token-user-edit-name' className='form-label small'>
-							Name <span className='text-danger'>*</span>
-						</label>
-						<input
-							id='token-user-edit-name'
-							type='text'
-							className='form-control'
-							value={editDraft.name}
-							onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
-							autoComplete='name'
-							required
-						/>
-					</div>
-					<div>
-						<label htmlFor='token-user-edit-email' className='form-label small'>
-							Email
-						</label>
-						<input
-							id='token-user-edit-email'
-							type='email'
-							className='form-control'
-							value={editDraft.email}
-							onChange={(e) => setEditDraft((d) => ({ ...d, email: e.target.value }))}
-							autoComplete='email'
-						/>
-					</div>
-					<div>
-						<label htmlFor='token-user-edit-phone' className='form-label small'>
-							Phone
-						</label>
-						<input
-							id='token-user-edit-phone'
-							type='tel'
-							className='form-control'
-							value={editDraft.phone}
-							onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))}
-							autoComplete='tel'
-						/>
-					</div>
-					<div className='row g-3'>
-						<div className='col-12 col-sm-6'>
-							<label htmlFor='token-user-edit-age' className='form-label small'>
-								Age
-							</label>
-							<input
-								id='token-user-edit-age'
-								type='text'
-								inputMode='numeric'
-								className='form-control'
-								value={editDraft.age}
-								onChange={(e) => setEditDraft((d) => ({ ...d, age: e.target.value }))}
-							/>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					void handleSave();
+				}}>
+				<ModalBody className='pt-2 pb-3'>
+					{tokenUser?.name ? (
+						<div className='d-flex align-items-center gap-3 p-3 rounded-4 mb-3 border border-secondary border-opacity-25 bg-body-secondary'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+								style={{ width: 44, height: 44 }}>
+								<Icon icon='Person' color='primary' />
+							</span>
+							<div className='min-w-0'>
+								<div className='text-muted small text-uppercase fw-semibold mb-1'>Editing</div>
+								<div className='fw-bold text-body lh-sm text-truncate'>{tokenUser.name}</div>
+							</div>
 						</div>
-						<div className='col-12 col-sm-6'>
-							<label htmlFor='token-user-edit-place' className='form-label small'>
-								Place
-							</label>
-							<input
-								id='token-user-edit-place'
-								type='text'
-								className='form-control'
-								value={editDraft.place}
-								onChange={(e) => setEditDraft((d) => ({ ...d, place: e.target.value }))}
-							/>
+					) : null}
+					<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+						<div className='row g-3'>
+							<div className='col-12'>
+								<label htmlFor='token-user-edit-name' className={fieldLabelClass}>
+									Name *
+								</label>
+								<input
+									id='token-user-edit-name'
+									type='text'
+									className='form-control rounded-3'
+									placeholder='Enter customer name'
+									value={editDraft.name}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+									autoComplete='name'
+									required
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label htmlFor='token-user-edit-email' className={fieldLabelClass}>
+									Email
+								</label>
+								<input
+									id='token-user-edit-email'
+									type='email'
+									className='form-control rounded-3'
+									placeholder='Optional'
+									value={editDraft.email}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, email: e.target.value }))}
+									autoComplete='email'
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label htmlFor='token-user-edit-phone' className={fieldLabelClass}>
+									Phone
+								</label>
+								<input
+									id='token-user-edit-phone'
+									type='tel'
+									className='form-control rounded-3'
+									placeholder='Optional'
+									value={editDraft.phone}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))}
+									autoComplete='tel'
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label htmlFor='token-user-edit-age' className={fieldLabelClass}>
+									Age
+								</label>
+								<input
+									id='token-user-edit-age'
+									type='text'
+									inputMode='numeric'
+									className='form-control rounded-3'
+									placeholder='Optional'
+									value={editDraft.age}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, age: e.target.value }))}
+								/>
+							</div>
+							<div className='col-md-6'>
+								<label htmlFor='token-user-edit-place' className={fieldLabelClass}>
+									Place
+								</label>
+								<input
+									id='token-user-edit-place'
+									type='text'
+									className='form-control rounded-3'
+									placeholder='Optional'
+									value={editDraft.place}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, place: e.target.value }))}
+								/>
+							</div>
+							<div className='col-12'>
+								<label htmlFor='token-user-edit-remarks' className={fieldLabelClass}>
+									Remarks
+								</label>
+								<textarea
+									id='token-user-edit-remarks'
+									className='form-control rounded-3'
+									rows={3}
+									placeholder='Optional notes'
+									value={editDraft.remarks}
+									disabled={saving}
+									onChange={(e) => setEditDraft((d) => ({ ...d, remarks: e.target.value }))}
+								/>
+							</div>
 						</div>
 					</div>
-					<div>
-						<label htmlFor='token-user-edit-remarks' className='form-label small'>
-							Remarks
-						</label>
-						<textarea
-							id='token-user-edit-remarks'
-							className='form-control'
-							rows={3}
-							value={editDraft.remarks}
-							onChange={(e) => setEditDraft((d) => ({ ...d, remarks: e.target.value }))}
-						/>
-					</div>
-				</form>
-			</ModalBody>
-			<ModalFooter>
-				<Button color='secondary' isOutline onClick={closeModal} isDisable={saving}>
-					Cancel
-				</Button>
-				<Button color='primary' onClick={() => void handleSave()} isDisable={saving}>
-					{saving ? 'Saving…' : 'Save'}
-				</Button>
-			</ModalFooter>
+				</ModalBody>
+				<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+					<Button color='secondary' isLight type='button' onClick={closeModal} isDisable={saving}>
+						Cancel
+					</Button>
+					<Button color='primary' type='submit' icon='Save' isDisable={saving}>
+						{saving ? (
+							<>
+								<Spinner isSmall inButton />
+								Saving…
+							</>
+						) : (
+							'Save'
+						)}
+					</Button>
+				</ModalFooter>
+			</form>
 		</Modal>
 	);
 };

@@ -6,7 +6,7 @@ import Page from '../../layout/Page/Page';
 import Card, { CardActions, CardBody, CardHeader } from '../../components/bootstrap/Card';
 import Icon from '../../components/icon/Icon';
 import UserManagementTableComponent from '../../components/MasterComponents/Usermanagement/UserManagementMainTable';
-import AddUser from '../../components/MasterComponents/Usermanagement/AddUserOffCanvas';
+import UserFormModal from '../../components/MasterComponents/Usermanagement/UserFormModal';
 import ButtonWithPopover from '../../components/CustomComponent/Buttons/ButtonWithPopover';
 import BulkUpload from '../../components/MasterComponents/Usermanagement/BulkUpload';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
@@ -36,11 +36,11 @@ const index: React.FC = () => {
 	return (
 		<>
 			{addModalShow && (
-				<AddUser
+				<UserFormModal
 					isOpen={addModalShow}
 					setIsOpen={setAddModalShow}
 					tableRef={tableRef}
-					title='Add User'
+					mode='add'
 				/>
 			)}
 			{addUploadModalShow && (

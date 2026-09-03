@@ -35,6 +35,7 @@ import {
 	servingPointQueueIds,
 } from '../QueueManagement/queueManagementUtils';
 import usePermissions from '../../../hooks/usePermissions';
+import CurrentVisitorPanel from './CurrentVisitorPanel';
 export type ServingWindowNavState = {
 	from?: 'schedule' | 'serving-point';
 	queueId?: number;
@@ -488,158 +489,199 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 
 	return (
 		<div className='d-grid gap-4'>
-			<Card className='border-0 shadow-sm rounded-4 overflow-hidden'>
+			<Card className='border-0 shadow-sm rounded-4 overflow-visible sw-detail-hero'>
 				<CardBody className='p-0'>
-					<div className='d-flex flex-column flex-lg-row'>
-						<div className='p-4 p-lg-4 flex-grow-1'>
-							<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap'>
-								<div className='d-flex align-items-start gap-3'>
-									<div className='queue-modern-card__icon-box flex-shrink-0 rounded-3'>
-										<Icon icon='Schedule' className='queue-modern-card__icon' />
-									</div>
-									<div>
-										<div className='text-muted small mb-1 text-uppercase fw-semibold'>
-											Serving window
-										</div>
-										<div className='h4 mb-1 fw-bold'>
+					<div className='p-4'>
+						<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap mb-1'>
+							<div className='d-flex align-items-start gap-3 min-w-0'>
+								<div className='sw-detail-hero__icon flex-shrink-0'>
+									<Icon icon='Monitor' color='primary' />
+								</div>
+								<div className='min-w-0'>
+									<div className='sw-detail-hero__eyebrow'>Serving window</div>
+									<div className='sw-detail-hero__title-row'>
+										<h4 className='sw-detail-hero__title mb-0'>
 											{windowRow?.serving_point_name
 												? `${windowRow.serving_point_name}`
 												: `Window #${windowNumericId}`}
-										</div>
+										</h4>
 										{windowRow?.serving_point_name && windowRow?.id != null && (
-											<div className='text-muted small mb-2'>Window #{windowRow.id}</div>
-										)}
-										<div className='d-flex flex-wrap align-items-center gap-2 mb-2'>
-											<Icon icon='DateRange' className='text-primary' size='sm' />
-											<span className='text-body-secondary small'>
-												{windowRow
-													? `${formatDate(windowRow.from_datetime)} – ${formatDate(windowRow.to_datetime)}`
-													: '—'}
-											</span>
-										</div>
-										{windowRow && (
-											<div className='d-flex align-items-center gap-2 flex-wrap'>
-												<span className='text-muted small'>Serving point status</span>
-												<StatusBadge status={windowSpStatus || undefined} emptyFallback='—' />
-												{servingPoint && (
-													<>
-														<span className='text-muted small ms-1'>Listing</span>
-														<StatusBadge
-															status={servingPoint.is_active !== false ? 'active' : 'inactive'}
-														/>
-													</>
-												)}
-												{canEditServingPointStatus && (
-													<Tooltip title='Change serving point status'>
-														<span className='d-inline-flex'>
-															<Button
-																color='primary'
-																isLight
-																size='sm'
-																icon='Edit'
-																onClick={() => setShowStatusModal(true)}
-															>
-																Change status
-															</Button>
-														</span>
-													</Tooltip>
-												)}
-												
-											</div>
+											<span className='sw-detail-hero__id'>Window #{windowRow.id}</span>
 										)}
 									</div>
-								</div>
-								<div className='d-flex flex-wrap gap-2 align-items-center'>
-									{windowRow?.queue_schedule != null && canReadSchedule && (
-										<Tooltip title='Open the parent schedule in queue management.' arrow>
-											<span className='d-inline-flex'>
-												<Button
-													color='info'
-													isLight
-													icon='CalendarMonth'
-													onClick={() => {
-														const qId =
-															windowRow.queue_schedule_queue_id ?? queueIdFromNav;
-														navigate(
-															`/queue-management/schedules/${windowRow.queue_schedule}`,
-															{
-																state: {
-																	from: scheduleEntryPath
-																		? ('schedules-list' as const)
-																		: ('queue-detail' as const),
-																	...(qId != null
-																		? {
-																				queueId: qId,
-																				queueName:
-																					currentQueue?.name ?? queueNameFromNav,
-																				queueDetailPath: scheduleEntryPath
-																					? undefined
-																					: `/queue-management/${qId}`,
-																			}
-																		: {}),
-																},
-															},
-														);
-													}}>
-													Open schedule
-												</Button>
-											</span>
-										</Tooltip>
+									<div className='sw-detail-hero__date'>
+										<Icon icon='DateRange' size='sm' color='primary' />
+										<span>
+											{windowRow
+												? `${formatDate(windowRow.from_datetime)} – ${formatDate(windowRow.to_datetime)}`
+												: '—'}
+										</span>
+									</div>
+									{windowRow && (
+										<div className='sw-detail-hero__facts'>
+											<div className='sw-detail-hero__fact'>
+												<span className='sw-detail-hero__fact-label'>Serving point status</span>
+												<StatusBadge status={windowSpStatus || undefined} emptyFallback='—' />
+											</div>
+											{servingPoint && (
+												<div className='sw-detail-hero__fact'>
+													<span className='sw-detail-hero__fact-label'>Listing</span>
+													<StatusBadge
+														status={servingPoint.is_active !== false ? 'active' : 'inactive'}
+													/>
+												</div>
+											)}
+											{canEditServingPointStatus && (
+												<Tooltip title='Change serving point status'>
+													<span className='d-inline-flex align-items-center'>
+														<Button
+															color='primary'
+															isLight
+															size='sm'
+															icon='Edit'
+															onClick={() => setShowStatusModal(true)}>
+															Change status
+														</Button>
+													</span>
+												</Tooltip>
+											)}
+										</div>
 									)}
-									<Tooltip title={backTarget.label} arrow>
+								</div>
+							</div>
+							<div className='d-flex flex-wrap gap-2 align-items-center'>
+								{windowRow?.queue_schedule != null && canReadSchedule && (
+									<Tooltip title='Open the parent schedule in queue management.' arrow>
 										<span className='d-inline-flex'>
 											<Button
-												color='dark'
+												color='info'
 												isLight
-												icon='ArrowBack'
-												onClick={() => navigate(backTarget.path)}>
-												{backTarget.label}
+												icon='CalendarMonth'
+												onClick={() => {
+													const qId =
+														windowRow.queue_schedule_queue_id ?? queueIdFromNav;
+													navigate(
+														`/queue-management/schedules/${windowRow.queue_schedule}`,
+														{
+															state: {
+																from: scheduleEntryPath
+																	? ('schedules-list' as const)
+																	: ('queue-detail' as const),
+																...(qId != null
+																	? {
+																			queueId: qId,
+																			queueName:
+																				currentQueue?.name ?? queueNameFromNav,
+																			queueDetailPath: scheduleEntryPath
+																				? undefined
+																				: `/queue-management/${qId}`,
+																		}
+																	: {}),
+															},
+														},
+													);
+												}}>
+												Open schedule
 											</Button>
 										</span>
 									</Tooltip>
-								</div>
+								)}
+								<Tooltip title={backTarget.label} arrow>
+									<span className='d-inline-flex'>
+										<Button
+											color='dark'
+											isLight
+											icon='ArrowBack'
+											onClick={() => navigate(backTarget.path)}>
+											{backTarget.label}
+										</Button>
+									</span>
+								</Tooltip>
 							</div>
 						</div>
-					</div>
 
-					{loading ? (
-						<div className='text-muted px-4 pb-4'>Loading window details...</div>
-					) : !windowRow ? (
-						<div className='alert alert-warning mx-4 mb-4'>Serving window could not be loaded.</div>
-					) : (
-						<div className='row g-3 px-4 pb-4 border-top border-secondary border-opacity-25 pt-3 mx-0 bg-body-secondary bg-opacity-50'>
-							<div className='col-12 col-sm-6 col-md-4'>
-								<div className='small text-muted text-uppercase fw-semibold'>Serving point</div>
-								<div className='fw-semibold'>
-									{servingPoint?.name ||
-										windowRow.serving_point_name ||
-										`#${windowRow.serving_point}`}
+						{loading ? (
+							<div className='text-muted pt-3'>Loading window details...</div>
+						) : !windowRow ? (
+							<div className='alert alert-warning mb-0 mt-3'>
+								Serving window could not be loaded.
+							</div>
+						) : (
+							<div className='row g-3 schedule-detail-hover-grid mt-2'>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--primary p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(34, 73, 158, 0.14)' }}>
+											<Icon icon='Monitor' color='primary' />
+										</div>
+										<div className='min-w-0'>
+											<div className='text-muted small mb-1'>Serving point</div>
+											<div className='fw-semibold text-truncate'>
+												{servingPoint?.name ||
+													windowRow.serving_point_name ||
+													`#${windowRow.serving_point}`}
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(54, 153, 255, 0.14)' }}>
+											<Icon icon='Queue' color='info' />
+										</div>
+										<div className='min-w-0'>
+											<div className='text-muted small mb-1'>Queue</div>
+											<div className='fw-semibold text-truncate'>
+												{(servingPoint as (ServingPoint & { queue_name?: string }) | null)
+													?.queue_name ||
+													(currentQueue?.name != null
+														? currentQueue.name
+														: windowRow.queue_schedule_queue_id != null
+															? `Queue #${windowRow.queue_schedule_queue_id}`
+															: (() => {
+																	const ids = servingPoint
+																		? servingPointQueueIds(servingPoint)
+																		: [];
+																	return ids.length
+																		? ids.map((qid) => `Queue #${qid}`).join(', ')
+																		: '—';
+																})())}
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--success p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(27, 197, 189, 0.16)' }}>
+											<Icon icon='EventAvailable' color='success' />
+										</div>
+										<div className='min-w-0'>
+											<div className='text-muted small mb-1'>Created</div>
+											<div className='fw-semibold'>{formatDate(windowRow.created_at)}</div>
+										</div>
+									</div>
+								</div>
+								<div className='col-md-6'>
+									<div className='schedule-detail-hover-card schedule-detail-hover-card--warning p-3 h-100 d-flex align-items-center gap-3'>
+										<div
+											className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+											style={{ width: 34, height: 34, backgroundColor: 'rgba(255, 168, 0, 0.16)' }}>
+											<Icon icon='Update' color='warning' />
+										</div>
+										<div className='min-w-0'>
+											<div className='text-muted small mb-1'>Updated</div>
+											<div className='fw-semibold'>{formatDate(windowRow.updated_at)}</div>
+										</div>
+									</div>
 								</div>
 							</div>
-							<div className='col-12 col-sm-6 col-md-4'>
-								<div className='small text-muted text-uppercase fw-semibold'>Queue</div>
-								<div className='fw-semibold'>
-									{(servingPoint as (ServingPoint & { queue_name?: string }) | null)?.queue_name ||
-										(currentQueue?.name != null
-											? currentQueue.name
-											: windowRow.queue_schedule_queue_id != null
-												? `Queue #${windowRow.queue_schedule_queue_id}`
-												: (() => {
-													const ids = servingPoint ? servingPointQueueIds(servingPoint) : [];
-													return ids.length ? ids.map((qid) => `Queue #${qid}`).join(', ') : '—';
-												})())}
-								</div>
-							</div>
-							<div className='col-12 col-sm-6 col-md-4'>
-								<div className='small text-muted text-uppercase fw-semibold'>Created</div>
-								<div className='fw-semibold'>{formatDate(windowRow.created_at)}</div>
-							</div>
-							<div className='col-12 col-sm-6 col-md-4'>
-								<div className='small text-muted text-uppercase fw-semibold'>Updated</div>
-								<div className='fw-semibold'>{formatDate(windowRow.updated_at)}</div>
-							</div>
-						</div>
-					)}
+						)}
+					</div>
 				</CardBody>
 			</Card>
 
@@ -717,12 +759,8 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 								</div>
 								) : (
 								<div className='p-4'>
-									<div className='d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap'>
-										<div className='d-flex align-items-center gap-2'>
-											<Icon icon='Person' className='text-primary' size='sm' />
-											<span className='small text-uppercase fw-semibold text-muted'>Current visitor</span>
-										</div>
-										{token?.token_user?.uuid && windowRow?.queue_schedule_queue_id != null && (
+									{token?.token_user?.uuid && windowRow?.queue_schedule_queue_id != null && (
+										<div className='d-flex justify-content-end mb-3'>
 											<Button
 												color='info'
 												isLight
@@ -731,34 +769,19 @@ const ServingWindowDetailWorkspace: React.FC = () => {
 												onClick={() => setShowShareModal(true)}>
 												Share
 											</Button>
-										)}
-									</div>
+										</div>
+									)}
 									<div className='row g-4 align-items-start'>
-										<div className={canWrite ? 'col-12 col-lg-4' : 'col-12'}>
-											<div className='display-5 fw-bold text-primary lh-sm mb-1'>{tokenDisplay}</div>
-											{user?.name?.trim() ? (
-												<div className='fs-4 fw-semibold text-body-emphasis mb-3'>{user.name.trim()}</div>
-											) : null}
-											<div className='d-flex flex-wrap align-items-center gap-2 mb-3'>
-												<span className='text-muted small'>Token status</span>
-												<StatusBadge status={tokStatus || undefined} />
-											</div>
-											{detailRows.length > 0 && (
-												<ul className='list-unstyled mb-0 d-flex flex-column gap-2'>
-													{detailRows.map((row) => (
-														<li key={row.label} className='d-flex align-items-start gap-2'>
-															<Icon icon={row.icon} color='primary' size='sm' className='mt-1 flex-shrink-0' />
-															<div>
-																<span className='text-muted small'>{row.label}: </span>
-																<span className='fw-medium text-break'>{row.value}</span>
-															</div>
-														</li>
-													))}
-												</ul>
-											)}
+										<div className={canWrite ? 'col-12 col-lg-5' : 'col-12'}>
+											<CurrentVisitorPanel
+												tokenDisplay={tokenDisplay}
+												visitorName={user?.name?.trim() || null}
+												tokenStatus={tokStatus}
+												detailRows={detailRows}
+											/>
 										</div>
 										{canWrite ? (
-										<div className='col-12 col-lg-8 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
+										<div className='col-12 col-lg-7 d-flex flex-wrap align-items-start align-items-lg-center justify-content-lg-end gap-2 pt-lg-1'>
 										{visibleTokenActions.map((a) => {
 											if (a.key === 'start') {
 												return (

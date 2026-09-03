@@ -33,15 +33,11 @@ const STAT_TILES: Array<{
 	{ key: 'cancelled', label: 'Cancelled', icon: 'Cancel', color: 'secondary' },
 ];
 
-const ICON_BG_BY_COLOR: Record<TColor, string> = {
-	primary: 'rgba(54, 153, 255, 0.14)',
-	secondary: 'rgba(125, 138, 156, 0.14)',
-	success: 'rgba(27, 197, 189, 0.14)',
-	info: 'rgba(114, 57, 234, 0.14)',
-	warning: 'rgba(255, 168, 0, 0.14)',
-	danger: 'rgba(246, 78, 96, 0.14)',
-	dark: 'rgba(24, 28, 50, 0.14)',
-	light: 'rgba(245, 248, 250, 0.24)',
+export type QueueDetailEntryFrom = 'queues-list' | 'serving-points' | 'serving-point-detail';
+
+export type QueueDetailNavState = {
+	from?: QueueDetailEntryFrom;
+	servingPointId?: number;
 };
 
 const QueueDetailView: React.FC = () => {
@@ -49,6 +45,7 @@ const QueueDetailView: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const id = Number(queueId);
+	const navState = location.state as QueueDetailNavState | null;
 
 	const [loading, setLoading] = useState(true);
 	const [queue, setQueue] = useState<Queue | null>(null);
@@ -109,6 +106,17 @@ const QueueDetailView: React.FC = () => {
 		return withGroupName.group_name ?? (queue.group != null ? String(queue.group) : '-');
 	}, [queue]);
 
+	const backNav = useMemo(() => {
+		const from = navState?.from;
+		if (from === 'serving-point-detail' && navState?.servingPointId) {
+			return `/serving-points/${navState.servingPointId}`;
+		}
+		if (from === 'serving-points') {
+			return '/serving-points';
+		}
+		return '/queue-management';
+	}, [navState?.from, navState?.servingPointId]);
+
 	const statValue = (key: string): number => {
 		if (key === 'total_tokens') return stats?.total_tokens ?? 0;
 		if (key === 'waiting') return stats?.waiting ?? 0;
@@ -129,7 +137,10 @@ const QueueDetailView: React.FC = () => {
 
 	if (!loading && !queue) {
 		return (
-			<div className='d-flex justify-content-center align-items-center py-5'>
+			<div className='d-flex justify-content-center align-items-center py-5 gap-2 flex-wrap'>
+				<Button color='dark' isLight icon='ArrowBack' onClick={() => navigate(backNav)}>
+					Back
+				</Button>
 				<Button color='primary' icon='Refresh' onClick={() => void load()}>
 					Try again
 				</Button>
@@ -218,7 +229,15 @@ const QueueDetailView: React.FC = () => {
 												<div className='text-muted small mt-1'>{queueData.description || 'Service queue'}</div>
 											</div>
 										</div>
-										<div className='d-flex align-items-center gap-2 flex-shrink-0'>
+										<div className='d-flex align-items-center gap-2 flex-wrap flex-shrink-0'>
+											<Button
+												color='dark'
+												isLight
+												size='sm'
+												icon='ArrowBack'
+												onClick={() => navigate(backNav)}>
+												Back
+											</Button>
 											<span className={`queue-modern-card__status ${queueData.is_active ? 'queue-modern-card__status--active' : 'queue-modern-card__status--inactive'}`}>
 												{queueData.is_active ? 'Active' : 'Inactive'}
 												<span className='queue-modern-card__status-dot' />
@@ -247,7 +266,7 @@ const QueueDetailView: React.FC = () => {
 									</div>
 
 									{/* Meta pills row */}
-									<div className='d-flex flex-wrap gap-3 mb-4 align-items-center'>
+									<div className='queue-detail-meta-row'>
 										{infoMeta.map((m) => (
 											<div key={m.label} className='queue-detail-meta-pill'>
 												<span className='queue-detail-meta-label'>{m.label}</span>
@@ -292,19 +311,18 @@ const QueueDetailView: React.FC = () => {
 											{STAT_TILES.map((m) => (
 												<div
 													key={m.label}
-													className='queue-detail-stat-tile border rounded-3 p-4 text-center d-flex flex-column align-items-center justify-content-center'
-													style={{ minHeight: 94 }}>
-													<div
-														className='d-inline-flex align-items-center justify-content-center rounded-circle mb-2'
-														style={{
-															width: 54,
-															height: 54,
-															backgroundColor: ICON_BG_BY_COLOR[m.color],
-														}}>
-														<Icon icon={m.icon} color={m.color} size='2x' className='mb-0 opacity-90' />
+													className={`dashboard-stat-card dashboard-stat-card--${m.color} queue-detail-stat-tile`}>
+													<div className='dashboard-stat-card__body dashboard-stat-card__body--stacked'>
+														<div className='dashboard-stat-card__icon-box' aria-hidden>
+															<Icon icon={m.icon} className='dashboard-stat-card__icon' />
+														</div>
+														<div className='dashboard-stat-card__copy'>
+															<span className='dashboard-stat-card__label'>{m.label}</span>
+															<span className='dashboard-stat-card__value'>
+																{statValue(m.key).toLocaleString()}
+															</span>
+														</div>
 													</div>
-													<div className='text-muted small'>{m.label}</div>
-													<div className='fs-3 fw-bold'>{statValue(m.key)}</div>
 												</div>
 											))}
 										</div>

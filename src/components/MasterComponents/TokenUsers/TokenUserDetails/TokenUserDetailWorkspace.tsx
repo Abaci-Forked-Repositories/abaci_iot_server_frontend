@@ -339,7 +339,11 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 								e.preventDefault();
 								e.stopPropagation();
 								navigate(`/queue-management/schedules/${rowData.schedule}`, {
-									state: { from: 'schedules-list' as const },
+									state: {
+										from: 'token-user' as const,
+										tokenUserId: id,
+										tokenUserName: tokenUser?.name ?? undefined,
+									},
 								});
 							}}>
 							#{rowData.schedule}
@@ -539,6 +543,8 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 		[
 			canReadSchedule,
 			navigate,
+			id,
+			tokenUser?.name,
 			handleTokenStatusTransition,
 			handleSetPrioritizedQueue,
 			prioritizingTokenId,
@@ -560,83 +566,198 @@ const TokenUserDetailWorkspace: React.FC<TokenUserDetailWorkspaceProps> = ({
 	return (
 		<>
 			<div className='d-flex flex-column gap-4 flex-fill min-h-0 h-100 pb-3'>
-				<Card className='mb-0 flex-shrink-0'>
-				<CardBody>
-					<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap'>
-						<div>
-							<div className='text-muted small mb-1'>Token User</div>
-							<div className='h4 mb-1'>{tokenUser?.name || `User #${id}`}</div>
-							<div className='text-muted'>
-								{tokenUser?.created_at
-									? `Joined ${formatDate(tokenUser.created_at)}`
-									: ''}
+				<Card className='border-0 shadow-sm rounded-4 overflow-visible mb-0 flex-shrink-0 tu-detail-hero'>
+					<CardBody className='p-0'>
+						<div className='p-4'>
+							<div className='d-flex align-items-start justify-content-between gap-3 flex-wrap mb-1'>
+								<div className='d-flex align-items-start gap-3 min-w-0'>
+									<div
+										className='d-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0'
+										style={{
+											width: 48,
+											height: 48,
+											backgroundColor: 'color-mix(in srgb, var(--bs-primary) 12%, #ffffff)',
+										}}>
+										<Icon icon='Person' color='primary' />
+									</div>
+									<div className='min-w-0'>
+										<div className='text-muted small text-uppercase fw-semibold mb-1'>
+											Token User
+										</div>
+										<h4 className='fw-bold mb-2 lh-sm'>
+											{tokenUser?.name || `User #${id}`}
+										</h4>
+										{tokenUser?.created_at ? (
+											<div className='d-inline-flex align-items-center gap-2 text-muted small px-3 py-2 rounded-3 border border-secondary border-opacity-25 bg-body-secondary'>
+												<Icon icon='DateRange' size='sm' color='primary' />
+												<span>Joined {formatDate(tokenUser.created_at)}</span>
+											</div>
+										) : null}
+									</div>
+								</div>
+								<div className='d-flex flex-wrap gap-2 align-items-center'>
+									{canWriteTokenUser && (
+										<Button
+											color='primary'
+											isLight
+											icon='Edit'
+											isDisable={loading || !tokenUser}
+											onClick={() => setEditUserOpen(true)}>
+											Edit
+										</Button>
+									)}
+									<Button
+										color='dark'
+										isLight
+										icon='ArrowBack'
+										onClick={() => navigate('/token-users')}>
+										Back
+									</Button>
+								</div>
 							</div>
-						</div>
-						<div className='d-flex gap-2'>
-							{canWriteTokenUser && (
-							<Button
-								color='primary'
-								isLight
-								icon='Edit'
-								isDisable={loading || !tokenUser}
-								onClick={() => setEditUserOpen(true)}>
-								Edit
-							</Button>
-							)}
-							<Button
-								color='light'
-								isLight
-								icon='ArrowBack'
-								onClick={() => navigate('/token-users')}>
-								Back
-							</Button>
-						</div>
-					</div>
 
-					{loading && !tokenUser ? (
-						<div className='text-muted py-4'>Loading token user details...</div>
-					) : (
-						<div className='row g-3 mt-2'>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Email</div>
-								<div className='fw-semibold'>{tokenUser?.email || '—'}</div>
-							</div>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Phone</div>
-								<div className='fw-semibold'>{tokenUser?.phone || '—'}</div>
-							</div>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Age</div>
-								<div className='fw-semibold'>
-									{tokenUser?.age != null && tokenUser.age !== ''
-										? String(tokenUser.age)
-										: '—'}
-								</div>
-							</div>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Place</div>
-								<div className='fw-semibold'>{tokenUser?.place || '—'}</div>
-							</div>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Created at</div>
-								<div className='fw-semibold'>
-									{formatDate(tokenUser?.created_at)}
-								</div>
-							</div>
-							<div className='col-12 col-md-4'>
-								<div className='small text-muted'>Total tokens</div>
-								<div className='fw-semibold'>{tokens.length}</div>
-							</div>
-							{remarks && (
-								<div className='col-12'>
-									<div className='small text-muted'>Remarks</div>
-									<div className='fw-semibold'>{remarks}</div>
+							{loading && !tokenUser ? (
+								<div className='text-muted pt-3'>Loading token user details...</div>
+							) : (
+								<div className='row g-3 schedule-detail-hover-grid mt-2'>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(54, 153, 255, 0.14)',
+												}}>
+												<Icon icon='Email' color='info' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Email</div>
+												<div className='fw-semibold text-truncate'>
+													{tokenUser?.email || '—'}
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--primary p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(34, 73, 158, 0.14)',
+												}}>
+												<Icon icon='Phone' color='primary' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Phone</div>
+												<div className='fw-semibold text-truncate'>
+													{tokenUser?.phone || '—'}
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--warning p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(255, 168, 0, 0.16)',
+												}}>
+												<Icon icon='Cake' color='warning' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Age</div>
+												<div className='fw-semibold'>
+													{tokenUser?.age != null && tokenUser.age !== ''
+														? String(tokenUser.age)
+														: '—'}
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--success p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(27, 197, 189, 0.16)',
+												}}>
+												<Icon icon='Place' color='success' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Place</div>
+												<div className='fw-semibold text-truncate'>
+													{tokenUser?.place || '—'}
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--secondary p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(125, 138, 156, 0.14)',
+												}}>
+												<Icon icon='EventAvailable' color='secondary' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Created at</div>
+												<div className='fw-semibold'>
+													{formatDate(tokenUser?.created_at)}
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className='col-md-6 col-xl-4'>
+										<div className='schedule-detail-hover-card schedule-detail-hover-card--primary p-3 h-100 d-flex align-items-center gap-3'>
+											<div
+												className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+												style={{
+													width: 34,
+													height: 34,
+													backgroundColor: 'rgba(34, 73, 158, 0.14)',
+												}}>
+												<Icon icon='ConfirmationNumber' color='primary' />
+											</div>
+											<div className='min-w-0'>
+												<div className='text-muted small mb-1'>Total tokens</div>
+												<div className='fw-semibold'>{tokens.length}</div>
+											</div>
+										</div>
+									</div>
+									{remarks && (
+										<div className='col-12'>
+											<div className='schedule-detail-hover-card schedule-detail-hover-card--info p-3 d-flex align-items-start gap-3'>
+												<div
+													className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+													style={{
+														width: 34,
+														height: 34,
+														backgroundColor: 'rgba(54, 153, 255, 0.14)',
+													}}>
+													<Icon icon='Notes' color='info' />
+												</div>
+												<div className='min-w-0'>
+													<div className='text-muted small mb-1'>Remarks</div>
+													<div className='fw-semibold'>{remarks}</div>
+												</div>
+											</div>
+										</div>
+									)}
 								</div>
 							)}
 						</div>
-					)}
-				</CardBody>
-			</Card>
+					</CardBody>
+				</Card>
 
 			<Card className='mb-0 flex-grow-1 d-flex flex-column min-h-0 token-user-detail-tokens-card'>
 				<CardHeader>

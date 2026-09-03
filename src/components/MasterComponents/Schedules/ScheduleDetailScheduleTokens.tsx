@@ -18,6 +18,7 @@ import Button from '../../bootstrap/Button';
 import DropDownFilter from '../../CustomComponent/DropDown/DropDownFilter';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
+import Icon from '../../icon/Icon';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import usePermissions from '../../../hooks/usePermissions';
@@ -68,6 +69,47 @@ const ACTION_SUBMIT_COLORS: Record<TokenStatusAction, 'primary' | 'danger' | 'se
 	mark_waiting: 'primary',
 	cancel: 'danger',
 	postpone: 'secondary',
+};
+
+const TOKEN_STATUS_ACTION_META: Record<
+	TokenStatusAction,
+	{
+		icon: string;
+		color: 'primary' | 'danger' | 'secondary';
+		badgeStatus: string;
+		selectedCard: string;
+		selectedRadio: string;
+		selectedIconWrap: string;
+		selectedText: string;
+	}
+> = {
+	mark_waiting: {
+		icon: 'NotificationsActive',
+		color: 'primary',
+		badgeStatus: 'waiting',
+		selectedCard: 'border-primary bg-primary bg-opacity-10',
+		selectedRadio: 'bg-primary border-primary',
+		selectedIconWrap: 'bg-primary bg-opacity-15',
+		selectedText: 'text-primary',
+	},
+	cancel: {
+		icon: 'Cancel',
+		color: 'danger',
+		badgeStatus: 'cancelled',
+		selectedCard: 'border-danger bg-danger bg-opacity-10',
+		selectedRadio: 'bg-danger border-danger',
+		selectedIconWrap: 'bg-danger bg-opacity-15',
+		selectedText: 'text-danger',
+	},
+	postpone: {
+		icon: 'Update',
+		color: 'secondary',
+		badgeStatus: 'postponed',
+		selectedCard: 'border-secondary bg-secondary bg-opacity-10',
+		selectedRadio: 'bg-secondary border-secondary',
+		selectedIconWrap: 'bg-secondary bg-opacity-15',
+		selectedText: 'text-secondary',
+	},
 };
 
 const canEditTokenDetails = (token: Token) => {
@@ -418,53 +460,141 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 					if (!open) closeStatusModal();
 				}}
 				isCentered
-				size='sm'
+				size='lg'
 				isAnimation={false}>
 				<ModalHeader
 					setIsOpen={(open) => {
 						if (!open) closeStatusModal();
 					}}>
-					<ModalTitle id='schedule-token-status-modal'>Update token status</ModalTitle>
+					<ModalTitle id='schedule-token-status-modal'>
+						<div className='d-flex align-items-center gap-3'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+								style={{ width: 40, height: 40 }}>
+								<Icon icon='TrackChanges' color='primary' />
+							</span>
+							<div>
+								<div className='fw-bold lh-sm'>Update token status</div>
+								<div className='text-muted small fw-normal mt-1'>
+									Choose the next state for this scheduled token
+								</div>
+							</div>
+						</div>
+					</ModalTitle>
 				</ModalHeader>
 				{statusModalToken && statusModalOptions.length > 0 && (
 					<form onSubmit={handleSubmitTokenStatus}>
-						<ModalBody>
-							<p className='fw-semibold mb-1'>
-								Token {getTokenDisplay(statusModalToken)}
-								{statusModalToken.token_user?.name ? (
-									<span className='text-muted fw-normal'>
-										{' '}
-										· {statusModalToken.token_user.name}
-									</span>
-								) : null}
-							</p>
-							<div className='d-flex align-items-center gap-2 mb-3'>
-								<span className='text-muted small'>Current status</span>
-								<StatusBadge status={String(statusModalToken.status)} />
+						<ModalBody className='pt-2 pb-4'>
+							<div className='d-flex align-items-center gap-3 p-3 p-md-4 rounded-4 mb-4 border border-secondary border-opacity-25 bg-body-secondary'>
+								<span
+									className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+									style={{ width: 48, height: 48 }}>
+									<Icon icon='ConfirmationNumber' color='primary' />
+								</span>
+								<div className='min-w-0 flex-grow-1'>
+									<div className='text-muted small text-uppercase fw-semibold mb-1'>Token</div>
+									<div className='fw-bold fs-5 text-body lh-sm text-truncate'>
+										{getTokenDisplay(statusModalToken)}
+									</div>
+									{statusModalToken.token_user?.name ? (
+										<div className='text-muted small mt-2 lh-base text-truncate'>
+											{statusModalToken.token_user.name}
+										</div>
+									) : null}
+								</div>
 							</div>
-							<label
-								className='form-label fw-semibold'
-								htmlFor='schedule-token-next-status'>
-								Change to
-							</label>
-							<select
-								id='schedule-token-next-status'
-								className='form-select'
-								value={statusActionValue}
-								disabled={statusSaving}
-								onChange={(e) =>
-									setStatusActionValue(e.target.value as TokenStatusAction)
-								}>
-								{statusModalOptions.map((o) => (
-									<option key={o.value} value={o.value}>
-										{o.label}
-									</option>
-								))}
-							</select>
+
+							<div className='d-flex align-items-center justify-content-between gap-3 flex-wrap mb-4 px-1'>
+								<div className='d-flex flex-column gap-2'>
+									<span className='text-muted small text-uppercase fw-semibold'>
+										Current status
+									</span>
+									<StatusBadge status={String(statusModalToken.status)} />
+								</div>
+								<span
+									className='d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary border border-secondary border-opacity-25 flex-shrink-0'
+									style={{ width: 36, height: 36 }}>
+									<Icon icon='ArrowForward' color='secondary' size='sm' />
+								</span>
+								<div className='d-flex flex-column gap-2'>
+									<span className='text-muted small text-uppercase fw-semibold'>
+										New status
+									</span>
+									{statusActionValue ? (
+										<StatusBadge
+											status={TOKEN_STATUS_ACTION_META[statusActionValue].badgeStatus}
+										/>
+									) : (
+										<span className='text-muted small'>Select below</span>
+									)}
+								</div>
+							</div>
+
+							<div className='mb-1'>
+								<div className='text-muted small text-uppercase fw-semibold mb-3 px-1'>
+									Select new status
+								</div>
+								<div className='d-flex flex-column gap-2'>
+									{statusModalOptions.map((option, index) => {
+										const meta = TOKEN_STATUS_ACTION_META[option.value];
+										const isSelected = statusActionValue === option.value;
+										return (
+											<button
+												key={`${option.value}-${index}`}
+												type='button'
+												disabled={statusSaving}
+												onClick={() => setStatusActionValue(option.value)}
+												className={[
+													'd-flex align-items-center gap-3 p-3 rounded-3 border text-start w-100',
+													isSelected
+														? meta.selectedCard
+														: 'border-secondary border-opacity-25 bg-transparent',
+												].join(' ')}
+												style={{ cursor: statusSaving ? 'not-allowed' : 'pointer' }}>
+												<span
+													className={[
+														'd-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 border',
+														isSelected
+															? meta.selectedRadio
+															: 'bg-body border-secondary border-opacity-50',
+													].join(' ')}
+													style={{ width: 22, height: 22 }}>
+													{isSelected && <Icon icon='Check' size='sm' color='light' />}
+												</span>
+												<span
+													className={[
+														'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+														isSelected ? meta.selectedIconWrap : 'bg-body-secondary',
+													].join(' ')}
+													style={{ width: 40, height: 40 }}>
+													<Icon icon={meta.icon} color={meta.color} />
+												</span>
+												<div className='flex-grow-1 min-w-0'>
+													<div
+														className={`fw-semibold ${isSelected ? meta.selectedText : 'text-body'}`}>
+														{option.label}
+													</div>
+													<div className='text-muted small'>
+														Set token to {option.label.toLowerCase()}
+													</div>
+												</div>
+												{isSelected && (
+													<Icon
+														icon='ArrowForward'
+														color={meta.color}
+														size='sm'
+														className='flex-shrink-0'
+													/>
+												)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
 						</ModalBody>
-						<ModalFooter>
+						<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
 							<Button
-								color='light'
+								color='secondary'
 								isLight
 								type='button'
 								isDisable={statusSaving}
@@ -476,6 +606,7 @@ const ScheduleDetailScheduleTokens: React.FC<ScheduleDetailScheduleTokensProps> 
 									statusActionValue ? ACTION_SUBMIT_COLORS[statusActionValue] : 'primary'
 								}
 								type='submit'
+								icon={statusActionValue ? TOKEN_STATUS_ACTION_META[statusActionValue].icon : undefined}
 								isDisable={statusSaving || !statusActionValue}>
 								{statusSaving ? (
 									<>

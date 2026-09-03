@@ -1,7 +1,10 @@
 import React, { type FormEvent, useEffect, useState } from 'react';
-import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import TokenCreateForm from '../QueueManagement/TokenCreateForm';
 import StatusBadge from '../../BadgeWithIcon.jsx';
+import Icon from '../../icon/Icon';
+import Button from '../../bootstrap/Button';
+import Spinner from '../../bootstrap/Spinner';
 import type { CreateTokenPayload, Queue, QueueSchedule, Token } from '../../../services/queueManagementApi';
 import { tokensApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -61,10 +64,12 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 	const [tokenForm, setTokenForm] = useState<CreateTokenPayload>(initialTokenForm);
 	const [saving, setSaving] = useState(false);
 	const [tokenNumberLoading, setTokenNumberLoading] = useState(false);
+	const [nameError, setNameError] = useState<string | undefined>();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 
 	useEffect(() => {
 		if (!isOpen) return;
+		setNameError(undefined);
 		if (mode === 'edit' && editingToken) {
 			setTokenForm(tokenToForm(editingToken, scheduleId));
 			return;
@@ -85,8 +90,19 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 			});
 	}, [isOpen, mode, editingToken, scheduleId]);
 
+	useEffect(() => {
+		if (tokenForm.name.trim()) {
+			setNameError(undefined);
+		}
+	}, [tokenForm.name]);
+
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		if (!tokenForm.name.trim()) {
+			setNameError('*This field is required');
+			return;
+		}
+		setNameError(undefined);
 		if (
 			mode === 'create' &&
 			tokenForm.token_number != null &&
@@ -151,43 +167,97 @@ const ScheduleTokenModal: React.FC<ScheduleTokenModalProps> = ({
 		}
 	};
 
-	const title = mode === 'create' ? 'Create Token for Schedule' : 'Edit Token';
+	const title = mode === 'create' ? 'Create Token' : 'Edit Token';
 	const submitLabel = mode === 'create' ? 'Create Token' : 'Save changes';
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered size='lg' isAnimation={false}>
 			<ModalHeader setIsOpen={setIsOpen}>
-				<ModalTitle id='schedule-token-modal'>{title}</ModalTitle>
-			</ModalHeader>
-			<ModalBody>
-				{mode === 'edit' && editingToken && (
-					<div className='d-flex flex-wrap align-items-center gap-2 text-muted small mb-3'>
-						<span>Token</span>
-						<span className='fw-semibold text-body'>{getTokenDisplay(editingToken)}</span>
-						<span className='text-muted'>·</span>
-						<span>Status</span>
-						<StatusBadge status={editingToken.status} />
+				<ModalTitle id='schedule-token-modal'>
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon={mode === 'create' ? 'ConfirmationNumber' : 'Edit'} color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>{title}</div>
+							<div className='text-muted small fw-normal mt-1'>
+								{mode === 'create'
+									? 'Issue a token and capture customer details for this schedule'
+									: 'Update customer details for this token'}
+							</div>
+						</div>
 					</div>
-				)}
-			<TokenCreateForm
-				key={`${isOpen}-${mode}-${editingToken?.id ?? 'new'}-${scheduleId}`}
-				tokenForm={tokenForm}
-				setTokenForm={setTokenForm}
-				queues={queues}
-				schedules={schedules}
-				selectedQueueId={queueId}
-				onQueueChange={() => {}}
-				fixedScheduleId={scheduleId}
-				servingPoints={[]}
-				showServingPoints={false}
-				onCancel={() => setIsOpen(false)}
-				onSubmit={handleSubmit}
-				isSubmitting={saving}
-				submitLabel={submitLabel}
-				showTokenNumber={mode === 'create'}
-				tokenNumberLoading={tokenNumberLoading}
-			/>
-			</ModalBody>
+				</ModalTitle>
+			</ModalHeader>
+			<form onSubmit={handleSubmit}>
+				<ModalBody className='pt-2 pb-3'>
+					<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+						{mode === 'edit' && editingToken && (
+							<div className='d-flex align-items-center gap-3 p-3 rounded-4 mb-3 border border-secondary border-opacity-25 bg-body'>
+								<span
+									className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+									style={{ width: 44, height: 44 }}>
+									<Icon icon='ConfirmationNumber' color='primary' />
+								</span>
+								<div className='min-w-0 flex-grow-1'>
+									<div className='text-muted small text-uppercase fw-semibold mb-1'>Token</div>
+									<div className='fw-bold fs-5 text-body lh-sm text-truncate'>
+										{getTokenDisplay(editingToken)}
+									</div>
+								</div>
+								<StatusBadge status={editingToken.status} />
+							</div>
+						)}
+						<TokenCreateForm
+							key={`${isOpen}-${mode}-${editingToken?.id ?? 'new'}-${scheduleId}`}
+							embedInParentForm
+							hideActions
+							nameError={nameError}
+							tokenForm={tokenForm}
+							setTokenForm={setTokenForm}
+							queues={queues}
+							schedules={schedules}
+							selectedQueueId={queueId}
+							onQueueChange={() => {}}
+							fixedScheduleId={scheduleId}
+							servingPoints={[]}
+							showServingPoints={false}
+							onCancel={() => setIsOpen(false)}
+							onSubmit={handleSubmit}
+							isSubmitting={saving}
+							submitLabel={submitLabel}
+							showTokenNumber={mode === 'create'}
+							tokenNumberLoading={tokenNumberLoading}
+						/>
+					</div>
+				</ModalBody>
+				<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+					<Button
+						color='secondary'
+						isLight
+						type='button'
+						isDisable={saving}
+						onClick={() => setIsOpen(false)}>
+						Cancel
+					</Button>
+					<Button
+						color='primary'
+						type='submit'
+						icon={mode === 'create' ? 'Add' : 'Save'}
+						isDisable={saving}>
+						{saving ? (
+							<>
+								<Spinner isSmall inButton />
+								{mode === 'create' ? 'Creating…' : 'Saving…'}
+							</>
+						) : (
+							submitLabel
+						)}
+					</Button>
+				</ModalFooter>
+			</form>
 		</Modal>
 	);
 };

@@ -4,7 +4,8 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Button from '../../bootstrap/Button';
 import Spinner from '../../bootstrap/Spinner';
-import ReactSelectWithState from '../../CustomComponent/Select/ReactSelect';
+import Icon from '../../icon/Icon';
+import ModernMultiSelect from '../../CustomComponent/Select/ModernMultiSelect';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import type {
 	CreateQueuePayload,
@@ -29,6 +30,7 @@ interface QueueFormState {
 	description: string;
 	limit: string;
 	grace_period_minutes: string;
+	noshow_recall_interval: string;
 	allow_postpone: boolean;
 	is_reporting_enabled: boolean;
 	token_prefix: string;
@@ -41,12 +43,19 @@ const defaultFormState = (): QueueFormState => ({
 	description: '',
 	limit: '50',
 	grace_period_minutes: '15',
+	noshow_recall_interval: '5',
 	allow_postpone: true,
 	is_reporting_enabled: false,
 	token_prefix: '',
 	serving_point_ids: [],
 	next_queue_ids: [],
 });
+
+const DEFAULT_NOSHOW_RECALL_MINUTES = 5;
+
+/** API stores seconds; form displays minutes. */
+const secondsToMinutes = (seconds: number) => Math.round(seconds / 60);
+const minutesToSeconds = (minutes: number) => minutes * 60;
 
 const extractNextQueueIds = (nextQueues?: Queue[] | number[]): number[] => {
 	if (!nextQueues?.length) return [];
@@ -59,6 +68,11 @@ const queueToFormState = (q: Queue): QueueFormState => ({
 	description: q.description || '',
 	limit: String(q.limit ?? 50),
 	grace_period_minutes: String(q.grace_period_minutes ?? 15),
+	noshow_recall_interval: String(
+		q.noshow_recall_interval != null
+			? secondsToMinutes(q.noshow_recall_interval)
+			: DEFAULT_NOSHOW_RECALL_MINUTES,
+	),
 	allow_postpone: q.allow_postpone ?? true,
 	is_reporting_enabled: q.is_reporting_enabled ?? false,
 	token_prefix: q.token_prefix || '',
@@ -74,6 +88,7 @@ const buildChangedQueuePayload = (
 	form: QueueFormState,
 	original: Queue,
 	graceMinutes: number,
+	noshowRecallMinutes: number,
 ): UpdateQueuePayload => {
 	const baseline = queueToFormState(original);
 	const changes: UpdateQueuePayload = {};
@@ -91,6 +106,10 @@ const buildChangedQueuePayload = (
 
 	if (graceMinutes !== (Number(baseline.grace_period_minutes || 0) || 0)) {
 		changes.grace_period_minutes = graceMinutes;
+	}
+
+	if (noshowRecallMinutes !== (Number(baseline.noshow_recall_interval || 0) || 0)) {
+		changes.noshow_recall_interval = minutesToSeconds(noshowRecallMinutes);
 	}
 
 	if (form.allow_postpone !== baseline.allow_postpone) {
@@ -112,6 +131,87 @@ const buildChangedQueuePayload = (
 
 	return changes;
 };
+
+const fieldLabelClass = 'form-label text-muted small text-uppercase fw-semibold mb-2';
+
+interface ToggleSettingCardProps {
+	id: string;
+	label: string;
+	checked: boolean;
+	disabled: boolean;
+	onChange: (checked: boolean) => void;
+	enabledTitle: string;
+	disabledTitle: string;
+	enabledHint: string;
+	disabledHint: string;
+	iconOn: string;
+	iconOff: string;
+	activeBorderClass: string;
+	activeIconWrapClass: string;
+	activeTextClass: string;
+	iconColorOn: 'primary' | 'success' | 'info';
+}
+
+const ToggleSettingCard: React.FC<ToggleSettingCardProps> = ({
+	id,
+	label,
+	checked,
+	disabled,
+	onChange,
+	enabledTitle,
+	disabledTitle,
+	enabledHint,
+	disabledHint,
+	iconOn,
+	iconOff,
+	activeBorderClass,
+	activeIconWrapClass,
+	activeTextClass,
+	iconColorOn,
+}) => (
+	<div className='h-100 d-flex flex-column'>
+		<label className={fieldLabelClass} htmlFor={id}>
+			{label}
+		</label>
+		<div
+			className={[
+				'flex-grow-1 d-flex align-items-center justify-content-between gap-2 p-2 p-md-3 rounded-3 border transition-all',
+				checked ? activeBorderClass : 'border-secondary border-opacity-25 bg-body',
+			].join(' ')}>
+			<div className='d-flex align-items-center gap-2 min-w-0'>
+				<span
+					className={[
+						'd-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0',
+						checked ? activeIconWrapClass : 'bg-body-secondary',
+					].join(' ')}
+					style={{ width: 32, height: 32 }}>
+					<Icon
+						icon={checked ? iconOn : iconOff}
+						color={checked ? iconColorOn : 'secondary'}
+						size='sm'
+					/>
+				</span>
+				<div className='min-w-0'>
+					<div className={`fw-semibold small ${checked ? activeTextClass : 'text-body'}`}>
+						{checked ? enabledTitle : disabledTitle}
+					</div>
+					<div className='text-muted small lh-sm'>{checked ? enabledHint : disabledHint}</div>
+				</div>
+			</div>
+			<div className='form-check form-switch m-0 flex-shrink-0'>
+				<input
+					className='form-check-input'
+					type='checkbox'
+					role='switch'
+					id={id}
+					checked={checked}
+					disabled={disabled}
+					onChange={(e) => onChange(e.target.checked)}
+				/>
+			</div>
+		</div>
+	</div>
+);
 
 const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	isOpen,
@@ -291,8 +391,23 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 			return;
 		}
 
+		const noshowRaw = form.noshow_recall_interval.trim();
+		if (noshowRaw === '') {
+			showNotification('Error', 'No-show recall interval (minutes) is required.', 'danger');
+			return;
+		}
+		const noshowRecallMinutes = Number(noshowRaw);
+		if (!Number.isInteger(noshowRecallMinutes) || noshowRecallMinutes < 0) {
+			showNotification(
+				'Error',
+				'No-show recall interval must be a whole number of 0 or greater.',
+				'danger',
+			);
+			return;
+		}
+
 		const updatePayload = isUpdateSubmit
-			? buildChangedQueuePayload(form, loadedEditQueue!, graceMinutes)
+			? buildChangedQueuePayload(form, loadedEditQueue!, graceMinutes, noshowRecallMinutes)
 			: null;
 		if (isUpdateSubmit && updatePayload && Object.keys(updatePayload).length === 0) {
 			showNotification('Info', 'No changes to save.', 'info');
@@ -310,6 +425,7 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 					description: form.description.trim() || undefined,
 					limit: Number(form.limit || 0) || 0,
 					grace_period_minutes: graceMinutes,
+					noshow_recall_interval: minutesToSeconds(noshowRecallMinutes),
 					allow_postpone: form.allow_postpone,
 					is_reporting_enabled: form.is_reporting_enabled,
 					token_prefix: form.token_prefix.trim() || undefined,
@@ -329,193 +445,289 @@ const QueueFormModal: React.FC<QueueFormModalProps> = ({
 	};
 
 	const formReady = !isEditMode || !loadingEditQueue;
+	const formDisabled = !formReady || submitting;
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} isCentered size='lg' isAnimation={false}>
 			<ModalHeader setIsOpen={setIsOpen}>
-				<ModalTitle id='queue-form-modal'>{isEditMode ? 'Edit Queue' : 'Add Queue'}</ModalTitle>
+				<ModalTitle id='queue-form-modal'>
+					<div className='d-flex align-items-center gap-3'>
+						<span
+							className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+							style={{ width: 40, height: 40 }}>
+							<Icon icon={isEditMode ? 'Edit' : 'Add'} color='primary' />
+						</span>
+						<div>
+							<div className='fw-bold lh-sm'>{isEditMode ? 'Edit Queue' : 'Add Queue'}</div>
+							<div className='text-muted small fw-normal mt-1'>
+								{isEditMode
+									? 'Update queue settings, limits, and follow-up routing'
+									: 'Create a waiting line and configure token behaviour'}
+							</div>
+						</div>
+					</div>
+				</ModalTitle>
 			</ModalHeader>
 			<form onSubmit={handleSubmit}>
-				<ModalBody>
+				<ModalBody className='pt-2 pb-3'>
 					{isEditMode && loadingEditQueue ? (
 						<div className='d-flex flex-column align-items-center justify-content-center py-5 gap-2 text-muted'>
 							<Spinner color='primary' />
 							<span>Loading queue…</span>
 						</div>
 					) : (
-						<div className='row g-3'>
-							<div className='col-12'>
-								<label className='form-label fw-semibold' htmlFor='queue-name'>
-									Queue Name *
-								</label>
-								<input
-									id='queue-name'
-									className={`form-control${fieldErrors.name ? ' is-invalid' : ''}`}
-									value={form.name}
-									onChange={(e) => {
-										const value = e.target.value;
-										setForm((prev) => ({ ...prev, name: value }));
-										if (fieldErrors.name && value.trim()) {
-											setFieldErrors((prev) => ({ ...prev, name: undefined }));
-										}
-									}}
-									placeholder='Enter queue name'
-									disabled={!formReady}
-								/>
-								{fieldErrors.name && (
-									<span style={{ color: 'red', fontSize: '0.875rem' }}>{fieldErrors.name}</span>
-								)}
-							</div>
-							<div className='col-12'>
-								<label className='form-label fw-semibold' htmlFor='queue-description'>
-									Description
-								</label>
-								<textarea
-									id='queue-description'
-									className='form-control'
-									rows={3}
-									value={form.description}
-									onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-									placeholder='Short description'
-									disabled={!formReady}
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold d-flex align-items-center gap-1' htmlFor='queue-token-prefix'>
-									Token Prefix
-									<Tooltip
-										arrow
-										placement='top'
-										title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
-										<InfoOutlinedIcon style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }} />
-									</Tooltip>
-								</label>
-								<input
-									id='queue-token-prefix'
-									className='form-control'
-									value={form.token_prefix}
-									onChange={(e) => setForm((prev) => ({ ...prev, token_prefix: e.target.value }))}
-									placeholder='e.g. A'
-									maxLength={10}
-									disabled={!formReady}
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='queue-limit'>
-									Token Limit
-								</label>
-								<input
-									id='queue-limit'
-									type='number'
-									min={1}
-									className='form-control'
-									value={form.limit}
-									onChange={(e) => setForm((prev) => ({ ...prev, limit: e.target.value }))}
-									disabled={!formReady}
-								/>
-							</div>
-							<div className='col-md-6'>
-								<label className='form-label fw-semibold' htmlFor='queue-grace-period-minutes'>
-									Grace period (minutes)
-								</label>
-								<input
-									id='queue-grace-period-minutes'
-									type='number'
-									min={0}
-									step={1}
-									className='form-control'
-									value={form.grace_period_minutes}
-									onChange={(e) =>
-										setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
-									}
-									placeholder='e.g. 15'
-									disabled={!formReady}
-								/>
-							</div>
-							<div className='col-md-6 d-flex align-items-end'>
-								<div className='form-check form-switch mb-2'>
-									<input
-										className='form-check-input'
-										type='checkbox'
-										id='queue-allow-postpone'
-										checked={form.allow_postpone}
-										onChange={(e) =>
-											setForm((prev) => ({ ...prev, allow_postpone: e.target.checked }))
-										}
-										disabled={!formReady}
-									/>
-									<label className='form-check-label fw-semibold' htmlFor='queue-allow-postpone'>
-										Allow Postpone
-									</label>
+						<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+							{isEditMode && loadedEditQueue?.name ? (
+								<div className='d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-25 bg-body mb-3'>
+									<span
+										className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+										style={{ width: 44, height: 44 }}>
+										<Icon icon='Queue' color='primary' />
+									</span>
+									<div className='min-w-0'>
+										<div className='text-muted small text-uppercase fw-semibold mb-1'>
+											Editing
+										</div>
+										<div className='fw-bold fs-5 text-body lh-sm text-truncate'>
+											{loadedEditQueue.name}
+										</div>
+									</div>
 								</div>
-							</div>
-							<div className='col-md-6 d-flex align-items-end'>
-								<div className='form-check form-switch mb-2'>
-									<input
-										className='form-check-input'
-										type='checkbox'
-										id='queue-is-reporting-enabled'
-										checked={form.is_reporting_enabled}
-										onChange={(e) =>
-											setForm((prev) => ({ ...prev, is_reporting_enabled: e.target.checked }))
-										}
-										disabled={!formReady}
-									/>
-									<label className='form-check-label fw-semibold' htmlFor='queue-is-reporting-enabled'>
-										Reporting Enabled
+							) : null}
+
+							<div className='row g-3'>
+								<div className='col-12'>
+									<label className={fieldLabelClass} htmlFor='queue-name'>
+										Queue Name *
 									</label>
+									<input
+										id='queue-name'
+										className={`form-control rounded-3${fieldErrors.name ? ' is-invalid' : ''}`}
+										value={form.name}
+										onChange={(e) => {
+											const value = e.target.value;
+											setForm((prev) => ({ ...prev, name: value }));
+											if (fieldErrors.name && value.trim()) {
+												setFieldErrors((prev) => ({ ...prev, name: undefined }));
+											}
+										}}
+										placeholder='Enter queue name'
+										disabled={formDisabled}
+									/>
+									{fieldErrors.name ? (
+										<div className='invalid-feedback d-block'>{fieldErrors.name}</div>
+									) : null}
 								</div>
-							</div>
-							<div className='col-12'>
-								<label className='form-label fw-semibold'>Next queue</label>
-								{loadingQueues ? (
-									<div className='text-muted small py-2'>Loading queues…</div>
-								) : (
-									<ReactSelectWithState
-										options={queueOptions}
-										value={selectedNextQueueOptions}
-										setValue={(selected: Array<{ value: number; label: string }> | null) =>
+
+								<div className='col-12'>
+									<label className={fieldLabelClass} htmlFor='queue-description'>
+										Description
+									</label>
+									<textarea
+										id='queue-description'
+										className='form-control rounded-3'
+										rows={2}
+										value={form.description}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, description: e.target.value }))
+										}
+										placeholder='Short description'
+										disabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<label
+										className={`${fieldLabelClass} d-flex align-items-center gap-1`}
+										htmlFor='queue-token-prefix'>
+										Token Prefix
+										<Tooltip
+											arrow
+											placement='top'
+											title='A short text prepended to every token number generated for this queue (e.g. "A" produces tokens A001, A002, …). Leave blank to use plain numbers.'>
+											<InfoOutlinedIcon
+												style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }}
+											/>
+										</Tooltip>
+									</label>
+									<input
+										id='queue-token-prefix'
+										className='form-control rounded-3'
+										value={form.token_prefix}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, token_prefix: e.target.value }))
+										}
+										placeholder='e.g. A'
+										maxLength={10}
+										disabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<label className={fieldLabelClass} htmlFor='queue-limit'>
+										Token Limit
+									</label>
+									<input
+										id='queue-limit'
+										type='number'
+										min={1}
+										className='form-control rounded-3'
+										value={form.limit}
+										onChange={(e) => setForm((prev) => ({ ...prev, limit: e.target.value }))}
+										disabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<label className={fieldLabelClass} htmlFor='queue-grace-period-minutes'>
+										Grace period (minutes)
+									</label>
+									<input
+										id='queue-grace-period-minutes'
+										type='number'
+										min={0}
+										step={1}
+										className='form-control rounded-3'
+										value={form.grace_period_minutes}
+										onChange={(e) =>
+											setForm((prev) => ({ ...prev, grace_period_minutes: e.target.value }))
+										}
+										placeholder='e.g. 15'
+										disabled={formDisabled}
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<label
+										className={`${fieldLabelClass} d-flex align-items-center gap-1`}
+										htmlFor='queue-noshow-recall-interval'>
+										No-show recall interval (minutes)
+										<Tooltip
+											arrow
+											placement='top'
+											title='How many minutes to wait after a no-show before the token can be recalled again.'>
+											<InfoOutlinedIcon
+												style={{ fontSize: 16, color: '#6c757d', cursor: 'default' }}
+											/>
+										</Tooltip>
+									</label>
+									<input
+										id='queue-noshow-recall-interval'
+										type='number'
+										min={0}
+										step={1}
+										className='form-control rounded-3'
+										value={form.noshow_recall_interval}
+										onChange={(e) =>
 											setForm((prev) => ({
 												...prev,
-												next_queue_ids: (selected || []).map((option) => option.value),
+												noshow_recall_interval: e.target.value,
 											}))
 										}
-										isMulti
-										placeholder='Select next queues'
+										placeholder='e.g. 5'
+										disabled={formDisabled}
 									/>
-								)}
-							</div>
-							{!isEditMode && (
+								</div>
+
+								<div className='col-md-6'>
+									<ToggleSettingCard
+										id='queue-allow-postpone'
+										label='Allow Postpone'
+										checked={form.allow_postpone}
+										disabled={formDisabled}
+										onChange={(checked) =>
+											setForm((prev) => ({ ...prev, allow_postpone: checked }))
+										}
+										enabledTitle='Allowed'
+										disabledTitle='Disabled'
+										enabledHint='Customers can postpone tokens'
+										disabledHint='Postpone not allowed'
+										iconOn='Update'
+										iconOff='Block'
+										activeBorderClass='border-primary bg-primary bg-opacity-10'
+										activeIconWrapClass='bg-primary bg-opacity-15'
+										activeTextClass='text-primary'
+										iconColorOn='primary'
+									/>
+								</div>
+
+								<div className='col-md-6'>
+									<ToggleSettingCard
+										id='queue-is-reporting-enabled'
+										label='Reporting Enabled'
+										checked={form.is_reporting_enabled}
+										disabled={formDisabled}
+										onChange={(checked) =>
+											setForm((prev) => ({ ...prev, is_reporting_enabled: checked }))
+										}
+										enabledTitle='Enabled'
+										disabledTitle='Disabled'
+										enabledHint='Included in reports'
+										disabledHint='Excluded from reports'
+										iconOn='Assessment'
+										iconOff='Block'
+										activeBorderClass='border-info bg-info bg-opacity-10'
+										activeIconWrapClass='bg-info bg-opacity-15'
+										activeTextClass='text-info'
+										iconColorOn='info'
+									/>
+								</div>
+
 								<div className='col-12'>
-									<label className='form-label fw-semibold'>Serving Points</label>
-									{loadingServingPoints ? (
-										<div className='text-muted small py-2'>Loading serving points…</div>
+									<label className={fieldLabelClass}>Next queue</label>
+									{loadingQueues ? (
+										<div className='text-muted small py-2'>Loading queues…</div>
 									) : (
-										<ReactSelectWithState
-											options={servingPointOptions}
-											value={selectedServingPointOptions}
-											setValue={(selected: Array<{ value: number; label: string }> | null) =>
+										<ModernMultiSelect
+											options={queueOptions}
+											value={selectedNextQueueOptions}
+											onChange={(selected) =>
 												setForm((prev) => ({
 													...prev,
-													serving_point_ids: (selected || []).map((option) => option.value),
+													next_queue_ids: selected.map((option) => option.value as number),
 												}))
 											}
-											isMulti
-											placeholder='Select serving points'
+											placeholder='Select next queues'
+											isDisabled={formDisabled}
 										/>
 									)}
 								</div>
-							)}
+
+								{!isEditMode && (
+									<div className='col-12'>
+										<label className={fieldLabelClass}>Serving Points</label>
+										{loadingServingPoints ? (
+											<div className='text-muted small py-2'>Loading serving points…</div>
+										) : (
+											<ModernMultiSelect
+												options={servingPointOptions}
+												value={selectedServingPointOptions}
+												onChange={(selected) =>
+													setForm((prev) => ({
+														...prev,
+														serving_point_ids: selected.map(
+															(option) => option.value as number,
+														),
+													}))
+												}
+												placeholder='Select serving points'
+												isDisabled={formDisabled}
+											/>
+										)}
+									</div>
+								)}
+							</div>
 						</div>
 					)}
 				</ModalBody>
-				<ModalFooter>
-					<Button color='secondary' isLight onClick={() => setIsOpen(false)}>
+				<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
+					<Button color='secondary' isLight type='button' onClick={() => setIsOpen(false)}>
 						Cancel
 					</Button>
 					<Button
 						color='primary'
 						type='submit'
+						icon={isUpdateSubmit ? 'Save' : 'Add'}
 						isDisable={submitting || (isEditMode && !canSubmitEdit)}>
 						{submitting ? (
 							<>
