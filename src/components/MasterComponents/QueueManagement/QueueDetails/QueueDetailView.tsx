@@ -4,6 +4,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Badge from '../../../bootstrap/Badge';
 import Button from '../../../bootstrap/Button';
 import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../../bootstrap/Card';
+import Dropdown, { DropdownMenu, DropdownToggle } from '../../../bootstrap/Dropdown';
 import Icon from '../../../icon/Icon';
 import QueueDetailSkeleton from '../../../CustomComponent/Skeleton/QueueDetailSkeleton';
 import type { Queue, QueueStatistics } from '../../../../services/queueManagementApi';
@@ -17,7 +18,13 @@ import ScheduleCalendar, { type QueueScheduleEvent } from './ScheduleCalendar';
 import QueueDetailCurrentlyServing from './QueueDetailCurrentlyServing';
 import QueueDetailServingPoints from './QueueDetailServingPoints';
 
-const STAT_RANGE_OPTIONS = ['Today', 'This week', 'This month'] as const;
+const STAT_RANGE_OPTIONS = [
+	{ value: 'Today', icon: 'Today' },
+	{ value: 'This week', icon: 'DateRange' },
+	{ value: 'This month', icon: 'CalendarMonth' },
+] as const;
+
+type StatRange = (typeof STAT_RANGE_OPTIONS)[number]['value'];
 
 const STAT_TILES: Array<{
 	key: keyof QueueStatistics | 'total' | 'completed_today';
@@ -51,7 +58,8 @@ const QueueDetailView: React.FC = () => {
 	const [queue, setQueue] = useState<Queue | null>(null);
 	const [stats, setStats] = useState<QueueStatistics | null>(null);
 	const [pageDataVersion, setPageDataVersion] = useState(0);
-	const [statRange, setStatRange] = useState<(typeof STAT_RANGE_OPTIONS)[number]>('Today');
+	const [statRange, setStatRange] = useState<StatRange>('Today');
+	const [statRangeMenuOpen, setStatRangeMenuOpen] = useState(false);
 	const { showErrorNotification } = useToasterNotification();
 	const { can } = usePermissions();
 	const canWrite = can('queue_management_write');
@@ -291,18 +299,74 @@ const QueueDetailView: React.FC = () => {
 												<span className='text-muted fw-normal small'>({statRange})</span>
 											</span>
 										</div>
-										<select
-											className='form-select form-select-sm w-auto'
-											value={statRange}
-											onChange={(e) =>
-												setStatRange(e.target.value as (typeof STAT_RANGE_OPTIONS)[number])
-											}>
-											{STAT_RANGE_OPTIONS.map((o) => (
-												<option key={o} value={o}>
-													{o}
-												</option>
-											))}
-										</select>
+										<Dropdown
+											isOpen={statRangeMenuOpen}
+											setIsOpen={setStatRangeMenuOpen}
+											className='queue-overview-range-dropdown'>
+											<DropdownToggle hasIcon={false}>
+												<Button
+													color='primary'
+													isLight
+													size='sm'
+													icon={
+														STAT_RANGE_OPTIONS.find((o) => o.value === statRange)
+															?.icon ?? 'Today'
+													}
+													className='queue-overview-range-toggle d-inline-flex align-items-center gap-1'>
+													{statRange}
+													<Icon
+														icon={statRangeMenuOpen ? 'ExpandLess' : 'ExpandMore'}
+														size='sm'
+													/>
+												</Button>
+											</DropdownToggle>
+											<DropdownMenu
+												isAlignmentEnd
+												isCloseAfterLeave={false}
+												className='queue-overview-range-menu'>
+												{STAT_RANGE_OPTIONS.map((o) => {
+													const isActive = statRange === o.value;
+													return (
+														<li key={o.value} className='list-unstyled'>
+															<button
+																type='button'
+																className={[
+																	'queue-overview-range-option',
+																	isActive ? 'is-active' : '',
+																]
+																	.filter(Boolean)
+																	.join(' ')}
+																aria-pressed={isActive}
+																onClick={() => {
+																	setStatRange(o.value);
+																	setStatRangeMenuOpen(false);
+																}}>
+																<span
+																	className='queue-overview-range-option__icon'
+																	aria-hidden>
+																	<Icon icon={o.icon} size='sm' />
+																</span>
+																<span className='queue-overview-range-option__label'>
+																	{o.value}
+																</span>
+																{isActive ? (
+																	<Icon
+																		icon='Check'
+																		size='sm'
+																		className='queue-overview-range-option__check'
+																	/>
+																) : (
+																	<span
+																		className='queue-overview-range-option__check-spacer'
+																		aria-hidden
+																	/>
+																)}
+															</button>
+														</li>
+													);
+												})}
+											</DropdownMenu>
+										</Dropdown>
 									</div>
 
 									{/* Stat tiles — single row (center vertically in remaining space) */}

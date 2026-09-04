@@ -1929,6 +1929,234 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 	min-width: 0;
 }
 
+// Queue Overview period picker — scoped to this dropdown only
+.queue-overview-range-dropdown {
+	.queue-overview-range-toggle {
+		min-width: 8.5rem;
+		justify-content: space-between;
+		border-radius: 0.65rem !important;
+		font-weight: 600;
+		box-shadow: 0 1px 2px rgba(#0f172a, 0.04);
+	}
+}
+
+.queue-overview-range-menu.dropdown-menu {
+	min-width: 11.5rem;
+	padding: 0.4rem !important;
+	border: 1px solid rgba(203, 213, 225, 0.7);
+	border-radius: 0.85rem !important;
+	box-shadow:
+		0 8px 24px rgba(#0f172a, 0.1),
+		0 2px 6px rgba(#0f172a, 0.05);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.queue-overview-range-option {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	width: 100%;
+	margin: 0;
+	padding: 0.55rem 0.7rem;
+	border: 0;
+	border-radius: 0.6rem;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1.25;
+	cursor: pointer;
+	transition:
+		background-color 0.18s ease,
+		color 0.18s ease,
+		transform 0.18s ease;
+
+	&:hover {
+		background: color-mix(in srgb, var(--bs-primary) 8%, #ffffff);
+	}
+
+	&:focus-visible {
+		outline: 2px solid color-mix(in srgb, var(--bs-primary) 45%, transparent);
+		outline-offset: 1px;
+	}
+
+	&.is-active {
+		background: color-mix(in srgb, var(--bs-primary) 12%, #ffffff);
+		color: var(--bs-primary);
+		font-weight: 600;
+	}
+}
+
+.queue-overview-range-option__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 0.5rem;
+	background: color-mix(in srgb, var(--bs-primary) 10%, #ffffff);
+	color: var(--bs-primary);
+}
+
+.queue-overview-range-option.is-active .queue-overview-range-option__icon {
+	background: color-mix(in srgb, var(--bs-primary) 18%, #ffffff);
+}
+
+.queue-overview-range-option__label {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.queue-overview-range-option__check,
+.queue-overview-range-option__check-spacer {
+	flex-shrink: 0;
+	width: 1rem;
+	height: 1rem;
+}
+
+.queue-overview-range-option__check {
+	color: var(--bs-primary);
+}
+
+@include dark-mode(true) {
+	.queue-overview-range-menu.dropdown-menu {
+		border-color: rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 10px 28px rgba(#000000, 0.4),
+			0 2px 8px rgba(#000000, 0.2);
+	}
+
+	.queue-overview-range-option:hover {
+		background: color-mix(in srgb, var(--bs-primary) 18%, transparent);
+	}
+
+	.queue-overview-range-option.is-active {
+		background: color-mix(in srgb, var(--bs-primary) 22%, transparent);
+	}
+
+	.queue-overview-range-option__icon {
+		background: color-mix(in srgb, var(--bs-primary) 22%, transparent);
+	}
+}
+
+// Schedule calendar Month/Day view switcher — selected highlight
+.schedule-view-mode-dropdown {
+	.schedule-view-mode-toggle {
+		min-width: 6.5rem;
+		justify-content: space-between;
+		border-radius: 0.65rem !important;
+		font-weight: 600;
+	}
+}
+
+.schedule-view-mode-menu.dropdown-menu {
+	min-width: 9.5rem;
+	padding: 0.4rem !important;
+	border: 1px solid rgba(203, 213, 225, 0.7);
+	border-radius: 0.85rem !important;
+	box-shadow:
+		0 8px 24px rgba(#0f172a, 0.1),
+		0 2px 6px rgba(#0f172a, 0.05);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.schedule-view-mode-option {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	width: 100%;
+	margin: 0;
+	padding: 0.55rem 0.7rem;
+	border: 0;
+	border-radius: 0.6rem;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1.25;
+	cursor: pointer;
+	transition:
+		background-color 0.18s ease,
+		color 0.18s ease;
+
+	&:hover {
+		background: color-mix(in srgb, var(--bs-primary) 8%, #ffffff);
+	}
+
+	&:focus-visible {
+		outline: 2px solid color-mix(in srgb, var(--bs-primary) 45%, transparent);
+		outline-offset: 1px;
+	}
+
+	&.is-active {
+		background: color-mix(in srgb, var(--bs-primary) 12%, #ffffff);
+		color: var(--bs-primary);
+		font-weight: 600;
+	}
+}
+
+.schedule-view-mode-option__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 0.5rem;
+	background: color-mix(in srgb, var(--bs-primary) 10%, #ffffff);
+	color: var(--bs-primary);
+}
+
+.schedule-view-mode-option.is-active .schedule-view-mode-option__icon {
+	background: color-mix(in srgb, var(--bs-primary) 18%, #ffffff);
+}
+
+.schedule-view-mode-option__label {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.schedule-view-mode-option__check,
+.schedule-view-mode-option__check-spacer {
+	flex-shrink: 0;
+	width: 1rem;
+	height: 1rem;
+}
+
+.schedule-view-mode-option__check {
+	color: var(--bs-primary);
+}
+
+@include dark-mode(true) {
+	.schedule-view-mode-menu.dropdown-menu {
+		border-color: rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 10px 28px rgba(#000000, 0.4),
+			0 2px 8px rgba(#000000, 0.2);
+	}
+
+	.schedule-view-mode-option:hover {
+		background: color-mix(in srgb, var(--bs-primary) 18%, transparent);
+	}
+
+	.schedule-view-mode-option.is-active {
+		background: color-mix(in srgb, var(--bs-primary) 22%, transparent);
+	}
+
+	.schedule-view-mode-option__icon {
+		background: color-mix(in srgb, var(--bs-primary) 22%, transparent);
+	}
+}
+
 // Single-row stat tiles — flex with equal widths
 .queue-detail-stat-row {
 	display: flex;

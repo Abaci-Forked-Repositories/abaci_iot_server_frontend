@@ -7,6 +7,8 @@ import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../bootstra
 import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
+import Icon from '../../icon/Icon';
+import ModernDateTimePicker from '../../CustomComponent/ModernDateTimePicker';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
@@ -377,80 +379,117 @@ const ScheduleDetailServingPoints: React.FC<ScheduleDetailServingPointsProps> = 
 				size='lg'
 				isAnimation={false}>
 				<ModalHeader setIsOpen={setShowServingPointEditModal}>
-					<ModalTitle id='update-serving-point-window-modal'>Edit Serving Point Window</ModalTitle>
+					<ModalTitle id='update-serving-point-window-modal'>
+						<div className='d-flex align-items-center gap-3'>
+							<span
+								className='d-inline-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10 flex-shrink-0'
+								style={{ width: 40, height: 40 }}>
+								<Icon icon='EditCalendar' color='primary' />
+							</span>
+							<div>
+								<div className='fw-bold lh-sm'>Edit Serving Point Window</div>
+								<div className='text-muted small fw-normal mt-1'>
+									Adjust the start and end time for this counter window
+								</div>
+							</div>
+						</div>
+					</ModalTitle>
 				</ModalHeader>
 				<form onSubmit={handleUpdateServingPointWindow}>
-					<ModalBody>
-						<div className='text-muted small mb-2'>
-							Serving Point:{' '}
-							<span className='fw-semibold'>
-								{editingServingPointWindow?.serving_point_name ||
-									(editingServingPointWindow?.serving_point
-										? `#${editingServingPointWindow.serving_point}`
-										: '—')}
+					<ModalBody className='pt-2 pb-3'>
+						<div className='d-flex flex-wrap align-items-center gap-2 mb-3'>
+							<span className='d-inline-flex align-items-center gap-2 rounded-3 border border-secondary border-opacity-25 bg-body-secondary px-3 py-2'>
+								<span
+									className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
+									style={{
+										width: 28,
+										height: 28,
+										backgroundColor: 'color-mix(in srgb, var(--bs-primary) 14%, #ffffff)',
+									}}>
+									<Icon icon='Monitor' color='primary' size='sm' />
+								</span>
+								<span className='small'>
+									<span className='text-muted'>Serving point</span>
+									<span className='fw-semibold ms-2'>
+										{editingServingPointWindow?.serving_point_name ||
+											(editingServingPointWindow?.serving_point
+												? `#${editingServingPointWindow.serving_point}`
+												: '—')}
+									</span>
+								</span>
 							</span>
 						</div>
+
 						{scheduleTimeBounds && scheduleRecord && (
-							<p className='text-muted small mb-3 lh-base' style={{ maxWidth: '100%' }}>
-								<span className='fw-semibold text-body-secondary'>Note.</span> Start and end must stay
-								within this schedule:{' '}
-								<span className='fw-medium text-body'>{formatDate(scheduleRecord.from_datetime)}</span>
-								{' — '}
-								<span className='fw-medium text-body'>{formatDate(scheduleRecord.to_datetime)}</span>.
-							</p>
+							<div className='d-flex align-items-start gap-2 rounded-3 border border-info border-opacity-25 bg-info bg-opacity-10 px-3 py-2 mb-3'>
+								<Icon icon='Info' color='info' size='sm' className='flex-shrink-0 mt-1' />
+								<div className='small lh-base text-body-secondary'>
+									<span className='fw-semibold text-body'>Note.</span> Start and end must stay within
+									this schedule:{' '}
+									<span className='fw-medium text-body'>
+										{formatDate(scheduleRecord.from_datetime)}
+									</span>
+									{' — '}
+									<span className='fw-medium text-body'>
+										{formatDate(scheduleRecord.to_datetime)}
+									</span>
+									.
+								</div>
+							</div>
 						)}
-						<div className='mb-3'>
-							<label className='form-label fw-semibold' htmlFor='sp-window-from-datetime'>
-								From
-							</label>
-							<input
-								id='sp-window-from-datetime'
-								type='datetime-local'
-								className='form-control'
-								value={servingPointFromDateTimeFormValue}
-								min={scheduleTimeBounds?.minLocal || undefined}
-								max={servingPointFromMaxLocal}
-								onChange={(e) => setServingPointFromDateTimeFormValue(e.target.value)}
-								onBlur={(e) => {
-									const fromVal = e.currentTarget.value;
-									const toEl = document.getElementById('sp-window-to-datetime') as HTMLInputElement | null;
-									warnIfServingWindowOutsideSchedule(
-										fromVal,
-										toEl?.value ?? servingPointToDateTimeFormValue,
-										'blur',
-									);
-								}}
-								disabled={saving}
-							/>
-						</div>
-						<div className='mb-3'>
-							<label className='form-label fw-semibold' htmlFor='sp-window-to-datetime'>
-								End
-							</label>
-							<input
-								id='sp-window-to-datetime'
-								type='datetime-local'
-								className='form-control'
-								value={servingPointToDateTimeFormValue}
-								min={servingPointToMinLocal}
-								max={scheduleTimeBounds?.maxLocal || undefined}
-								onChange={(e) => setServingPointToDateTimeFormValue(e.target.value)}
-								onBlur={(e) => {
-									const fromEl = document.getElementById(
-										'sp-window-from-datetime',
-									) as HTMLInputElement | null;
-									const toVal = e.currentTarget.value;
-									warnIfServingWindowOutsideSchedule(
-										fromEl?.value ?? servingPointFromDateTimeFormValue,
-										toVal,
-										'blur',
-									);
-								}}
-								disabled={saving}
-							/>
+
+						<div className='rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-50 p-3'>
+							<div className='row g-3'>
+								<div className='col-md-6'>
+									<label
+										className='form-label text-muted small text-uppercase fw-semibold mb-2'
+										htmlFor='sp-window-from-datetime'>
+										From
+									</label>
+									<ModernDateTimePicker
+										id='sp-window-from-datetime'
+										className='rounded-3'
+										value={servingPointFromDateTimeFormValue}
+										min={scheduleTimeBounds?.minLocal || undefined}
+										max={servingPointFromMaxLocal}
+										onChange={(next) => setServingPointFromDateTimeFormValue(next)}
+										onBlur={(fromVal) => {
+											warnIfServingWindowOutsideSchedule(
+												fromVal,
+												servingPointToDateTimeFormValue,
+												'blur',
+											);
+										}}
+										disabled={saving}
+									/>
+								</div>
+								<div className='col-md-6'>
+									<label
+										className='form-label text-muted small text-uppercase fw-semibold mb-2'
+										htmlFor='sp-window-to-datetime'>
+										End
+									</label>
+									<ModernDateTimePicker
+										id='sp-window-to-datetime'
+										className='rounded-3'
+										value={servingPointToDateTimeFormValue}
+										min={servingPointToMinLocal}
+										max={scheduleTimeBounds?.maxLocal || undefined}
+										onChange={(next) => setServingPointToDateTimeFormValue(next)}
+										onBlur={(toVal) => {
+											warnIfServingWindowOutsideSchedule(
+												servingPointFromDateTimeFormValue,
+												toVal,
+												'blur',
+											);
+										}}
+										disabled={saving}
+									/>
+								</div>
+							</div>
 						</div>
 					</ModalBody>
-					<ModalFooter>
+					<ModalFooter className='border-top border-secondary border-opacity-25 pt-3'>
 						<Button
 							color='secondary'
 							isLight

@@ -6,6 +6,7 @@ import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import Spinner from '../../bootstrap/Spinner';
 import Icon from '../../icon/Icon';
+import ModernDateTimePicker from '../../CustomComponent/ModernDateTimePicker';
 import type { QueueSchedule } from '../../../services/queueManagementApi';
 import { schedulesApi } from '../../../services/queueManagementApi';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -368,14 +369,12 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 								<label className={fieldLabelClass} htmlFor='schedule-start'>
 									Start Date & Time
 								</label>
-								<input
+								<ModernDateTimePicker
 									id='schedule-start'
-									type='datetime-local'
-									className='form-control rounded-3'
+									className='rounded-3'
 									min={isEditMode ? undefined : toDateTimeLocalValue(new Date())}
 									value={scheduleForm.start}
-									onChange={(e) => {
-										const nextStart = e.target.value;
+									onChange={(nextStart) => {
 										setScheduleForm((prev) => {
 											const ns = new Date(nextStart);
 											const ne = new Date(prev.end);
@@ -400,13 +399,14 @@ const ScheduleFormModal: React.FC<ScheduleFormModalProps> = ({
 								<label className={fieldLabelClass} htmlFor='schedule-end'>
 									End Date & Time
 								</label>
-								<input
+								<ModernDateTimePicker
 									id='schedule-end'
-									type='datetime-local'
-									className='form-control rounded-3'
+									className='rounded-3'
 									min={endDateTimeMin}
 									value={scheduleForm.end}
-									onChange={(e) => setScheduleForm((prev) => ({ ...prev, end: e.target.value }))}
+									onChange={(nextEnd) =>
+										setScheduleForm((prev) => ({ ...prev, end: nextEnd }))
+									}
 									required
 									disabled={savingSchedule}
 								/>
