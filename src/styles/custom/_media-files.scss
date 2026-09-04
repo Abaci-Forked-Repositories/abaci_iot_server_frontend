@@ -2056,6 +2056,55 @@ $queue-card-hover-lift-room: calc(#{$queue-card-hover-lift} + 14px);
 	}
 }
 
+// No lift / slide on hover (inner serving-history field tiles)
+.schedule-detail-hover-card--no-lift {
+	&:hover {
+		transform: none;
+	}
+}
+
+// Reusable small bounce-toward-user on hover (use `.btn-hover-bounce` on any control)
+@keyframes btn-hover-bounce {
+	0% {
+		transform: scale(1);
+	}
+	35% {
+		transform: scale(1.07);
+	}
+	60% {
+		transform: scale(0.98);
+	}
+	100% {
+		transform: scale(1.04);
+	}
+}
+
+.btn-hover-bounce {
+	transform-origin: center center;
+	will-change: transform;
+
+	&:hover:not(:disabled):not(.disabled):not([aria-disabled='true']) {
+		animation: btn-hover-bounce 0.45s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+	}
+
+	&:active:not(:disabled):not(.disabled):not([aria-disabled='true']) {
+		animation: none;
+		transform: scale(0.97);
+		transition: transform 0.12s ease;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn-hover-bounce {
+		&:hover:not(:disabled):not(.disabled):not([aria-disabled='true']),
+		&:active:not(:disabled):not(.disabled):not([aria-disabled='true']) {
+			animation: none;
+			transform: none;
+			transition: none;
+		}
+	}
+}
+
 // Meta pills inside queue info panel
 .queue-detail-meta-row {
 	display: flex;

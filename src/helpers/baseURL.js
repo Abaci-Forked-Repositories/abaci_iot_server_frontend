@@ -2,7 +2,7 @@ const baseURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
 
 	if (import.meta.env.MODE === 'development') {
-		return 'https://marina-arrangements-anchor-hold.trycloudflare.com';
+		return 'https://venues-housewives-loan-schema.trycloudflare.com';
 	}
 	return url;
 };

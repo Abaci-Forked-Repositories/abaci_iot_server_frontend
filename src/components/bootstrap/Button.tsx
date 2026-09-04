@@ -102,6 +102,8 @@ export interface IButtonProps
 	isDisable?: boolean;
 	shadow?: null | 'none' | 'sm' | 'default' | 'lg';
 	hoverShadow?: null | 'none' | 'sm' | 'default' | 'lg';
+	/** Small bounce-toward-user on hover. Default true; set false to opt out. */
+	hoverBounce?: boolean;
 	target?: HTMLAttributeAnchorTarget;
 	isVisuallyHidden?: boolean;
 	onClick?(...args: unknown[]): unknown;
@@ -127,6 +129,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 			isDisable,
 			shadow,
 			hoverShadow,
+			hoverBounce = true,
 			target,
 			isVisuallyHidden,
 			...props
@@ -154,6 +157,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 				'btn-only-icon': !children || isVisuallyHidden,
 				disabled: isDisable,
 				active: isActive,
+				'btn-hover-bounce': hoverBounce,
 			},
 			className,
 		);
@@ -315,6 +319,7 @@ Button.propTypes = {
 	isDisable: PropTypes.bool,
 	shadow: PropTypes.oneOf([null, 'none', 'sm', 'default', 'lg']),
 	hoverShadow: PropTypes.oneOf([null, 'none', 'sm', 'default', 'lg']),
+	hoverBounce: PropTypes.bool,
 	/**
 	 * If tag is "a", the target attribute specifies where to open the linked document.
 	 */
@@ -342,6 +347,7 @@ Button.defaultProps = {
 	isDisable: false,
 	shadow: null,
 	hoverShadow: null,
+	hoverBounce: true,
 	target: undefined,
 	isVisuallyHidden: false,
 	onClick: undefined,
