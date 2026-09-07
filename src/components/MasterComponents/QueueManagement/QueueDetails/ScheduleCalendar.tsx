@@ -267,6 +267,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 	const canReadSchedule = can('schedules_read');
 
 	const [viewMode, setViewMode] = useState<TView>(Views.MONTH);
+	const [viewModeMenuOpen, setViewModeMenuOpen] = useState(false);
 	const [date, setDate] = useState<Date>(() => toLocalDate(new Date()));
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [scheduleModalMode, setScheduleModalMode] = useState<'create' | 'edit'>('create');
@@ -412,8 +413,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
 					{/* Month / Day switcher */}
 					<CardActions>
-						<Dropdown>
-							<DropdownToggle>
+						<Dropdown
+							isOpen={viewModeMenuOpen}
+							setIsOpen={setViewModeMenuOpen}
+							className='schedule-view-mode-dropdown'>
+							<DropdownToggle hasIcon={false}>
 								<Button
 									color='primary'
 									isLight
@@ -422,25 +426,61 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 										viewMode === Views.MONTH
 											? 'calendar_view_month'
 											: 'calendar_view_day'
-									}>
+									}
+									className='schedule-view-mode-toggle d-inline-flex align-items-center gap-1'>
 									{viewMode === Views.MONTH ? 'Month' : 'Day'}
+									<Icon
+										icon={viewModeMenuOpen ? 'ExpandLess' : 'ExpandMore'}
+										size='sm'
+									/>
 								</Button>
 							</DropdownToggle>
-							<DropdownMenu isAlignmentEnd>
-								<Button
-									color='link'
-									icon='calendar_view_month'
-									isActive={viewMode === Views.MONTH}
-									onClick={() => setViewMode(Views.MONTH)}>
-									Month
-								</Button>
-								<Button
-									color='link'
-									icon='calendar_view_day'
-									isActive={viewMode === Views.DAY}
-									onClick={() => setViewMode(Views.DAY)}>
-									Day
-								</Button>
+							<DropdownMenu
+								isAlignmentEnd
+								isCloseAfterLeave={false}
+								className='schedule-view-mode-menu'>
+								{(
+									[
+										{ view: Views.MONTH, label: 'Month', icon: 'calendar_view_month' },
+										{ view: Views.DAY, label: 'Day', icon: 'calendar_view_day' },
+									] as const
+								).map((opt) => {
+									const isActive = viewMode === opt.view;
+									return (
+										<li key={opt.view} className='list-unstyled'>
+											<button
+												type='button'
+												className={[
+													'schedule-view-mode-option',
+													isActive ? 'is-active' : '',
+												]
+													.filter(Boolean)
+													.join(' ')}
+												aria-pressed={isActive}
+												onClick={() => {
+													setViewMode(opt.view);
+													setViewModeMenuOpen(false);
+												}}>
+												<span className='schedule-view-mode-option__icon' aria-hidden>
+													<Icon icon={opt.icon} size='sm' />
+												</span>
+												<span className='schedule-view-mode-option__label'>{opt.label}</span>
+												{isActive ? (
+													<Icon
+														icon='Check'
+														size='sm'
+														className='schedule-view-mode-option__check'
+													/>
+												) : (
+													<span
+														className='schedule-view-mode-option__check-spacer'
+														aria-hidden
+													/>
+												)}
+											</button>
+										</li>
+									);
+								})}
 							</DropdownMenu>
 						</Dropdown>
 					</CardActions>

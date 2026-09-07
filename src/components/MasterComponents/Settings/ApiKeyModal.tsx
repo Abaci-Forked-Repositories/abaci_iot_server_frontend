@@ -6,7 +6,8 @@ import Button from '../../bootstrap/Button';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../bootstrap/Modal';
 import FormGroup from '../../bootstrap/forms/FormGroup';
 import Spinner from '../../bootstrap/Spinner';
-import DateTimeLocalInput, { toDateTimeLocalValue } from '../../CustomComponent/DateTimeLocalInput';
+import ModernDateTimePicker from '../../CustomComponent/ModernDateTimePicker';
+import { toDateTimeLocalValue } from '../../CustomComponent/DateTimeLocalInput';
 import JwtSecretRevealPanel from './JwtSecretRevealPanel';
 
 export interface DeviceCredential {
@@ -101,26 +102,25 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 
 	const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
-		if (name === 'valid_from') {
-			setForm((prev) => {
-				const nextFrom = value;
-				const fromDate = new Date(nextFrom);
-				const untilDate = new Date(prev.valid_until);
-				let nextUntil = prev.valid_until;
-				if (
-					nextFrom &&
-					prev.valid_until &&
-					!Number.isNaN(fromDate.getTime()) &&
-					!Number.isNaN(untilDate.getTime()) &&
-					untilDate <= fromDate
-				) {
-					nextUntil = toDateTimeLocalValue(dayjs(fromDate).add(1, 'minute').toDate());
-				}
-				return { ...prev, valid_from: nextFrom, valid_until: nextUntil };
-			});
-			return;
-		}
 		setForm((prev) => ({ ...prev, [name]: value }));
+	};
+
+	const handleValidFromChange = (nextFrom: string) => {
+		setForm((prev) => {
+			const fromDate = new Date(nextFrom);
+			const untilDate = new Date(prev.valid_until);
+			let nextUntil = prev.valid_until;
+			if (
+				nextFrom &&
+				prev.valid_until &&
+				!Number.isNaN(fromDate.getTime()) &&
+				!Number.isNaN(untilDate.getTime()) &&
+				untilDate <= fromDate
+			) {
+				nextUntil = toDateTimeLocalValue(dayjs(fromDate).add(1, 'minute').toDate());
+			}
+			return { ...prev, valid_from: nextFrom, valid_until: nextUntil };
+		});
 	};
 
 	const validateForm = (): { valid_from?: string; valid_until?: string } | null => {
@@ -281,22 +281,26 @@ const ApiKeyModal: FC<ApiKeyModalProps> = ({ isOpen, setIsOpen, editing, onSaved
 
 							<div className='col-12 col-md-6'>
 								<FormGroup label={isEdit ? 'Valid from' : 'Valid from *'}>
-									<DateTimeLocalInput
-										name='valid_from'
+									<ModernDateTimePicker
+										id='api-key-valid-from'
 										min={!isEdit ? toDateTimeLocalValue(new Date()) : undefined}
 										value={form.valid_from}
-										onChange={handleChange}
+										onChange={handleValidFromChange}
+										required={!isEdit}
 									/>
 								</FormGroup>
 							</div>
 
 							<div className='col-12 col-md-6'>
 								<FormGroup label={isEdit ? 'Valid until' : 'Valid until *'}>
-									<DateTimeLocalInput
-										name='valid_until'
+									<ModernDateTimePicker
+										id='api-key-valid-until'
 										min={validUntilMin}
 										value={form.valid_until}
-										onChange={handleChange}
+										onChange={(nextUntil) =>
+											setForm((prev) => ({ ...prev, valid_until: nextUntil }))
+										}
+										required={!isEdit}
 									/>
 								</FormGroup>
 							</div>

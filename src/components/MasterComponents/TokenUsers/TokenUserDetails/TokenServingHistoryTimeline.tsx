@@ -327,7 +327,7 @@ const HistoryFieldTile: React.FC<{ field: HistoryField; index: number }> = ({ fi
 				delay: reduceMotion ? 0 : Math.min(index, 12) * 0.03,
 			}}>
 			<div
-				className={`schedule-detail-hover-card schedule-detail-hover-card--no-top-accent ${meta.card} p-2 px-3 h-100 d-flex align-items-start gap-2`}>
+				className={`schedule-detail-hover-card schedule-detail-hover-card--no-top-accent schedule-detail-hover-card--no-lift ${meta.card} p-2 px-3 h-100 d-flex align-items-start gap-2`}>
 				<span
 					className='d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0'
 					style={{ width: 28, height: 28, backgroundColor: meta.iconBg }}>
