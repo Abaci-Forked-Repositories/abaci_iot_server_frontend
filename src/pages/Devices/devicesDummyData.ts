@@ -1,0 +1,55 @@
+// ─── Dummy data (replace with API when backend is ready) ───
+export const DUMMY_DEVICES = [
+	{
+		id: 1,
+		name: 'Inverter-A1',
+		site: 'Site Alpha',
+		description: 'Main inverter unit',
+		last_online: '2026-09-18 10:30',
+		last_offline: '2026-09-17 22:15',
+		created_at: '2026-01-15 09:00',
+		status: 'Online',
+	},
+	{
+		id: 2,
+		name: 'Inverter-B2',
+		site: 'Site Beta',
+		description: 'Backup inverter',
+		last_online: '2026-09-18 08:45',
+		last_offline: '2026-09-16 18:30',
+		created_at: '2026-02-20 14:00',
+		status: 'Online',
+	},
+	{
+		id: 3,
+		name: 'Sensor-C3',
+		site: 'Site Alpha',
+		description: 'Temperature sensor',
+		last_online: '2026-09-17 16:00',
+		last_offline: '2026-09-18 06:00',
+		created_at: '2026-03-10 11:30',
+		status: 'Offline',
+	},
+	{
+		id: 4,
+		name: 'Gateway-D4',
+		site: 'Site Gamma',
+		description: 'Network gateway',
+		last_online: '2026-09-18 12:00',
+		last_offline: '2026-09-10 09:00',
+		created_at: '2026-04-05 08:00',
+		status: 'Online',
+	},
+	{
+		id: 5,
+		name: 'Sensor-E5',
+		site: 'Site Beta',
+		description: 'Voltage sensor',
+		last_online: '2026-09-15 14:00',
+		last_offline: '2026-09-15 14:05',
+		created_at: '2026-05-22 16:45',
+		status: 'Offline',
+	},
+];
+
+export type Device = (typeof DUMMY_DEVICES)[number];

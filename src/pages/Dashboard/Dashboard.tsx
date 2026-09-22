@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
-import DashboardWorkspace from '../../components/MasterComponents/Dashboard/DashboardWorkspace';
+import Card, { CardBody } from '../../components/bootstrap/Card';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 
 const Dashboard = () => {
@@ -16,7 +16,11 @@ const Dashboard = () => {
 	return (
 		<PageWrapper title='Dashboard'>
 			<Page container='fluid'>
-				<DashboardWorkspace />
+				<Card stretch>
+					<CardBody className='d-flex align-items-center justify-content-center'>
+						<h2 className='mb-0 fw-bold text-muted'>Main Dashboard</h2>
+					</CardBody>
+				</Card>
 			</Page>
 		</PageWrapper>
 	);

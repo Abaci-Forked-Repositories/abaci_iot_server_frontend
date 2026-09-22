@@ -2,10 +2,10 @@ import { Store } from 'react-notifications-component';
 import { useContext } from 'react';
 import useErrorHandler from './useErrorHandler';
 import AuthContext from '../contexts/authContext';
-import {
-	formatPermissionDeniedMessage,
-	isForbiddenPermissionError,
-} from '../components/MasterComponents/QueueManagement/queueManagementUtils';
+// import {
+// 	formatPermissionDeniedMessage,
+// 	isForbiddenPermissionError,
+// } from '../components/MasterComponents/QueueManagement/queueManagementUtils';
 
 const useToasterNotification = () => {
   const { setLogOut } = useContext(AuthContext);
@@ -41,8 +41,8 @@ const useToasterNotification = () => {
     }
     if (message?.response?.status === 401) {
       setLogOut();
-    } else if (isForbiddenPermissionError(message)) {
-      showNotification('Access restricted', formatPermissionDeniedMessage(message), 'warning');
+    // } else if (isForbiddenPermissionError(message)) {
+    //   showNotification('Access restricted', formatPermissionDeniedMessage(message), 'warning');
     } else if (message?.response?.status === 403) {
       setLogOut();
     } else {

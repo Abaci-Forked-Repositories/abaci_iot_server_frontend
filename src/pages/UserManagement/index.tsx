@@ -1,31 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
+import MaterialTable from '@material-table/core';
+import { ThemeProvider } from '@mui/material/styles';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
-import Card, { CardActions, CardBody, CardHeader } from '../../components/bootstrap/Card';
+import Card, { CardBody, CardHeader } from '../../components/bootstrap/Card';
 import Icon from '../../components/icon/Icon';
-import UserManagementTableComponent from '../../components/MasterComponents/Usermanagement/UserManagementMainTable';
-import UserFormModal from '../../components/MasterComponents/Usermanagement/UserFormModal';
-import ButtonWithPopover from '../../components/CustomComponent/Buttons/ButtonWithPopover';
-import BulkUpload from '../../components/MasterComponents/Usermanagement/BulkUpload';
+import useTablestyle from '../../hooks/useTablestyles';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
-import usePermissions from '../../hooks/usePermissions';
+import { DUMMY_USERS } from '../Devices/usersDummyData';
 
-const index: React.FC = () => {
+const UserManagement: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
-	const [addModalShow, setAddModalShow] = useState(false);
-	const tableRef = useRef(null);
-	const urlBackup = useRef(null);
-	const [addUploadModalShow, setAddUploadModalShow] = useState(false);
-	const { can } = usePermissions();
-	const canWrite = can('users_write');
+	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const [filterEnabled, setFilterEnabled] = useState(false);
+
 	useEffect(() => {
-		dispatch(setHeaderTitle({ name: 'User Management', isEditable: false }));
+		dispatch(setHeaderTitle({ name: 'Users', isEditable: false }));
 		dispatch(
 			setBreadcrumbs([
-				{ label: 'User Management', path: location.pathname + location.search },
+				{ label: 'Users', path: location.pathname + location.search },
 			]),
 		);
 		return () => {
@@ -33,52 +30,82 @@ const index: React.FC = () => {
 		};
 	}, [dispatch, location.pathname, location.search]);
 
+	const columns = useMemo(
+		() => [
+			{
+				title: 'Name',
+				field: 'name',
+				cellStyle: { fontWeight: 600 },
+			},
+			{
+				title: 'Type',
+				field: 'type',
+				lookup: { Admin: 'Admin', User: 'User' },
+			},
+			{
+				title: 'Status',
+				field: 'status',
+				lookup: { Active: 'Active', Inactive: 'Inactive' },
+				render: (rowData) => (
+					<span
+						className={`badge ${
+							rowData.status === 'Active' ? 'bg-success' : 'bg-danger'
+						}`}>
+						{rowData.status}
+					</span>
+				),
+			},
+		],
+		[],
+	);
+
+	const tableActions = useMemo(
+		() => [
+			{
+				icon: FilterListIcon,
+				tooltip: filterEnabled ? 'Hide filters' : 'Show filters',
+				isFreeAction: true,
+				onClick: () => setFilterEnabled((prev) => !prev),
+			},
+		],
+		[filterEnabled],
+	);
+
 	return (
-		<>
-			{addModalShow && (
-				<UserFormModal
-					isOpen={addModalShow}
-					setIsOpen={setAddModalShow}
-					tableRef={tableRef}
-					mode='add'
-				/>
-			)}
-			{addUploadModalShow && (
-				<BulkUpload
-					isOpen={addUploadModalShow}
-					setIsOpen={setAddUploadModalShow}
-					tableRef={tableRef}
-					title='Bulk Upload'
-				/>
-			)}
-			<PageWrapper title='User Management'>
-				<Page container='fluid'>
-					<Card stretch>
-						<CardHeader>
-							<div className='d-flex align-items-center gap-3'>
-								<div className='media-files-title-text d-flex align-items-center gap-2'>
-									<Icon icon='Person' color='primary' size='2x' />
-									<span>User Management</span>
-								</div>
-							</div>
-							<CardActions>
-								{canWrite && (
-								<ButtonWithPopover
-									addBulkModalShow={setAddUploadModalShow}
-										addModalShow={setAddModalShow}
-										buttonName='Add User'
-									/>
-								)}
-							</CardActions>
-						</CardHeader>
-						<CardBody className='table-responsive'>
-							<UserManagementTableComponent urlBackup={urlBackup} tableRef={tableRef} />
-						</CardBody>
-					</Card>
-				</Page>
-			</PageWrapper>
-		</>
+		<PageWrapper title='Users'>
+			<Page container='fluid'>
+				<Card stretch>
+					<CardHeader>
+						<div className='d-flex align-items-center gap-2'>
+							<Icon icon='Person' color='primary' size='2x' />
+							<span>Users</span>
+						</div>
+					</CardHeader>
+					<CardBody>
+						<ThemeProvider theme={theme}>
+							<MaterialTable
+								title=''
+								columns={columns}
+								data={DUMMY_USERS}
+								actions={tableActions}
+								options={{
+									search: true,
+									filtering: filterEnabled,
+									sorting: true,
+									paging: true,
+									pageSize: 10,
+									pageSizeOptions: [5, 10, 25],
+									showEmptyDataSourceMessage: false,
+									rowStyle: rowStyles(),
+									headerStyle: headerStyles(),
+								}}
+							/>
+						</ThemeProvider>
+					</CardBody>
+				</Card>
+			</Page>
+		</PageWrapper>
 	);
 };
 
-export default index;
+export default UserManagement;

@@ -18,6 +18,10 @@ export interface PagePermissions {
 	controllers_write: boolean;
 	token_users_read: boolean;
 	token_users_write: boolean;
+	devices_read: boolean;
+	devices_write: boolean;
+	sites_read: boolean;
+	sites_write: boolean;
 }
 
 /** Fallback used for admin/superuser accounts that have no explicit page_permission record. */
@@ -41,4 +45,8 @@ export const ALL_PERMISSIONS_TRUE: PagePermissions = {
 	controllers_write: true,
 	token_users_read: true,
 	token_users_write: true,
+	devices_read: true,
+	devices_write: true,
+	sites_read: true,
+	sites_write: true,
 };

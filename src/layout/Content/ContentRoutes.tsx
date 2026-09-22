@@ -13,7 +13,6 @@ import AdminSetup from '../../pages/Auth/AdminSetup';
 import LicenceSetup from '../../pages/Auth/LicenceSetup';
 import TokenStatusPage from '../../pages/PublicPages/TokenStatusPage';
 
-import ScreenTokenStatusPage from '../../pages/PublicPages/ScreenTokenStatusPage';
 const ContentRoutes = () => {
 	const { userData, permissions } = useContext(AuthContext);
 
@@ -24,9 +23,13 @@ const ContentRoutes = () => {
 	const isAuthenticated = Boolean(userData && Object.keys(userData).length > 0);
 
 	const canAccessRoute = (permissionKey?: string): boolean => {
-		if (!permissionKey) return true;
-		if (!permissions) return false;
-		return (permissions as any)[permissionKey] === true;
+		// ─── Permission check disabled (no backend / IoT project) ───
+		// To restore: uncomment the real logic below and remove the mock.
+		// if (!permissionKey) return true;
+		// if (!permissions) return false;
+		// return (permissions as any)[permissionKey] === true;
+		return true;
+		// ─────────────────────────────────────────────────────────────
 	};
 
 	return (
@@ -39,7 +42,6 @@ const ContentRoutes = () => {
 			<Route path='/public/activation/:string' element={<Registration />} />
 			<Route path='/public/error' element={<ErrorPage />} />
 			<Route path='/public/token-status' element={<TokenStatusPage />} />
-			<Route path='/screenstokenstatus/:uuid' element={<ScreenTokenStatusPage />} />
 		<Route path='/licence_setup' element={<LicenceSetup />} />
 
 			{/* Protected Routes */}

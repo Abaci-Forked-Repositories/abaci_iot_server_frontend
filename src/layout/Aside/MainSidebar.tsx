@@ -17,14 +17,21 @@ const MainSidebar = () => {
 	 * - If no permissionKey → always show (e.g. dashboard with no restriction).
 	 * - If permissionKey exists → show only when the user has that permission.
 	 * Admin users always pass can() so they see the full menu.
+	 *
+	 * ⚠️  Permission filtering disabled — all sidebar items shown (no backend / IoT project).
+	 *     To restore: uncomment the real filter logic below and remove the mock.
 	 */
 	const visibleMenu = useMemo(() => {
-		return Object.fromEntries(
-			Object.entries(AdminRoutes).filter(([, route]) => {
-				if (!route.permissionKey) return true;
-				return can(route.permissionKey);
-			}),
-		);
+		// ─── Permission filter disabled (no backend / IoT project) ───
+		// To restore: uncomment the real filter below and remove the mock.
+		// return Object.fromEntries(
+		// 	Object.entries(AdminRoutes).filter(([, route]) => {
+		// 		if (!route.permissionKey) return true;
+		// 		return can(route.permissionKey);
+		// 	}),
+		// );
+		return AdminRoutes;
+		// ─────────────────────────────────────────────────────────────
 	}, [isAdmin, can]);
 
 	return (
