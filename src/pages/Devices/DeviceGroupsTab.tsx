@@ -1,43 +1,20 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
+import { useQuery } from '@tanstack/react-query';
 import Card, { CardBody } from '../../components/bootstrap/Card';
 import Button from '../../components/bootstrap/Button';
 import Icon from '../../components/icon/Icon';
 import useTablestyle from '../../hooks/useTablestyles';
+import useToasterNotification from '../../hooks/useToasterNotification';
+import {
+	createDeviceGroup,
+	getDeviceGroups,
+	updateDeviceGroup,
+	type DeviceGroup,
+} from '../../api/devices/deviceGroups';
+import { getDevices, type Device } from '../../api/devices/devices';
 import DeviceGroupFormModal, { type DeviceGroupFormData } from './DeviceGroupFormModal';
-import { DUMMY_DEVICES, type Device } from './devicesDummyData';
-
-// ─── Dummy data (replace with API when backend is ready) ───
-const DUMMY_GROUPS: (DeviceGroupFormData & { id: number })[] = [
-	{
-		id: 1,
-		name: 'Alpha Inverters',
-		description: 'All inverters at Site Alpha',
-		device_ids: [1, 3],
-		status: 'Active',
-		created_at: '2026-01-20 10:00',
-	},
-	{
-		id: 2,
-		name: 'Beta Sensors',
-		description: 'Temperature and voltage sensors',
-		device_ids: [2, 5],
-		status: 'Active',
-		created_at: '2026-02-12 14:30',
-	},
-	{
-		id: 3,
-		name: 'Gateways',
-		description: 'Network gateway devices',
-		device_ids: [4],
-		status: 'Inactive',
-		created_at: '2026-03-05 09:15',
-	},
-];
-// ────────────────────────────────────────────────────────────
-
-export type DeviceGroup = (typeof DUMMY_GROUPS)[number];
 
 interface DeviceGroupsTabProps {
 	canWrite: boolean;
@@ -55,13 +32,77 @@ const CARD_STYLES = `
 }
 `;
 
+const extractList = <T,>(response: any, keys: string[]): T[] => {
+	for (const key of keys) {
+		if (Array.isArray(response?.[key])) return response[key];
+	}
+	if (Array.isArray(response)) return response;
+	return [];
+};
+
 const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const { showErrorNotification } = useToasterNotification();
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [editingGroup, setEditingGroup] = useState<DeviceGroup | null>(null);
-	const [groups, setGroups] = useState<DeviceGroup[]>(DUMMY_GROUPS);
 	const [viewingGroup, setViewingGroup] = useState<DeviceGroup | null>(null);
+	const [saving, setSaving] = useState(false);
+	const [groupSearch, setGroupSearch] = useState('');
+	const [debouncedGroupSearch, setDebouncedGroupSearch] = useState('');
+
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedGroupSearch(groupSearch), 400);
+		return () => clearTimeout(timer);
+	}, [groupSearch]);
+
+	const {
+		data: groupsResponse,
+		isLoading: groupsLoading,
+		isError: groupsError,
+		error: groupsErrorObj,
+		refetch: refetchGroups,
+	} = useQuery({
+		queryKey: ['device-groups', debouncedGroupSearch],
+		queryFn: () =>
+			getDeviceGroups({
+				page: 1,
+				limit: 100,
+				search: debouncedGroupSearch.trim(),
+			}),
+	});
+
+	const {
+		data: devicesResponse,
+		isLoading: devicesLoading,
+		isError: devicesError,
+		error: devicesErrorObj,
+	} = useQuery({
+		queryKey: ['devices', 'picker'],
+		queryFn: () => getDevices({ page: 1, limit: 1000 }),
+	});
+
+	useEffect(() => {
+		if (groupsError && groupsErrorObj) {
+			showErrorNotification(groupsErrorObj);
+		}
+	}, [groupsError, groupsErrorObj, showErrorNotification]);
+
+	useEffect(() => {
+		if (devicesError && devicesErrorObj) {
+			showErrorNotification(devicesErrorObj);
+		}
+	}, [devicesError, devicesErrorObj, showErrorNotification]);
+
+	const groups: DeviceGroup[] = useMemo(
+		() => extractList(groupsResponse, ['device_groups', 'device-groups', 'results', 'groups']),
+		[groupsResponse],
+	);
+
+	const devices: Device[] = useMemo(
+		() => extractList(devicesResponse, ['devices', 'results']),
+		[devicesResponse],
+	);
 
 	const handleAdd = () => {
 		setModalMode('add');
@@ -76,26 +117,39 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 		setModalOpen(true);
 	};
 
-	const handleSave = (group: DeviceGroupFormData & { id?: number }) => {
-		if (modalMode === 'add') {
-			const newId = Math.max(0, ...groups.map((g) => g.id)) + 1;
-			setGroups([...groups, { ...group, id: newId } as DeviceGroup]);
-		} else {
-			setGroups(
-				groups.map((g) => (g.id === group.id ? ({ ...g, ...group } as DeviceGroup) : g)),
-			);
-			if (viewingGroup?.id === group.id) {
-				setViewingGroup({ ...viewingGroup, ...group } as DeviceGroup);
+	const handleSave = async (group: DeviceGroupFormData & { id?: number }) => {
+		setSaving(true);
+		try {
+			if (modalMode === 'add') {
+				await createDeviceGroup(group);
+			} else if (group.id != null) {
+				const updated = await updateDeviceGroup(group.id, {
+					...group,
+					id: group.id,
+				});
+				if (viewingGroup?.id === group.id) {
+					setViewingGroup({
+						...viewingGroup,
+						...group,
+						...updated,
+					} as DeviceGroup);
+				}
 			}
+			setModalOpen(false);
+			await refetchGroups();
+		} catch (error) {
+			console.error('Error saving device group:', error);
+			showErrorNotification(error);
+		} finally {
+			setSaving(false);
 		}
-		setModalOpen(false);
 	};
 
 	const groupDevices: Device[] = useMemo(() => {
 		if (!viewingGroup) return [];
-		const ids = viewingGroup.device_ids ?? [];
-		return DUMMY_DEVICES.filter((d) => ids.includes(d.id));
-	}, [viewingGroup]);
+		const ids = new Set(viewingGroup.device_ids ?? []);
+		return devices.filter((d) => ids.has(d.id));
+	}, [viewingGroup, devices]);
 
 	const deviceColumns = useMemo(
 		() => [
@@ -124,19 +178,24 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 		[],
 	);
 
+	const formModal = (
+		<DeviceGroupFormModal
+			isOpen={modalOpen}
+			setIsOpen={setModalOpen}
+			mode={modalMode}
+			group={editingGroup}
+			onSave={handleSave}
+			devices={devices}
+			saving={saving}
+		/>
+	);
+
 	// ── Detail view: devices inside selected group ──
 	if (viewingGroup) {
 		const count = viewingGroup.device_ids?.length ?? 0;
 		return (
 			<>
-				<DeviceGroupFormModal
-					isOpen={modalOpen}
-					setIsOpen={setModalOpen}
-					mode={modalMode}
-					group={editingGroup}
-					onSave={handleSave}
-					devices={DUMMY_DEVICES}
-				/>
+				{formModal}
 				<div className='d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2'>
 					<div className='d-flex align-items-center gap-2'>
 						<Button
@@ -166,13 +225,16 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 						<button
 							type='button'
 							className='btn btn-outline-primary btn-sm'
-							onClick={() => handleEdit(viewingGroup)}>
+							onClick={() => handleEdit(viewingGroup)}
+							disabled={saving}>
 							Edit Group
 						</button>
 					)}
 				</div>
 
-				{groupDevices.length === 0 ? (
+				{devicesLoading ? (
+					<div className='text-center text-muted py-5'>Loading devices…</div>
+				) : groupDevices.length === 0 ? (
 					<div className='text-center text-muted py-5'>
 						No devices in this group yet.
 					</div>
@@ -204,27 +266,31 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 	return (
 		<>
 			<style>{CARD_STYLES}</style>
-			<DeviceGroupFormModal
-				isOpen={modalOpen}
-				setIsOpen={setModalOpen}
-				mode={modalMode}
-				group={editingGroup}
-				onSave={handleSave}
-				devices={DUMMY_DEVICES}
-			/>
+			{formModal}
 
-			<div className='d-flex justify-content-end mb-3'>
+			<div className='d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2'>
+				<input
+					type='search'
+					className='form-control form-control-sm'
+					style={{ maxWidth: 260 }}
+					placeholder='Search groups…'
+					value={groupSearch}
+					onChange={(e) => setGroupSearch(e.target.value)}
+				/>
 				{canWrite && (
 					<button
 						type='button'
 						className='btn btn-primary btn-sm'
-						onClick={handleAdd}>
+						onClick={handleAdd}
+						disabled={saving}>
 						+ Add Device Group
 					</button>
 				)}
 			</div>
 
-			{groups.length === 0 ? (
+			{groupsLoading ? (
+				<div className='text-center text-muted py-5'>Loading device groups…</div>
+			) : groups.length === 0 ? (
 				<div className='text-center text-muted py-5'>No device groups yet.</div>
 			) : (
 				<div className='row g-3'>
@@ -304,3 +370,4 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 };
 
 export default DeviceGroupsTab;
+export type { DeviceGroup };

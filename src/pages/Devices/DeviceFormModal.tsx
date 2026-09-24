@@ -23,7 +23,8 @@ interface DeviceFormModalProps {
 	setIsOpen: (open: boolean) => void;
 	mode: 'add' | 'edit';
 	device: DeviceFormData & { id?: number } | null;
-	onSave: (data: DeviceFormData & { id?: number }) => void;
+	onSave: (data: DeviceFormData & { id?: number }) => void | Promise<void>;
+	saving?: boolean;
 }
 
 const emptyForm: DeviceFormData = {
@@ -48,6 +49,7 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	mode,
 	device,
 	onSave,
+	saving = false,
 }) => {
 	const isEdit = mode === 'edit';
 
@@ -78,7 +80,7 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 		}
 	}, [isOpen, isEdit, device, reset]);
 
-	const onSubmit = (data: DeviceFormData) => {
+	const onSubmit = async (data: DeviceFormData) => {
 		const formatted = {
 			...data,
 			last_online: fromInputDateTime(data.last_online),
@@ -86,9 +88,9 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 			created_at: fromInputDateTime(data.created_at),
 		};
 		if (isEdit && device) {
-			onSave({ ...formatted, id: device.id });
+			await onSave({ ...formatted, id: device.id });
 		} else {
-			onSave(formatted);
+			await onSave(formatted);
 		}
 	};
 
@@ -185,11 +187,12 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 				<Button
 					color='secondary'
 					onClick={() => setIsOpen(false)}
-					className='me-2'>
+					className='me-2'
+					isDisable={saving}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)}>
-					{isEdit ? 'Update' : 'Add'}
+				<Button color='primary' onClick={handleSubmit(onSubmit)} isDisable={saving}>
+					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>

@@ -202,7 +202,10 @@ export const formatFiltersWithOptions = (filters: any) => {
 		.forEach((filtered_item: any) => {
 			// Changed .map to .forEach since we're not transforming the array items
 
-			if (filtered_item.column.lookup) {
+			if (filtered_item.column.type === 'date' && filtered_item.value) {
+				const day = moment(filtered_item.value).format('YYYY-MM-DD');
+				otherFilters += `&datefilterrange_${filtered_item.column.field}=${day}to${day}`;
+			} else if (filtered_item.column.lookup) {
 				otherFilters += `&${filtered_item.column.field}=${filtered_item.value}`;
 			} else if (!filtered_item.column.lookup) {
 				otherFilters += `&${filtered_item.column.field}__icontains=${filtered_item.value}`;

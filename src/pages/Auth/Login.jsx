@@ -23,6 +23,7 @@ import showNotification from '../../components/extras/showNotification';
 import AnimatedInputs from '../../components/CustomComponent/Fields/AnimatedInputs';
 import AnimatedPasswordConfirmation from '../../components/CustomComponent/Fields/AnimatedPasswordConfirmation';
 import QueIconLogo from '../../assets/que-icon-logo.svg';
+import { login, resetPasswordOnLogin } from '../../api/auth/auth';
 
 const AnimatedText = ({ text, className, delay = 0 }) => {
 	const words = text.split(' ');
@@ -108,7 +109,7 @@ LoginHeader.defaultProps = {
 
 const Login = ({ isSignUp }) => {
 	const navigate = useNavigate();
-	const { setUser, setUserData, refreshProfile } = useContext(AuthContext);
+	const { refreshProfile } = useContext(AuthContext);
 	const { showErrorNotification } = useToasterNotification();
 	const { darkModeStatus } = useDarkMode();
 	const [singUpStatus] = useState(!!isSignUp);
@@ -218,101 +219,51 @@ const Login = ({ isSignUp }) => {
 	const handleSignin = (values) => {
 		setWaitingForAxios(true);
 
-		// ─── Mock login (no backend available) ───
-		// To restore: uncomment the real API call below and remove this mock block.
-		// Simulate a short delay then set mock user and navigate to dashboard.
-		setTimeout(() => {
-			const MOCK_ACCESS = 'mock-access-token';
-			const MOCK_REFRESH = 'mock-refresh-token';
-			persistAuthSession({ access: MOCK_ACCESS, refresh: MOCK_REFRESH });
+		const request = reset
+			? resetPasswordOnLogin({
+					current_password: values.loginPassword,
+					username: values.loginUsername,
+					new_password: values.confirmPassword,
+				})
+			: login({
+					password: values.loginPassword,
+					username: values.loginUsername,
+				});
 
-			// Set mock user data directly in auth context
-			setUser(values.loginUsername || 'admin@example.com');
-			setUserData({
-				email: values.loginUsername || 'admin@example.com',
-				first_name: 'Admin',
-				last_name: 'User',
-				role: { id: 1, name: 'admin' },
-				user_status: 'ACTIVE',
-				page_permission: {
-					dashboard_read: true,
-					queue_management_read: true,
-					queue_management_write: true,
-					serving_point_read: true,
-					serving_point_write: true,
-					schedules_read: true,
-					schedules_write: true,
-					users_read: true,
-					users_write: true,
-					screens_read: true,
-					screens_write: true,
-					templates_read: true,
-					templates_write: true,
-					settings_read: true,
-					settings_write: true,
-					controllers_read: true,
-					controllers_write: true,
-					token_users_read: true,
-					token_users_write: true,
-					devices_read: true,
-					devices_write: true,
-					sites_read: true,
-					sites_write: true,
-				},
+		request
+			.then((response) => {
+				const { access, refresh, user } = response ?? {};
+
+				if (user?.user_status === 'INVITED') {
+					setReset(true);
+					setForgotPasswordStep(4);
+					setIsForgotPassword(true);
+					return;
+				}
+
+				persistAuthSession({ access, refresh });
+				return refreshProfile()
+					.then(() => navigate('/'))
+					.catch(() => navigate('/'));
+			})
+			.catch((error) => {
+				const status = error.response?.status;
+				const serverMessage = getApiErrorMessage(error);
+
+				if (status === 401 || status === 403) {
+					if (serverMessage === 'Current password is incorrect') {
+						formik.setFieldError('confirmPassword', 'Passwords do not match');
+						return;
+					}
+				}
+
+				formik.setFieldError('loginPassword', serverMessage);
+				formik.setFieldError('loginUsername', ' ');
+				showErrorNotification(error);
+			})
+			.finally(() => {
+				setWaitingForAxios(false);
 			});
-
-			navigate('/');
-			setWaitingForAxios(false);
-		}, 500);
-		return;
-		// ──────────────────────────────────────────
-
-		// // Real API login (uncomment when backend is ready)
-		// const url = reset ? 'api/users/password-reset/' : 'api/auth/login/';
-		// const payload = reset
-		// 	? {
-		// 		current_password: values.loginPassword,
-		// 		username: values.loginUsername,
-		// 		new_password: values.confirmPassword,
-		// 	}
-		// 	: {
-		// 		password: values.loginPassword,
-		// 		username: values.loginUsername,
-		// 	};
-		// publicAxios
-		// 	.post(url, payload)
-		// 	.then((response) => {
-		// 		const { access, refresh, user } = response.data ?? {};
-		//
-		// 		if (user?.user_status === 'INVITED') {
-		// 			setReset(true);
-		// 			setForgotPasswordStep(4);
-		// 			setIsForgotPassword(true);
-		// 			return;
-		// 		}
-		//
-		// 		persistAuthSession({ access, refresh });
-		// 		return refreshProfile()
-		// 			.then(() => navigate('/'))
-		// 			.catch(() => navigate('/'));
-		// 	})
-		// 	.catch((error) => {
-		// 		const status = error.response?.status;
-		// 		const serverMessage = getApiErrorMessage(error);
-		//
-		// 		if (status === 401 || status === 403) {
-		// 			if (serverMessage === 'Current password is incorrect') {
-		// 				formik.setFieldError('confirmPassword', 'Passwords do not match');
-		// 				return;
-		// 			}
-		// 		}
-		//
-		// 		formik.setFieldError('loginPassword', serverMessage);
-		// 		formik.setFieldError('loginUsername', ' ');
-		// 	})
-		// 	.finally(() => {
-		// 		setWaitingForAxios(false);
-		// 	});
 	};
 
 	const handleForgotPasswordEmail = (values) => {
@@ -673,6 +624,7 @@ const Login = ({ isSignUp }) => {
 										</Button>
 									</div>
 
+									{/* Forgot password — temporarily hidden; re-enable when ready
 									<div className='col-12 mt-3 text-center'>
 										{isForgotPassword ? (
 											<u
@@ -688,6 +640,7 @@ const Login = ({ isSignUp }) => {
 											</u>
 										)}
 									</div>
+									*/}
 									{/* </AnimatedHeightWrapper> */}
 								</form>
 							</CardBody>

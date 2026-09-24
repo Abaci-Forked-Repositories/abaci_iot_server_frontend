@@ -1,5 +1,4 @@
 import React, { useState, useContext, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 import { useWindowSize } from 'react-use';
@@ -12,21 +11,15 @@ import Icon from '../../components/icon/Icon';
 import useNavigationItemHandle from '../../hooks/useNavigationItemHandle';
 import AuthContext from '../../contexts/authContext';
 import ThemeContext from '../../contexts/themeContext';
-import urlMaker from '../../helpers/UrlMaker';
 import ProfilePic from "../../assets/img/Avatar.svg"
-import { authAxios } from '../../axiosInstance';
-import showNotification from '../../components/extras/showNotification';
-import useErrorHandler from '../../hooks/useErrorHandler';
-import { baseURL, imageURL } from '../../helpers/baseURL';
+import { baseURL } from '../../helpers/baseURL';
 
 
 const User = () => {
 
-	const { handleError } = useErrorHandler();
 	const { width } = useWindowSize();
 	const { setAsideStatus } = useContext(ThemeContext);
 	const { userData, setLogOut } = useContext(AuthContext);
-	const navigate = useNavigate();
 	const handleItem = useNavigationItemHandle();
 	const { darkModeStatus, setDarkModeStatus } = useDarkMode();
 	const [collapseStatus, setCollapseStatus] = useState<boolean>(false);
@@ -43,22 +36,8 @@ const User = () => {
 		if (width < Number(import.meta.env.VITE_MOBILE_BREAKPOINT_SIZE)) {
 			setAsideStatus(false);
 		}
-
-		// const url = 'api/users/logout'
-		// authAxios.post(url)
-		// 	.then(() => {
-		setLogOut()
-		// })
-		// .catch(err => {
-		// 	if (err?.response?.status === 403 || err?.response?.status === 401) {
-		// 		setLogOut()
-		// 	} else {
-		// 		showNotification('Error', handleError(err), 'danger')
-		// 	}
-
-		// })
-
-	}
+		setLogOut();
+	};
 
 
 	const avatarSrc = getAvatarSrc();
@@ -96,6 +75,7 @@ const User = () => {
 				</div>
 			</div>
 			<DropdownMenu >
+				{/* Profile — temporarily hidden; re-enable when ready
 				<DropdownItem >
 					<Button
 						className='prevent-userselect'
@@ -107,6 +87,7 @@ const User = () => {
 						Profile
 					</Button>
 				</DropdownItem>
+				*/}
 				<DropdownItem>
 					<Button
 						className='prevent-userselect'
@@ -121,6 +102,7 @@ const User = () => {
 			<Collapse isOpen={collapseStatus} className='user-menu'>
 				<nav aria-label='aside-bottom-user-menu'>
 					<div className='navigation'>
+						{/* Profile — temporarily hidden; re-enable when ready
 						<div
 							role='presentation'
 							className='navigation-item cursor-pointer'
@@ -136,6 +118,7 @@ const User = () => {
 								</span>
 							</span>
 						</div>
+						*/}
 						<div
 							role='presentation'
 							className='navigation-item cursor-pointer'

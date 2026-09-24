@@ -7,7 +7,7 @@ import Modal, {
 	ModalTitle,
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
-import { DUMMY_DEVICES, type Device } from './devicesDummyData';
+import type { Device } from '../../api/devices/devices';
 
 export interface DeviceGroupFormData {
 	name: string;
@@ -22,9 +22,10 @@ interface DeviceGroupFormModalProps {
 	setIsOpen: (open: boolean) => void;
 	mode: 'add' | 'edit';
 	group: (DeviceGroupFormData & { id?: number }) | null;
-	onSave: (data: DeviceGroupFormData & { id?: number }) => void;
-	/** Available devices to pick from (defaults to dummy list) */
+	onSave: (data: DeviceGroupFormData & { id?: number }) => void | Promise<void>;
+	/** Available devices to pick from */
 	devices?: Device[];
+	saving?: boolean;
 }
 
 const emptyForm = {
@@ -39,7 +40,8 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 	mode,
 	group,
 	onSave,
-	devices = DUMMY_DEVICES,
+	devices = [],
+	saving = false,
 }) => {
 	const isEdit = mode === 'edit';
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -105,7 +107,7 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 		}
 	};
 
-	const onSubmit = (data: typeof emptyForm) => {
+	const onSubmit = async (data: typeof emptyForm) => {
 		const payload: DeviceGroupFormData & { id?: number } = {
 			name: data.name,
 			description: data.description,
@@ -117,9 +119,9 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 					: new Date().toISOString().slice(0, 16).replace('T', ' '),
 		};
 		if (isEdit && group) {
-			onSave({ ...payload, id: group.id });
+			await onSave({ ...payload, id: group.id });
 		} else {
-			onSave(payload);
+			await onSave(payload);
 		}
 	};
 
@@ -251,11 +253,15 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 				<Button
 					color='secondary'
 					onClick={() => setIsOpen(false)}
-					className='me-2'>
+					className='me-2'
+					isDisable={saving}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)}>
-					{isEdit ? 'Update' : 'Add'}
+				<Button
+					color='primary'
+					onClick={handleSubmit(onSubmit)}
+					isDisable={saving}>
+					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>

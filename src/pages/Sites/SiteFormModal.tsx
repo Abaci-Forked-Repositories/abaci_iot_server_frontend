@@ -7,7 +7,6 @@ import Modal, {
 	ModalTitle,
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
-import { DUMMY_USERS, type DummyUser } from '../Devices/usersDummyData';
 
 export interface SiteFormData {
 	name: string;
@@ -15,13 +14,21 @@ export interface SiteFormData {
 	admin_id: number | null;
 }
 
+export type SiteAdminOption = {
+	id: number;
+	name: string;
+	type?: string;
+	status?: string;
+};
+
 interface SiteFormModalProps {
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
 	mode: 'add' | 'edit';
 	site: (SiteFormData & { id?: number }) | null;
-	onSave: (data: SiteFormData & { id?: number }) => void;
-	users?: DummyUser[];
+	onSave: (data: SiteFormData & { id?: number }) => void | Promise<void>;
+	users?: SiteAdminOption[];
+	saving?: boolean;
 }
 
 const emptyForm: SiteFormData = {
@@ -36,7 +43,8 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 	mode,
 	site,
 	onSave,
-	users = DUMMY_USERS,
+	users = [],
+	saving = false,
 }) => {
 	const isEdit = mode === 'edit';
 
@@ -63,7 +71,7 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 		}
 	}, [isOpen, isEdit, site, reset]);
 
-	const onSubmit = (data: SiteFormData) => {
+	const onSubmit = async (data: SiteFormData) => {
 		const adminId =
 			data.admin_id === null || data.admin_id === ('' as any)
 				? null
@@ -74,13 +82,15 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 			admin_id: Number.isNaN(adminId as number) ? null : adminId,
 		};
 		if (isEdit && site) {
-			onSave({ ...payload, id: site.id });
+			await onSave({ ...payload, id: site.id });
 		} else {
-			onSave(payload);
+			await onSave(payload);
 		}
 	};
 
-	const selectableUsers = users.filter((u) => u.status === 'Active');
+	const selectableUsers = users.filter(
+		(u) => !u.status || u.status === 'Active' || u.status === 'active',
+	);
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade>
@@ -132,7 +142,8 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 								</option>
 								{selectableUsers.map((user) => (
 									<option key={user.id} value={user.id}>
-										{user.name} ({user.type})
+										{user.name}
+										{user.type ? ` (${user.type})` : ''}
 									</option>
 								))}
 							</select>
@@ -149,11 +160,12 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 				<Button
 					color='secondary'
 					onClick={() => setIsOpen(false)}
-					className='me-2'>
+					className='me-2'
+					isDisable={saving}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)}>
-					{isEdit ? 'Update' : 'Add'}
+				<Button color='primary' onClick={handleSubmit(onSubmit)} isDisable={saving}>
+					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>

@@ -1,12 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MaterialTable from '@material-table/core';
+import MaterialTable, { Query, QueryResult } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import EditIcon from '@mui/icons-material/Edit';
+import Button from '../../components/bootstrap/Button';
 import useTablestyle from '../../hooks/useTablestyles';
-import DeviceFormModal from './DeviceFormModal';
-import { DUMMY_DEVICES, type Device } from './devicesDummyData';
+import useToasterNotification from '../../hooks/useToasterNotification';
+import {
+	createDevice,
+	getDevices,
+	updateDevice,
+	type Device,
+} from '../../api/devices/devices';
+import { formatFiltersWithOptions } from '../../helpers/functions';
+import { debounceIntervalForTable } from '../../helpers/constants';
+import ModernTableDateFilter from '../../components/CustomComponent/Filters/ModernTableDateFilter';
+import { asMaterialTableFilterProps } from '../../components/CustomComponent/Filters/materialTableFilterTypes';
+import DeviceFormModal, { type DeviceFormData } from './DeviceFormModal';
 
 export type { Device };
 
@@ -16,12 +27,14 @@ interface DeviceListTabProps {
 
 const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 	const navigate = useNavigate();
-	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const tableRef = useRef<any>(null);
+	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
+	const { showErrorNotification } = useToasterNotification();
 	const [filterEnabled, setFilterEnabled] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-	const [devices, setDevices] = useState<Device[]>(DUMMY_DEVICES);
+	const [saving, setSaving] = useState(false);
 
 	const handleAdd = () => {
 		setModalMode('add');
@@ -35,14 +48,26 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		setModalOpen(true);
 	};
 
-	const handleSave = (device: Omit<Device, 'id'> & { id?: number }) => {
-		if (modalMode === 'add') {
-			const newId = Math.max(0, ...devices.map((d) => d.id)) + 1;
-			setDevices([...devices, { ...device, id: newId } as Device]);
-		} else {
-			setDevices(devices.map((d) => (d.id === device.id ? (device as Device) : d)));
+	const refreshTable = () => {
+		tableRef.current?.onQueryChange?.();
+	};
+
+	const handleSave = async (device: DeviceFormData & { id?: number }) => {
+		setSaving(true);
+		try {
+			if (modalMode === 'add') {
+				await createDevice(device);
+			} else if (device.id != null) {
+				await updateDevice(device.id, device);
+			}
+			setModalOpen(false);
+			refreshTable();
+		} catch (error) {
+			console.error('Error saving device:', error);
+			showErrorNotification(error);
+		} finally {
+			setSaving(false);
 		}
-		setModalOpen(false);
 	};
 
 	const handleRowClick = (_event: any, rowData?: Device | Device[]) => {
@@ -70,14 +95,32 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 			{
 				title: 'Last Online',
 				field: 'last_online',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
+				render: (rowData: Device) => rowData.last_online || '—',
 			},
 			{
 				title: 'Last Offline',
 				field: 'last_offline',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
+				render: (rowData: Device) => rowData.last_offline || '—',
 			},
 			{
 				title: 'Created At',
 				field: 'created_at',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
+				render: (rowData: Device) => rowData.created_at || '—',
 			},
 			{
 				title: 'Status',
@@ -95,6 +138,38 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		],
 		[],
 	);
+
+	const fetchDevices = (query: Query<Device>): Promise<QueryResult<Device>> => {
+		const otherFilters = formatFiltersWithOptions(query.filters);
+		let ordering = '';
+		if (query.orderBy?.field) {
+			ordering =
+				query.orderDirection === 'asc'
+					? `&ordering=-${String(query.orderBy.field)}`
+					: `&ordering=${String(query.orderBy.field)}`;
+		}
+
+		return getDevices({
+			page: query.page + 1,
+			limit: query.pageSize,
+			search: query.search,
+			filters: otherFilters,
+			ordering,
+		})
+			.then((response) => ({
+				data: response.devices ?? response.results ?? [],
+				page: query.page,
+				totalCount: response.count ?? response.total ?? 0,
+			}))
+			.catch((error) => {
+				showErrorNotification(error);
+				return {
+					data: [],
+					page: query.page,
+					totalCount: 0,
+				};
+			});
+	};
 
 	const tableActions = useMemo(() => {
 		const actions: any[] = [
@@ -126,22 +201,21 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				mode={modalMode}
 				device={selectedDevice}
 				onSave={handleSave}
+				saving={saving}
 			/>
 			<div className='d-flex justify-content-end mb-3'>
 				{canWrite && (
-					<button
-						type='button'
-						className='btn btn-primary btn-sm'
-						onClick={handleAdd}>
+					<Button color='primary' size='sm' onClick={handleAdd} isDisable={saving}>
 						+ Add Device
-					</button>
+					</Button>
 				)}
 			</div>
 			<ThemeProvider theme={theme}>
 				<MaterialTable
 					title=''
+					tableRef={tableRef}
 					columns={columns}
-					data={devices}
+					data={fetchDevices}
 					actions={tableActions}
 					onRowClick={handleRowClick}
 					options={{
@@ -151,6 +225,7 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 						paging: true,
 						pageSize: 10,
 						pageSizeOptions: [5, 10, 25],
+						debounceInterval: debounceIntervalForTable,
 						showEmptyDataSourceMessage: false,
 						actionsColumnIndex: -1,
 						rowStyle: () => ({
@@ -158,6 +233,7 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 							cursor: 'pointer',
 						}),
 						headerStyle: headerStyles(),
+						searchFieldStyle: searchFieldStyle(),
 					}}
 				/>
 			</ThemeProvider>

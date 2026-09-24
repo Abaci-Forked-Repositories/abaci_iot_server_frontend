@@ -1,25 +1,42 @@
 import React, { useEffect, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
 import Button from '../../components/bootstrap/Button';
 import DashboardWorkspace from '../../components/MasterComponents/Dashboard/DashboardWorkspace';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
-import { DUMMY_DEVICES } from './devicesDummyData';
+import useToasterNotification from '../../hooks/useToasterNotification';
+import { getDeviceById, type Device } from '../../api/devices/devices';
 
 const DeviceDetail: React.FC = () => {
 	const { deviceId } = useParams<{ deviceId: string }>();
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
+	const { showErrorNotification } = useToasterNotification();
 
-	const device = useMemo(() => {
-		const id = Number(deviceId);
-		return DUMMY_DEVICES.find((d) => d.id === id) ?? null;
-	}, [deviceId]);
+	const { data, isLoading, isError, error } = useQuery({
+		queryKey: ['device', deviceId],
+		queryFn: () => getDeviceById(deviceId!),
+		enabled: !!deviceId,
+	});
+
+	const device: Device | null = useMemo(() => {
+		if (!data) return null;
+		if (data.device) return data.device as Device;
+		if (data.id != null) return data as Device;
+		return null;
+	}, [data]);
 
 	useEffect(() => {
-		const title = device ? device.name : 'Device Dashboard';
+		if (isError && error) {
+			showErrorNotification(error);
+		}
+	}, [isError, error, showErrorNotification]);
+
+	useEffect(() => {
+		const title = device?.name ?? 'Device Dashboard';
 		dispatch(setHeaderTitle({ name: title, isEditable: false }));
 		dispatch(
 			setBreadcrumbs([
@@ -32,7 +49,17 @@ const DeviceDetail: React.FC = () => {
 		};
 	}, [dispatch, device, deviceId]);
 
-	if (!device) {
+	if (isLoading) {
+		return (
+			<PageWrapper title='Loading Device'>
+				<Page container='fluid'>
+					<div className='text-center text-muted py-5'>Loading device…</div>
+				</Page>
+			</PageWrapper>
+		);
+	}
+
+	if (isError || !device?.id) {
 		return (
 			<PageWrapper title='Device Not Found'>
 				<Page container='fluid'>
@@ -62,7 +89,7 @@ const DeviceDetail: React.FC = () => {
 						{device.site} · {device.status}
 					</span>
 				</div>
-				<DashboardWorkspace deviceName={device.name} />
+				<DashboardWorkspace deviceId={device.id} deviceName={device.name} />
 			</Page>
 		</PageWrapper>
 	);

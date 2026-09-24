@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import MaterialTable from '@material-table/core';
+import MaterialTable, { Query, QueryResult } from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
@@ -10,12 +10,25 @@ import Card, { CardBody, CardHeader } from '../../components/bootstrap/Card';
 import Icon from '../../components/icon/Icon';
 import useTablestyle from '../../hooks/useTablestyles';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
-import { DUMMY_USERS } from '../Devices/usersDummyData';
+import { getUsers } from '../../api/users/users';
+import { formatFiltersWithOptions } from '../../helpers/functions';
+import { debounceIntervalForTable } from '../../helpers/constants';
+import useToasterNotification from '../../hooks/useToasterNotification';
+
+/** Row shape expected from GET /api/users list */
+type UserListRow = {
+	id: number;
+	name: string;
+	type: string;
+	status: string;
+};
 
 const UserManagement: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
-	const { theme, headerStyles, rowStyles } = useTablestyle();
+	const tableRef = useRef<any>(null);
+	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
+	const { showErrorNotification } = useToasterNotification();
 	const [filterEnabled, setFilterEnabled] = useState(false);
 
 	useEffect(() => {
@@ -46,7 +59,7 @@ const UserManagement: React.FC = () => {
 				title: 'Status',
 				field: 'status',
 				lookup: { Active: 'Active', Inactive: 'Inactive' },
-				render: (rowData) => (
+				render: (rowData: UserListRow) => (
 					<span
 						className={`badge ${
 							rowData.status === 'Active' ? 'bg-success' : 'bg-danger'
@@ -58,6 +71,39 @@ const UserManagement: React.FC = () => {
 		],
 		[],
 	);
+
+	const fetchUsers = (query: Query<UserListRow>): Promise<QueryResult<UserListRow>> => {
+		const otherFilters = formatFiltersWithOptions(query.filters);
+		let ordering = '';
+		if (query.orderBy?.field) {
+			ordering =
+				query.orderDirection === 'asc'
+					? `&ordering=-${String(query.orderBy.field)}`
+					: `&ordering=${String(query.orderBy.field)}`;
+		}
+
+		// MaterialTable pages are 0-based; API is 1-based
+		return getUsers({
+			page: query.page + 1,
+			limit: query.pageSize,
+			search: query.search,
+			filters: otherFilters,
+			ordering,
+		})
+			.then((response) => ({
+				data: response.users ?? response.results ?? [],
+				page: query.page,
+				totalCount: response.count ?? response.total ?? 0,
+			}))
+			.catch((error) => {
+				showErrorNotification(error);
+				return {
+					data: [],
+					page: query.page,
+					totalCount: 0,
+				};
+			});
+	};
 
 	const tableActions = useMemo(
 		() => [
@@ -85,8 +131,9 @@ const UserManagement: React.FC = () => {
 						<ThemeProvider theme={theme}>
 							<MaterialTable
 								title=''
+								tableRef={tableRef}
 								columns={columns}
-								data={DUMMY_USERS}
+								data={fetchUsers}
 								actions={tableActions}
 								options={{
 									search: true,
@@ -95,9 +142,11 @@ const UserManagement: React.FC = () => {
 									paging: true,
 									pageSize: 10,
 									pageSizeOptions: [5, 10, 25],
+									debounceInterval: debounceIntervalForTable,
 									showEmptyDataSourceMessage: false,
 									rowStyle: rowStyles(),
 									headerStyle: headerStyles(),
+									searchFieldStyle: searchFieldStyle(),
 								}}
 							/>
 						</ThemeProvider>
