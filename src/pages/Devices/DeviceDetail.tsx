@@ -8,7 +8,7 @@ import Button from '../../components/bootstrap/Button';
 import DashboardWorkspace from '../../components/MasterComponents/Dashboard/DashboardWorkspace';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import useToasterNotification from '../../hooks/useToasterNotification';
-import { getDeviceById, type Device } from '../../api/devices/devices';
+import { getDeviceById, getDeviceLabel, type Device } from '../../api/devices/devices';
 
 const DeviceDetail: React.FC = () => {
 	const { deviceId } = useParams<{ deviceId: string }>();
@@ -31,7 +31,7 @@ const DeviceDetail: React.FC = () => {
 	}, [isError, error, showErrorNotification]);
 
 	useEffect(() => {
-		const title = device?.name ?? 'Device Dashboard';
+		const title = device ? getDeviceLabel(device) : 'Device Dashboard';
 		dispatch(setHeaderTitle({ name: title, isEditable: false }));
 		dispatch(
 			setBreadcrumbs([
@@ -70,7 +70,7 @@ const DeviceDetail: React.FC = () => {
 	}
 
 	return (
-		<PageWrapper title={device.name}>
+		<PageWrapper title={getDeviceLabel(device)}>
 			<Page container='fluid'>
 				<div className='d-flex align-items-center gap-2 mb-3'>
 					<Button
@@ -83,11 +83,14 @@ const DeviceDetail: React.FC = () => {
 					<span className='text-muted small'>
 						{[device.description, device.firmware_version]
 							.filter(Boolean)
-							.join(' · ') || '—'}
+							.join(' · ') || '----'}
 					</span>
 				</div>
 				<div className='pb-4'>
-					<DashboardWorkspace deviceId={device.id} deviceName={device.name} />
+					<DashboardWorkspace
+						deviceId={device.id}
+						deviceName={getDeviceLabel(device)}
+					/>
 				</div>
 			</Page>
 		</PageWrapper>

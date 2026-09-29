@@ -154,20 +154,30 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 	const deviceColumns = useMemo(
 		() => [
 			{
-				title: 'Name',
-				field: 'name',
+				title: 'Model',
+				field: 'model',
 				cellStyle: { fontWeight: 600 },
+				render: (rowData: Device) => rowData.model?.trim() || '----',
 			},
-			{ title: 'Description', field: 'description' },
+			{
+				title: 'Identifier',
+				field: 'identifier',
+				render: (rowData: Device) => rowData.identifier?.trim() || '----',
+			},
+			{
+				title: 'Description',
+				field: 'description',
+				render: (rowData: Device) => rowData.description?.trim() || '----',
+			},
 			{
 				title: 'Firmware',
 				field: 'firmware_version',
-				render: (rowData: Device) => rowData.firmware_version || '—',
+				render: (rowData: Device) => rowData.firmware_version || '----',
 			},
 			{
 				title: 'WiFi IP',
 				field: 'wifi_ip_address',
-				render: (rowData: Device) => rowData.wifi_ip_address || '—',
+				render: (rowData: Device) => rowData.wifi_ip_address || '----',
 			},
 		],
 		[],

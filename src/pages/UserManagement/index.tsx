@@ -33,11 +33,20 @@ import UserFormModal, { type UserFormData } from './UserFormModal';
 type UserListRow = {
 	id: number;
 	username: string;
+	first_name: string;
+	last_name: string;
 	email: string;
 	role: string;
 	status: string;
 	date_joined: string;
 	raw: ApiUser;
+};
+
+const EMPTY = '----';
+
+const displayValue = (value: string | null | undefined) => {
+	const trimmed = value?.trim();
+	return trimmed ? trimmed : EMPTY;
 };
 
 const displayRole = (user: ApiUser): string => {
@@ -49,6 +58,8 @@ const displayRole = (user: ApiUser): string => {
 const mapUserRow = (user: ApiUser): UserListRow => ({
 	id: user.id,
 	username: user.username || '',
+	first_name: user.first_name || '',
+	last_name: user.last_name || '',
 	email: user.email || '',
 	role: displayRole(user),
 	status: user.is_active ? 'Active' : 'Inactive',
@@ -164,9 +175,15 @@ const UserManagement: React.FC = () => {
 	const columns = useMemo(
 		() => [
 			{
-				title: 'Username',
-				field: 'username',
+				title: 'First Name',
+				field: 'first_name',
 				cellStyle: { fontWeight: 600 },
+				render: (rowData: UserListRow) => displayValue(rowData.first_name),
+			},
+			{
+				title: 'Last Name',
+				field: 'last_name',
+				render: (rowData: UserListRow) => displayValue(rowData.last_name),
 			},
 			{
 				title: 'Email',
@@ -233,6 +250,8 @@ const UserManagement: React.FC = () => {
 				if (search) {
 					rows = rows.filter(
 						(r) =>
+							r.first_name.toLowerCase().includes(search) ||
+							r.last_name.toLowerCase().includes(search) ||
 							r.username.toLowerCase().includes(search) ||
 							r.email.toLowerCase().includes(search) ||
 							r.role.toLowerCase().includes(search),

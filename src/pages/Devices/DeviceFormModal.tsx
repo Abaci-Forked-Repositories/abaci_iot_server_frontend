@@ -10,7 +10,9 @@ import Button from '../../components/bootstrap/Button';
 import type { Device } from '../../api/devices/devices';
 
 export interface DeviceFormData {
-	name: string;
+	model: string;
+	identifier: string;
+	serial_number: string;
 	description: string;
 	wifi_ip_address: string;
 	wifi_mask: string;
@@ -30,7 +32,9 @@ interface DeviceFormModalProps {
 }
 
 const emptyForm: DeviceFormData = {
-	name: '',
+	model: '',
+	identifier: '',
+	serial_number: '',
 	description: '',
 	wifi_ip_address: '',
 	wifi_mask: '',
@@ -63,7 +67,9 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 		if (isOpen) {
 			if (isEdit && device) {
 				reset({
-					name: device.name || '',
+					model: device.model || '',
+					identifier: device.identifier || '',
+					serial_number: device.serial_number || '',
 					description: device.description || '',
 					wifi_ip_address: device.wifi_ip_address || '',
 					wifi_mask: device.wifi_mask || '',
@@ -97,16 +103,21 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 				<form id='device-form' onSubmit={handleSubmit(onSubmit)}>
 					<div className='row g-4'>
 						<div className='col-12 col-md-6'>
-							<label className='form-label'>
-								Name <span className='text-danger'>*</span>
-							</label>
+							<label className='form-label'>Model</label>
+							<input className='form-control' {...register('model')} />
+						</div>
+
+						<div className='col-12 col-md-6'>
+							<label className='form-label'>Identifier</label>
 							<input
-								className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-								{...register('name', { required: 'Name is required' })}
+								className={`form-control ${errors.identifier ? 'is-invalid' : ''}`}
+								{...register('identifier')}
 							/>
-							{errors.name && (
-								<div className='invalid-feedback'>{errors.name.message}</div>
-							)}
+						</div>
+
+						<div className='col-12 col-md-6'>
+							<label className='form-label'>Serial Number</label>
+							<input className='form-control' {...register('serial_number')} />
 						</div>
 
 						<div className='col-12 col-md-6'>

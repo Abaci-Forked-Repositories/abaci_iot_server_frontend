@@ -8,6 +8,7 @@ import Modal, {
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
 import type { Device } from '../../api/devices/devices';
+import { getDeviceLabel } from '../../api/devices/devices';
 
 export interface DeviceGroupFormData {
 	name: string;
@@ -78,7 +79,8 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 		if (!q) return devices;
 		return devices.filter(
 			(d) =>
-				d.name?.toLowerCase().includes(q) ||
+				d.model?.toLowerCase().includes(q) ||
+				d.identifier?.toLowerCase().includes(q) ||
 				d.description?.toLowerCase().includes(q) ||
 				d.wifi_ssid?.toLowerCase().includes(q) ||
 				d.wifi_ip_address?.toLowerCase().includes(q),
@@ -224,12 +226,12 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 												/>
 												<div className='flex-grow-1 min-w-0'>
 													<div className='fw-semibold text-truncate'>
-														{device.name}
+														{getDeviceLabel(device)}
 													</div>
 													<div className='small text-muted text-truncate'>
 														{device.description ||
 															device.wifi_ip_address ||
-															'—'}
+															'----'}
 													</div>
 												</div>
 												<span className='badge flex-shrink-0 bg-secondary'>

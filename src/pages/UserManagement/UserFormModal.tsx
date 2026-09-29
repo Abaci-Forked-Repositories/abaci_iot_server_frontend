@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Modal, {
 	ModalBody,
 	ModalFooter,
@@ -54,6 +56,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 	saving = false,
 }) => {
 	const isEdit = mode === 'edit';
+	const [showPassword, setShowPassword] = useState(false);
 
 	const {
 		register,
@@ -66,6 +69,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 
 	useEffect(() => {
 		if (!isOpen) return;
+		setShowPassword(false);
 		if (isEdit && user) {
 			reset({
 				username: user.username || '',
@@ -141,20 +145,52 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 								Password
 								{!isEdit && <span className='text-danger'> *</span>}
 							</label>
-							<input
-								type='password'
-								autoComplete='new-password'
-								className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-								placeholder={isEdit ? 'Leave blank to keep current' : ''}
-								{...register('password', {
-									required: isEdit ? false : 'Password is required',
-									minLength: isEdit
-										? undefined
-										: { value: 6, message: 'At least 6 characters' },
-								})}
-							/>
+							<div style={{ position: 'relative' }}>
+								<input
+									type={showPassword ? 'text' : 'password'}
+									autoComplete='new-password'
+									className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+									placeholder={isEdit ? 'Leave blank to keep current' : ''}
+									style={{ paddingRight: '2.75rem' }}
+									{...register('password', {
+										required: isEdit ? false : 'Password is required',
+										minLength: isEdit
+											? undefined
+											: { value: 6, message: 'At least 6 characters' },
+									})}
+								/>
+								<span
+									role='button'
+									tabIndex={0}
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+									onClick={() => setShowPassword((v) => !v)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											setShowPassword((v) => !v);
+										}
+									}}
+									style={{
+										position: 'absolute',
+										top: '50%',
+										right: 12,
+										transform: 'translateY(-50%)',
+										cursor: 'pointer',
+										lineHeight: 1,
+										color: '#6c757d',
+										zIndex: 2,
+									}}>
+									{showPassword ? (
+										<VisibilityOffIcon fontSize='small' />
+									) : (
+										<VisibilityIcon fontSize='small' />
+									)}
+								</span>
+							</div>
 							{errors.password && (
-								<div className='invalid-feedback'>{errors.password.message}</div>
+								<div className='invalid-feedback d-block'>
+									{errors.password.message}
+								</div>
 							)}
 						</div>
 

@@ -5,8 +5,10 @@ import { baseURL } from '../../helpers/baseURL';
 /** Shape returned by GET /api/devices/ */
 export type Device = {
 	id: number;
-	name: string;
-	description: string;
+	identifier: string | null;
+	serial_number: string | null;
+	model: string | null;
+	description: string | null;
 	created_at: string;
 	updated_at: string;
 	wifi_ip_address: string | null;
@@ -15,6 +17,17 @@ export type Device = {
 	wifi_ssid: string | null;
 	wifi_password: string | null;
 	firmware_version: string | null;
+};
+
+/** Prefer model → identifier → description for UI labels. */
+export const getDeviceLabel = (device: Pick<Device, 'id' | 'model' | 'identifier' | 'description'>) => {
+	const model = device.model?.trim();
+	if (model) return model;
+	const identifier = device.identifier?.trim();
+	if (identifier) return identifier;
+	const description = device.description?.trim();
+	if (description) return description;
+	return `Device #${device.id}`;
 };
 
 export type DevicesListResponse = {
@@ -32,8 +45,10 @@ export type GetDevicesParams = {
 };
 
 export type DeviceWritePayload = {
-	name: string;
-	description?: string;
+	model?: string | null;
+	identifier?: string | null;
+	serial_number?: string | null;
+	description?: string | null;
 	wifi_ip_address?: string | null;
 	wifi_mask?: string | null;
 	wifi_gateway?: string | null;

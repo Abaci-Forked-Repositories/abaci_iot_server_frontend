@@ -15,6 +15,7 @@ import {
 	deleteDevice,
 	getDevices,
 	updateDevice,
+	getDeviceLabel,
 	type Device,
 } from '../../api/devices/devices';
 import { formatFiltersWithOptions } from '../../helpers/functions';
@@ -26,10 +27,15 @@ import swalFire from '../../helpers/swalHelper';
 
 export type { Device };
 
-const displayValue = (value: string | null | undefined) => value?.trim() || '—';
+const EMPTY = '----';
+
+const displayValue = (value: string | null | undefined) => {
+	const trimmed = value?.trim();
+	return trimmed ? trimmed : EMPTY;
+};
 
 const formatDateTime = (value: string | null | undefined) => {
-	if (!value) return '—';
+	if (!value) return EMPTY;
 	const date = new Date(value);
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
@@ -70,7 +76,7 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		swalFire({
 			title: 'Are you sure?',
 			icon: 'info',
-			text: `Delete device "${device.name}"? You won't be able to revert this!`,
+			text: `Delete device "${getDeviceLabel(device)}"? You won't be able to revert this!`,
 			showCancelButton: true,
 			iconColor: buttonColor[0],
 			theme: darkModeStatus ? 'dark' : 'light',
@@ -93,8 +99,10 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		setSaving(true);
 		try {
 			const payload = {
-				name: device.name,
-				description: device.description,
+				model: device.model || null,
+				identifier: device.identifier || null,
+				serial_number: device.serial_number || null,
+				description: device.description || null,
 				wifi_ip_address: device.wifi_ip_address || null,
 				wifi_mask: device.wifi_mask || null,
 				wifi_gateway: device.wifi_gateway || null,
@@ -127,9 +135,20 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 	const columns = useMemo(
 		() => [
 			{
-				title: 'Name',
-				field: 'name',
+				title: 'Model',
+				field: 'model',
 				cellStyle: { fontWeight: 600 },
+				render: (rowData: Device) => displayValue(rowData.model),
+			},
+			{
+				title: 'Identifier',
+				field: 'identifier',
+				render: (rowData: Device) => displayValue(rowData.identifier),
+			},
+			{
+				title: 'Serial Number',
+				field: 'serial_number',
+				render: (rowData: Device) => displayValue(rowData.serial_number),
 			},
 			{
 				title: 'Description',
@@ -199,7 +218,9 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				if (search) {
 					rows = rows.filter(
 						(r) =>
-							r.name?.toLowerCase().includes(search) ||
+							r.model?.toLowerCase().includes(search) ||
+							r.identifier?.toLowerCase().includes(search) ||
+							r.serial_number?.toLowerCase().includes(search) ||
 							r.description?.toLowerCase().includes(search) ||
 							r.firmware_version?.toLowerCase().includes(search) ||
 							r.wifi_ssid?.toLowerCase().includes(search) ||
