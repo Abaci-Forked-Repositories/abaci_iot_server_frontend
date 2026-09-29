@@ -7,6 +7,7 @@ import MainHeader from '../layout/Header/MainHeader';
 
 const headers: RouteProps[] = [
 	{ path: pagesNotInSideBar.login.path, element: null },
+	{ path: pagesNotInSideBar.SelfRegister.path, element: null },
 	{ path: '/createsuperadmin', element: null },
 	{ path: pagesNotInSideBar.Register.path, element: null },
 	{ path: pagesNotInSideBar.ForgotPassword.path, element: null },

@@ -7,41 +7,38 @@ import Modal, {
 	ModalTitle,
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
+import type { Device } from '../../api/devices/devices';
 
 export interface DeviceFormData {
 	name: string;
-	site: string;
 	description: string;
-	last_online: string;
-	last_offline: string;
-	created_at: string;
-	status: string;
+	wifi_ip_address: string;
+	wifi_mask: string;
+	wifi_gateway: string;
+	wifi_ssid: string;
+	wifi_password: string;
+	firmware_version: string;
 }
 
 interface DeviceFormModalProps {
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
 	mode: 'add' | 'edit';
-	device: DeviceFormData & { id?: number } | null;
+	device: Device | null;
 	onSave: (data: DeviceFormData & { id?: number }) => void | Promise<void>;
 	saving?: boolean;
 }
 
 const emptyForm: DeviceFormData = {
 	name: '',
-	site: '',
 	description: '',
-	last_online: '',
-	last_offline: '',
-	created_at: new Date().toISOString().slice(0, 16),
-	status: 'Online',
+	wifi_ip_address: '',
+	wifi_mask: '',
+	wifi_gateway: '',
+	wifi_ssid: '',
+	wifi_password: '',
+	firmware_version: '',
 };
-
-/** Convert "YYYY-MM-DD HH:mm" ↔ "YYYY-MM-DDTHH:mm" for datetime-local inputs */
-const toInputDateTime = (value: string) =>
-	value ? value.replace(' ', 'T').slice(0, 16) : '';
-const fromInputDateTime = (value: string) =>
-	value ? value.replace('T', ' ') : '';
 
 const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	isOpen,
@@ -66,13 +63,14 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 		if (isOpen) {
 			if (isEdit && device) {
 				reset({
-					name: device.name,
-					site: device.site,
-					description: device.description,
-					last_online: toInputDateTime(device.last_online),
-					last_offline: toInputDateTime(device.last_offline),
-					created_at: toInputDateTime(device.created_at),
-					status: device.status,
+					name: device.name || '',
+					description: device.description || '',
+					wifi_ip_address: device.wifi_ip_address || '',
+					wifi_mask: device.wifi_mask || '',
+					wifi_gateway: device.wifi_gateway || '',
+					wifi_ssid: device.wifi_ssid || '',
+					wifi_password: device.wifi_password || '',
+					firmware_version: device.firmware_version || '',
 				});
 			} else {
 				reset(emptyForm);
@@ -81,16 +79,10 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	}, [isOpen, isEdit, device, reset]);
 
 	const onSubmit = async (data: DeviceFormData) => {
-		const formatted = {
-			...data,
-			last_online: fromInputDateTime(data.last_online),
-			last_offline: fromInputDateTime(data.last_offline),
-			created_at: fromInputDateTime(data.created_at),
-		};
 		if (isEdit && device) {
-			await onSave({ ...formatted, id: device.id });
+			await onSave({ ...data, id: device.id });
 		} else {
-			await onSave(formatted);
+			await onSave(data);
 		}
 	};
 
@@ -104,7 +96,6 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 			<ModalBody>
 				<form id='device-form' onSubmit={handleSubmit(onSubmit)}>
 					<div className='row g-4'>
-						{/* Name */}
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>
 								Name <span className='text-danger'>*</span>
@@ -118,21 +109,11 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 							)}
 						</div>
 
-						{/* Site */}
 						<div className='col-12 col-md-6'>
-							<label className='form-label'>
-								Site <span className='text-danger'>*</span>
-							</label>
-							<input
-								className={`form-control ${errors.site ? 'is-invalid' : ''}`}
-								{...register('site', { required: 'Site is required' })}
-							/>
-							{errors.site && (
-								<div className='invalid-feedback'>{errors.site.message}</div>
-							)}
+							<label className='form-label'>Firmware Version</label>
+							<input className='form-control' {...register('firmware_version')} />
 						</div>
 
-						{/* Description */}
 						<div className='col-12'>
 							<label className='form-label'>Description</label>
 							<textarea
@@ -142,43 +123,34 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 							/>
 						</div>
 
-						{/* Last Online */}
 						<div className='col-12 col-md-6'>
-							<label className='form-label'>Last Online</label>
+							<label className='form-label'>WiFi SSID</label>
+							<input className='form-control' {...register('wifi_ssid')} />
+						</div>
+
+						<div className='col-12 col-md-6'>
+							<label className='form-label'>WiFi Password</label>
 							<input
-								type='datetime-local'
+								type='password'
 								className='form-control'
-								{...register('last_online')}
+								autoComplete='new-password'
+								{...register('wifi_password')}
 							/>
 						</div>
 
-						{/* Last Offline */}
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>Last Offline</label>
-							<input
-								type='datetime-local'
-								className='form-control'
-								{...register('last_offline')}
-							/>
+						<div className='col-12 col-md-4'>
+							<label className='form-label'>WiFi IP Address</label>
+							<input className='form-control' {...register('wifi_ip_address')} />
 						</div>
 
-						{/* Created At */}
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>Created At</label>
-							<input
-								type='datetime-local'
-								className='form-control'
-								{...register('created_at')}
-							/>
+						<div className='col-12 col-md-4'>
+							<label className='form-label'>WiFi Mask</label>
+							<input className='form-control' {...register('wifi_mask')} />
 						</div>
 
-						{/* Status */}
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>Status</label>
-							<select className='form-select' {...register('status')}>
-								<option value='Online'>Online</option>
-								<option value='Offline'>Offline</option>
-							</select>
+						<div className='col-12 col-md-4'>
+							<label className='form-label'>WiFi Gateway</label>
+							<input className='form-control' {...register('wifi_gateway')} />
 						</div>
 					</div>
 				</form>

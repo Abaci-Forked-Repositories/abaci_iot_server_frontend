@@ -1,8 +1,14 @@
 const baseURLFunc = () => {
+	const fromEnv = import.meta.env.VITE_API_BASE_URL;
+	if (fromEnv !== undefined && fromEnv !== null && String(fromEnv).trim() !== '') {
+		return String(fromEnv).replace(/\/$/, '');
+	}
+
 	const url = window.location.origin.split(':3000')[0];
 
+	// Dev default: same-origin so Vite can proxy /api → remote backend (avoids CORS).
 	if (import.meta.env.MODE === 'development') {
-		return 'https://venues-housewives-loan-schema.trycloudflare.com';
+		return '';
 	}
 	return url;
 };

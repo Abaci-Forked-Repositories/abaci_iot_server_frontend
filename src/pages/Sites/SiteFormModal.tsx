@@ -7,34 +7,25 @@ import Modal, {
 	ModalTitle,
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
+import type { Site } from '../../api/sites/sites';
 
-export interface SiteFormData {
+export type SiteFormData = {
 	name: string;
 	description: string;
-	admin_id: number | null;
-}
-
-export type SiteAdminOption = {
-	id: number;
-	name: string;
-	type?: string;
-	status?: string;
 };
 
 interface SiteFormModalProps {
 	isOpen: boolean;
 	setIsOpen: (open: boolean) => void;
 	mode: 'add' | 'edit';
-	site: (SiteFormData & { id?: number }) | null;
+	site: Site | null;
 	onSave: (data: SiteFormData & { id?: number }) => void | Promise<void>;
-	users?: SiteAdminOption[];
 	saving?: boolean;
 }
 
 const emptyForm: SiteFormData = {
 	name: '',
 	description: '',
-	admin_id: null,
 };
 
 const SiteFormModal: React.FC<SiteFormModalProps> = ({
@@ -43,7 +34,6 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 	mode,
 	site,
 	onSave,
-	users = [],
 	saving = false,
 }) => {
 	const isEdit = mode === 'edit';
@@ -58,28 +48,21 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 	});
 
 	useEffect(() => {
-		if (isOpen) {
-			if (isEdit && site) {
-				reset({
-					name: site.name,
-					description: site.description,
-					admin_id: site.admin_id,
-				});
-			} else {
-				reset(emptyForm);
-			}
+		if (!isOpen) return;
+		if (isEdit && site) {
+			reset({
+				name: site.name || '',
+				description: site.description || '',
+			});
+		} else {
+			reset(emptyForm);
 		}
 	}, [isOpen, isEdit, site, reset]);
 
 	const onSubmit = async (data: SiteFormData) => {
-		const adminId =
-			data.admin_id === null || data.admin_id === ('' as any)
-				? null
-				: Number(data.admin_id);
 		const payload: SiteFormData & { id?: number } = {
-			name: data.name,
-			description: data.description,
-			admin_id: Number.isNaN(adminId as number) ? null : adminId,
+			name: data.name.trim(),
+			description: data.description.trim(),
 		};
 		if (isEdit && site) {
 			await onSave({ ...payload, id: site.id });
@@ -87,10 +70,6 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 			await onSave(payload);
 		}
 	};
-
-	const selectableUsers = users.filter(
-		(u) => !u.status || u.status === 'Active' || u.status === 'active',
-	);
 
 	return (
 		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade>
@@ -116,40 +95,19 @@ const SiteFormModal: React.FC<SiteFormModalProps> = ({
 						</div>
 
 						<div className='col-12'>
-							<label className='form-label'>Description</label>
-							<textarea
-								className='form-control'
-								rows={3}
-								{...register('description')}
-							/>
-						</div>
-
-						<div className='col-12'>
 							<label className='form-label'>
-								Site Admin <span className='text-danger'>*</span>
+								Description <span className='text-danger'>*</span>
 							</label>
-							<select
-								className={`form-select ${errors.admin_id ? 'is-invalid' : ''}`}
-								{...register('admin_id', {
-									required: 'Site admin is required',
-									validate: (v) =>
-										v !== null && String(v) !== ''
-											? true
-											: 'Site admin is required',
-								})}>
-								<option value='' disabled>
-									Select a user…
-								</option>
-								{selectableUsers.map((user) => (
-									<option key={user.id} value={user.id}>
-										{user.name}
-										{user.type ? ` (${user.type})` : ''}
-									</option>
-								))}
-							</select>
-							{errors.admin_id && (
-								<div className='invalid-feedback d-block'>
-									{errors.admin_id.message}
+							<textarea
+								className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+								rows={3}
+								{...register('description', {
+									required: 'Description is required',
+								})}
+							/>
+							{errors.description && (
+								<div className='invalid-feedback'>
+									{errors.description.message}
 								</div>
 							)}
 						</div>

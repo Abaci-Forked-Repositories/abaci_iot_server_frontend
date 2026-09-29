@@ -38,7 +38,26 @@ body {
 .page {
 	flex: 1 1 auto;
 	min-height: 0;
-	overflow: auto;
+	overflow-x: hidden;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+// Bootstrap container used by <Page container="fluid" />
+.page.container,
+.page.container-fluid,
+.page.container-sm,
+.page.container-md,
+.page.container-lg,
+.page.container-xl,
+.page.container-xxl {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	flex: 1 1 auto;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .footer {
@@ -46,12 +65,16 @@ body {
 }
 
 // Stretch cards fill the page and scroll internally.
+// Keep bottom margin equal to the gap under the header (grid gutter).
 .card.card-stretch-full {
 	display: flex;
 	flex-direction: column;
+	flex: 1 1 auto;
 	min-height: 0;
-	max-height: 100%;
+	height: calc(100% - #{$grid-gutter-width});
+	max-height: calc(100% - #{$grid-gutter-width});
 	overflow: hidden;
+	margin-bottom: $grid-gutter-width;
 
 	> .card-header,
 	> .card-footer {
@@ -61,6 +84,46 @@ body {
 	> .card-body {
 		flex: 1 1 auto;
 		min-height: 0;
-		overflow: auto;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+}
+
+// Host for toolbars above a full-height table inside a stretch card body
+.material-table-page-host {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+// Material table fills card body; only tbody scrolls.
+.material-table-full-height {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+
+	> .MuiPaper-root,
+	> div > .MuiPaper-root {
+		flex: 1 1 auto;
+		min-height: 0;
+		height: 100% !important;
+		display: flex !important;
+		flex-direction: column;
+		box-shadow: none !important;
+		background: transparent !important;
+	}
+
+	.MuiToolbar-root:not(.MuiTablePagination-toolbar) {
+		flex-shrink: 0;
+	}
+
+	.MuiTablePagination-root {
+		flex-shrink: 0;
 	}
 }

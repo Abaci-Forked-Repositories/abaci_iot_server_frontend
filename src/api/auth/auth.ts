@@ -18,10 +18,31 @@ export type AuthTokens = {
 	user?: any;
 };
 
-/** POST /api/auth/login/ */
+export type SelfRegistrationPayload = {
+	username: string;
+	email: string;
+	password: string;
+	device_serial: string;
+};
+
+/** POST /api/self-registration/ — public self-serve signup */
+export const selfRegister = async (payload: SelfRegistrationPayload) => {
+	try {
+		const response = await publicAxios.post(
+			`${baseURL}/api/users/self-registration/`,
+			payload,
+		);
+		return response.data;
+	} catch (error) {
+		console.error('Error self-registering:', error);
+		throw error;
+	}
+};
+
+/** POST /api/login/ */
 export const login = async (payload: LoginPayload): Promise<AuthTokens> => {
 	try {
-		const response = await publicAxios.post(`${baseURL}/api/auth/login/`, payload);
+		const response = await publicAxios.post(`${baseURL}/api/login/`, payload);
 		return response.data;
 	} catch (error) {
 		console.error('Error logging in:', error);
@@ -45,23 +66,25 @@ export const resetPasswordOnLogin = async (
 	}
 };
 
-/** POST /api/auth/logout/ */
+/** POST /api/logout/ */
 export const logout = async (): Promise<void> => {
 	try {
-		await authAxios.post(`${baseURL}/api/auth/logout/`);
+		await authAxios.post(`${baseURL}/api/logout/`);
 	} catch (error) {
 		console.error('Error logging out:', error);
 		throw error;
 	}
 };
 
-/** GET /api/users/profile/ */
+/** POST /api/token/refresh/ — exchange refresh token for a new access token */
+export const refreshTokens = async (refresh: string): Promise<AuthTokens> => {
+	const response = await publicAxios.post(`${baseURL}/api/token/refresh/`, {
+		refresh,
+	});
+	return response.data;
+};
+
+/** GET /api/users/profile/ — unused for now (auth uses login token + stored username). */
 export const getProfile = async () => {
-	try {
-		const response = await authAxios.get(`${baseURL}/api/users/profile/`);
-		return response.data?.user ?? response.data;
-	} catch (error) {
-		console.error('Error fetching profile:', error);
-		throw error;
-	}
+	throw new Error('getProfile is disabled — profile API is not used');
 };

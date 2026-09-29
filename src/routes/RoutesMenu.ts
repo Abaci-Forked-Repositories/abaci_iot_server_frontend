@@ -123,6 +123,14 @@ export const allRoutesObject: Record<string, RouteMenuItem & { path: string }> =
 		subMenu: null,
 		permissionKey: 'sites_read',
 	},
+	subscriptions: {
+		id: 'subscriptions',
+		text: 'Subscriptions',
+		icon: 'CardMembership',
+		path: '/subscriptions',
+		subMenu: null,
+		permissionKey: 'subscriptions_read',
+	},
 	scheduledetails: {
 		id: 'scheduledetails',
 		text: 'Schedule Detail',
@@ -243,6 +251,14 @@ export const AdminRoutes: Record<string, RouteMenuItem> = {
 		subMenu: null,
 		permissionKey: 'sites_read',
 	},
+	subscriptions: {
+		id: 'subscriptions',
+		text: 'Subscriptions',
+		icon: 'CardMembership',
+		path: '/subscriptions',
+		subMenu: null,
+		permissionKey: 'subscriptions_read',
+	},
 	// ─── Commented out sidebar items (not needed yet) ───
 	// knowledge: {
 	// 	id: 'knowledge',
@@ -273,6 +289,12 @@ export const pagesNotInSideBar = {
 		id: 'login',
 		text: 'Login',
 		path: 'login',
+		icon: 'Login',
+	},
+	SelfRegister: {
+		id: 'SelfRegister',
+		text: 'Register',
+		path: 'register',
 		icon: 'Login',
 	},
 	Register: {

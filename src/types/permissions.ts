@@ -22,6 +22,8 @@ export interface PagePermissions {
 	devices_write: boolean;
 	sites_read: boolean;
 	sites_write: boolean;
+	subscriptions_read: boolean;
+	subscriptions_write: boolean;
 }
 
 /** Fallback used for admin/superuser accounts that have no explicit page_permission record. */
@@ -49,4 +51,6 @@ export const ALL_PERMISSIONS_TRUE: PagePermissions = {
 	devices_write: true,
 	sites_read: true,
 	sites_write: true,
+	subscriptions_read: true,
+	subscriptions_write: true,
 };

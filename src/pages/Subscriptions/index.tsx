@@ -7,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useQuery } from '@tanstack/react-query';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
 import Card, { CardBody, CardHeader } from '../../components/bootstrap/Card';
@@ -18,26 +19,32 @@ import useDarkMode from '../../hooks/useDarkMode';
 import useToasterNotification from '../../hooks/useToasterNotification';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import {
-	createSite,
-	deleteSite,
-	getSites,
-	updateSite,
-	type Site,
-} from '../../api/sites/sites';
+	createSubscription,
+	deleteSubscription,
+	getSubscriptions,
+	updateSubscription,
+	type Subscription,
+} from '../../api/subscriptions/subscriptions';
+import { getUsers } from '../../api/users/users';
 import { formatFiltersWithOptions } from '../../helpers/functions';
-import { debounceIntervalForTable, buttonColor } from '../../helpers/constants';
+import { buttonColor, debounceIntervalForTable } from '../../helpers/constants';
 import swalFire from '../../helpers/swalHelper';
-import SiteFormModal, { type SiteFormData } from './SiteFormModal';
+import SubscriptionFormModal, {
+	type SubscriptionFormData,
+	type SubscriptionUserOption,
+} from './SubscriptionFormModal';
 import ModernTableDateFilter from '../../components/CustomComponent/Filters/ModernTableDateFilter';
 import { asMaterialTableFilterProps } from '../../components/CustomComponent/Filters/materialTableFilterTypes';
 
 const formatDate = (value: string | null | undefined) => {
 	if (!value) return '—';
+	// Prefer plain YYYY-MM-DD display without time
 	if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
 	const date = new Date(value);
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 };
 
+/** Normalize filter/API values to YYYY-MM-DD for comparison */
 const toDateKey = (value: unknown): string | null => {
 	if (value == null || value === '') return null;
 	if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -52,9 +59,15 @@ const toDateKey = (value: unknown): string | null => {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const DATE_FILTER_FIELDS = new Set(['created_at', 'updated_at']);
+const DATE_FILTER_FIELDS = new Set([
+	'start_date',
+	'end_date',
+	'created_at',
+	'updated_at',
+]);
 
-const Sites: React.FC = () => {
+
+const Subscriptions: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
 	const tableRef = useRef<any>(null);
@@ -62,18 +75,47 @@ const Sites: React.FC = () => {
 	const { darkModeStatus } = useDarkMode();
 	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const { can } = usePermissions();
-	const canWrite = can('sites_write');
+	const canWrite = can('subscriptions_write');
 	const [filterEnabled, setFilterEnabled] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-	const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+	const [selected, setSelected] = useState<Subscription | null>(null);
 	const [saving, setSaving] = useState(false);
 
+	const { data: usersResponse } = useQuery({
+		queryKey: ['users', 'subscription-picker'],
+		queryFn: () => getUsers({ page: 1, limit: 1000 }),
+	});
+
+	const users: SubscriptionUserOption[] = useMemo(() => {
+		const list = usersResponse?.results ?? [];
+		return list.map((u) => ({
+			id: u.id,
+			label: u.username || u.email || `User #${u.id}`,
+		}));
+	}, [usersResponse]);
+
+	const userLabelById = useMemo(() => {
+		const map: Record<number, string> = {};
+		users.forEach((u) => {
+			map[u.id] = u.label;
+		});
+		return map;
+	}, [users]);
+
+	const userLookup = useMemo(() => {
+		const lookup: Record<string, string> = {};
+		users.forEach((u) => {
+			lookup[String(u.id)] = u.label;
+		});
+		return lookup;
+	}, [users]);
+
 	useEffect(() => {
-		dispatch(setHeaderTitle({ name: 'Sites', isEditable: false }));
+		dispatch(setHeaderTitle({ name: 'Subscriptions', isEditable: false }));
 		dispatch(
 			setBreadcrumbs([
-				{ label: 'Sites', path: location.pathname + location.search },
+				{ label: 'Subscriptions', path: location.pathname + location.search },
 			]),
 		);
 		return () => {
@@ -87,45 +129,47 @@ const Sites: React.FC = () => {
 
 	const handleAdd = () => {
 		setModalMode('add');
-		setSelectedSite(null);
+		setSelected(null);
 		setModalOpen(true);
 	};
 
-	const handleEdit = (site: Site) => {
+	const handleEdit = (row: Subscription) => {
 		setModalMode('edit');
-		setSelectedSite(site);
+		setSelected(row);
 		setModalOpen(true);
 	};
 
-	const handleSave = async (site: SiteFormData & { id?: number }) => {
+	const handleSave = async (data: SubscriptionFormData & { id?: number }) => {
 		setSaving(true);
 		try {
 			const payload = {
-				name: site.name,
-				description: site.description,
+				user: Number(data.user),
+				start_date: data.start_date || null,
+				end_date: data.end_date || null,
 			};
 			if (modalMode === 'add') {
-				await createSite(payload);
-				showSuccessNotification('Site created successfully.');
-			} else if (site.id != null) {
-				await updateSite(site.id, payload);
-				showSuccessNotification('Site updated successfully.');
+				await createSubscription(payload);
+				showSuccessNotification('Subscription created successfully.');
+			} else if (data.id != null) {
+				await updateSubscription(data.id, payload);
+				showSuccessNotification('Subscription updated successfully.');
 			}
 			setModalOpen(false);
 			refreshTable();
 		} catch (error) {
-			console.error('Error saving site:', error);
+			console.error('Error saving subscription:', error);
 			showErrorNotification(error);
 		} finally {
 			setSaving(false);
 		}
 	};
 
-	const handleDelete = (site: Site) => {
+	const handleDelete = (row: Subscription) => {
+		const userLabel = userLabelById[row.user] || `User #${row.user}`;
 		swalFire({
 			title: 'Are you sure?',
 			icon: 'info',
-			text: `Delete site "${site.name}"? You won't be able to revert this!`,
+			text: `Delete subscription for "${userLabel}"? You won't be able to revert this!`,
 			showCancelButton: true,
 			iconColor: buttonColor[0],
 			theme: darkModeStatus ? 'dark' : 'light',
@@ -135,8 +179,8 @@ const Sites: React.FC = () => {
 		}).then(async (result: any) => {
 			if (!result.isConfirmed) return;
 			try {
-				await deleteSite(site.id);
-				showSuccessNotification('Site deleted successfully.');
+				await deleteSubscription(row.id);
+				showSuccessNotification('Subscription deleted successfully.');
 				refreshTable();
 			} catch (error) {
 				showErrorNotification(error);
@@ -147,39 +191,64 @@ const Sites: React.FC = () => {
 	const columns = useMemo(
 		() => [
 			{
-				title: 'Site Name',
-				field: 'name',
+				title: 'ID',
+				field: 'id',
 				cellStyle: { fontWeight: 600 },
 			},
 			{
-				title: 'Description',
-				field: 'description',
+				title: 'User',
+				field: 'user',
+				lookup: userLookup,
+				render: (row: Subscription) =>
+					userLabelById[row.user] || (row.user != null ? `User #${row.user}` : '—'),
 			},
 			{
-				title: 'Created Date',
+				title: 'Start Date',
+				field: 'start_date',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
+				render: (row: Subscription) => formatDate(row.start_date),
+			},
+			{
+				title: 'End Date',
+				field: 'end_date',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
+				),
+				render: (row: Subscription) => formatDate(row.end_date),
+			},
+			{
+				title: 'Created At',
 				field: 'created_at',
 				type: 'date' as const,
 				filtering: true,
 				filterComponent: (props: unknown) => (
 					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
 				),
-				render: (row: Site) => formatDate(row.created_at),
+				render: (row: Subscription) => formatDate(row.created_at),
 			},
 			{
-				title: 'Updated Date',
+				title: 'Updated At',
 				field: 'updated_at',
 				type: 'date' as const,
 				filtering: true,
 				filterComponent: (props: unknown) => (
 					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
 				),
-				render: (row: Site) => formatDate(row.updated_at),
+				render: (row: Subscription) => formatDate(row.updated_at),
 			},
 		],
-		[],
+		[userLookup, userLabelById],
 	);
 
-	const fetchSites = (query: Query<Site>): Promise<QueryResult<Site>> => {
+	const fetchSubscriptions = (
+		query: Query<Subscription>,
+	): Promise<QueryResult<Subscription>> => {
 		const otherFilters = formatFiltersWithOptions(query.filters);
 		let ordering = '';
 		if (query.orderBy?.field) {
@@ -189,7 +258,7 @@ const Sites: React.FC = () => {
 					: `&ordering=-${String(query.orderBy.field)}`;
 		}
 
-		return getSites({
+		return getSubscriptions({
 			page: query.page + 1,
 			limit: query.pageSize,
 			search: query.search,
@@ -201,11 +270,14 @@ const Sites: React.FC = () => {
 
 				const search = (query.search || '').trim().toLowerCase();
 				if (search) {
-					rows = rows.filter(
-						(r) =>
-							r.name?.toLowerCase().includes(search) ||
-							r.description?.toLowerCase().includes(search),
-					);
+					rows = rows.filter((r) => {
+						const userLabel = (userLabelById[r.user] || '').toLowerCase();
+						return (
+							userLabel.includes(search) ||
+							String(r.id).includes(search) ||
+							String(r.user).includes(search)
+						);
+					});
 				}
 
 				query.filters?.forEach((f) => {
@@ -259,84 +331,83 @@ const Sites: React.FC = () => {
 			actions.push(
 				{
 					icon: EditIcon,
-					tooltip: 'Edit Site',
-					onClick: (_event: any, rowData: Site) => {
+					tooltip: 'Edit Subscription',
+					onClick: (_event: any, rowData: Subscription) => {
 						handleEdit(rowData);
 					},
 				},
 				{
 					icon: DeleteIcon,
-					tooltip: 'Delete Site',
-					onClick: (_event: any, rowData: Site) => {
+					tooltip: 'Delete Subscription',
+					onClick: (_event: any, rowData: Subscription) => {
 						handleDelete(rowData);
 					},
 				},
 			);
 		}
 		return actions;
-	}, [filterEnabled, canWrite, darkModeStatus]);
+	}, [filterEnabled, canWrite, darkModeStatus, userLabelById]);
 
 	return (
-		<>
-			<SiteFormModal
-				isOpen={modalOpen}
-				setIsOpen={setModalOpen}
-				mode={modalMode}
-				site={selectedSite}
-				onSave={handleSave}
-				saving={saving}
-			/>
-			<PageWrapper title='Sites'>
-				<Page container='fluid'>
-					<Card stretch>
-						<CardHeader>
-							<div className='d-flex align-items-center justify-content-between w-100 flex-wrap gap-2'>
-								<div className='d-flex align-items-center gap-2'>
-									<Icon icon='Place' color='primary' size='2x' />
-									<span>Sites</span>
-								</div>
-								{canWrite && (
-									<Button
-										color='primary'
-										size='sm'
-										onClick={handleAdd}
-										isDisable={saving}>
-										+ Add Site
-									</Button>
-								)}
+		<PageWrapper title='Subscriptions'>
+			<Page container='fluid'>
+				<Card stretch>
+					<CardHeader>
+						<div className='d-flex align-items-center justify-content-between w-100 flex-wrap gap-2'>
+							<div className='d-flex align-items-center gap-2'>
+								<Icon icon='CardMembership' color='primary' size='2x' />
+								<span>Subscriptions</span>
 							</div>
-						</CardHeader>
-						<CardBody>
-							<ThemeProvider theme={theme}>
-								<FullHeightMaterialTable
-									title=''
-									tableRef={tableRef}
-									columns={columns}
-									data={fetchSites}
-									actions={tableActions}
-									options={{
-										search: true,
-										filtering: filterEnabled,
-										sorting: true,
-										paging: true,
-										pageSize: 10,
-										pageSizeOptions: [5, 10, 25],
-										debounceInterval: debounceIntervalForTable,
-										showEmptyDataSourceMessage: true,
-										emptyRowsWhenPaging: false,
-										actionsColumnIndex: -1,
-										rowStyle: rowStyles(),
-										headerStyle: headerStyles(),
-										searchFieldStyle: searchFieldStyle(),
-									}}
-								/>
-							</ThemeProvider>
-						</CardBody>
-					</Card>
-				</Page>
-			</PageWrapper>
-		</>
+							{canWrite && (
+								<Button
+									color='primary'
+									size='sm'
+									onClick={handleAdd}
+									isDisable={saving}>
+									+ Add Subscription
+								</Button>
+							)}
+						</div>
+					</CardHeader>
+					<CardBody>
+						<SubscriptionFormModal
+							isOpen={modalOpen}
+							setIsOpen={setModalOpen}
+							mode={modalMode}
+							subscription={selected}
+							onSave={handleSave}
+							users={users}
+							saving={saving}
+						/>
+						<ThemeProvider theme={theme}>
+							<FullHeightMaterialTable
+								title=''
+								tableRef={tableRef}
+								columns={columns}
+								data={fetchSubscriptions}
+								actions={tableActions}
+								options={{
+									search: true,
+									filtering: filterEnabled,
+									sorting: true,
+									paging: true,
+									pageSize: 10,
+									pageSizeOptions: [5, 10, 25],
+									debounceInterval: debounceIntervalForTable,
+									showEmptyDataSourceMessage: true,
+									emptyRowsWhenPaging: false,
+									actionsColumnIndex: -1,
+									rowStyle: rowStyles(),
+									headerStyle: headerStyles(),
+									searchFieldStyle: searchFieldStyle(),
+								}}
+							/>
+						</ThemeProvider>
+					</CardBody>
+				</Card>
+			</Page>
+		</PageWrapper>
 	);
 };
 
-export default Sites;
+export default Subscriptions;

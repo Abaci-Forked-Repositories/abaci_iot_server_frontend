@@ -39,7 +39,6 @@ const ModernTableDateFilter: React.FC<MaterialTableFilterProps> = ({
 				<DatePicker
 					value={value}
 					onChange={handleChange}
-					disableFuture
 					format='DD MMM YYYY'
 					slotProps={{
 						textField: {

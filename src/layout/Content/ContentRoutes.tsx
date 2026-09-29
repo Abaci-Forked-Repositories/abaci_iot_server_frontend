@@ -34,8 +34,11 @@ const ContentRoutes = () => {
 
 	return (
 		<Routes>
-			{/* Public Routes */}
-			<Route path='/login' element={<Login />} />
+			{/* Public auth — shared layout so login↔register swap does not remount the page */}
+			<Route element={<Login />}>
+				<Route path='/login' element={null} />
+				<Route path='/register' element={null} />
+			</Route>
 			<Route path='/admin_setup' element={<AdminSetup />} />
 			<Route path='/customer-login' element={<Login />} />
 			<Route path='/createsuperadmin' element={<Activation />} />

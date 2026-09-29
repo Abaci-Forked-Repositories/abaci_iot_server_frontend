@@ -78,9 +78,10 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 		if (!q) return devices;
 		return devices.filter(
 			(d) =>
-				d.name.toLowerCase().includes(q) ||
-				d.site.toLowerCase().includes(q) ||
-				d.description.toLowerCase().includes(q),
+				d.name?.toLowerCase().includes(q) ||
+				d.description?.toLowerCase().includes(q) ||
+				d.wifi_ssid?.toLowerCase().includes(q) ||
+				d.wifi_ip_address?.toLowerCase().includes(q),
 		);
 	}, [devices, deviceSearch]);
 
@@ -226,19 +227,13 @@ const DeviceGroupFormModal: React.FC<DeviceGroupFormModalProps> = ({
 														{device.name}
 													</div>
 													<div className='small text-muted text-truncate'>
-														{device.site}
-														{device.description
-															? ` · ${device.description}`
-															: ''}
+														{device.description ||
+															device.wifi_ip_address ||
+															'—'}
 													</div>
 												</div>
-												<span
-													className={`badge flex-shrink-0 ${
-														device.status === 'Online'
-															? 'bg-success'
-															: 'bg-danger'
-													}`}>
-													{device.status}
+												<span className='badge flex-shrink-0 bg-secondary'>
+													{device.firmware_version || 'No FW'}
 												</span>
 											</label>
 										);

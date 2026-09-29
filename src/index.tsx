@@ -15,6 +15,10 @@ import store from './store';
 import { LicenceProvider } from './contexts/LicenceContext';
 import ProductValidation from './components/ProductValidation';
 import { USE_MOCK_SERVICE } from './config';
+import { setupAxiosAuthRefresh } from './axiosAuthRefresh';
+
+// Attach 401 → refresh → retry before the app mounts
+setupAxiosAuthRefresh();
 
 const queryClient = new QueryClient({
 	defaultOptions: {

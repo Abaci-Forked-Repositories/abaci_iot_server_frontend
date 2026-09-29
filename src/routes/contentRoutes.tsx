@@ -11,6 +11,7 @@ const MAINROUTE = {
 	Devices: lazy(() => import('../pages/Devices/index')),
 	DeviceDetail: lazy(() => import('../pages/Devices/DeviceDetail')),
 	Sites: lazy(() => import('../pages/Sites/index')),
+	Subscriptions: lazy(() => import('../pages/Subscriptions/index')),
 	Knowledge: lazy(() => import('../pages/Knowledge/index')),
 	// Settings: lazy(() => import('../pages/Settings/index')),
 };
@@ -52,6 +53,11 @@ const RouteConfig: CustomRouteConfig[] = [
 		path: allRoutesObject.sites.path,
 		element: <MAINROUTE.Sites />,
 		permissionKey: 'sites_read',
+	},
+	{
+		path: allRoutesObject.subscriptions.path,
+		element: <MAINROUTE.Subscriptions />,
+		permissionKey: 'subscriptions_read',
 	},
 	{
 		path: allRoutesObject.knowledge.path,

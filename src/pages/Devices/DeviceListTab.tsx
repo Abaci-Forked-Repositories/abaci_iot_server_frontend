@@ -1,25 +1,38 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MaterialTable, { Query, QueryResult } from '@material-table/core';
+import { Query, QueryResult } from '@material-table/core';
+import FullHeightMaterialTable from '../../components/CustomComponent/FullHeightMaterialTable';
 import { ThemeProvider } from '@mui/material/styles';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Button from '../../components/bootstrap/Button';
 import useTablestyle from '../../hooks/useTablestyles';
+import useDarkMode from '../../hooks/useDarkMode';
 import useToasterNotification from '../../hooks/useToasterNotification';
 import {
 	createDevice,
+	deleteDevice,
 	getDevices,
 	updateDevice,
 	type Device,
 } from '../../api/devices/devices';
 import { formatFiltersWithOptions } from '../../helpers/functions';
-import { debounceIntervalForTable } from '../../helpers/constants';
+import { buttonColor, debounceIntervalForTable } from '../../helpers/constants';
 import ModernTableDateFilter from '../../components/CustomComponent/Filters/ModernTableDateFilter';
 import { asMaterialTableFilterProps } from '../../components/CustomComponent/Filters/materialTableFilterTypes';
 import DeviceFormModal, { type DeviceFormData } from './DeviceFormModal';
+import swalFire from '../../helpers/swalHelper';
 
 export type { Device };
+
+const displayValue = (value: string | null | undefined) => value?.trim() || '—';
+
+const formatDateTime = (value: string | null | undefined) => {
+	if (!value) return '—';
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
 
 interface DeviceListTabProps {
 	canWrite: boolean;
@@ -29,7 +42,8 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 	const navigate = useNavigate();
 	const tableRef = useRef<any>(null);
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
-	const { showErrorNotification } = useToasterNotification();
+	const { darkModeStatus } = useDarkMode();
+	const { showErrorNotification, showSuccessNotification } = useToasterNotification();
 	const [filterEnabled, setFilterEnabled] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -52,13 +66,46 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		tableRef.current?.onQueryChange?.();
 	};
 
+	const handleDelete = (device: Device) => {
+		swalFire({
+			title: 'Are you sure?',
+			icon: 'info',
+			text: `Delete device "${device.name}"? You won't be able to revert this!`,
+			showCancelButton: true,
+			iconColor: buttonColor[0],
+			theme: darkModeStatus ? 'dark' : 'light',
+			confirmButtonColor: buttonColor[0],
+			cancelButtonColor: buttonColor[1],
+			confirmButtonText: 'Delete',
+		}).then(async (result: any) => {
+			if (!result.isConfirmed) return;
+			try {
+				await deleteDevice(device.id);
+				showSuccessNotification('Device deleted successfully.');
+				refreshTable();
+			} catch (error) {
+				showErrorNotification(error);
+			}
+		});
+	};
+
 	const handleSave = async (device: DeviceFormData & { id?: number }) => {
 		setSaving(true);
 		try {
+			const payload = {
+				name: device.name,
+				description: device.description,
+				wifi_ip_address: device.wifi_ip_address || null,
+				wifi_mask: device.wifi_mask || null,
+				wifi_gateway: device.wifi_gateway || null,
+				wifi_ssid: device.wifi_ssid || null,
+				wifi_password: device.wifi_password || null,
+				firmware_version: device.firmware_version || null,
+			};
 			if (modalMode === 'add') {
-				await createDevice(device);
+				await createDevice(payload);
 			} else if (device.id != null) {
-				await updateDevice(device.id, device);
+				await updateDevice(device.id, payload);
 			}
 			setModalOpen(false);
 			refreshTable();
@@ -85,32 +132,24 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				cellStyle: { fontWeight: 600 },
 			},
 			{
-				title: 'Site',
-				field: 'site',
-			},
-			{
 				title: 'Description',
 				field: 'description',
+				render: (rowData: Device) => displayValue(rowData.description),
 			},
 			{
-				title: 'Last Online',
-				field: 'last_online',
-				type: 'date' as const,
-				filtering: true,
-				filterComponent: (props: unknown) => (
-					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
-				),
-				render: (rowData: Device) => rowData.last_online || '—',
+				title: 'Firmware',
+				field: 'firmware_version',
+				render: (rowData: Device) => displayValue(rowData.firmware_version),
 			},
 			{
-				title: 'Last Offline',
-				field: 'last_offline',
-				type: 'date' as const,
-				filtering: true,
-				filterComponent: (props: unknown) => (
-					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
-				),
-				render: (rowData: Device) => rowData.last_offline || '—',
+				title: 'WiFi SSID',
+				field: 'wifi_ssid',
+				render: (rowData: Device) => displayValue(rowData.wifi_ssid),
+			},
+			{
+				title: 'WiFi IP',
+				field: 'wifi_ip_address',
+				render: (rowData: Device) => displayValue(rowData.wifi_ip_address),
 			},
 			{
 				title: 'Created At',
@@ -120,20 +159,17 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				filterComponent: (props: unknown) => (
 					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
 				),
-				render: (rowData: Device) => rowData.created_at || '—',
+				render: (rowData: Device) => formatDateTime(rowData.created_at),
 			},
 			{
-				title: 'Status',
-				field: 'status',
-				lookup: { Online: 'Online', Offline: 'Offline' },
-				render: (rowData: Device) => (
-					<span
-						className={`badge ${
-							rowData.status === 'Online' ? 'bg-success' : 'bg-danger'
-						}`}>
-						{rowData.status}
-					</span>
+				title: 'Updated At',
+				field: 'updated_at',
+				type: 'date' as const,
+				filtering: true,
+				filterComponent: (props: unknown) => (
+					<ModernTableDateFilter {...asMaterialTableFilterProps(props)} />
 				),
+				render: (rowData: Device) => formatDateTime(rowData.updated_at),
 			},
 		],
 		[],
@@ -145,8 +181,8 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		if (query.orderBy?.field) {
 			ordering =
 				query.orderDirection === 'asc'
-					? `&ordering=-${String(query.orderBy.field)}`
-					: `&ordering=${String(query.orderBy.field)}`;
+					? `&ordering=${String(query.orderBy.field)}`
+					: `&ordering=-${String(query.orderBy.field)}`;
 		}
 
 		return getDevices({
@@ -156,11 +192,45 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 			filters: otherFilters,
 			ordering,
 		})
-			.then((response) => ({
-				data: response.devices ?? response.results ?? [],
-				page: query.page,
-				totalCount: response.count ?? response.total ?? 0,
-			}))
+			.then((response) => {
+				let rows = response.results;
+
+				const search = (query.search || '').trim().toLowerCase();
+				if (search) {
+					rows = rows.filter(
+						(r) =>
+							r.name?.toLowerCase().includes(search) ||
+							r.description?.toLowerCase().includes(search) ||
+							r.firmware_version?.toLowerCase().includes(search) ||
+							r.wifi_ssid?.toLowerCase().includes(search) ||
+							r.wifi_ip_address?.toLowerCase().includes(search),
+					);
+				}
+
+				query.filters?.forEach((f) => {
+					const value = String(f.value ?? '').trim();
+					if (!value || !f.column.field) return;
+					const field = String(f.column.field);
+					rows = rows.filter((r) =>
+						String((r as any)[field] ?? '')
+							.toLowerCase()
+							.includes(value.toLowerCase()),
+					);
+				});
+
+				const isFullList = response.count === response.results.length;
+				const totalCount = isFullList ? rows.length : response.count;
+				const start = query.page * query.pageSize;
+				const pageData = isFullList
+					? rows.slice(start, start + query.pageSize)
+					: rows;
+
+				return {
+					data: pageData,
+					page: query.page,
+					totalCount,
+				};
+			})
 			.catch((error) => {
 				showErrorNotification(error);
 				return {
@@ -181,17 +251,27 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 			},
 		];
 		if (canWrite) {
-			actions.push({
-				icon: EditIcon,
-				tooltip: 'Edit Device',
-				onClick: (event: any, rowData: Device) => {
-					event?.stopPropagation?.();
-					handleEdit(rowData);
+			actions.push(
+				{
+					icon: EditIcon,
+					tooltip: 'Edit Device',
+					onClick: (event: any, rowData: Device) => {
+						event?.stopPropagation?.();
+						handleEdit(rowData);
+					},
 				},
-			});
+				{
+					icon: DeleteIcon,
+					tooltip: 'Delete Device',
+					onClick: (event: any, rowData: Device) => {
+						event?.stopPropagation?.();
+						handleDelete(rowData);
+					},
+				},
+			);
 		}
 		return actions;
-	}, [filterEnabled, canWrite]);
+	}, [filterEnabled, canWrite, darkModeStatus]);
 
 	return (
 		<>
@@ -203,40 +283,43 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				onSave={handleSave}
 				saving={saving}
 			/>
-			<div className='d-flex justify-content-end mb-3'>
-				{canWrite && (
-					<Button color='primary' size='sm' onClick={handleAdd} isDisable={saving}>
-						+ Add Device
-					</Button>
-				)}
+			<div className='material-table-page-host'>
+				<div className='d-flex justify-content-end mb-3 flex-shrink-0'>
+					{canWrite && (
+						<Button color='primary' size='sm' onClick={handleAdd} isDisable={saving}>
+							+ Add Device
+						</Button>
+					)}
+				</div>
+				<ThemeProvider theme={theme}>
+					<FullHeightMaterialTable
+						title=''
+						tableRef={tableRef}
+						columns={columns}
+						data={fetchDevices}
+						actions={tableActions}
+						onRowClick={handleRowClick}
+						options={{
+							search: true,
+							filtering: filterEnabled,
+							sorting: true,
+							paging: true,
+							pageSize: 10,
+							pageSizeOptions: [5, 10, 25],
+							debounceInterval: debounceIntervalForTable,
+							showEmptyDataSourceMessage: true,
+							emptyRowsWhenPaging: false,
+							actionsColumnIndex: -1,
+							rowStyle: () => ({
+								...rowStyles(),
+								cursor: 'pointer',
+							}),
+							headerStyle: headerStyles(),
+							searchFieldStyle: searchFieldStyle(),
+						}}
+					/>
+				</ThemeProvider>
 			</div>
-			<ThemeProvider theme={theme}>
-				<MaterialTable
-					title=''
-					tableRef={tableRef}
-					columns={columns}
-					data={fetchDevices}
-					actions={tableActions}
-					onRowClick={handleRowClick}
-					options={{
-						search: true,
-						filtering: filterEnabled,
-						sorting: true,
-						paging: true,
-						pageSize: 10,
-						pageSizeOptions: [5, 10, 25],
-						debounceInterval: debounceIntervalForTable,
-						showEmptyDataSourceMessage: false,
-						actionsColumnIndex: -1,
-						rowStyle: () => ({
-							...rowStyles(),
-							cursor: 'pointer',
-						}),
-						headerStyle: headerStyles(),
-						searchFieldStyle: searchFieldStyle(),
-					}}
-				/>
-			</ThemeProvider>
 		</>
 	);
 };

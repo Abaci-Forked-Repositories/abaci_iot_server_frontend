@@ -51,6 +51,18 @@ export default defineConfig({
       fs: {
         strict: true,
       },
+      proxy: {
+        '/api': {
+          target: 'http://111.92.105.222:58001',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/media': {
+          target: 'http://111.92.105.222:58001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     build: {
     outDir: 'build', 

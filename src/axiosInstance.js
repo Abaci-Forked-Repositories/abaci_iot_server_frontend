@@ -53,20 +53,19 @@ const authAxiosFileUpload = axios.create({
 });
 
 export const updateToken = (newToken) => {
-	// token = newToken;
-	// tenant = newTenant;
-	authAxios.defaults.headers.Authorization = `Bearer ${newToken}`;
-	authAxiosFileUpload.defaults.headers.Authorization = `Bearer ${newToken}`;
+	const header = newToken ? `Bearer ${newToken}` : '';
+	authAxios.defaults.headers.Authorization = header;
+	authAxiosFileUpload.defaults.headers.Authorization = header;
+	authAxiosForCSV.defaults.headers.Authorization = header;
 	authAxios.defaults.baseURL = baseURL;
 	authAxiosFileUpload.defaults.baseURL = baseURL;
-	
+	authAxiosForCSV.defaults.baseURL = baseURL;
 };
 
 export const setInitialToken = () => {
-	// authAxios.defaults.headers.Authorization = `Bearer ${token}`;
-	authAxiosFileUpload.defaults.headers.Authorization = baseURL;
 	authAxios.defaults.baseURL = baseURL;
 	authAxiosFileUpload.defaults.baseURL = baseURL;
+	authAxiosForCSV.defaults.baseURL = baseURL;
 };
 
 setInitialToken();

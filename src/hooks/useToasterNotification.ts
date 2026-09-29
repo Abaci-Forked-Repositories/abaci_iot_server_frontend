@@ -1,15 +1,9 @@
 import { Store } from 'react-notifications-component';
-import { useContext } from 'react';
 import useErrorHandler from './useErrorHandler';
-import AuthContext from '../contexts/authContext';
-// import {
-// 	formatPermissionDeniedMessage,
-// 	isForbiddenPermissionError,
-// } from '../components/MasterComponents/QueueManagement/queueManagementUtils';
+// 401 session expiry is handled by axiosAuthRefresh (refresh → retry, or redirect to login).
+// Do not force logout here — that also breaks login wrong-password 401s.
 
 const useToasterNotification = () => {
-  const { setLogOut } = useContext(AuthContext);
-
   const { handleError } = useErrorHandler();
 
   const showNotification = (
@@ -39,15 +33,16 @@ const useToasterNotification = () => {
       showNotification('Error', message, 'danger');
       return;
     }
+    // 401: interceptor already refreshed or redirected — avoid duplicate logout/toasts
     if (message?.response?.status === 401) {
-      setLogOut();
-    // } else if (isForbiddenPermissionError(message)) {
-    //   showNotification('Access restricted', formatPermissionDeniedMessage(message), 'warning');
-    } else if (message?.response?.status === 403) {
-      setLogOut();
-    } else {
-      showNotification('Error', handleError(message), 'danger');
+      return;
     }
+    // 403: permission denied — show message, do not log the user out
+    if (message?.response?.status === 403) {
+      showNotification('Error', handleError(message), 'danger');
+      return;
+    }
+    showNotification('Error', handleError(message), 'danger');
   };
 
   const showSuccessNotification = (message: string | JSX.Element) => {

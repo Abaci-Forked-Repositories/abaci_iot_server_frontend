@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Card, { CardBody } from '../../bootstrap/Card';
 import Icon from '../../icon/Icon';
@@ -30,6 +30,28 @@ const STAT_CARD_STYLES = `
 .stat-card--danger { border-left: 3px solid #EF4444; }
 .stat-card--danger:hover { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
 `;
+
+/** Placeholder dashboard when monitor API is unavailable — keeps the UI visible. */
+const EMPTY_DASHBOARD: DeviceDashboardData = {
+	mode: '',
+	charging: false,
+	short_circuit: false,
+	overload: false,
+	fan_status: false,
+	output_voltage: NaN,
+	load_percentage: NaN,
+	battery_voltage: NaN,
+	temperature_1: NaN,
+	temperature_2: NaN,
+	digital_in_1: false,
+	digital_in_2: false,
+	digital_out_1: false,
+	digital_out_2: false,
+	analog_in_1: NaN,
+	analog_in_2: NaN,
+	analog_in_3: NaN,
+	analog_in_4: NaN,
+};
 
 interface DashboardStatisticsCardsProps {
 	deviceId: number | string;
@@ -71,16 +93,24 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 	const queryClient = useQueryClient();
 	const { showErrorNotification } = useToasterNotification();
 	const queryKey = ['device-dashboard', deviceId] as const;
+	const notifiedErrorRef = useRef(false);
 
 	const { data, isLoading, isError, error } = useQuery({
 		queryKey,
 		queryFn: () => getDeviceDashboard(deviceId),
 		enabled: !!deviceId,
-		refetchInterval: 10_000,
+		retry: 1,
+		// Keep polling only while live data is available; don't spam a missing endpoint
+		refetchInterval: (query) => (query.state.status === 'error' ? false : 10_000),
 	});
 
 	useEffect(() => {
-		if (isError && error) {
+		notifiedErrorRef.current = false;
+	}, [deviceId]);
+
+	useEffect(() => {
+		if (isError && error && !notifiedErrorRef.current) {
+			notifiedErrorRef.current = true;
 			showErrorNotification(error);
 		}
 	}, [isError, error, showErrorNotification]);
@@ -117,26 +147,21 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 		},
 	});
 
+	const hasLiveData = Boolean(data) && !isError;
+	const monitor: DeviceDashboardData = data ?? EMPTY_DASHBOARD;
+
 	const toggleField = (field: keyof DeviceDashboardUpdate, current: boolean) => {
-		if (updateMutation.isPending) return;
+		if (!hasLiveData || updateMutation.isPending) return;
 		updateMutation.mutate({ [field]: !current });
 	};
 
-	if (isLoading) {
+	if (isLoading && !data) {
 		return (
 			<div className='text-center text-muted py-5'>Loading device monitor…</div>
 		);
 	}
 
-	if (isError || !data) {
-		return (
-			<div className='text-center text-muted py-5'>
-				Unable to load device monitor data.
-			</div>
-		);
-	}
-
-	const busy = updateMutation.isPending;
+	const busy = updateMutation.isPending || !hasLiveData;
 
 	return (
 		<div className='d-flex flex-column gap-4'>
@@ -155,7 +180,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 
 							<div className='d-flex justify-content-between align-items-center mb-3 py-2 border-bottom'>
 								<span className='text-muted'>Mode</span>
-								<span className='fw-semibold'>{data.mode || '—'}</span>
+								<span className='fw-semibold'>{monitor.mode || '—'}</span>
 							</div>
 
 							<div className='d-flex justify-content-between align-items-center py-2'>
@@ -163,12 +188,12 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 								<button
 									type='button'
 									disabled={busy}
-									onClick={() => toggleField('charging', !!data.charging)}
+									onClick={() => toggleField('charging', !!monitor.charging)}
 									className={`btn btn-sm px-4 btn-hover-bounce ${
-										data.charging ? 'btn-success' : 'btn-danger'
+										monitor.charging ? 'btn-success' : 'btn-danger'
 									}`}
 									style={{ minWidth: '80px' }}>
-									{data.charging ? 'ON' : 'OFF'}
+									{monitor.charging ? 'ON' : 'OFF'}
 								</button>
 							</div>
 						</CardBody>
@@ -183,17 +208,17 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 
 							<div className='d-flex justify-content-between align-items-center mb-3 py-2 border-bottom'>
 								<span className='text-muted'>Short Circuit</span>
-								<StatusDot active={!!data.short_circuit} />
+								<StatusDot active={!!monitor.short_circuit} />
 							</div>
 
 							<div className='d-flex justify-content-between align-items-center mb-3 py-2 border-bottom'>
 								<span className='text-muted'>Overload</span>
-								<StatusDot active={!!data.overload} />
+								<StatusDot active={!!monitor.overload} />
 							</div>
 
 							<div className='d-flex justify-content-between align-items-center py-2'>
 								<span className='text-muted'>Fan Status</span>
-								<StatusDot active={!!data.fan_status} dangerWhenActive={false} />
+								<StatusDot active={!!monitor.fan_status} dangerWhenActive={false} />
 							</div>
 						</CardBody>
 					</Card>
@@ -215,7 +240,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Output Voltage
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.5rem' }}>
-										{formatNumber(data.output_voltage)} V
+										{formatNumber(monitor.output_voltage)} V
 									</div>
 								</CardBody>
 							</Card>
@@ -229,7 +254,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Load Percentage
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.5rem' }}>
-										{formatNumber(data.load_percentage)} %
+										{formatNumber(monitor.load_percentage)} %
 									</div>
 								</CardBody>
 							</Card>
@@ -248,7 +273,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Battery Voltage
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.5rem' }}>
-										{formatNumber(data.battery_voltage)} V
+										{formatNumber(monitor.battery_voltage)} V
 									</div>
 								</CardBody>
 							</Card>
@@ -262,7 +287,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Temperature 1
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.5rem' }}>
-										{formatNumber(data.temperature_1)} °C
+										{formatNumber(monitor.temperature_1)} °C
 									</div>
 								</CardBody>
 							</Card>
@@ -276,7 +301,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Temperature 2
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.5rem' }}>
-										{formatNumber(data.temperature_2)} °C
+										{formatNumber(monitor.temperature_2)} °C
 									</div>
 								</CardBody>
 							</Card>
@@ -299,14 +324,14 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 									</div>
 									<span
 										className={`btn btn-sm px-4 ${
-											data.digital_in_1 ? 'btn-success' : 'btn-secondary'
+											monitor.digital_in_1 ? 'btn-success' : 'btn-secondary'
 										}`}
 										style={{
 											minWidth: '70px',
 											cursor: 'default',
 											pointerEvents: 'none',
 										}}>
-										{data.digital_in_1 ? 'ON' : 'OFF'}
+										{monitor.digital_in_1 ? 'ON' : 'OFF'}
 									</span>
 								</CardBody>
 							</Card>
@@ -320,14 +345,14 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 									</div>
 									<span
 										className={`btn btn-sm px-4 ${
-											data.digital_in_2 ? 'btn-success' : 'btn-secondary'
+											monitor.digital_in_2 ? 'btn-success' : 'btn-secondary'
 										}`}
 										style={{
 											minWidth: '70px',
 											cursor: 'default',
 											pointerEvents: 'none',
 										}}>
-										{data.digital_in_2 ? 'ON' : 'OFF'}
+										{monitor.digital_in_2 ? 'ON' : 'OFF'}
 									</span>
 								</CardBody>
 							</Card>
@@ -343,13 +368,13 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										type='button'
 										disabled={busy}
 										onClick={() =>
-											toggleField('digital_out_1', !!data.digital_out_1)
+											toggleField('digital_out_1', !!monitor.digital_out_1)
 										}
 										className={`btn btn-sm px-4 btn-hover-bounce ${
-											data.digital_out_1 ? 'btn-success' : 'btn-secondary'
+											monitor.digital_out_1 ? 'btn-success' : 'btn-secondary'
 										}`}
 										style={{ minWidth: '70px' }}>
-										{data.digital_out_1 ? 'HIGH' : 'LOW'}
+										{monitor.digital_out_1 ? 'HIGH' : 'LOW'}
 									</button>
 								</CardBody>
 							</Card>
@@ -365,13 +390,13 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										type='button'
 										disabled={busy}
 										onClick={() =>
-											toggleField('digital_out_2', !!data.digital_out_2)
+											toggleField('digital_out_2', !!monitor.digital_out_2)
 										}
 										className={`btn btn-sm px-4 btn-hover-bounce ${
-											data.digital_out_2 ? 'btn-success' : 'btn-secondary'
+											monitor.digital_out_2 ? 'btn-success' : 'btn-secondary'
 										}`}
 										style={{ minWidth: '70px' }}>
-										{data.digital_out_2 ? 'HIGH' : 'LOW'}
+										{monitor.digital_out_2 ? 'HIGH' : 'LOW'}
 									</button>
 								</CardBody>
 							</Card>
@@ -386,7 +411,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Analog In 1
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(data.analog_in_1, 2)}
+										{formatNumber(monitor.analog_in_1, 2)}
 									</div>
 								</CardBody>
 							</Card>
@@ -399,7 +424,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Analog In 2
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(data.analog_in_2, 2)}
+										{formatNumber(monitor.analog_in_2, 2)}
 									</div>
 								</CardBody>
 							</Card>
@@ -412,7 +437,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Analog In 3
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(data.analog_in_3, 2)}
+										{formatNumber(monitor.analog_in_3, 2)}
 									</div>
 								</CardBody>
 							</Card>
@@ -425,7 +450,7 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 										Analog In 4
 									</div>
 									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(data.analog_in_4, 2)}
+										{formatNumber(monitor.analog_in_4, 2)}
 									</div>
 								</CardBody>
 							</Card>

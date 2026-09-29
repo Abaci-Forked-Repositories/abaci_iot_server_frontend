@@ -100,7 +100,7 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 	);
 
 	const devices: Device[] = useMemo(
-		() => extractList(devicesResponse, ['devices', 'results']),
+		() => devicesResponse?.results ?? extractList(devicesResponse, ['devices', 'results']),
 		[devicesResponse],
 	);
 
@@ -158,21 +158,16 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ canWrite }) => {
 				field: 'name',
 				cellStyle: { fontWeight: 600 },
 			},
-			{ title: 'Site', field: 'site' },
 			{ title: 'Description', field: 'description' },
-			{ title: 'Last Online', field: 'last_online' },
-			{ title: 'Last Offline', field: 'last_offline' },
 			{
-				title: 'Status',
-				field: 'status',
-				render: (rowData: Device) => (
-					<span
-						className={`badge ${
-							rowData.status === 'Online' ? 'bg-success' : 'bg-danger'
-						}`}>
-						{rowData.status}
-					</span>
-				),
+				title: 'Firmware',
+				field: 'firmware_version',
+				render: (rowData: Device) => rowData.firmware_version || '—',
+			},
+			{
+				title: 'WiFi IP',
+				field: 'wifi_ip_address',
+				render: (rowData: Device) => rowData.wifi_ip_address || '—',
 			},
 		],
 		[],

@@ -11,9 +11,11 @@ function Error(error, setLogOut) {
 			errorField = errorField.charAt(0).toUpperCase() + errorField.slice(1);
 			errorMsg = `${errorField} - ${error.response.data[errorKey].join()}`;
 		}
-	} else if (error?.response?.status === 401 || error?.response?.status === 403) {
-		setLogOut();
+	} else if (error?.response?.status === 401) {
+		// Session refresh / redirect is handled by axiosAuthRefresh interceptor
 		errorMsg = 'Authentication failed !';
+	} else if (error?.response?.status === 403) {
+		errorMsg = 'You do not have permission to perform this action.';
 	} else if (error?.response?.status === 406) {
 		errorMsg = error.response.data.message;
 	} else if (error?.response?.status === 409) {

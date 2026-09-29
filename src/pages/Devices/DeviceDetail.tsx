@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -22,12 +22,7 @@ const DeviceDetail: React.FC = () => {
 		enabled: !!deviceId,
 	});
 
-	const device: Device | null = useMemo(() => {
-		if (!data) return null;
-		if (data.device) return data.device as Device;
-		if (data.id != null) return data as Device;
-		return null;
-	}, [data]);
+	const device: Device | null = data ?? null;
 
 	useEffect(() => {
 		if (isError && error) {
@@ -86,10 +81,14 @@ const DeviceDetail: React.FC = () => {
 						Back
 					</Button>
 					<span className='text-muted small'>
-						{device.site} · {device.status}
+						{[device.description, device.firmware_version]
+							.filter(Boolean)
+							.join(' · ') || '—'}
 					</span>
 				</div>
-				<DashboardWorkspace deviceId={device.id} deviceName={device.name} />
+				<div className='pb-4'>
+					<DashboardWorkspace deviceId={device.id} deviceName={device.name} />
+				</div>
 			</Page>
 		</PageWrapper>
 	);

@@ -9,11 +9,15 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { clearAuthSession, restoreAuthTokenFromCookies } from '../helpers/authSession';
+import {
+	clearAuthSession,
+	getStoredUsername,
+	restoreAuthTokenFromCookies,
+} from '../helpers/authSession';
 import AbaciLoader from '../components/AbaciLoader/AbaciLoader';
 import useToasterNotification from '../hooks/useToasterNotification';
 import type { PagePermissions } from '../types/permissions';
-import { getProfile, logout as logoutApi } from '../api/auth/auth';
+import { logout as logoutApi } from '../api/auth/auth';
 
 export interface IAuthContextProps {
 	user: string;
@@ -25,8 +29,8 @@ export interface IAuthContextProps {
 	isAdmin: boolean;
 	setLogOut: () => void;
 	/**
-	 * Fetches /api/users/profile/ and updates user, userData, and permissions.
-	 * Call this after login — the login response does not include page_permission.
+	 * No-op for now — profile API is not used.
+	 * Kept so callers (e.g. Login) do not break.
 	 */
 	refreshProfile: () => Promise<void>;
 }
@@ -37,7 +41,7 @@ interface IAuthContextProviderProps {
 	children: ReactNode;
 }
 
-/** Routes that must work without a logged-in user (no profile fetch on boot). */
+/** Routes that must work without a logged-in user. */
 function shouldSkipAuthBoot(pathname: string): boolean {
 	return (
 		pathname.includes('public') ||
@@ -71,17 +75,9 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 		}
 	}, [userData]);
 
-	const applyProfile = useCallback((profile: any) => {
-		setUser(profile?.email ?? profile?.username ?? '');
-		setUserData(profile);
-		setPermissions(profile?.page_permission ?? null);
-	}, []);
-
 	const refreshProfile = useCallback(async () => {
-		restoreAuthTokenFromCookies();
-		const profile = await getProfile();
-		applyProfile(profile);
-	}, [applyProfile]);
+		// Profile API intentionally skipped for now.
+	}, []);
 
 	const clearLocalSession = useCallback(() => {
 		setUser('');
@@ -107,7 +103,7 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 	}, [clearLocalSession, navigate, showErrorNotification]);
 
 	/**
-	 * On app boot / page refresh: restore token from cookies, then fetch profile.
+	 * On app boot / page refresh: restore token from cookies only (no profile API).
 	 */
 	useEffect(() => {
 		if (shouldSkipAuthBoot(location.pathname)) {
@@ -116,32 +112,18 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 			return;
 		}
 
-		const boot = async () => {
-			try {
-				const token = restoreAuthTokenFromCookies();
-				if (!token) {
-					clearLocalSession();
-					navigate('/login');
-					return;
-				}
-				const profile = await getProfile();
-				applyProfile(profile);
-			} catch (err: any) {
-				console.error(
-					'[authContext] profile fetch failed:',
-					err?.response?.status,
-					err?.message,
-				);
-				clearLocalSession();
-				if (!shouldSkipAuthBoot(location.pathname)) {
-					navigate('/login');
-				}
-			} finally {
-				setLoading(false);
-			}
-		};
+		const token = restoreAuthTokenFromCookies();
+		if (!token) {
+			clearLocalSession();
+			navigate('/login');
+			setLoading(false);
+			return;
+		}
 
-		boot();
+		const username = getStoredUsername();
+		setUser(username || 'user');
+		setUserData(username ? { username, email: username } : {});
+		setLoading(false);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
