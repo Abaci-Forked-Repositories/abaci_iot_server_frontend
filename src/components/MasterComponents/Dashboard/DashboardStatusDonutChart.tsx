@@ -131,9 +131,7 @@ const DashboardStatusDonutChart: React.FC<DashboardStatusDonutChartProps> = ({
 				position: 'bottom',
 				fontSize: '13px',
 				markers: {
-					width: 10,
-					height: 10,
-					radius: 10,
+					size: 10,
 				},
 			},
 			dataLabels: {

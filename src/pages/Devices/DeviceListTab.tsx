@@ -13,6 +13,7 @@ import useToasterNotification from '../../hooks/useToasterNotification';
 import {
 	createDevice,
 	deleteDevice,
+	getDeviceById,
 	getDevices,
 	updateDevice,
 	getDeviceLabel,
@@ -40,6 +41,14 @@ const formatDateTime = (value: string | null | undefined) => {
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
+/** Material Table may pass a single row or an array — always resolve to one device. */
+const resolveDeviceRow = (rowData: Device | Device[] | undefined | null): Device | null => {
+	if (!rowData) return null;
+	const device = Array.isArray(rowData) ? rowData[0] : rowData;
+	if (!device || device.id == null) return null;
+	return device;
+};
+
 interface DeviceListTabProps {
 	canWrite: boolean;
 }
@@ -55,24 +64,50 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [loadingDevice, setLoadingDevice] = useState(false);
 
 	const handleAdd = () => {
 		setModalMode('add');
 		setSelectedDevice(null);
+		setLoadingDevice(false);
 		setModalOpen(true);
 	};
 
-	const handleEdit = (device: Device) => {
+	const handleEdit = async (rowData: Device | Device[]) => {
+		const row = resolveDeviceRow(rowData);
+		if (!row) {
+			showErrorNotification('Unable to edit device: missing device id.');
+			return;
+		}
+
+		// Start the GET immediately — don't wait on modal/render work.
+		const fetchPromise = getDeviceById(row.id);
+
 		setModalMode('edit');
-		setSelectedDevice(device);
+		setSelectedDevice(row); // fill instantly from list row
+		setLoadingDevice(true);
 		setModalOpen(true);
+
+		try {
+			const fresh = await fetchPromise;
+			setSelectedDevice(fresh);
+		} catch (error) {
+			showErrorNotification(error);
+		} finally {
+			setLoadingDevice(false);
+		}
 	};
 
 	const refreshTable = () => {
 		tableRef.current?.onQueryChange?.();
 	};
 
-	const handleDelete = (device: Device) => {
+	const handleDelete = (rowData: Device | Device[]) => {
+		const device = resolveDeviceRow(rowData);
+		if (!device) {
+			showErrorNotification('Unable to delete device: missing device id.');
+			return;
+		}
 		swalFire({
 			title: 'Are you sure?',
 			icon: 'info',
@@ -95,27 +130,37 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		});
 	};
 
-	const handleSave = async (device: DeviceFormData & { id?: number }) => {
+	const handleSave = async (formData: DeviceFormData & { id?: number }) => {
 		setSaving(true);
 		try {
 			const payload = {
-				model: device.model || null,
-				identifier: device.identifier || null,
-				serial_number: device.serial_number || null,
-				description: device.description || null,
-				wifi_ip_address: device.wifi_ip_address || null,
-				wifi_mask: device.wifi_mask || null,
-				wifi_gateway: device.wifi_gateway || null,
-				wifi_ssid: device.wifi_ssid || null,
-				wifi_password: device.wifi_password || null,
-				firmware_version: device.firmware_version || null,
+				model: formData.model || null,
+				identifier: formData.identifier || null,
+				serial_number: formData.serial_number || null,
+				description: formData.description || null,
+				wifi_ip_address: formData.wifi_ip_address || null,
+				wifi_mask: formData.wifi_mask || null,
+				wifi_gateway: formData.wifi_gateway || null,
+				wifi_ssid: formData.wifi_ssid || null,
+				wifi_password: formData.wifi_password || null,
+				firmware_version: formData.firmware_version || null,
 			};
+
 			if (modalMode === 'add') {
 				await createDevice(payload);
-			} else if (device.id != null) {
-				await updateDevice(device.id, payload);
+				showSuccessNotification('Device created successfully.');
+			} else {
+				const deviceId = selectedDevice?.id ?? formData.id;
+				if (deviceId == null) {
+					showErrorNotification('Unable to update device: missing device id.');
+					return;
+				}
+				await updateDevice(deviceId, payload);
+				showSuccessNotification('Device updated successfully.');
 			}
+
 			setModalOpen(false);
+			setSelectedDevice(null);
 			refreshTable();
 		} catch (error) {
 			console.error('Error saving device:', error);
@@ -126,8 +171,8 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 	};
 
 	const handleRowClick = (_event: any, rowData?: Device | Device[]) => {
-		const device = Array.isArray(rowData) ? rowData[0] : rowData;
-		if (device?.id != null) {
+		const device = resolveDeviceRow(rowData ?? null);
+		if (device) {
 			navigate(`/devices/${device.id}`);
 		}
 	};
@@ -303,6 +348,7 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				device={selectedDevice}
 				onSave={handleSave}
 				saving={saving}
+				loading={loadingDevice}
 			/>
 			<div className='material-table-page-host'>
 				<div className='d-flex justify-content-end mb-3 flex-shrink-0'>

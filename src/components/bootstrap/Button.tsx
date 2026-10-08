@@ -76,6 +76,8 @@ export interface IButtonProps
 	children?: ReactNode;
 	tag?: 'button' | 'a' | 'input' | 'link';
 	type?: 'button' | 'submit' | 'reset';
+	/** Associates a submit button outside a form via the form's `id`. */
+	form?: string;
 	to?: string | undefined;
 	href?: string | undefined;
 	isActive?: boolean;
@@ -115,6 +117,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 			children,
 			tag,
 			type,
+			form,
 			to,
 			href,
 			isActive,
@@ -233,6 +236,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 				ref={ref}
 				tag={tag}
 				type={type}
+				form={form}
 				className={BTN_CLASS}
 				// eslint-disable-next-line react/jsx-props-no-spreading
 				{...disableProps}

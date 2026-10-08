@@ -20,6 +20,7 @@ import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import {
 	createSite,
 	deleteSite,
+	getSiteById,
 	getSites,
 	updateSite,
 	type Site,
@@ -68,6 +69,7 @@ const Sites: React.FC = () => {
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [selectedSite, setSelectedSite] = useState<Site | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [loadingSite, setLoadingSite] = useState(false);
 
 	useEffect(() => {
 		dispatch(setHeaderTitle({ name: 'Sites', isEditable: false }));
@@ -88,13 +90,32 @@ const Sites: React.FC = () => {
 	const handleAdd = () => {
 		setModalMode('add');
 		setSelectedSite(null);
+		setLoadingSite(false);
 		setModalOpen(true);
 	};
 
-	const handleEdit = (site: Site) => {
+	const handleEdit = async (site: Site | Site[]) => {
+		const selected = Array.isArray(site) ? site[0] : site;
+		if (!selected?.id) {
+			showErrorNotification('Unable to edit site: missing id.');
+			return;
+		}
+
+		const fetchPromise = getSiteById(selected.id);
+
 		setModalMode('edit');
-		setSelectedSite(site);
+		setSelectedSite(selected);
+		setLoadingSite(true);
 		setModalOpen(true);
+
+		try {
+			const fresh = await fetchPromise;
+			setSelectedSite(fresh);
+		} catch (error) {
+			showErrorNotification(error);
+		} finally {
+			setLoadingSite(false);
+		}
 	};
 
 	const handleSave = async (site: SiteFormData & { id?: number }) => {
@@ -107,11 +128,17 @@ const Sites: React.FC = () => {
 			if (modalMode === 'add') {
 				await createSite(payload);
 				showSuccessNotification('Site created successfully.');
-			} else if (site.id != null) {
-				await updateSite(site.id, payload);
+			} else {
+				const siteId = selectedSite?.id ?? site.id;
+				if (siteId == null) {
+					showErrorNotification('Unable to update site: missing id.');
+					return;
+				}
+				await updateSite(siteId, payload);
 				showSuccessNotification('Site updated successfully.');
 			}
 			setModalOpen(false);
+			setSelectedSite(null);
 			refreshTable();
 		} catch (error) {
 			console.error('Error saving site:', error);
@@ -285,6 +312,7 @@ const Sites: React.FC = () => {
 				site={selectedSite}
 				onSave={handleSave}
 				saving={saving}
+				loading={loadingSite}
 			/>
 			<PageWrapper title='Sites'>
 				<Page container='fluid'>

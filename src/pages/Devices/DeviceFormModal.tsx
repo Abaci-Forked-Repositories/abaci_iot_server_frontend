@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Modal, {
 	ModalBody,
 	ModalFooter,
@@ -29,6 +31,8 @@ interface DeviceFormModalProps {
 	device: Device | null;
 	onSave: (data: DeviceFormData & { id?: number }) => void | Promise<void>;
 	saving?: boolean;
+	/** True while GET /api/devices/{id}/ is in flight */
+	loading?: boolean;
 }
 
 const emptyForm: DeviceFormData = {
@@ -51,8 +55,11 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	device,
 	onSave,
 	saving = false,
+	loading = false,
 }) => {
 	const isEdit = mode === 'edit';
+	const busy = saving || loading;
+	const [showPassword, setShowPassword] = useState(false);
 
 	const {
 		register,
@@ -64,27 +71,28 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	});
 
 	useEffect(() => {
-		if (isOpen) {
-			if (isEdit && device) {
-				reset({
-					model: device.model || '',
-					identifier: device.identifier || '',
-					serial_number: device.serial_number || '',
-					description: device.description || '',
-					wifi_ip_address: device.wifi_ip_address || '',
-					wifi_mask: device.wifi_mask || '',
-					wifi_gateway: device.wifi_gateway || '',
-					wifi_ssid: device.wifi_ssid || '',
-					wifi_password: device.wifi_password || '',
-					firmware_version: device.firmware_version || '',
-				});
-			} else {
-				reset(emptyForm);
-			}
+		if (!isOpen) return;
+		setShowPassword(false);
+		if (isEdit && device) {
+			reset({
+				model: device.model || '',
+				identifier: device.identifier || '',
+				serial_number: device.serial_number || '',
+				description: device.description || '',
+				wifi_ip_address: device.wifi_ip_address || '',
+				wifi_mask: device.wifi_mask || '',
+				wifi_gateway: device.wifi_gateway || '',
+				wifi_ssid: device.wifi_ssid || '',
+				wifi_password: device.wifi_password || '',
+				firmware_version: device.firmware_version || '',
+			});
+		} else if (!isEdit) {
+			reset(emptyForm);
 		}
 	}, [isOpen, isEdit, device, reset]);
 
 	const onSubmit = async (data: DeviceFormData) => {
+		if (busy) return;
 		if (isEdit && device) {
 			await onSave({ ...data, id: device.id });
 		} else {
@@ -93,36 +101,48 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade>
-			<ModalHeader setIsOpen={setIsOpen}>
+		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade isStaticBackdrop={busy}>
+			<ModalHeader setIsOpen={busy ? undefined : setIsOpen}>
 				<ModalTitle id='device-form-modal'>
 					{isEdit ? 'Edit Device' : 'Add Device'}
 				</ModalTitle>
 			</ModalHeader>
 			<ModalBody>
+				{loading && (
+					<div className='text-muted small mb-3'>Refreshing device details…</div>
+				)}
 				<form id='device-form' onSubmit={handleSubmit(onSubmit)}>
 					<div className='row g-4'>
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Model</label>
-							<input className='form-control' {...register('model')} />
+							<input className='form-control' disabled={busy} {...register('model')} />
 						</div>
 
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Identifier</label>
 							<input
 								className={`form-control ${errors.identifier ? 'is-invalid' : ''}`}
+								disabled={busy}
 								{...register('identifier')}
 							/>
 						</div>
 
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Serial Number</label>
-							<input className='form-control' {...register('serial_number')} />
+							<input
+								className='form-control'
+								disabled={busy}
+								{...register('serial_number')}
+							/>
 						</div>
 
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Firmware Version</label>
-							<input className='form-control' {...register('firmware_version')} />
+							<input
+								className='form-control'
+								disabled={busy}
+								{...register('firmware_version')}
+							/>
 						</div>
 
 						<div className='col-12'>
@@ -130,38 +150,80 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 							<textarea
 								className='form-control'
 								rows={3}
+								disabled={busy}
 								{...register('description')}
 							/>
 						</div>
 
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>WiFi SSID</label>
-							<input className='form-control' {...register('wifi_ssid')} />
+							<input className='form-control' disabled={busy} {...register('wifi_ssid')} />
 						</div>
 
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>WiFi Password</label>
-							<input
-								type='password'
-								className='form-control'
-								autoComplete='new-password'
-								{...register('wifi_password')}
-							/>
+							<div style={{ position: 'relative' }}>
+								<input
+									type={showPassword ? 'text' : 'password'}
+									className='form-control'
+									autoComplete='new-password'
+									disabled={busy}
+									style={{ paddingRight: '2.75rem' }}
+									{...register('wifi_password')}
+								/>
+								<span
+									role='button'
+									tabIndex={0}
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+									onClick={() => !busy && setShowPassword((v) => !v)}
+									onKeyDown={(e) => {
+										if (busy) return;
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											setShowPassword((v) => !v);
+										}
+									}}
+									style={{
+										position: 'absolute',
+										top: '50%',
+										right: 12,
+										transform: 'translateY(-50%)',
+										cursor: busy ? 'default' : 'pointer',
+										lineHeight: 1,
+										color: '#6c757d',
+										zIndex: 2,
+										opacity: busy ? 0.5 : 1,
+									}}>
+									{showPassword ? (
+										<VisibilityOffIcon fontSize='small' />
+									) : (
+										<VisibilityIcon fontSize='small' />
+									)}
+								</span>
+							</div>
 						</div>
 
 						<div className='col-12 col-md-4'>
 							<label className='form-label'>WiFi IP Address</label>
-							<input className='form-control' {...register('wifi_ip_address')} />
+							<input
+								className='form-control'
+								disabled={busy}
+								{...register('wifi_ip_address')}
+							/>
 						</div>
 
 						<div className='col-12 col-md-4'>
 							<label className='form-label'>WiFi Mask</label>
-							<input className='form-control' {...register('wifi_mask')} />
+							<input className='form-control' disabled={busy} {...register('wifi_mask')} />
 						</div>
 
 						<div className='col-12 col-md-4'>
 							<label className='form-label'>WiFi Gateway</label>
-							<input className='form-control' {...register('wifi_gateway')} />
+							<input
+								className='form-control'
+								disabled={busy}
+								{...register('wifi_gateway')}
+							/>
 						</div>
 					</div>
 				</form>
@@ -171,11 +233,15 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 					color='secondary'
 					onClick={() => setIsOpen(false)}
 					className='me-2'
-					isDisable={saving}>
+					isDisable={busy}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)} isDisable={saving}>
-					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
+				<Button
+					color='primary'
+					type='submit'
+					form='device-form'
+					isDisable={busy}>
+					{saving ? 'Saving…' : loading ? 'Loading…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>

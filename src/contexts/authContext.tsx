@@ -14,6 +14,7 @@ import {
 	getStoredUsername,
 	restoreAuthTokenFromCookies,
 } from '../helpers/authSession';
+import { AUTH_BYPASS_USER, isAuthBypassEnabled } from '../helpers/authBypass';
 import AbaciLoader from '../components/AbaciLoader/AbaciLoader';
 import useToasterNotification from '../hooks/useToasterNotification';
 import type { PagePermissions } from '../types/permissions';
@@ -106,6 +107,14 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 	 * On app boot / page refresh: restore token from cookies only (no profile API).
 	 */
 	useEffect(() => {
+		// TEMP: local UI bypass — do not use outside development.
+		if (isAuthBypassEnabled()) {
+			setUser(AUTH_BYPASS_USER.username);
+			setUserData({ ...AUTH_BYPASS_USER });
+			setLoading(false);
+			return;
+		}
+
 		if (shouldSkipAuthBoot(location.pathname)) {
 			setUserData({});
 			setLoading(false);

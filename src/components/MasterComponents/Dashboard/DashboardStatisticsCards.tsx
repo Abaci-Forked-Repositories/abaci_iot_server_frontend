@@ -9,6 +9,8 @@ import {
 	type DeviceDashboardData,
 	type DeviceDashboardUpdate,
 } from '../../../api/devices/devices';
+import { DUMMY_PAGE_STATISTICS } from '../../../api/dashboard/dashboard';
+import PageStatisticsChart from '../../extras/charts/PageStatisticsChart';
 
 /* Hover animation styles for stat cards */
 const STAT_CARD_STYLES = `
@@ -456,6 +458,13 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 							</Card>
 						</div>
 					</div>
+				</CardBody>
+			</Card>
+
+			{/* Page Statistics chart — dummy data until device API is ready */}
+			<Card className='shadow-sm' borderSize={1}>
+				<CardBody>
+					<PageStatisticsChart data={DUMMY_PAGE_STATISTICS} height={480} />
 				</CardBody>
 			</Card>
 		</div>

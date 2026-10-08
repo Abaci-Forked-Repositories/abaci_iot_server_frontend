@@ -110,10 +110,11 @@ export const deleteUser = async (id: string | number) => {
 	}
 };
 
-export const getUserById = async (id: string | number) => {
+export const getUserById = async (id: string | number): Promise<ApiUser> => {
 	try {
 		const response = await authAxios.get(`${baseURL}/api/users/${id}/`);
-		return response.data;
+		const data = response.data;
+		return (data?.user ?? data?.data ?? data) as ApiUser;
 	} catch (error) {
 		console.error('Error fetching user by id:', error);
 		throw error;

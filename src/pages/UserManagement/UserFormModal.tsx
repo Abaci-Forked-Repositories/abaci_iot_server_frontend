@@ -29,6 +29,8 @@ interface UserFormModalProps {
 	user: ApiUser | null;
 	onSave: (data: UserFormData & { id?: number }) => void | Promise<void>;
 	saving?: boolean;
+	/** True while GET /api/users/{id}/ is in flight */
+	loading?: boolean;
 }
 
 const emptyForm: UserFormData = {
@@ -54,8 +56,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 	user,
 	onSave,
 	saving = false,
+	loading = false,
 }) => {
 	const isEdit = mode === 'edit';
+	const busy = saving || loading;
 	const [showPassword, setShowPassword] = useState(false);
 
 	const {
@@ -80,12 +84,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 				role: roleFromUser(user),
 				is_active: Boolean(user.is_active),
 			});
-		} else {
+		} else if (!isEdit) {
 			reset(emptyForm);
 		}
 	}, [isOpen, isEdit, user, reset]);
 
 	const onSubmit = async (data: UserFormData) => {
+		if (busy) return;
 		if (isEdit && user) {
 			await onSave({ ...data, id: user.id });
 		} else {
@@ -94,141 +99,151 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade>
-			<ModalHeader setIsOpen={setIsOpen}>
+		<Modal
+			isOpen={isOpen}
+			setIsOpen={setIsOpen}
+			size='lg'
+			isCentered
+			fade
+			isStaticBackdrop={busy}>
+			<ModalHeader setIsOpen={busy ? undefined : setIsOpen}>
 				<ModalTitle id='user-form-modal'>
 					{isEdit ? 'Edit User' : 'Add User'}
 				</ModalTitle>
 			</ModalHeader>
 			<ModalBody>
-				<form id='user-form' onSubmit={handleSubmit(onSubmit)}>
-					<div className='row g-4'>
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>
-								Username <span className='text-danger'>*</span>
-							</label>
-							<input
-								className={`form-control ${errors.username ? 'is-invalid' : ''}`}
-								{...register('username', { required: 'Username is required' })}
-							/>
-							{errors.username && (
-								<div className='invalid-feedback'>{errors.username.message}</div>
-							)}
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>
-								Email <span className='text-danger'>*</span>
-							</label>
-							<input
-								type='email'
-								className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-								{...register('email', { required: 'Email is required' })}
-							/>
-							{errors.email && (
-								<div className='invalid-feedback'>{errors.email.message}</div>
-							)}
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>First Name</label>
-							<input className='form-control' {...register('first_name')} />
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>Last Name</label>
-							<input className='form-control' {...register('last_name')} />
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>
-								Password
-								{!isEdit && <span className='text-danger'> *</span>}
-							</label>
-							<div style={{ position: 'relative' }}>
-								<input
-									type={showPassword ? 'text' : 'password'}
-									autoComplete='new-password'
-									className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-									placeholder={isEdit ? 'Leave blank to keep current' : ''}
-									style={{ paddingRight: '2.75rem' }}
-									{...register('password', {
-										required: isEdit ? false : 'Password is required',
-										minLength: isEdit
-											? undefined
-											: { value: 6, message: 'At least 6 characters' },
-									})}
-								/>
-								<span
-									role='button'
-									tabIndex={0}
-									aria-label={showPassword ? 'Hide password' : 'Show password'}
-									onClick={() => setShowPassword((v) => !v)}
-									onKeyDown={(e) => {
-										if (e.key === 'Enter' || e.key === ' ') {
-											e.preventDefault();
-											setShowPassword((v) => !v);
-										}
-									}}
-									style={{
-										position: 'absolute',
-										top: '50%',
-										right: 12,
-										transform: 'translateY(-50%)',
-										cursor: 'pointer',
-										lineHeight: 1,
-										color: '#6c757d',
-										zIndex: 2,
-									}}>
-									{showPassword ? (
-										<VisibilityOffIcon fontSize='small' />
-									) : (
-										<VisibilityIcon fontSize='small' />
-									)}
-								</span>
-							</div>
-							{errors.password && (
-								<div className='invalid-feedback d-block'>
-									{errors.password.message}
-								</div>
-							)}
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>Role</label>
-							<select className='form-select' {...register('role')}>
-								<option value='User'>User</option>
-								<option value='Staff'>Staff</option>
-								<option value='Superuser'>Superuser</option>
-							</select>
-						</div>
-
-						<div className='col-12'>
-							<div className='form-check'>
-								<input
-									id='user-is-active'
-									type='checkbox'
-									className='form-check-input'
-									{...register('is_active')}
-								/>
-								<label className='form-check-label' htmlFor='user-is-active'>
-									Active
+				{loading ? (
+					<div className='text-center text-muted py-4'>Loading user…</div>
+				) : (
+					<form id='user-form' onSubmit={handleSubmit(onSubmit)}>
+						<div className='row g-4'>
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>
+									Username <span className='text-danger'>*</span>
 								</label>
+								<input
+									className={`form-control ${errors.username ? 'is-invalid' : ''}`}
+									{...register('username', { required: 'Username is required' })}
+								/>
+								{errors.username && (
+									<div className='invalid-feedback'>{errors.username.message}</div>
+								)}
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>
+									Email <span className='text-danger'>*</span>
+								</label>
+								<input
+									type='email'
+									className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+									{...register('email', { required: 'Email is required' })}
+								/>
+								{errors.email && (
+									<div className='invalid-feedback'>{errors.email.message}</div>
+								)}
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>First Name</label>
+								<input className='form-control' {...register('first_name')} />
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>Last Name</label>
+								<input className='form-control' {...register('last_name')} />
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>
+									Password
+									{!isEdit && <span className='text-danger'> *</span>}
+								</label>
+								<div style={{ position: 'relative' }}>
+									<input
+										type={showPassword ? 'text' : 'password'}
+										autoComplete='new-password'
+										className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+										placeholder={isEdit ? 'Leave blank to keep current' : ''}
+										style={{ paddingRight: '2.75rem' }}
+										{...register('password', {
+											required: isEdit ? false : 'Password is required',
+											minLength: isEdit
+												? undefined
+												: { value: 6, message: 'At least 6 characters' },
+										})}
+									/>
+									<span
+										role='button'
+										tabIndex={0}
+										aria-label={showPassword ? 'Hide password' : 'Show password'}
+										onClick={() => setShowPassword((v) => !v)}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												setShowPassword((v) => !v);
+											}
+										}}
+										style={{
+											position: 'absolute',
+											top: '50%',
+											right: 12,
+											transform: 'translateY(-50%)',
+											cursor: 'pointer',
+											lineHeight: 1,
+											color: '#6c757d',
+											zIndex: 2,
+										}}>
+										{showPassword ? (
+											<VisibilityOffIcon fontSize='small' />
+										) : (
+											<VisibilityIcon fontSize='small' />
+										)}
+									</span>
+								</div>
+								{errors.password && (
+									<div className='invalid-feedback d-block'>
+										{errors.password.message}
+									</div>
+								)}
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>Role</label>
+								<select className='form-select' {...register('role')}>
+									<option value='User'>User</option>
+									<option value='Staff'>Staff</option>
+									<option value='Superuser'>Superuser</option>
+								</select>
+							</div>
+
+							<div className='col-12'>
+								<div className='form-check'>
+									<input
+										id='user-is-active'
+										type='checkbox'
+										className='form-check-input'
+										{...register('is_active')}
+									/>
+									<label className='form-check-label' htmlFor='user-is-active'>
+										Active
+									</label>
+								</div>
 							</div>
 						</div>
-					</div>
-				</form>
+					</form>
+				)}
 			</ModalBody>
 			<ModalFooter>
 				<Button
 					color='secondary'
 					onClick={() => setIsOpen(false)}
 					className='me-2'
-					isDisable={saving}>
+					isDisable={busy}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)} isDisable={saving}>
-					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
+				<Button color='primary' type='submit' form='user-form' isDisable={busy}>
+					{saving ? 'Saving…' : loading ? 'Loading…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>

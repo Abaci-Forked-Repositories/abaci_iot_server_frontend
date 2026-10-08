@@ -21,6 +21,7 @@ import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import {
 	createSubscription,
 	deleteSubscription,
+	getSubscriptionById,
 	getSubscriptions,
 	updateSubscription,
 	type Subscription,
@@ -81,6 +82,7 @@ const Subscriptions: React.FC = () => {
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [selected, setSelected] = useState<Subscription | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [loadingSubscription, setLoadingSubscription] = useState(false);
 
 	const { data: usersResponse } = useQuery({
 		queryKey: ['users', 'subscription-picker'],
@@ -130,13 +132,32 @@ const Subscriptions: React.FC = () => {
 	const handleAdd = () => {
 		setModalMode('add');
 		setSelected(null);
+		setLoadingSubscription(false);
 		setModalOpen(true);
 	};
 
-	const handleEdit = (row: Subscription) => {
+	const handleEdit = async (row: Subscription | Subscription[]) => {
+		const selectedRow = Array.isArray(row) ? row[0] : row;
+		if (!selectedRow?.id) {
+			showErrorNotification('Unable to edit subscription: missing id.');
+			return;
+		}
+
+		const fetchPromise = getSubscriptionById(selectedRow.id);
+
 		setModalMode('edit');
-		setSelected(row);
+		setSelected(selectedRow);
+		setLoadingSubscription(true);
 		setModalOpen(true);
+
+		try {
+			const fresh = await fetchPromise;
+			setSelected(fresh);
+		} catch (error) {
+			showErrorNotification(error);
+		} finally {
+			setLoadingSubscription(false);
+		}
 	};
 
 	const handleSave = async (data: SubscriptionFormData & { id?: number }) => {
@@ -150,11 +171,17 @@ const Subscriptions: React.FC = () => {
 			if (modalMode === 'add') {
 				await createSubscription(payload);
 				showSuccessNotification('Subscription created successfully.');
-			} else if (data.id != null) {
-				await updateSubscription(data.id, payload);
+			} else {
+				const subscriptionId = selected?.id ?? data.id;
+				if (subscriptionId == null) {
+					showErrorNotification('Unable to update subscription: missing id.');
+					return;
+				}
+				await updateSubscription(subscriptionId, payload);
 				showSuccessNotification('Subscription updated successfully.');
 			}
 			setModalOpen(false);
+			setSelected(null);
 			refreshTable();
 		} catch (error) {
 			console.error('Error saving subscription:', error);
@@ -378,6 +405,7 @@ const Subscriptions: React.FC = () => {
 							onSave={handleSave}
 							users={users}
 							saving={saving}
+							loading={loadingSubscription}
 						/>
 						<ThemeProvider theme={theme}>
 							<FullHeightMaterialTable

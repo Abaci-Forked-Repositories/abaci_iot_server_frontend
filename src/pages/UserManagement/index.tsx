@@ -19,6 +19,7 @@ import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import {
 	createUser,
 	deleteUser,
+	getUserById,
 	getUsers,
 	updateUser,
 	type ApiUser,
@@ -99,6 +100,7 @@ const UserManagement: React.FC = () => {
 	const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 	const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [loadingUser, setLoadingUser] = useState(false);
 
 	useEffect(() => {
 		dispatch(setHeaderTitle({ name: 'Users', isEditable: false }));
@@ -119,13 +121,30 @@ const UserManagement: React.FC = () => {
 	const handleAdd = () => {
 		setModalMode('add');
 		setSelectedUser(null);
+		setLoadingUser(false);
 		setModalOpen(true);
 	};
 
-	const handleEdit = (row: UserListRow) => {
+	const handleEdit = async (row: UserListRow | UserListRow[]) => {
+		const selected = Array.isArray(row) ? row[0] : row;
+		if (!selected?.id) {
+			showErrorNotification('Unable to edit user: missing user id.');
+			return;
+		}
+
 		setModalMode('edit');
-		setSelectedUser(row.raw);
+		setSelectedUser(selected.raw);
 		setModalOpen(true);
+		setLoadingUser(true);
+
+		try {
+			const fresh = await getUserById(selected.id);
+			setSelectedUser(fresh);
+		} catch (error) {
+			showErrorNotification(error);
+		} finally {
+			setLoadingUser(false);
+		}
 	};
 
 	const handleSave = async (data: UserFormData & { id?: number }) => {
@@ -135,11 +154,17 @@ const UserManagement: React.FC = () => {
 			if (modalMode === 'add') {
 				await createUser(payload as any);
 				showSuccessNotification('User created successfully.');
-			} else if (data.id != null) {
-				await updateUser(data.id, payload as any);
+			} else {
+				const userId = selectedUser?.id ?? data.id;
+				if (userId == null) {
+					showErrorNotification('Unable to update user: missing user id.');
+					return;
+				}
+				await updateUser(userId, payload as any);
 				showSuccessNotification('User updated successfully.');
 			}
 			setModalOpen(false);
+			setSelectedUser(null);
 			refreshTable();
 		} catch (error) {
 			console.error('Error saving user:', error);
@@ -347,6 +372,7 @@ const UserManagement: React.FC = () => {
 							user={selectedUser}
 							onSave={handleSave}
 							saving={saving}
+							loading={loadingUser}
 						/>
 						<ThemeProvider theme={theme}>
 							<FullHeightMaterialTable

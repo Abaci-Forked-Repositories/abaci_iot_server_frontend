@@ -95,10 +95,11 @@ export const deleteSite = async (id: number | string) => {
 	}
 };
 
-export const getSiteById = async (id: number | string) => {
+export const getSiteById = async (id: number | string): Promise<Site> => {
 	try {
 		const response = await authAxios.get(`${baseURL}/api/sites/${id}/`);
-		return response.data as Site;
+		const data = response.data;
+		return (data?.site ?? data?.data ?? data) as Site;
 	} catch (error) {
 		console.error('Error fetching site by id:', error);
 		throw error;

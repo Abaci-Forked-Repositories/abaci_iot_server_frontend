@@ -106,10 +106,11 @@ export const deleteSubscription = async (id: number | string) => {
 	}
 };
 
-export const getSubscriptionById = async (id: number | string) => {
+export const getSubscriptionById = async (id: number | string): Promise<Subscription> => {
 	try {
 		const response = await authAxios.get(`${baseURL}/api/subscriptions/${id}/`);
-		return response.data as Subscription;
+		const data = response.data;
+		return (data?.subscription ?? data?.data ?? data) as Subscription;
 	} catch (error) {
 		console.error('Error fetching subscription by id:', error);
 		throw error;

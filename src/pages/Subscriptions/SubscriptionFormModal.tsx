@@ -28,6 +28,8 @@ interface SubscriptionFormModalProps {
 	onSave: (data: SubscriptionFormData & { id?: number }) => void | Promise<void>;
 	users?: SubscriptionUserOption[];
 	saving?: boolean;
+	/** True while GET /api/subscriptions/{id}/ is in flight */
+	loading?: boolean;
 }
 
 const emptyForm: SubscriptionFormData = {
@@ -69,8 +71,10 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 	onSave,
 	users = [],
 	saving = false,
+	loading = false,
 }) => {
 	const isEdit = mode === 'edit';
+	const busy = saving || loading;
 	const today = todayDateString();
 
 	const {
@@ -93,12 +97,13 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 				start_date: toInputDate(subscription.start_date),
 				end_date: toInputDate(subscription.end_date),
 			});
-		} else {
+		} else if (!isEdit) {
 			reset(emptyForm);
 		}
 	}, [isOpen, isEdit, subscription, reset]);
 
 	const onSubmit = async (data: SubscriptionFormData) => {
+		if (busy) return;
 		const payload: SubscriptionFormData & { id?: number } = {
 			user: data.user === '' ? '' : Number(data.user),
 			start_date: fromInputDate(data.start_date) ?? '',
@@ -112,13 +117,22 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 	};
 
 	return (
-		<Modal isOpen={isOpen} setIsOpen={setIsOpen} size='lg' isCentered fade>
-			<ModalHeader setIsOpen={setIsOpen}>
+		<Modal
+			isOpen={isOpen}
+			setIsOpen={setIsOpen}
+			size='lg'
+			isCentered
+			fade
+			isStaticBackdrop={busy}>
+			<ModalHeader setIsOpen={busy ? undefined : setIsOpen}>
 				<ModalTitle id='subscription-form-modal'>
 					{isEdit ? 'Edit Subscription' : 'Add Subscription'}
 				</ModalTitle>
 			</ModalHeader>
 			<ModalBody>
+				{loading && (
+					<div className='text-muted small mb-3'>Refreshing subscription details…</div>
+				)}
 				<form id='subscription-form' onSubmit={handleSubmit(onSubmit)}>
 					<div className='row g-4'>
 						<div className='col-12'>
@@ -127,6 +141,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 							</label>
 							<select
 								className={`form-select ${errors.user ? 'is-invalid' : ''}`}
+								disabled={busy}
 								{...register('user', {
 									required: 'User is required',
 									validate: (v) => v !== '' || 'User is required',
@@ -148,6 +163,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 							<input
 								type='date'
 								min={today}
+								disabled={busy}
 								className={`form-control ${errors.start_date ? 'is-invalid' : ''}`}
 								{...register('start_date', {
 									validate: (value) => {
@@ -169,6 +185,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 							<input
 								type='date'
 								min={startDateValue || today}
+								disabled={busy}
 								className={`form-control ${errors.end_date ? 'is-invalid' : ''}`}
 								{...register('end_date', {
 									validate: (value) => {
@@ -192,11 +209,15 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 					color='secondary'
 					onClick={() => setIsOpen(false)}
 					className='me-2'
-					isDisable={saving}>
+					isDisable={busy}>
 					Cancel
 				</Button>
-				<Button color='primary' onClick={handleSubmit(onSubmit)} isDisable={saving}>
-					{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}
+				<Button
+					color='primary'
+					type='submit'
+					form='subscription-form'
+					isDisable={busy}>
+					{saving ? 'Saving…' : loading ? 'Loading…' : isEdit ? 'Update' : 'Add'}
 				</Button>
 			</ModalFooter>
 		</Modal>
