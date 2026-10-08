@@ -11,6 +11,8 @@ import {
 } from '../../../api/devices/devices';
 import { DUMMY_PAGE_STATISTICS } from '../../../api/dashboard/dashboard';
 import PageStatisticsChart from '../../extras/charts/PageStatisticsChart';
+import IotDataTable from './IotDataTable';
+import GpioDataFromApi from './GpioDataFromApi';
 
 /* Hover animation styles for stat cards */
 const STAT_CARD_STYLES = `
@@ -312,159 +314,21 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 				</CardBody>
 			</Card>
 
-			{/* Card 4 — GPIO Data */}
-			<Card className='shadow-sm' borderSize={1}>
-				<CardBody>
-					<h5 className='fw-bold mb-4'>GPIO Data</h5>
-
-					<div className='row g-3 mb-3'>
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--primary' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Digital In 1
-									</div>
-									<span
-										className={`btn btn-sm px-4 ${
-											monitor.digital_in_1 ? 'btn-success' : 'btn-secondary'
-										}`}
-										style={{
-											minWidth: '70px',
-											cursor: 'default',
-											pointerEvents: 'none',
-										}}>
-										{monitor.digital_in_1 ? 'ON' : 'OFF'}
-									</span>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--info' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Digital In 2
-									</div>
-									<span
-										className={`btn btn-sm px-4 ${
-											monitor.digital_in_2 ? 'btn-success' : 'btn-secondary'
-										}`}
-										style={{
-											minWidth: '70px',
-											cursor: 'default',
-											pointerEvents: 'none',
-										}}>
-										{monitor.digital_in_2 ? 'ON' : 'OFF'}
-									</span>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--success' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Digital Out 1
-									</div>
-									<button
-										type='button'
-										disabled={busy}
-										onClick={() =>
-											toggleField('digital_out_1', !!monitor.digital_out_1)
-										}
-										className={`btn btn-sm px-4 btn-hover-bounce ${
-											monitor.digital_out_1 ? 'btn-success' : 'btn-secondary'
-										}`}
-										style={{ minWidth: '70px' }}>
-										{monitor.digital_out_1 ? 'HIGH' : 'LOW'}
-									</button>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--warning' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Digital Out 2
-									</div>
-									<button
-										type='button'
-										disabled={busy}
-										onClick={() =>
-											toggleField('digital_out_2', !!monitor.digital_out_2)
-										}
-										className={`btn btn-sm px-4 btn-hover-bounce ${
-											monitor.digital_out_2 ? 'btn-success' : 'btn-secondary'
-										}`}
-										style={{ minWidth: '70px' }}>
-										{monitor.digital_out_2 ? 'HIGH' : 'LOW'}
-									</button>
-								</CardBody>
-							</Card>
-						</div>
-					</div>
-
-					<div className='row g-3'>
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--primary' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-1' style={{ fontSize: '0.8rem' }}>
-										Analog In 1
-									</div>
-									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(monitor.analog_in_1, 2)}
-									</div>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--info' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-1' style={{ fontSize: '0.8rem' }}>
-										Analog In 2
-									</div>
-									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(monitor.analog_in_2, 2)}
-									</div>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--success' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-1' style={{ fontSize: '0.8rem' }}>
-										Analog In 3
-									</div>
-									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(monitor.analog_in_3, 2)}
-									</div>
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--warning' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-1' style={{ fontSize: '0.8rem' }}>
-										Analog In 4
-									</div>
-									<div className='fw-bold' style={{ fontSize: '1.3rem' }}>
-										{formatNumber(monitor.analog_in_4, 2)}
-									</div>
-								</CardBody>
-							</Card>
-						</div>
-					</div>
-				</CardBody>
-			</Card>
+			{/* Card 4 — GPIO Data (from /api/devices/{id}/data/ — latest record) */}
+			<GpioDataFromApi deviceId={deviceId} />
 
 			{/* Page Statistics chart — dummy data until device API is ready */}
 			<Card className='shadow-sm' borderSize={1}>
 				<CardBody>
 					<PageStatisticsChart data={DUMMY_PAGE_STATISTICS} height={480} />
+				</CardBody>
+			</Card>
+
+			{/* IOT Data Table — fetched from /api/data/iot-data/ */}
+			<Card className='shadow-sm' borderSize={1}>
+				<CardBody>
+					<h5 className='fw-bold mb-4'>IOT Data</h5>
+					<IotDataTable deviceId={deviceId} />
 				</CardBody>
 			</Card>
 		</div>

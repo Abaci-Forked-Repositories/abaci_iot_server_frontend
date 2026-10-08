@@ -115,7 +115,14 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 					<div className='row g-4'>
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Model</label>
-							<input className='form-control' disabled={busy} {...register('model')} />
+							<select
+								className='form-select'
+								disabled={busy}
+								{...register('model')}>
+								<option value=''>Select model</option>
+								<option value='C3'>C3</option>
+								<option value='S3'>S3</option>
+							</select>
 						</div>
 
 						<div className='col-12 col-md-6'>
