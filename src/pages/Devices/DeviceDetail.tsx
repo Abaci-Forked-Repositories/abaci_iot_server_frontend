@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import PageWrapper from '../../layout/PageWrapper/PageWrapper';
 import Page from '../../layout/Page/Page';
 import Button from '../../components/bootstrap/Button';
-import DashboardWorkspace from '../../components/MasterComponents/Dashboard/DashboardWorkspace';
+import DeviceDetailDashboard from '../../components/MasterComponents/Dashboard/DeviceDetailDashboard';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import useToasterNotification from '../../hooks/useToasterNotification';
 import { getDeviceById, getDeviceLabel, type Device } from '../../api/devices/devices';
@@ -87,7 +87,7 @@ const DeviceDetail: React.FC = () => {
 					</span>
 				</div>
 				<div className='pb-4'>
-					<DashboardWorkspace
+					<DeviceDetailDashboard
 						deviceId={device.id}
 						deviceName={getDeviceLabel(device)}
 					/>

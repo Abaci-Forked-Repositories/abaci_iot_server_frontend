@@ -188,6 +188,9 @@ export const getMainDashboard = async (): Promise<MainDashboardData> => {
 
 /** Line-chart payload for the main dashboard (categories ↔ series data by index) */
 export type DashboardPageStatisticsSeries = {
+	color?: string;
+	strokeWidth: number;
+	dashArray: number;
 	name: string;
 	unit: string | null;
 	/** Numbers for points; `null` draws a gap */
@@ -232,6 +235,9 @@ export const normalizePageStatistics = (raw: unknown): DashboardPageStatistics =
 			toNullableNumber(dataRaw[i]),
 		);
 		return {
+			color: s.color ? String(s.color) : undefined,
+			strokeWidth: toNumber(s.strokeWidth ?? 2),
+			dashArray: toNumber(s.dashArray ?? 0),
 			name: String(s.name ?? ''),
 			unit,
 			data,

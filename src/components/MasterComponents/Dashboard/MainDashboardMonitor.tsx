@@ -5,33 +5,12 @@ import Icon from '../../icon/Icon';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 import {
 	getMainDashboard,
-	DUMMY_PAGE_STATISTICS,
 	type DashboardMinMax,
 	type DashboardOnOff,
 	type MainDashboardData,
 } from '../../../api/dashboard/dashboard';
-import PageStatisticsChart from '../../extras/charts/PageStatisticsChart';
-
-/* Hover animation styles for stat cards — shared look with device monitor */
-const STAT_CARD_STYLES = `
-.stat-card {
-	transition: transform 0.25s ease, box-shadow 0.25s ease;
-	cursor: default;
-}
-.stat-card:hover {
-	transform: translateY(-6px);
-}
-.stat-card--primary { border-left: 3px solid #5B8CFF; }
-.stat-card--primary:hover { box-shadow: 0 8px 24px rgba(91, 140, 255, 0.35); }
-.stat-card--info { border-left: 3px solid #38BDF8; }
-.stat-card--info:hover { box-shadow: 0 8px 24px rgba(56, 189, 248, 0.35); }
-.stat-card--success { border-left: 3px solid #22C55E; }
-.stat-card--success:hover { box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35); }
-.stat-card--warning { border-left: 3px solid #F59E0B; }
-.stat-card--warning:hover { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35); }
-.stat-card--danger { border-left: 3px solid #EF4444; }
-.stat-card--danger:hover { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
-`;
+import MainDashboardCharts from './MainDashboardCharts';
+import { STAT_CARD_STYLES } from './sharedStyles';
 
 const EMPTY_DASHBOARD: MainDashboardData = {
 	short_circuit: NaN,
@@ -107,6 +86,18 @@ const OnOffValue: React.FC<{ pair: DashboardOnOff; digits?: number }> = ({
 	</div>
 );
 
+/**
+ * MainDashboardMonitor — the full monitor panel for the main (aggregate) dashboard.
+ * This is specific to the main dashboard and completely independent
+ * from the device detail's DeviceDetailMonitor component.
+ *
+ * Differences from DeviceDetailMonitor:
+ *  - Aggregate data across all devices (min/max, on/off counts)
+ *  - No interactive controls (no toggle buttons)
+ *  - No per-device GPIO data section
+ *  - Uses MainDashboardCharts (aggregate charts) instead of DeviceDetailCharts
+ *  - No IOT data table
+ */
 const MainDashboardMonitor: React.FC = () => {
 	const { showErrorNotification } = useToasterNotification();
 	const notifiedErrorRef = useRef(false);
@@ -347,12 +338,8 @@ const MainDashboardMonitor: React.FC = () => {
 				</CardBody>
 			</Card>
 
-			{/* Page Statistics chart — dummy data until API is wired */}
-			<Card className='shadow-sm' borderSize={1}>
-				<CardBody>
-					<PageStatisticsChart data={DUMMY_PAGE_STATISTICS} height={480} />
-				</CardBody>
-			</Card>
+			{/* Main Dashboard Charts — aggregate statistics, independent from device charts */}
+			<MainDashboardCharts />
 		</div>
 	);
 };

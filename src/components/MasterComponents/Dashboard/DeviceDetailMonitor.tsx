@@ -11,35 +11,8 @@ import {
 } from '../../../api/devices/devices';
 import IotDataTable from './IotDataTable';
 import GpioDataFromApi from './GpioDataFromApi';
-import DeviceCharts from './DeviceCharts';
-
-
-// i want to use real api call for charts in the device dashboard
-// get the data from the api/devices/{device.id}/get-graphs/
-// and use it to render the charts
-// the api should return the data in the format of the DeviceChartConfig
-// and use it to render the charts
-
-/* Hover animation styles for stat cards */
-const STAT_CARD_STYLES = `
-.stat-card {
-	transition: transform 0.25s ease, box-shadow 0.25s ease;
-	cursor: default;
-}
-.stat-card:hover {
-	transform: translateY(-6px);
-}
-.stat-card--primary { border-left: 3px solid #5B8CFF; }
-.stat-card--primary:hover { box-shadow: 0 8px 24px rgba(91, 140, 255, 0.35); }
-.stat-card--info { border-left: 3px solid #38BDF8; }
-.stat-card--info:hover { box-shadow: 0 8px 24px rgba(56, 189, 248, 0.35); }
-.stat-card--success { border-left: 3px solid #22C55E; }
-.stat-card--success:hover { box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35); }
-.stat-card--warning { border-left: 3px solid #F59E0B; }
-.stat-card--warning:hover { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35); }
-.stat-card--danger { border-left: 3px solid #EF4444; }
-.stat-card--danger:hover { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
-`;
+import DeviceDetailCharts from './DeviceDetailCharts';
+import { STAT_CARD_STYLES } from './sharedStyles';
 
 /** Placeholder dashboard when monitor API is unavailable — keeps the UI visible. */
 const EMPTY_DASHBOARD: DeviceDashboardData = {
@@ -63,7 +36,7 @@ const EMPTY_DASHBOARD: DeviceDashboardData = {
 	analog_in_4: NaN,
 };
 
-interface DashboardStatisticsCardsProps {
+interface DeviceDetailMonitorProps {
 	deviceId: number | string;
 	deviceName?: string;
 }
@@ -96,7 +69,20 @@ const StatusDot: React.FC<{ active: boolean; dangerWhenActive?: boolean }> = ({
 	/>
 );
 
-const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
+/**
+ * DeviceDetailMonitor — the full monitor panel for a single device's detail page.
+ * This is specific to the device detail view and is completely independent
+ * from the main dashboard's MainDashboardMonitor component.
+ *
+ * Differences from MainDashboardMonitor:
+ *  - Per-device data (mode, charging toggle, fan status, etc.)
+ *  - Interactive controls (toggle charging, digital outputs)
+ *  - Device-specific GPIO data from /api/devices/{id}/data/
+ *  - Device-specific charts from /api/devices/{id}/get-graphs/
+ *  - IOT data table filtered by device
+ *  - Status dots instead of aggregate counts
+ */
+const DeviceDetailMonitor: React.FC<DeviceDetailMonitorProps> = ({
 	deviceId,
 	deviceName,
 }) => {
@@ -110,7 +96,6 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 		queryFn: () => getDeviceDashboard(deviceId),
 		enabled: !!deviceId,
 		retry: 1,
-		// Keep polling only while live data is available; don't spam a missing endpoint
 		refetchInterval: (query) => (query.state.status === 'error' ? false : 10_000),
 	});
 
@@ -323,8 +308,8 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 			{/* Card 4 — GPIO Data (from /api/devices/{id}/data/ — latest record) */}
 			<GpioDataFromApi deviceId={deviceId} />
 
-			{/* Dynamic Charts — rendered from API response (dummy data for now) */}
-			<DeviceCharts deviceId={deviceId} />
+			{/* Device-specific Charts — from /api/devices/{id}/get-graphs/ */}
+			<DeviceDetailCharts deviceId={deviceId} />
 
 			{/* IOT Data Table — fetched from /api/data/iot-data/ */}
 			<Card className='shadow-sm' borderSize={1}>
@@ -337,4 +322,4 @@ const DashboardStatisticsCards: React.FC<DashboardStatisticsCardsProps> = ({
 	);
 };
 
-export default DashboardStatisticsCards;
+export default DeviceDetailMonitor;

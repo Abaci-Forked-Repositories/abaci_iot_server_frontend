@@ -1,6 +1,6 @@
 // ─── Theme · Metro Mosaic (slug: metro-mosaic) ────────────────────────────────
 // Soft matte transit map — pastel line colors, route-map dividers, slide-in token.
-
+@use "sass:math";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap');
 
 $mm-bg: #e8eef5;
@@ -175,7 +175,7 @@ $mm-line-gold: #c9a86c;
 		@for $i from 0 through 23 {
 			&:nth-child(#{$i + 2}) {
 				$col: $i % 6;
-				$row: floor($i / 6);
+				$row: math.floor(math.div($i, 6));
 				left: percentage(0.04 + $col * 0.16);
 				top: percentage(0.08 + $row * 0.22);
 				width: 12%;

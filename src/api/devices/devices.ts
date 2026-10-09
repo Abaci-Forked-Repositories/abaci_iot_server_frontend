@@ -1,5 +1,6 @@
 // api call for devices list + CRUD
 import { authAxios } from '../../axiosInstance';
+// DeviceChartConfig is no longer needed here — normalization happens in DeviceDetailCharts
 import { baseURL } from '../../helpers/baseURL';
 
 /** Shape returned by GET /api/devices/ */
@@ -251,6 +252,19 @@ export const updateDeviceDashboard = async (
 		return unwrapDashboard(response.data);
 	} catch (error) {
 		console.error('Error updating device dashboard:', error);
+		throw error;
+	}
+};
+
+// api call for charts in the device dashboard
+// Returns raw API response (keyed object like { "U": { ... } }) —
+// normalization is handled by normalizeGraphsResponse in DeviceDetailCharts
+export const getDeviceCharts = async (id: number | string): Promise<unknown> => {
+	try {
+		const response = await authAxios.get(`${baseURL}/api/devices/${id}/get-graphs/`);
+		return response.data;
+	} catch (error) {
+		console.error('Error fetching device charts:', error);
 		throw error;
 	}
 };
