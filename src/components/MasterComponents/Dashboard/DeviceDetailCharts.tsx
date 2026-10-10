@@ -63,15 +63,19 @@ const toNumber = (p: RawPoint): number | null => {
 	return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * Format an ISO timestamp from the API for the X-axis.
+ * Shows the exact UTC time from the response — no timezone conversion.
+ * e.g. "2026-10-09T12:45:39.972596Z" → "12:45:39"
+ */
 const formatTime = (iso: string): string => {
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return iso;
-	return d.toLocaleTimeString('en-IN', {
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false,
-	});
+	// Use getUTC* methods to show the exact time from the API response
+	const hh = String(d.getUTCHours()).padStart(2, '0');
+	const mm = String(d.getUTCMinutes()).padStart(2, '0');
+	const ss = String(d.getUTCSeconds()).padStart(2, '0');
+	return `${hh}:${mm}:${ss}`;
 };
 
 /**
@@ -214,7 +218,7 @@ const DeviceDetailCharts: React.FC<{ deviceId: number | string }> = ({ deviceId 
 		queryKey: ['device-charts', deviceId],
 		queryFn: () => getDeviceCharts(deviceId),
 		enabled: !!deviceId,
-		refetchInterval: 10_000,
+		refetchInterval: 30_000,
 	});
 
 	const charts = useMemo(() => normalizeGraphsResponse(data), [data]);
