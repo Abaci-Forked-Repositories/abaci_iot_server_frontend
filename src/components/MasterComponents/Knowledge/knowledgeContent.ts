@@ -1,14 +1,11 @@
 export type KnowledgeTopicId =
 	| 'overview'
-	| 'queues'
-	| 'queue-groups'
-	| 'schedules'
-	| 'serving-points'
-	| 'next-queue'
-	| 'tokens'
-	| 'token-users'
-	| 'screens'
-	| 'templates';
+	| 'devices'
+	| 'device-groups'
+	| 'dashboard'
+	| 'sites'
+	| 'users'
+	| 'subscriptions';
 
 export interface KnowledgeTerm {
 	name: string;
@@ -45,453 +42,261 @@ export const KNOWLEDGE_TOPICS: KnowledgeTopic[] = [
 		icon: 'AutoAwesome',
 		accent: 'primary',
 		summary:
-			'ABACI Queue Management is built around a simple daily flow: you set up service lines, decide when they are open, assign counters to serve customers, issue tokens, and optionally move a customer to another service when the first step is done.',
+			'Mini IOT Monitoring System is built around monitoring UPS/Inverter devices across multiple sites. You register devices, assign them to sites and groups, and the dashboard shows real-time telemetry — voltage, temperature, battery status, load, and alert conditions.',
 		paragraphs: [
-			'Start in Queue Management. Create the queues your organisation needs (for example Reception, Consultation, Billing). If you have many queues, put related ones into queue groups so the list stays easy to browse.',
-			'Each queue needs schedules — the time ranges when that queue can issue and serve tokens. Without a schedule, the queue has no active working window for the day.',
-			'Serving points are the counters or desks. You can link one serving point to several queues at once, so the same counter can serve more than one line. When a serving point is linked to a schedule, serving windows appear; staff open a window to call and complete tokens.',
-			'Customers (token users) receive tokens for a queue/schedule. Public screens show waiting and called tokens using templates you design.',
-			'If a customer must visit more than one service, configure Next Queue on the first queue. When service is completed, staff can send the customer into the next queue with a new token.',
+			'Start by creating Sites — the physical locations where your UPS/Inverter devices are installed (e.g., "Server Room A – Delhi", "Branch Office – Mumbai").',
+			'Register Devices in the system. Each device represents a physical UPS/Inverter unit. The system automatically receives telemetry data including output voltage, battery voltage, temperature, load percentage, and GPIO pin states.',
+			'The Dashboard gives you an aggregate view across all devices — min/max values, online/offline counts, and active alerts for short circuits or overloads.',
+			'Drill into a specific device to see its real-time status, control digital output pins remotely, and view historical time-series charts for all parameters.',
+			'Use Device Groups to logically organize devices (e.g., "All Server Room UPS units", "Critical Infrastructure").',
 		],
 		steps: [
-			'Create queues (and groups if needed).',
-			'Add schedules for the times each queue should run.',
-			'Create serving points and link them to the right queues and schedules.',
-			'Issue or accept tokens, then serve them from serving windows.',
-			'Optionally complete into a next queue for multi-step journeys.',
-			'Use Screens + Templates so visitors can see called numbers in the lobby.',
+			'Create sites for each physical location.',
+			'Register devices and assign them to sites.',
+			'Monitor the main dashboard for aggregate health status.',
+			'Drill into device details for real-time data and charts.',
+			'Use device groups to organize and filter devices.',
+			'Manage users and subscriptions as needed.',
 		],
 		terms: [
 			{
-				name: 'Queue',
+				name: 'Device',
 				description:
-					'A service line people wait in. Everything else (schedules, tokens, next-queue links) hangs off a queue.',
+					'A physical UPS/Inverter unit registered in the system. Each device reports telemetry data including voltage, temperature, battery, and GPIO states.',
 			},
 			{
-				name: 'Schedule',
+				name: 'Site',
 				description:
-					'A start–end time window for a queue. It defines when tokens can be issued and when counters can serve that queue.',
+					'A physical location where devices are installed. Helps organize and filter devices by branch, office, or facility.',
 			},
 			{
-				name: 'Serving point',
+				name: 'Dashboard',
 				description:
-					'A physical or logical counter. One serving point can handle multiple queues in the same period.',
+					'The main overview screen showing aggregate statistics and alert counts across all devices and sites.',
 			},
 			{
-				name: 'Serving window',
+				name: 'GPIO',
 				description:
-					'The working slot for a serving point under a schedule. Day-to-day call / serve / complete actions happen here.',
+					'General Purpose Input/Output pins on the device. Digital inputs read sensor states; digital outputs can be toggled remotely.',
 			},
 			{
-				name: 'Token',
+				name: 'Alert',
 				description:
-					'The ticket number given to a customer for a specific queue and schedule (e.g. A015).',
-			},
-			{
-				name: 'Next queue',
-				description:
-					'A follow-up queue configured on a queue so staff can move a customer to the next service after completing the current one.',
+					'Critical conditions detected on a device: short circuit, overload, or fan failure. Shown prominently on the dashboard.',
 			},
 		],
 	},
 	{
-		id: 'queues',
-		title: 'Queues',
-		subtitle: 'Creating a service line and its settings',
-		icon: 'Queue',
+		id: 'devices',
+		title: 'Devices',
+		subtitle: 'Registering and monitoring UPS/Inverter units',
+		icon: 'Devices',
 		accent: 'primary',
 		summary:
-			'A queue is where you define the service itself. When you add a queue, you choose how tokens are numbered, how many can be issued, whether customers may postpone, and which counters or follow-up queues are connected.',
+			'A device represents a physical UPS or Inverter in the field. Once registered, it reports live telemetry — output voltage, battery voltage, temperature, load %, charging status, and GPIO pin states.',
 		paragraphs: [
-			'Open Queue Management and add a queue. Give it a clear name that staff and visitors will recognise. After the queue exists, you attach schedules and serving points so it can actually run.',
-			'On create, you can already select serving points. Later you can also manage links from the serving point side. The same counter may be selected on several queues.',
+			'Add a device with its model, identifier, serial number, and WiFi configuration. The system will begin receiving data from the hardware unit automatically.',
+			'Each device detail page shows a real-time monitor panel with current values, alert indicators, and controllable digital outputs. Historical charts show parameter trends over time.',
+			'You can remotely toggle digital output pins (GPIO) to turn connected equipment on or off without visiting the site physically.',
 		],
 		steps: [
-			'Go to Queue Management → add a queue.',
-			'Fill name and optional description.',
-			'Set token prefix, limit, grace period, and toggles as needed.',
-			'Optionally choose next queues and serving points.',
-			'Save, then create schedules for that queue.',
+			'Go to Devices → add a device.',
+			'Fill model, identifier, serial number, and description.',
+			'Optionally configure WiFi settings (IP, SSID, gateway).',
+			'Save — the device begins reporting telemetry automatically.',
+			'Open device detail to monitor live data and control outputs.',
 		],
 		terms: [
 			{
-				name: 'Queue name',
-				description: 'Required label shown in lists, screens, and serving views.',
+				name: 'Model',
+				description: 'The UPS/Inverter model name or number (e.g., "APC Smart-UPS 3000").',
 			},
 			{
-				name: 'Description',
-				description: 'Optional note for staff about what this queue is used for.',
+				name: 'Identifier',
+				description: 'A unique label to recognize this device in lists and dashboards.',
 			},
 			{
-				name: 'Token prefix',
-				description:
-					'Letters or text placed before the number (e.g. A → A001). Helps distinguish queues on displays. Leave blank for numbers only.',
+				name: 'Serial number',
+				description: 'Hardware serial number for warranty and tracking purposes.',
 			},
 			{
-				name: 'Token limit',
-				description: 'Maximum tokens this queue is allowed to issue (default capacity).',
+				name: 'WiFi config',
+				description: 'Network settings (IP, mask, gateway, SSID, password) for the device connection.',
 			},
 			{
-				name: 'Grace period (minutes)',
-				description:
-					'Extra minutes after a token is called before it may be treated as missed or late.',
-			},
-			{
-				name: 'Allow postpone',
-				description:
-					'When enabled, a waiting customer can postpone their turn instead of cancelling or losing place immediately.',
-			},
-			{
-				name: 'Reporting enabled',
-				description: 'When on, this queue is included in reporting outputs.',
-			},
-			{
-				name: 'Next queue (field)',
-				description:
-					'Other queues that can receive the customer after this one is completed. Used during “complete service”.',
-			},
-			{
-				name: 'Serving points (on create)',
-				description:
-					'Counters assigned to serve this queue. A serving point may already serve other queues at the same time.',
+				name: 'Firmware version',
+				description: 'Current firmware version running on the device.',
 			},
 		],
 		tips: [
 			{
-				title: 'Name clearly',
-				text: 'Use names visitors hear at the desk (e.g. “Passport – New”) rather than internal codes alone.',
+				title: 'Use consistent naming',
+				text: 'Name devices with location + purpose (e.g., "Delhi-ServerRoom-UPS1") so they are easy to find in the dashboard.',
 			},
 		],
 	},
 	{
-		id: 'queue-groups',
-		title: 'Queue groups',
-		subtitle: 'Organising related queues',
+		id: 'device-groups',
+		title: 'Device groups',
+		subtitle: 'Organising related devices',
 		icon: 'FolderOpen',
 		accent: 'info',
 		summary:
-			'Queue groups are folders for related queues. They do not change how tokens are served; they only make large setups easier to navigate in Queue Management.',
+			'Device groups let you organize devices into logical collections. They do not change how devices report data; they only make large setups easier to navigate and filter.',
 		paragraphs: [
-			'Create a group, give it a name, and select member queues. You can move queues in or out of a group later without recreating them.',
-			'Use groups when you have many queues under the same department or location (for example all banking counters, or all clinic rooms).',
+			'Create a group, give it a name, and add devices. You can move devices in or out of a group later without re-registering them.',
+			'Use groups when you have many devices under the same department, location, or criticality level (for example "Critical UPS", "Branch Office Devices").',
 		],
 		terms: [
 			{
 				name: 'Group name',
-				description: 'Title of the collection shown in the Queue Groups tab.',
+				description: 'Title of the collection shown in the Device Groups tab.',
 			},
 			{
 				name: 'Description',
-				description: 'Optional explanation of why these queues are grouped.',
+				description: 'Optional explanation of why these devices are grouped.',
 			},
 			{
-				name: 'Member queues',
-				description: 'Queues belonging to this group. Membership is for browsing and management only.',
+				name: 'Member devices',
+				description: 'Devices belonging to this group. Membership is for browsing and management only.',
 			},
 		],
 	},
 	{
-		id: 'schedules',
-		title: 'Schedules',
-		subtitle: 'When a queue is open for work',
-		icon: 'Event',
+		id: 'dashboard',
+		title: 'Dashboard',
+		subtitle: 'Real-time monitoring overview',
+		icon: 'Dashboard',
 		accent: 'warning',
 		summary:
-			'A schedule is the operating period for a queue. It tells the system from when to when tokens may be issued and when serving points can have windows for that queue.',
+			'The main dashboard shows an aggregate view of all devices across all sites. It displays summary statistics, alert counts, and min/max ranges for key parameters like voltage, temperature, and battery level.',
 		paragraphs: [
-			'You can create schedules from the Schedules menu or from inside a queue’s detail. Set start and end date-time, token number range, and limits.',
-			'After a schedule exists, attach serving points so those counters get serving windows for that period. Completed or cancelled schedules lock date and token settings so history stays stable.',
+			'Statistics cards show total, online, and offline device counts, plus user and site totals.',
+			'The monitor panel shows aggregate min/max values for output voltage, battery voltage, temperature, and load percentage across all devices.',
+			'Alert indicators show the number of devices currently experiencing short circuits or overloads — these require immediate attention.',
+			'Digital GPIO summary shows how many inputs/outputs are currently on vs off across all devices.',
 		],
 		steps: [
-			'Open Schedules (or a queue detail) and create a schedule.',
-			'Set start/end, token from–to, and limit.',
-			'Adjust postpone / reporting if needed for this window.',
-			'Add serving points to the schedule so windows are created.',
+			'Open the Dashboard from the sidebar.',
+			'Review statistics cards for high-level counts.',
+			'Check the monitor panel for min/max parameter ranges.',
+			'Look for alert indicators (short circuit, overload).',
+			'Click into a device for detailed real-time data.',
 		],
 		terms: [
 			{
-				name: 'Start / End',
+				name: 'Min/Max range',
 				description:
-					'Date and time the schedule runs. End must be after start; a new schedule cannot start in the past.',
-			},
-			{
-				name: 'Token from / Token to',
-				description: 'Numeric range used when generating token numbers inside this schedule.',
-			},
-			{
-				name: 'Token limit',
-				description: 'How many tokens this schedule may issue before it is full.',
-			},
-			{
-				name: 'Token prefix (schedule)',
-				description:
-					'Optional override of the queue prefix for this schedule. New schedules usually inherit the queue default.',
-			},
-			{
-				name: 'Allow postpone / Reporting',
-				description: 'Schedule-level behaviour for postponing tokens and including this period in reports.',
-			},
-			{
-				name: 'Schedule status',
-				description:
-					'Lifecycle of the period (e.g. upcoming, active, completed, cancelled). Completed/cancelled schedules are not fully editable.',
-			},
-		],
-		tips: [
-			{
-				title: 'Plan shifts as schedules',
-				text: 'Morning and afternoon can be two schedules on the same queue with different limits or serving points.',
-			},
-		],
-	},
-	{
-		id: 'serving-points',
-		title: 'Serving points',
-		subtitle: 'Counters, desks, and their windows',
-		icon: 'Monitor',
-		accent: 'success',
-		summary:
-			'Serving points are where staff call and finish tokens. One serving point can be linked to multiple queues, so a single counter can work several lines without creating duplicate desks.',
-		paragraphs: [
-			'Create a serving point with a name, the queues it serves, optional description, active flag, and assigned staff users. Inactive points are not used until turned back on.',
-			'Serving windows appear when the point is connected to schedules. Open a window to see the current token, waiting list, and actions such as call, complete, skip, or postpone (depending on configuration).',
-			'This is the main day-to-day screen for operators at the counter.',
-		],
-		steps: [
-			'Add a serving point and select one or more queues.',
-			'Assign the staff who will operate that counter.',
-			'Ensure those queues have schedules and the point is linked to them.',
-			'Open a serving window and start serving tokens.',
-		],
-		terms: [
-			{
-				name: 'Serving point name',
-				description: 'Counter label staff see (e.g. Counter 3, Desk B).',
-			},
-			{
-				name: 'Queues (multi-select)',
-				description:
-					'Which queues this counter serves. Selecting several queues means one point can take tokens from each of them.',
-			},
-			{
-				name: 'Active',
-				description: 'Whether the point is available for serving right now.',
-			},
-			{
-				name: 'Assigned users',
-				description: 'Staff accounts allowed to work this serving point.',
-			},
-			{
-				name: 'Serving window',
-				description:
-					'A time-bound working session for the point under a schedule. Token actions for that period are done inside the window detail.',
-			},
-		],
-		tips: [
-			{
-				title: 'Multi-queue counters',
-				text: 'If one desk handles two services, attach both queues to the same serving point instead of creating two fake counters.',
-			},
-		],
-	},
-	{
-		id: 'next-queue',
-		title: 'Next queue',
-		subtitle: 'Moving a customer to another service',
-		icon: 'AltRoute',
-		accent: 'info',
-		summary:
-			'Next queue is how multi-step visits work. After staff finish serving a token, they can create a new token in another queue so the customer continues to the next desk without re-registering from scratch.',
-		paragraphs: [
-			'On the source queue, select one or more next queues. Only those destinations appear when completing service.',
-			'At the serving window, when the operator completes the token and next queues are configured, they choose the destination (if more than one). The system creates a follow-up token in that queue.',
-			'Example flow: Registration → Consultation → Pharmacy. Each step is its own queue; next-queue links chain them.',
-		],
-		steps: [
-			'Edit the first queue and set Next queue to the real follow-up services.',
-			'Serve the customer normally in the first serving window.',
-			'Complete the token and pick the next queue when prompted.',
-			'The customer then waits in the destination queue with a new token.',
-		],
-		terms: [
-			{
-				name: 'Source queue',
-				description: 'The queue where the customer is currently being served.',
-			},
-			{
-				name: 'Destination (next) queue',
-				description:
-					'The queue that receives a new token when service is completed with a next-queue choice.',
-			},
-			{
-				name: 'Complete with next queue',
-				description:
-					'The completion step where staff pick an active next queue; only active destinations can be selected.',
-			},
-		],
-		tips: [
-			{
-				title: 'Keep the list short',
-				text: 'Only configure real next steps. Too many options slows staff at completion time.',
-			},
-		],
-	},
-	{
-		id: 'tokens',
-		title: 'Tokens',
-		subtitle: 'Customer tickets through the day',
-		icon: 'ConfirmationNumber',
-		accent: 'primary',
-		summary:
-			'A token is the customer’s place in a queue for a given schedule. Status changes as staff call, serve, postpone, cancel, or complete the ticket.',
-		paragraphs: [
-			'Tokens are created when a customer registers or when staff issue one for a schedule. The number usually follows the queue or schedule prefix and range.',
-			'Operators manage tokens mainly from the serving window. Token Users shows the person behind the ticket and their history. Display screens show waiting and called tokens to the public.',
-		],
-		terms: [
-			{
-				name: 'Token number',
-				description: 'The visible ticket (e.g. A015) shown on screens and at the counter.',
-			},
-			{
-				name: 'Waiting',
-				description: 'Token is in line and not yet being served.',
-			},
-			{
-				name: 'Called / Serving',
-				description: 'Staff have called the token or are actively serving the customer.',
-			},
-			{
-				name: 'Postponed',
-				description: 'Customer deferred their turn; allowed only when postpone is enabled.',
-			},
-			{
-				name: 'Completed',
-				description: 'Service finished. May trigger creation of a token in a next queue.',
-			},
-			{
-				name: 'Cancelled',
-				description: 'Token was voided and will not be served.',
-			},
-			{
-				name: 'Priority',
-				description:
-					'A token can be marked priority so it is treated ahead of normal waiting tokens where the process allows.',
-			},
-		],
-	},
-	{
-		id: 'token-users',
-		title: 'Token users',
-		subtitle: 'Customers who hold tokens',
-		icon: 'Person',
-		accent: 'info',
-		summary:
-			'Token users are the people receiving service — not staff logins. The Token Users menu lists customers and lets you open each person’s profile and token history.',
-		paragraphs: [
-			'From a token user’s detail page you can update contact details, review all tokens, share a status link (QR), and perform allowed actions such as postpone, cancel, or prioritise a token.',
-			'Use this module when you need to find a person by name or phone and see where they are in the journey.',
-		],
-		terms: [
-			{
-				name: 'Token user',
-				description: 'Customer/visitor record linked to one or more tokens.',
-			},
-			{
-				name: 'Profile fields',
-				description: 'Name, email, phone, age, place, remarks — used to identify and contact the person.',
-			},
-			{
-				name: 'Token history',
-				description: 'List of that person’s tickets across queues and schedules, with status and times.',
-			},
-			{
-				name: 'Status share link',
-				description: 'QR / link the customer can use to check their token status.',
-			},
-		],
-	},
-	{
-		id: 'screens',
-		title: 'Screens',
-		subtitle: 'Lobby and counter displays',
-		icon: 'SmartScreen',
-		accent: 'success',
-		summary:
-			'Screens represent the physical displays that show queue information to visitors. You register each device, optionally put them in screen groups, and assign templates that define what content appears.',
-		paragraphs: [
-			'Add a screen with name, location, and network details as required. You can activate or deactivate a screen, control audio, and bind it to an IP so only that device can show the content.',
-			'Screen groups are for organisation only — deleting a group does not delete the screens inside it. Assign one or more templates to a screen and set interval/order if multiple templates rotate.',
-		],
-		terms: [
-			{
-				name: 'Screen',
-				description: 'One display device (TV/monitor) registered in the system.',
-			},
-			{
-				name: 'Screen group',
-				description: 'A folder of screens for easier management; does not remove member screens when deleted.',
+					'The lowest and highest values observed across all devices for a parameter. Useful to spot outliers.',
 			},
 			{
 				name: 'Online / Offline',
-				description: 'Whether the display is currently connected and reachable.',
+				description: 'Whether a device is currently connected and reporting data.',
 			},
 			{
-				name: 'Template assignment',
-				description: 'Which designed layouts this screen should show, including rotation interval and order.',
+				name: 'Short circuit count',
+				description: 'Number of devices currently detecting a short circuit condition.',
 			},
 			{
-				name: 'IP bind',
-				description: 'When enabled, the screen is restricted to its configured IP address.',
+				name: 'Overload count',
+				description: 'Number of devices currently operating beyond their rated load capacity.',
 			},
+		],
+		tips: [
 			{
-				name: 'Audio',
-				description: 'Whether call announcements or related audio are enabled on that screen.',
+				title: 'Watch the alerts',
+				text: 'Short circuit and overload alerts indicate conditions that can damage equipment. Investigate immediately when these appear.',
 			},
 		],
 	},
 	{
-		id: 'templates',
-		title: 'Templates',
-		subtitle: 'Layouts shown on display screens',
-		icon: 'ViewCompact',
-		accent: 'warning',
+		id: 'sites',
+		title: 'Sites',
+		subtitle: 'Physical locations for devices',
+		icon: 'Place',
+		accent: 'success',
 		summary:
-			'Templates are the visual layouts for public screens. You design zones on a canvas, choose a display theme, and link queues so waiting and called tokens appear the way you want.',
+			'Sites represent the physical locations where your UPS/Inverter devices are installed. Organizing devices by site makes it easy to monitor specific branches, offices, or facilities.',
 		paragraphs: [
-			'Create a template with a name, description, and orientation/resolution. In the template editor, place zones, pick themes, and attach the queues each zone should show.',
-			'After saving, assign the template to one or more screens. Screens then present live queue content using that design.',
+			'Create a site with a name and optional description. Then assign devices to that site when registering them.',
+			'Sites help filter the dashboard and device lists — you can quickly see all devices at a specific location and their health status.',
+		],
+		steps: [
+			'Go to Sites → add a site.',
+			'Enter name (e.g., "Mumbai Branch") and description.',
+			'Assign devices to the site from the Devices page.',
 		],
 		terms: [
 			{
-				name: 'Template',
-				description: 'A reusable screen layout for token/queue display.',
+				name: 'Site name',
+				description: 'Human-readable location label (e.g., "Delhi Data Center", "Chennai Office").',
 			},
 			{
-				name: 'Zone',
-				description:
-					'A rectangular area on the template canvas. Each zone can have its own theme and linked queues.',
+				name: 'Description',
+				description: 'Optional notes about the site — address, contact, or special instructions.',
+			},
+		],
+	},
+	{
+		id: 'users',
+		title: 'Users',
+		subtitle: 'Staff and administrator accounts',
+		icon: 'Person',
+		accent: 'info',
+		summary:
+			'User accounts control who can access the system. Administrators can create, edit, and deactivate users, and assign roles that determine which modules each user can view or modify.',
+		paragraphs: [
+			'Each user has a username, email, and role-based permissions. Superusers have full access to all modules.',
+			'Permissions are page-level — each module (Dashboard, Devices, Sites, etc.) can have separate read and write permissions per user role.',
+		],
+		terms: [
+			{
+				name: 'Superuser',
+				description: 'A user with full administrative access to all modules and settings.',
 			},
 			{
-				name: 'Display theme',
-				description: 'Visual style applied inside a zone (how tokens and boards look).',
+				name: 'Role',
+				description: 'A named set of permissions that can be assigned to users (e.g., "Viewer", "Operator", "Admin").',
 			},
 			{
-				name: 'Linked queues',
-				description: 'Queues whose tokens are shown in that zone.',
+				name: 'Active / Inactive',
+				description: 'Whether the user account is currently enabled. Inactive users cannot log in.',
+			},
+		],
+	},
+	{
+		id: 'subscriptions',
+		title: 'Subscriptions',
+		subtitle: 'License and subscription management',
+		icon: 'CardMembership',
+		accent: 'warning',
+		summary:
+			'Subscriptions track the licensing status for the system. Each subscription is tied to a user and defines the service period (start and end dates).',
+		paragraphs: [
+			'Subscriptions are typically managed during system activation and renewal. The license determines how many devices can be registered and what features are available.',
+			'Check the subscription list to see active and expired licenses, and their associated user accounts.',
+		],
+		terms: [
+			{
+				name: 'Start date',
+				description: 'When the subscription becomes active.',
 			},
 			{
-				name: 'Orientation / resolution',
-				description: 'Target screen size and landscape/portrait mode for the template.',
+				name: 'End date',
+				description: 'When the subscription expires. After this date, features may be restricted.',
+			},
+			{
+				name: 'Associated user',
+				description: 'The user account that owns this subscription.',
 			},
 		],
 	},
 ];
 
 export const KNOWLEDGE_FLOW = [
-	{ id: 'queue', label: 'Queue', icon: 'Queue' },
-	{ id: 'schedule', label: 'Schedule', icon: 'Event' },
-	{ id: 'point', label: 'Serving point', icon: 'Monitor' },
-	{ id: 'token', label: 'Token', icon: 'ConfirmationNumber' },
-	{ id: 'next', label: 'Next queue', icon: 'AltRoute' },
+	{ id: 'site', label: 'Site', icon: 'Place' },
+	{ id: 'device', label: 'Device', icon: 'Devices' },
+	{ id: 'dashboard', label: 'Dashboard', icon: 'Dashboard' },
+	{ id: 'monitor', label: 'Monitor', icon: 'Monitor' },
+	{ id: 'alert', label: 'Alerts', icon: 'Warning' },
 ] as const;

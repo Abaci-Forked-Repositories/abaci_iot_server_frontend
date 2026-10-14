@@ -1,5 +1,9 @@
 /**
  * Licensing tab data — GET api/administration/license-details/
+ *
+ * Note: Backend field names like `no_of_serving_point_license` are inherited
+ * from the original queue-management product. They represent licensed slot
+ * counts and must match the API response exactly.
  */
 
 import { authAxios } from '../../axiosInstance';

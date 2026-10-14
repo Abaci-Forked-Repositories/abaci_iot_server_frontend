@@ -20,7 +20,7 @@ interface Props {
 
 /** Public display / kiosk routes must never be blocked by the activation gate. */
 function isPublicScreenPath(pathname: string): boolean {
-	return pathname.includes('/public') || pathname.startsWith('/screenstokenstatus');
+	return pathname.includes('/public');
 }
 
 /**

@@ -9,27 +9,23 @@ export interface DashboardCountGroup {
 	total?: number;
 	active?: number;
 	inactive?: number;
-	running?: number;
-	completed?: number;
-	cancelled?: number;
-	on_hold?: number;
+	online?: number;
+	offline?: number;
 	by_status?: Record<string, DashboardStatusCount>;
 }
 
 export interface DashboardStatisticsResponse {
-	queues?: DashboardCountGroup;
-	serving_points?: DashboardCountGroup;
-	tokens?: DashboardCountGroup;
-	schedules?: DashboardCountGroup;
+	devices?: DashboardCountGroup;
+	sites?: DashboardCountGroup;
 	users?: DashboardCountGroup;
 }
 
 const unwrap = <T>(request: Promise<{ data: T }>) => request.then((response) => response.data);
 
-/** GET /api/administration/dashboard/statistics/ */
+/** GET /api/dashboard/statistics/ */
 export const dashboardApi = {
 	statistics: () =>
 		unwrap<DashboardStatisticsResponse>(
-			authAxios.get('api/administration/dashboard/statistics/'),
+			authAxios.get('api/dashboard/statistics/'),
 		),
 };

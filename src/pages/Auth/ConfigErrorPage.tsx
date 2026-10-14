@@ -30,7 +30,7 @@ const ConfigErrorPage: React.FC<Props> = ({
 					</div>
 					<img
 						src={QueIconLogo}
-						alt='Queue Management'
+						alt='Mini IOT'
 						className='activation-onboarding__logo'
 						width={88}
 						height={72}

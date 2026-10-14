@@ -28,11 +28,13 @@ export interface SystemConfig {
 	is_a_deactivated_system: boolean;
 	deactivation_date: string | null;
 	deactivation_key: string | null;
+	/** Backend field — licensed sensor/device count (inherited API name). */
 	no_of_sensor_license: number;
 	/** Present when backend reports currently used sensor slots. */
 	active_sensors?: number;
+	/** Backend field — licensed slot count (inherited API name). */
 	no_of_serving_point_license: number;
-	/** Present when backend reports currently used serving point slots. */
+	/** Currently used slots (inherited API name). */
 	active_serving_points?: number;
 	customer_id: string;
 	cloud_connectivity_status: boolean;

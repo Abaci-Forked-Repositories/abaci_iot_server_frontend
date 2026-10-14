@@ -52,10 +52,8 @@ const SUMMARY_TILES: Array<{
 	icon: string;
 	color: TColor;
 }> = [
-	{ key: 'queues', label: 'Queues', icon: 'Layers', color: 'primary' },
-	{ key: 'serving_points', label: 'Serving Points', icon: 'Store', color: 'info' },
-	{ key: 'tokens', label: 'Tokens', icon: 'ConfirmationNumber', color: 'warning' },
-	{ key: 'schedules', label: 'Schedules', icon: 'CalendarToday', color: 'success' },
+	{ key: 'devices', label: 'Devices', icon: 'Devices', color: 'primary' },
+	{ key: 'sites', label: 'Sites', icon: 'Place', color: 'info' },
 	{ key: 'users', label: 'Users', icon: 'People', color: 'secondary' },
 ];
 

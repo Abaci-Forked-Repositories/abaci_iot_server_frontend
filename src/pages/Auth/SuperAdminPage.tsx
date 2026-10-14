@@ -107,7 +107,7 @@ const SuperAdminPage: React.FC<Props> = ({ usedMock = false, onCreated }) => {
 					</div>
 					<img
 						src={QueIconLogo}
-						alt='Queue Management'
+						alt='Mini IOT'
 						className='activation-onboarding__logo'
 						width={88}
 						height={72}

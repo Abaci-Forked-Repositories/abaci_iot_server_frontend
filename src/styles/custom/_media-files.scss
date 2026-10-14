@@ -79,7 +79,7 @@
 
 // Match the gap under the header: header margin-bottom + page padding-top.
 // Without this, Card stretch fills down to the footer (footer has margin-top: 0).
-.queue-management-workspace-card.card-stretch-full {
+.workspace-card.card-stretch-full {
 	display: flex;
 	flex-direction: column;
 	margin-bottom: calc(#{$modern-design-size} + #{$grid-gutter-width});

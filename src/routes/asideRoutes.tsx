@@ -8,8 +8,6 @@ const asides: RouteProps[] = [
 	{ path: '/createsuperadmin', element: null },
 	{ path: pagesNotInSideBar.Register.path, element: null },
 	{ path: pagesNotInSideBar.ForgotPassword.path, element: null },
-	{ path: '/public/token-status', element: null },
-	{ path: '/screenstokenstatus/:uuid', element: null },
 	{ path: '*', element: <MainSidebar /> },
 	{ path: '/public/error', element: null },
 	{ path: pagesNotInSideBar.PrivacyPolicy.path, element: null },

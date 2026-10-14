@@ -50,7 +50,7 @@ const ActivationSuccessPanel: React.FC<Props> = ({ details, onContinue, usedMock
 					</div>
 					<img
 						src={QueIconLogo}
-						alt='Queue Management'
+						alt='Mini IOT'
 						className='activation-onboarding__logo'
 						width={88}
 						height={72}
@@ -64,7 +64,7 @@ const ActivationSuccessPanel: React.FC<Props> = ({ details, onContinue, usedMock
 
 				<ul className='activation-onboarding__details'>
 					<li>
-						<span>Serving point license</span>
+						<span>Device license slots</span>
 						<span>{details.no_of_serving_point_license ?? '—'}</span>
 					</li>
 					<li>

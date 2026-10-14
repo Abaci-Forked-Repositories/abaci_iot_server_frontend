@@ -11,8 +11,6 @@ import ProtectedRoute from './ProtectedRoute';
 import Activation from '../../pages/Auth/CreateOrganization';
 import AdminSetup from '../../pages/Auth/AdminSetup';
 import LicenceSetup from '../../pages/Auth/LicenceSetup';
-import TokenStatusPage from '../../pages/PublicPages/TokenStatusPage';
-
 const ContentRoutes = () => {
 	const { userData, permissions } = useContext(AuthContext);
 
@@ -44,8 +42,7 @@ const ContentRoutes = () => {
 			<Route path='/createsuperadmin' element={<Activation />} />
 			<Route path='/public/activation/:string' element={<Registration />} />
 			<Route path='/public/error' element={<ErrorPage />} />
-			<Route path='/public/token-status' element={<TokenStatusPage />} />
-		<Route path='/licence_setup' element={<LicenceSetup />} />
+			<Route path='/licence_setup' element={<LicenceSetup />} />
 
 			{/* Protected Routes */}
 			{RouteConfig.map((page) => {

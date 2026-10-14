@@ -1,5 +1,5 @@
 import React from 'react';
-import './QueueManagementSkeleton.css';
+import './SkeletonShimmer.css';
 import './ThumbnailCardGridSkeleton.css';
 
 export type ThumbnailCardGridSkeletonLayout = 'grid' | 'flex';

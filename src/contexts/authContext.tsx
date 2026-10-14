@@ -46,7 +46,6 @@ interface IAuthContextProviderProps {
 function shouldSkipAuthBoot(pathname: string): boolean {
 	return (
 		pathname.includes('public') ||
-		pathname.startsWith('/screenstokenstatus') ||
 		pathname === '/login' ||
 		pathname === '/customer-login' ||
 		pathname === '/licence_setup' ||
