@@ -310,6 +310,9 @@ const Login = ({ isSignUp }) => {
 	};
 
 	const handleSignin = (values) => {
+		// Clear previous errors when user retries
+		formik.setFieldError('loginPassword', undefined);
+		formik.setFieldError('loginUsername', undefined);
 		setWaitingForAxios(true);
 
 		const request = reset
@@ -343,19 +346,31 @@ const Login = ({ isSignUp }) => {
 				navigate('/');
 			})
 			.catch((error) => {
-				const status = error.response?.status;
+				const status = error?.response?.status;
 				const serverMessage = getApiErrorMessage(error);
 
+				// 401/403 with JSON = real auth error (wrong credentials)
 				if (status === 401 || status === 403) {
 					if (serverMessage === 'Current password is incorrect') {
 						formik.setFieldError('confirmPassword', 'Passwords do not match');
 						return;
 					}
+					// Show the backend's auth error message (e.g., "Invalid credentials")
+					formik.setFieldError('loginPassword', serverMessage);
+					formik.setFieldError('loginUsername', ' ');
+					return;
 				}
 
+				// All other errors (network, HTML response, 500, etc.) — show as
+				// a single inline error on the password field. The toast is suppressed
+				// for server-unavailable scenarios to avoid duplicate noise.
 				formik.setFieldError('loginPassword', serverMessage);
 				formik.setFieldError('loginUsername', ' ');
-				showErrorNotification(error);
+
+				// Only show toast for non-auth, non-network errors
+				if (status && status !== 401 && status !== 403) {
+					showErrorNotification(error);
+				}
 			})
 			.finally(() => {
 				setWaitingForAxios(false);

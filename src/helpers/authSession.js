@@ -51,14 +51,38 @@ export const clearAuthSession = () => {
 /**
  * Extract a user-facing message from API error responses.
  * Supports shapes like `{ error: "..." }`, `{ message: "..." }`, `{ detail: "..." }`.
+ *
+ * SANITIZATION: If the response body is HTML (e.g., an Nginx 404 page),
+ * it is NEVER returned as-is. A safe fallback is used instead.
  */
 export const getApiErrorMessage = (error, fallback = 'Error occurred, please check your connection and try again!') => {
 	const data = error?.response?.data;
-	if (!data) {
-		return error?.message || fallback;
-	}
+
+	// ── HTML guard: never expose raw HTML from Nginx/Apache error pages ──
 	if (typeof data === 'string') {
+		if (/<html|<!DOCTYPE|<head|<body|nginx\/|apache\/|<pre>/i.test(data)) {
+			// Server returned an HTML error page instead of JSON
+			const status = error?.response?.status;
+			if (status === 404) {
+				return 'The API endpoint is not available. The backend may not be fully deployed yet.';
+			}
+			if (status >= 500 && status <= 504) {
+				return 'The server is temporarily unavailable. Please try again later.';
+			}
+			return 'Received an unexpected response from the server. Please try again later.';
+		}
 		return data;
+	}
+
+	if (!data) {
+		// Network error (no response) — don't expose Axios internals
+		if (!error?.response) {
+			if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+				return 'The request took too long. Please try again.';
+			}
+			return 'Unable to reach the server. Please check your connection and try again.';
+		}
+		return error?.message || fallback;
 	}
 	if (typeof data.error === 'string') {
 		return data.error;

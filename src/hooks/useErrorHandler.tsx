@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-// import AuthContext from '../contexts/authContext';
+import { getApiErrorMessage } from '../helpers/authSession';
 
 const formatFieldErrorMessages = (entries: [string, unknown][]): string =>
 	entries
@@ -7,11 +7,19 @@ const formatFieldErrorMessages = (entries: [string, unknown][]): string =>
 		.filter(Boolean)
 		.join('\n');
 
-const useErrorHandler = () => {
-	// const { setLogOut } = useContext(AuthContext);
+/** Check if a string looks like HTML from a server error page (Nginx, Apache, etc.) */
+const isHtmlContent = (value: unknown): boolean => {
+	if (typeof value !== 'string') return false;
+	return /<!DOCTYPE|<html|<head|<body|<title|nginx\/|apache\/|<pre>/i.test(value);
+};
 
+const useErrorHandler = () => {
 	const handleError = useCallback((error: any): string => {
 		if (typeof error === 'string') {
+			// Never render raw HTML that might be in the string
+			if (isHtmlContent(error)) {
+				return 'The server returned an unexpected response. Please try again later.';
+			}
 			return error;
 		}
 
@@ -19,6 +27,27 @@ const useErrorHandler = () => {
 
 		const response = error?.response;
 		const data = response?.data;
+
+		// ── HTML guard: server returned an error page instead of JSON ──
+		if (isHtmlContent(data)) {
+			const status = response?.status;
+			if (status === 404) {
+				return 'The API endpoint is not available. The backend may not be fully deployed yet.';
+			}
+			if (status >= 500 && status <= 504) {
+				return 'The server is temporarily unavailable. Please try again later.';
+			}
+			return 'Received an unexpected response from the server. Please try again later.';
+		}
+
+		// ── Network error: no response at all ──
+		if (!response) {
+			if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+				return 'The request took too long. Please try again.';
+			}
+			return 'Unable to reach the server. Please check your connection and try again.';
+		}
+
 		if (error?.response?.status === 400 || error?.response?.status === 500) {
 			const errors = error.response.data?.errors;
 
@@ -58,6 +87,11 @@ const useErrorHandler = () => {
 			errorMsg += error.message;
 		} else {
 			errorMsg += 'Something went wrong. Please check your connection and try again!';
+		}
+
+		// Final safety check: never let HTML leak through
+		if (isHtmlContent(errorMsg)) {
+			return 'The server returned an unexpected response. Please try again later.';
 		}
 
 		return errorMsg;
