@@ -51,6 +51,26 @@ export type GetIotDataParams = {
 	filters?: string;
 };
 
+/**
+ * Normalize an analog_ratio value which may arrive as:
+ *  - { source: string, parsedValue: number }  (object form)
+ *  - a plain number                            (legacy / alternate form)
+ *  - null / undefined
+ */
+const normalizeRatio = (
+	value: unknown,
+): { source: string; parsedValue: number } | null => {
+	if (value == null) return null;
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return { source: String(value), parsedValue: value };
+	}
+	if (typeof value === 'object' && 'parsedValue' in (value as object)) {
+		const obj = value as { source?: string; parsedValue: number };
+		return { source: obj.source ?? String(obj.parsedValue), parsedValue: obj.parsedValue };
+	}
+	return null;
+};
+
 /** Normalize a single record from the API response. */
 export const normalizeIotDataRecord = (raw: unknown): IotDataRecord => {
 	const p = ((raw as any)?.data ?? raw ?? {}) as Record<string, unknown>;
@@ -70,10 +90,10 @@ export const normalizeIotDataRecord = (raw: unknown): IotDataRecord => {
 		analog_in_2: Number(p.analog_in_2 ?? 0),
 		analog_in_3: Number(p.analog_in_3 ?? 0),
 		analog_in_4: Number(p.analog_in_4 ?? 0),
-		analog_ratio_1: (p.analog_ratio_1 as { source: string; parsedValue: number } | null) ?? null,
-		analog_ratio_2: (p.analog_ratio_2 as { source: string; parsedValue: number } | null) ?? null,
-		analog_ratio_3: (p.analog_ratio_3 as { source: string; parsedValue: number } | null) ?? null,
-		analog_ratio_4: (p.analog_ratio_4 as { source: string; parsedValue: number } | null) ?? null,
+		analog_ratio_1: normalizeRatio(p.analog_ratio_1),
+		analog_ratio_2: normalizeRatio(p.analog_ratio_2),
+		analog_ratio_3: normalizeRatio(p.analog_ratio_3),
+		analog_ratio_4: normalizeRatio(p.analog_ratio_4),
 		analog_name_1: String(p.analog_name_1 ?? ''),
 		analog_name_2: String(p.analog_name_2 ?? ''),
 		analog_name_3: String(p.analog_name_3 ?? ''),

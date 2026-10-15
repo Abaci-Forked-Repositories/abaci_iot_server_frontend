@@ -108,7 +108,7 @@ const GpioDataFromApi: React.FC<GpioDataFromApiProps> = ({ deviceId }) => {
 										<span
 											className={`btn btn-sm px-4 ${active ? 'btn-success' : 'btn-secondary'}`}
 											style={{ minWidth: '70px', cursor: 'default', pointerEvents: 'none' }}>
-											{active ? 'HIGH' : 'LOW'}
+											{active ? 'ON' : 'OFF'}
 										</span>
 									</CardBody>
 								</Card>
