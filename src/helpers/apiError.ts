@@ -179,7 +179,7 @@ export const normalizeApiError = (
 		result.isServerUnavailable = true;
 		// 404 with HTML = server/proxy is up but API route doesn't exist yet
 		if (status === 404) {
-			result.message = 'The API endpoint is not available. The backend may not be fully deployed yet.';
+		result.message = 'The service is currently unavailable. Please try again later.';
 			result.isServerUnavailable = true;
 		} else if (status && status >= 500) {
 			result.message = DEFAULT_MESSAGES.server;

@@ -32,7 +32,7 @@ const useErrorHandler = () => {
 		if (isHtmlContent(data)) {
 			const status = response?.status;
 			if (status === 404) {
-				return 'The API endpoint is not available. The backend may not be fully deployed yet.';
+			return 'The service is currently unavailable. Please try again later.';
 			}
 			if (status >= 500 && status <= 504) {
 				return 'The server is temporarily unavailable. Please try again later.';

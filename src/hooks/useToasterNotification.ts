@@ -53,7 +53,7 @@ const useToasterNotification = () => {
     if (isHtmlContent(data)) {
       const status = message?.response?.status;
       if (status === 404) {
-        showNotification('Error', 'The API endpoint is not available. The backend may not be fully deployed yet.', 'danger');
+        showNotification('Error', 'The service is currently unavailable. Please try again later.', 'danger');
       } else if (status >= 500 && status <= 504) {
         showNotification('Error', 'The server is temporarily unavailable. Please try again later.', 'danger');
       } else {

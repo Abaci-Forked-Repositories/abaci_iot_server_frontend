@@ -12,7 +12,7 @@ interface Props {
 
 const ConfigErrorPage: React.FC<Props> = ({
 	title = 'Configuration error',
-	message = 'The system could not load activation status. Check that the backend is reachable, then try again.',
+	message = 'The system could not load activation status. Please check your connection and try again.',
 	onRetry,
 }) => {
 	const { darkModeStatus } = useDarkMode();
