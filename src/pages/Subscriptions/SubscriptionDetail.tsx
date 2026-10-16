@@ -80,9 +80,6 @@ const SubscriptionDetail: React.FC = () => {
 		enabled: !!subscriptionId,
 	});
 
-	/** Child subscriptions can have devices added/removed by the parent admin. */
-	const canManageDevices = subscription?.parent_subscription != null;
-
 	const deviceIdSet = useMemo(
 		() => new Set((subscription?.devices ?? []).map(Number)),
 		[subscription?.devices],
@@ -123,10 +120,7 @@ const SubscriptionDetail: React.FC = () => {
 
 	const handleRemoveDevice = useCallback(
 		(device: Device) => {
-			if (!subscriptionId || !canManageDevices) {
-				showErrorNotification('Devices can only be removed from child subscriptions.');
-				return;
-			}
+			if (!subscriptionId) return;
 			swalFire({
 				title: 'Remove device?',
 				icon: 'info',
@@ -150,7 +144,6 @@ const SubscriptionDetail: React.FC = () => {
 		},
 		[
 			subscriptionId,
-			canManageDevices,
 			darkModeStatus,
 			showErrorNotification,
 			showSuccessNotification,
@@ -159,10 +152,7 @@ const SubscriptionDetail: React.FC = () => {
 	);
 
 	const handleAddDevices = async (deviceIds: number[]) => {
-		if (!subscriptionId || !canManageDevices) {
-			showErrorNotification('Devices can only be added to child subscriptions.');
-			return;
-		}
+		if (!subscriptionId) return;
 		setSaving(true);
 		try {
 			await addDevicesToSubscription(subscriptionId, deviceIds);
@@ -359,15 +349,13 @@ const SubscriptionDetail: React.FC = () => {
 								<Icon icon='Devices' color='primary' size='2x' />
 								<span>Devices</span>
 							</div>
-							{canManageDevices && (
-								<Button
-									color='primary'
-									size='sm'
-									onClick={() => setAddOpen(true)}
-									isDisable={saving}>
-									+ Add Devices
-								</Button>
-							)}
+							<Button
+								color='primary'
+								size='sm'
+								onClick={() => setAddOpen(true)}
+								isDisable={saving}>
+								+ Add Devices
+							</Button>
 						</div>
 					</CardHeader>
 					<CardBody>
@@ -379,20 +367,16 @@ const SubscriptionDetail: React.FC = () => {
 									tableRef={tableRef}
 									columns={columns}
 									data={fetchDevices}
-									actions={
-										canManageDevices
-											? [
-													() => ({
-														icon: LinkOffIcon,
-														tooltip: 'Remove from subscription',
-														onClick: (event: any, row: Device) => {
-															event?.stopPropagation?.();
-															handleRemoveDevice(row);
-														},
-													}),
-												]
-											: []
-									}
+									actions={[
+										() => ({
+											icon: LinkOffIcon,
+											tooltip: 'Remove from subscription',
+											onClick: (event: any, row: Device) => {
+												event?.stopPropagation?.();
+												handleRemoveDevice(row);
+											},
+										}),
+									]}
 									onRowClick={(_event, rowData: Device | Device[]) => {
 										const device = Array.isArray(rowData) ? rowData[0] : rowData;
 										if (device?.id) navigate(`/devices/${device.id}`);

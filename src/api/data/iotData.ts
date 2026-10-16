@@ -147,3 +147,121 @@ export const getIotData = async ({
 		throw error;
 	}
 };
+
+export type AnalogFieldStats = {
+	min: number | null;
+	max: number | null;
+};
+
+export type DigitalFieldStats = {
+	on: number;
+	off: number;
+};
+
+export type DeviceAnalyticsPayload = {
+	analog_in_1: AnalogFieldStats;
+	analog_in_2: AnalogFieldStats;
+	analog_in_3: AnalogFieldStats;
+	analog_in_4: AnalogFieldStats;
+	digital_in_1: DigitalFieldStats;
+	digital_in_2: DigitalFieldStats;
+	digital_out_1: DigitalFieldStats;
+	digital_out_2: DigitalFieldStats;
+};
+
+export type SiteAnalytics = {
+	site_id: number | string;
+	date: string;
+	analytics: DeviceAnalyticsPayload;
+};
+
+export type MyDeviceAnalytics = {
+	subscription_ids: number[];
+	device_count: number;
+	date: string;
+	analytics: DeviceAnalyticsPayload;
+};
+
+const toNullableNumber = (value: unknown): number | null => {
+	if (value == null || value === '') return null;
+	const n = Number(value);
+	return Number.isFinite(n) ? n : null;
+};
+
+const normalizeAnalogStats = (raw: unknown): AnalogFieldStats => {
+	const obj = (raw ?? {}) as Record<string, unknown>;
+	return {
+		min: toNullableNumber(obj.min),
+		max: toNullableNumber(obj.max),
+	};
+};
+
+const normalizeDigitalStats = (raw: unknown): DigitalFieldStats => {
+	const obj = (raw ?? {}) as Record<string, unknown>;
+	return {
+		on: toNullableNumber(obj.on) ?? 0,
+		off: toNullableNumber(obj.off) ?? 0,
+	};
+};
+
+const normalizeAnalyticsPayload = (raw: unknown): DeviceAnalyticsPayload => {
+	const analyticsRaw = (raw ?? {}) as Record<string, unknown>;
+	return {
+		analog_in_1: normalizeAnalogStats(analyticsRaw.analog_in_1),
+		analog_in_2: normalizeAnalogStats(analyticsRaw.analog_in_2),
+		analog_in_3: normalizeAnalogStats(analyticsRaw.analog_in_3),
+		analog_in_4: normalizeAnalogStats(analyticsRaw.analog_in_4),
+		digital_in_1: normalizeDigitalStats(analyticsRaw.digital_in_1),
+		digital_in_2: normalizeDigitalStats(analyticsRaw.digital_in_2),
+		digital_out_1: normalizeDigitalStats(analyticsRaw.digital_out_1),
+		digital_out_2: normalizeDigitalStats(analyticsRaw.digital_out_2),
+	};
+};
+
+export const normalizeSiteAnalytics = (data: unknown): SiteAnalytics => {
+	const raw = (data ?? {}) as Record<string, unknown>;
+	return {
+		site_id: (raw.site_id as number | string) ?? '',
+		date: String(raw.date ?? ''),
+		analytics: normalizeAnalyticsPayload(raw.analytics),
+	};
+};
+
+export const normalizeMyDeviceAnalytics = (data: unknown): MyDeviceAnalytics => {
+	const raw = (data ?? {}) as Record<string, unknown>;
+	const subscriptionIds = Array.isArray(raw.subscription_ids)
+		? raw.subscription_ids.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+		: [];
+	return {
+		subscription_ids: subscriptionIds,
+		device_count: toNullableNumber(raw.device_count) ?? 0,
+		date: String(raw.date ?? ''),
+		analytics: normalizeAnalyticsPayload(raw.analytics),
+	};
+};
+
+/** GET /api/data/site-analytics/{siteId}/ — today's min/max per analog channel. */
+export const getSiteAnalytics = async (
+	siteId: number | string,
+): Promise<SiteAnalytics> => {
+	try {
+		const response = await authAxios.get(
+			`${baseURL}/api/data/site-analytics/${siteId}/`,
+		);
+		return normalizeSiteAnalytics(response.data);
+	} catch (error) {
+		console.error('Error fetching site analytics:', error);
+		throw error;
+	}
+};
+
+/** GET /api/data/my-device-analytics/ — today's analog min/max + digital on/off. */
+export const getMyDeviceAnalytics = async (): Promise<MyDeviceAnalytics> => {
+	try {
+		const response = await authAxios.get(`${baseURL}/api/data/my-device-analytics/`);
+		return normalizeMyDeviceAnalytics(response.data);
+	} catch (error) {
+		console.error('Error fetching my device analytics:', error);
+		throw error;
+	}
+};

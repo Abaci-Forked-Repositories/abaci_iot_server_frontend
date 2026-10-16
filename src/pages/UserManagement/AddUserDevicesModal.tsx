@@ -143,7 +143,7 @@ const AddUserDevicesModal: React.FC<AddUserDevicesModalProps> = ({
 		<Modal
 			isOpen={isOpen}
 			setIsOpen={setIsOpen}
-			size='md'
+			size='lg'
 			isCentered
 			fade
 			isStaticBackdrop={saving}>

@@ -165,73 +165,56 @@ const MainDashboardMonitor: React.FC = () => {
 				</CardBody>
 			</Card>
 
-			{/* Status Data — min + max */}
+			{/* Status Data — analog min/max from /api/data/my-device-analytics/ */}
 			<Card className='shadow-sm' borderSize={1}>
 				<CardBody>
 					<h5 className='fw-bold mb-4'>Status Data</h5>
 
 					<div className='row g-3'>
-						<div className='col-12 col-sm-6 col-md-4 col-xl'>
+						<div className='col-12 col-sm-6 col-xl-3'>
 							<Card className='h-100 text-center stat-card stat-card--primary' borderSize={1}>
 								<CardBody className='py-3'>
-									<Icon icon='Bolt' color='primary' size='2x' className='mb-2' />
+									<Icon icon='ShowChart' color='primary' size='2x' className='mb-2' />
 									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Output Voltage
+										Analog In 1
 									</div>
-									<MinMaxValue range={monitor.output_voltage} unit='V' />
+									<MinMaxValue range={monitor.analog_in_1} digits={2} />
 								</CardBody>
 							</Card>
 						</div>
 
-						<div className='col-12 col-sm-6 col-md-4 col-xl'>
+						<div className='col-12 col-sm-6 col-xl-3'>
 							<Card className='h-100 text-center stat-card stat-card--info' borderSize={1}>
 								<CardBody className='py-3'>
-									<Icon icon='FlashOn' color='info' size='2x' className='mb-2' />
+									<Icon icon='ShowChart' color='info' size='2x' className='mb-2' />
 									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Load Percentage
+										Analog In 2
 									</div>
-									<MinMaxValue range={monitor.load_percentage} unit='%' />
+									<MinMaxValue range={monitor.analog_in_2} digits={2} />
 								</CardBody>
 							</Card>
 						</div>
 
-						<div className='col-12 col-sm-6 col-md-4 col-xl'>
+						<div className='col-12 col-sm-6 col-xl-3'>
 							<Card className='h-100 text-center stat-card stat-card--success' borderSize={1}>
 								<CardBody className='py-3'>
-									<Icon
-										icon='BatteryChargingFull'
-										color='success'
-										size='2x'
-										className='mb-2'
-									/>
+									<Icon icon='ShowChart' color='success' size='2x' className='mb-2' />
 									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Battery Voltage
+										Analog In 3
 									</div>
-									<MinMaxValue range={monitor.battery_voltage} unit='V' />
+									<MinMaxValue range={monitor.analog_in_3} digits={2} />
 								</CardBody>
 							</Card>
 						</div>
 
-						<div className='col-12 col-sm-6 col-md-4 col-xl'>
+						<div className='col-12 col-sm-6 col-xl-3'>
 							<Card className='h-100 text-center stat-card stat-card--warning' borderSize={1}>
 								<CardBody className='py-3'>
-									<Icon icon='Thermostat' color='warning' size='2x' className='mb-2' />
+									<Icon icon='ShowChart' color='warning' size='2x' className='mb-2' />
 									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Temperature 1
+										Analog In 4
 									</div>
-									<MinMaxValue range={monitor.temperature_1} unit='°C' />
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-md-4 col-xl'>
-							<Card className='h-100 text-center stat-card stat-card--danger' borderSize={1}>
-								<CardBody className='py-3'>
-									<Icon icon='Thermostat' color='danger' size='2x' className='mb-2' />
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Temperature 2
-									</div>
-									<MinMaxValue range={monitor.temperature_2} unit='°C' />
+									<MinMaxValue range={monitor.analog_in_4} digits={2} />
 								</CardBody>
 							</Card>
 						</div>
@@ -239,12 +222,12 @@ const MainDashboardMonitor: React.FC = () => {
 				</CardBody>
 			</Card>
 
-			{/* GPIO Data — digital On/Off separately; analog Min/Max */}
+			{/* GPIO Data — digital on/off transitions from /api/data/my-device-analytics/ */}
 			<Card className='shadow-sm' borderSize={1}>
 				<CardBody>
 					<h5 className='fw-bold mb-4'>GPIO Data</h5>
 
-					<div className='row g-3 mb-3'>
+					<div className='row g-3'>
 						<div className='col-12 col-sm-6 col-xl-3'>
 							<Card className='h-100 text-center stat-card stat-card--primary' borderSize={1}>
 								<CardBody className='py-3'>
@@ -285,52 +268,6 @@ const MainDashboardMonitor: React.FC = () => {
 										Digital Out 2
 									</div>
 									<OnOffValue pair={monitor.digital_out_2} />
-								</CardBody>
-							</Card>
-						</div>
-					</div>
-
-					<div className='row g-3'>
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--primary' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Analog In 1
-									</div>
-									<MinMaxValue range={monitor.analog_in_1} digits={2} />
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--info' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Analog In 2
-									</div>
-									<MinMaxValue range={monitor.analog_in_2} digits={2} />
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--success' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Analog In 3
-									</div>
-									<MinMaxValue range={monitor.analog_in_3} digits={2} />
-								</CardBody>
-							</Card>
-						</div>
-
-						<div className='col-12 col-sm-6 col-xl-3'>
-							<Card className='h-100 text-center stat-card stat-card--warning' borderSize={1}>
-								<CardBody className='py-3'>
-									<div className='text-muted mb-2' style={{ fontSize: '0.8rem' }}>
-										Analog In 4
-									</div>
-									<MinMaxValue range={monitor.analog_in_4} digits={2} />
 								</CardBody>
 							</Card>
 						</div>

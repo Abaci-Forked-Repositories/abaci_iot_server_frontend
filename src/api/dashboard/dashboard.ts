@@ -1,5 +1,6 @@
 import { authAxios } from '../../axiosInstance';
 import { baseURL } from '../../helpers/baseURL';
+import { getMyDeviceAnalytics } from '../data/iotData';
 
 export interface DashboardCountGroup {
 	total: number;
@@ -175,11 +176,33 @@ export const getDashboardStatistics = async (): Promise<DashboardStatisticsRespo
 	}
 };
 
-/** GET /api/dashboard/ — aggregate main monitor (min/max, digital on/off) */
+/**
+ * Main dashboard status + GPIO from GET /api/data/my-device-analytics/.
+ * Analog channels feed Status Data; digital pins feed GPIO on/off counts.
+ * Alert fields are not provided by this endpoint and stay as NaN (shown as —).
+ */
 export const getMainDashboard = async (): Promise<MainDashboardData> => {
 	try {
-		const response = await authAxios.get(`${baseURL}/api/dashboard/`);
-		return unwrapMainDashboard(response.data);
+		const payload = await getMyDeviceAnalytics();
+		const a = payload.analytics;
+
+		return {
+			short_circuit: NaN,
+			overload: NaN,
+			output_voltage: toMinMax(a.analog_in_1),
+			load_percentage: toMinMax(a.analog_in_2),
+			battery_voltage: toMinMax(a.analog_in_3),
+			temperature_1: toMinMax(a.analog_in_4),
+			temperature_2: { min: NaN, max: NaN },
+			digital_in_1: toOnOff(a.digital_in_1),
+			digital_in_2: toOnOff(a.digital_in_2),
+			digital_out_1: toOnOff(a.digital_out_1),
+			digital_out_2: toOnOff(a.digital_out_2),
+			analog_in_1: toMinMax(a.analog_in_1),
+			analog_in_2: toMinMax(a.analog_in_2),
+			analog_in_3: toMinMax(a.analog_in_3),
+			analog_in_4: toMinMax(a.analog_in_4),
+		};
 	} catch (error) {
 		console.error('Error fetching main dashboard:', error);
 		throw error;

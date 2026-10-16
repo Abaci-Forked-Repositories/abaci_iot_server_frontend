@@ -15,9 +15,24 @@ import useToasterNotification from '../../hooks/useToasterNotification';
 import { setBreadcrumbs, setHeaderTitle } from '../../store/uiSlice';
 import { getSiteById } from '../../api/sites/sites';
 import { getDevices, type Device } from '../../api/devices/devices';
+import {
+	getSiteAnalytics,
+	type AnalogFieldStats,
+	type SiteAnalytics,
+} from '../../api/data/iotData';
 import { debounceIntervalForTable } from '../../helpers/constants';
 
 const EMPTY = '----';
+
+const ANALOG_FIELDS: Array<{
+	key: keyof SiteAnalytics['analytics'];
+	label: string;
+}> = [
+	{ key: 'analog_in_1', label: 'Analog In 1' },
+	{ key: 'analog_in_2', label: 'Analog In 2' },
+	{ key: 'analog_in_3', label: 'Analog In 3' },
+	{ key: 'analog_in_4', label: 'Analog In 4' },
+];
 
 const displayValue = (value: string | null | undefined) => {
 	const trimmed = value?.trim();
@@ -31,6 +46,36 @@ const formatDate = (value: string | null | undefined) => {
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 };
 
+const formatStat = (value: number | null | undefined) => {
+	if (value == null || Number.isNaN(value)) return '—';
+	return Number.isInteger(value) ? String(value) : value.toFixed(2);
+};
+
+const AnalogStatCard: React.FC<{
+	label: string;
+	stats: AnalogFieldStats | undefined;
+}> = ({ label, stats }) => (
+	<div className='col-6 col-md-3'>
+		<div className='border rounded p-3 h-100 bg-l25-primary'>
+			<div className='text-muted small mb-2'>{label}</div>
+			<div className='d-flex justify-content-between gap-2'>
+				<div>
+					<div className='text-muted' style={{ fontSize: 11 }}>
+						Min
+					</div>
+					<div className='fw-bold fs-5'>{formatStat(stats?.min)}</div>
+				</div>
+				<div className='text-end'>
+					<div className='text-muted' style={{ fontSize: 11 }}>
+						Max
+					</div>
+					<div className='fw-bold fs-5'>{formatStat(stats?.max)}</div>
+				</div>
+			</div>
+		</div>
+	</div>
+);
+
 const SiteDetail: React.FC = () => {
 	const { siteId } = useParams<{ siteId: string }>();
 	const dispatch = useDispatch();
@@ -42,6 +87,17 @@ const SiteDetail: React.FC = () => {
 		queryKey: ['site', siteId],
 		queryFn: () => getSiteById(siteId!),
 		enabled: !!siteId,
+	});
+
+	const {
+		data: analytics,
+		isLoading: analyticsLoading,
+		isError: analyticsError,
+	} = useQuery({
+		queryKey: ['site-analytics', siteId],
+		queryFn: () => getSiteAnalytics(siteId!),
+		enabled: !!siteId && !!site?.id,
+		retry: false,
 	});
 
 	useEffect(() => {
@@ -187,6 +243,40 @@ const SiteDetail: React.FC = () => {
 							.join(' · ')}
 					</span>
 				</div>
+
+				<Card className='mb-4'>
+					<CardHeader>
+						<div className='d-flex align-items-center justify-content-between w-100 flex-wrap gap-2'>
+							<div className='d-flex align-items-center gap-2'>
+								<Icon icon='Analytics' color='primary' size='2x' />
+								<span>Today&apos;s Min / Max</span>
+							</div>
+							{analytics?.date && (
+								<span className='text-muted small'>{formatDate(analytics.date)}</span>
+							)}
+						</div>
+					</CardHeader>
+					<CardBody>
+						{analyticsLoading ? (
+							<div className='text-muted py-3'>Loading analytics…</div>
+						) : analyticsError || !analytics ? (
+							<div className='text-muted py-3'>
+								No analytics data for this site today.
+							</div>
+						) : (
+							<div className='row g-3'>
+								{ANALOG_FIELDS.map(({ key, label }) => (
+									<AnalogStatCard
+										key={key}
+										label={label}
+										stats={analytics.analytics[key]}
+									/>
+								))}
+							</div>
+						)}
+					</CardBody>
+				</Card>
+
 				<Card stretch>
 					<CardHeader>
 						<div className='d-flex align-items-center gap-2'>
