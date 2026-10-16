@@ -81,7 +81,7 @@ const DeviceDetail: React.FC = () => {
 						Back
 					</Button>
 					<span className='text-muted small'>
-						{[device.description, device.firmware_version]
+						{[device.site?.name, device.description, device.firmware_version]
 							.filter(Boolean)
 							.join(' · ') || '----'}
 					</span>

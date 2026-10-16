@@ -93,7 +93,7 @@ const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
 		if (!isOpen) return;
 		if (isEdit && subscription) {
 			reset({
-				user: subscription.user ?? '',
+				user: subscription.user ?? ('' as const),
 				start_date: toInputDate(subscription.start_date),
 				end_date: toInputDate(subscription.end_date),
 			});

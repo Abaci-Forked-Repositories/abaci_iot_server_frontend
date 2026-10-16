@@ -184,6 +184,8 @@ const buildDeviceChartOptions = (
 		},
 		title: { text: undefined },
 		legend: {
+			show: true,
+			showForSingleSeries: true,
 			position: 'bottom',
 			horizontalAlign: 'left' as const,
 			fontSize: '13px',
@@ -209,10 +211,13 @@ const buildDeviceChartOptions = (
 		},
 		xaxis: {
 			categories,
-			tickAmount: Math.min(categories.length - 1, 12),
+			...(categories.length > 1
+				? { tickAmount: Math.min(categories.length - 1, 12) }
+				: {}),
 			labels: {
-				rotate: -45,
-				hideOverlappingLabels: true,
+				show: true,
+				rotate: categories.length > 1 ? -45 : 0,
+				hideOverlappingLabels: categories.length > 1,
 				style: {
 					fontSize: '11px',
 					fontWeight: 400,

@@ -1,6 +1,7 @@
 // api call for users list
 import { authAxios } from '../../axiosInstance';
 import { baseURL } from '../../helpers/baseURL';
+import { normalizeDevicesList, type DevicesListResponse } from '../devices/devices';
 
 /** Shape returned by GET /api/users/ */
 export type ApiUser = {
@@ -9,6 +10,10 @@ export type ApiUser = {
 	email: string;
 	first_name: string;
 	last_name: string;
+	/** Subscription access role: admin | view | edit */
+	role: 'admin' | 'view' | 'edit' | null;
+	/** Child subscription under the logged-in admin */
+	subscription_id: number | null;
 	is_superuser: boolean;
 	is_staff: boolean;
 	is_active: boolean;
@@ -70,14 +75,12 @@ export const getUsers = async ({
 };
 
 export type UserWritePayload = {
-	username: string;
 	email: string;
 	first_name?: string;
 	last_name?: string;
 	password?: string;
 	is_active?: boolean;
-	is_staff?: boolean;
-	is_superuser?: boolean;
+	role?: 'admin' | 'view' | 'edit';
 };
 
 export const createUser = async (user: UserWritePayload) => {
@@ -117,6 +120,30 @@ export const getUserById = async (id: string | number): Promise<ApiUser> => {
 		return (data?.user ?? data?.data ?? data) as ApiUser;
 	} catch (error) {
 		console.error('Error fetching user by id:', error);
+		throw error;
+	}
+};
+
+export type GetUserDevicesParams = {
+	page: number;
+	limit: number;
+	search?: string;
+};
+
+/** Devices linked to the selected user's subscription under the logged-in admin. */
+export const getUserDevices = async (
+	userId: string | number,
+	{ page, limit, search = '' }: GetUserDevicesParams,
+): Promise<DevicesListResponse> => {
+	try {
+		const offset = Math.max(page - 1, 0) * limit;
+		const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+		const response = await authAxios.get(
+			`${baseURL}/api/users/${userId}/devices/?limit=${limit}&offset=${offset}${searchParam}`,
+		);
+		return normalizeDevicesList(response.data);
+	} catch (error) {
+		console.error('Error fetching user devices:', error);
 		throw error;
 	}
 };

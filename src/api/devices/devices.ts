@@ -2,6 +2,7 @@
 import { authAxios } from '../../axiosInstance';
 // DeviceChartConfig is no longer needed here — normalization happens in DeviceDetailCharts
 import { baseURL } from '../../helpers/baseURL';
+import type { Site } from '../sites/sites';
 
 /** Shape returned by GET /api/devices/ */
 export type Device = {
@@ -19,6 +20,9 @@ export type Device = {
 	wifi_ssid: string | null;
 	wifi_password: string | null;
 	firmware_version: string | null;
+	site: Site | null;
+	/** Subscription access for this device: admin, edit, view, or null. */
+	access_type: string | null;
 };
 
 /** Prefer model → identifier → description for UI labels. */
@@ -44,6 +48,8 @@ export type GetDevicesParams = {
 	/** Extra query string from column filters */
 	filters?: string;
 	ordering?: string;
+	/** Filter devices assigned to this site id. */
+	site?: number | string;
 };
 
 export type DeviceWritePayload = {
@@ -59,6 +65,24 @@ export type DeviceWritePayload = {
 	wifi_ssid?: string | null;
 	wifi_password?: string | null;
 	firmware_version?: string | null;
+	site?: number | null;
+};
+
+const normalizeSite = (value: unknown): Site | null => {
+	if (value == null || value === '') return null;
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return { id: value, name: '', description: '', created_at: '', updated_at: '' };
+	}
+	if (typeof value !== 'object') return null;
+	const site = value as Partial<Site>;
+	if (site.id == null || Number.isNaN(Number(site.id))) return null;
+	return {
+		id: Number(site.id),
+		name: site.name ?? '',
+		description: site.description ?? '',
+		created_at: site.created_at ?? '',
+		updated_at: site.updated_at ?? '',
+	};
 };
 
 /** Normalize one device — API may use `mode` instead of `model`. */
@@ -86,6 +110,11 @@ export const normalizeDevice = (raw: unknown): Device => {
 		wifi_ssid: (payload.wifi_ssid as string | null) ?? null,
 		wifi_password: (payload.wifi_password as string | null) ?? null,
 		firmware_version: (payload.firmware_version as string | null) ?? null,
+		site: normalizeSite(payload.site),
+		access_type:
+			typeof payload.access_type === 'string' && payload.access_type.trim()
+				? payload.access_type
+				: null,
 	};
 };
 
@@ -122,6 +151,7 @@ export const toDeviceWritePayload = (
 		wifi_ssid: device.wifi_ssid ?? null,
 		wifi_password: device.wifi_password ?? null,
 		firmware_version: device.firmware_version ?? null,
+		site: device.site ?? null,
 		model,
 		mode: model,
 	};
@@ -133,11 +163,14 @@ export const getDevices = async ({
 	search = '',
 	filters = '',
 	ordering = '',
+	site,
 }: GetDevicesParams): Promise<DevicesListResponse> => {
 	try {
 		const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+		const siteParam = site != null && site !== '' ? `&site=${encodeURIComponent(String(site))}` : '';
+		const offset = Math.max(page - 1, 0) * limit;
 		const response = await authAxios.get(
-			`${baseURL}/api/devices/?page=${page}&limit=${limit}${searchParam}${ordering}${filters}`,
+			`${baseURL}/api/devices/?limit=${limit}&offset=${offset}${siteParam}${searchParam}${ordering}${filters}`,
 		);
 		return normalizeDevicesList(response.data);
 	} catch (error) {

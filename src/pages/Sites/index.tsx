@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Query, QueryResult } from '@material-table/core';
 import FullHeightMaterialTable from '../../components/CustomComponent/FullHeightMaterialTable';
 import { ThemeProvider } from '@mui/material/styles';
@@ -58,6 +58,7 @@ const DATE_FILTER_FIELDS = new Set(['created_at', 'updated_at']);
 const Sites: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const tableRef = useRef<any>(null);
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { darkModeStatus } = useDarkMode();
@@ -287,14 +288,16 @@ const Sites: React.FC = () => {
 				{
 					icon: EditIcon,
 					tooltip: 'Edit Site',
-					onClick: (_event: any, rowData: Site) => {
+					onClick: (event: any, rowData: Site) => {
+						event?.stopPropagation?.();
 						handleEdit(rowData);
 					},
 				},
 				{
 					icon: DeleteIcon,
 					tooltip: 'Delete Site',
-					onClick: (_event: any, rowData: Site) => {
+					onClick: (event: any, rowData: Site) => {
+						event?.stopPropagation?.();
 						handleDelete(rowData);
 					},
 				},
@@ -342,6 +345,10 @@ const Sites: React.FC = () => {
 									columns={columns}
 									data={fetchSites}
 									actions={tableActions}
+									onRowClick={(_event, rowData: Site | Site[]) => {
+										const site = Array.isArray(rowData) ? rowData[0] : rowData;
+										if (site?.id) navigate(`/sites/${site.id}`);
+									}}
 									options={{
 										search: true,
 										filtering: filterEnabled,
@@ -353,7 +360,10 @@ const Sites: React.FC = () => {
 										showEmptyDataSourceMessage: true,
 										emptyRowsWhenPaging: false,
 										actionsColumnIndex: -1,
-										rowStyle: rowStyles(),
+										rowStyle: () => ({
+											...rowStyles(),
+											cursor: 'pointer',
+										}),
 										headerStyle: headerStyles(),
 										searchFieldStyle: searchFieldStyle(),
 									}}

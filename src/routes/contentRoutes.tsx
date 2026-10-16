@@ -8,10 +8,13 @@ const MAINROUTE = {
 	
 	Profile: lazy(() => import('../pages/Profile/Index')),
 	Users: lazy(() => import('../pages/UserManagement/index')),
+	UserDetail: lazy(() => import('../pages/UserManagement/UserDetail')),
 	Devices: lazy(() => import('../pages/Devices/index')),
 	DeviceDetail: lazy(() => import('../pages/Devices/DeviceDetail')),
 	Sites: lazy(() => import('../pages/Sites/index')),
+	SiteDetail: lazy(() => import('../pages/Sites/SiteDetail')),
 	Subscriptions: lazy(() => import('../pages/Subscriptions/index')),
+	SubscriptionDetail: lazy(() => import('../pages/Subscriptions/SubscriptionDetail')),
 	Knowledge: lazy(() => import('../pages/Knowledge/index')),
 	// Settings: lazy(() => import('../pages/Settings/index')),
 };
@@ -40,6 +43,11 @@ const RouteConfig: CustomRouteConfig[] = [
 		permissionKey: 'users_read',
 	},
 	{
+		path: allRoutesObject.userDetails.path,
+		element: <MAINROUTE.UserDetail />,
+		permissionKey: 'users_read',
+	},
+	{
 		path: allRoutesObject.devices.path,
 		element: <MAINROUTE.Devices />,
 		permissionKey: 'devices_read',
@@ -55,8 +63,18 @@ const RouteConfig: CustomRouteConfig[] = [
 		permissionKey: 'sites_read',
 	},
 	{
+		path: allRoutesObject.siteDetails.path,
+		element: <MAINROUTE.SiteDetail />,
+		permissionKey: 'sites_read',
+	},
+	{
 		path: allRoutesObject.subscriptions.path,
 		element: <MAINROUTE.Subscriptions />,
+		permissionKey: 'subscriptions_read',
+	},
+	{
+		path: allRoutesObject.subscriptionDetails.path,
+		element: <MAINROUTE.SubscriptionDetail />,
 		permissionKey: 'subscriptions_read',
 	},
 	{

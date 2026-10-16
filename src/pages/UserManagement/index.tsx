@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Query, QueryResult } from '@material-table/core';
 import FullHeightMaterialTable from '../../components/CustomComponent/FullHeightMaterialTable';
 import { ThemeProvider } from '@mui/material/styles';
@@ -33,7 +33,6 @@ import UserFormModal, { type UserFormData } from './UserFormModal';
 /** Display row mapped from GET /api/users/ */
 type UserListRow = {
 	id: number;
-	username: string;
 	first_name: string;
 	last_name: string;
 	email: string;
@@ -45,20 +44,25 @@ type UserListRow = {
 
 const EMPTY = '----';
 
+const ROLE_LABELS: Record<string, string> = {
+	admin: 'Admin',
+	view: 'View',
+	edit: 'Edit',
+};
+
 const displayValue = (value: string | null | undefined) => {
 	const trimmed = value?.trim();
 	return trimmed ? trimmed : EMPTY;
 };
 
 const displayRole = (user: ApiUser): string => {
-	if (user.is_superuser) return 'Superuser';
-	if (user.is_staff) return 'Staff';
-	return 'User';
+	const role = user.role?.toLowerCase();
+	if (role && ROLE_LABELS[role]) return ROLE_LABELS[role];
+	return EMPTY;
 };
 
 const mapUserRow = (user: ApiUser): UserListRow => ({
 	id: user.id,
-	username: user.username || '',
 	first_name: user.first_name || '',
 	last_name: user.last_name || '',
 	email: user.email || '',
@@ -72,13 +76,11 @@ const mapUserRow = (user: ApiUser): UserListRow => ({
 
 const toWritePayload = (data: UserFormData) => {
 	const payload: Record<string, unknown> = {
-		username: data.username.trim(),
 		email: data.email.trim(),
 		first_name: data.first_name.trim(),
 		last_name: data.last_name.trim(),
 		is_active: data.is_active,
-		is_staff: data.role === 'Staff' || data.role === 'Superuser',
-		is_superuser: data.role === 'Superuser',
+		role: data.role,
 	};
 	if (data.password.trim()) {
 		payload.password = data.password;
@@ -89,6 +91,7 @@ const toWritePayload = (data: UserFormData) => {
 const UserManagement: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const tableRef = useRef<any>(null);
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { darkModeStatus } = useDarkMode();
@@ -178,7 +181,7 @@ const UserManagement: React.FC = () => {
 		swalFire({
 			title: 'Are you sure?',
 			icon: 'info',
-			text: `Delete user "${row.username}"? You won't be able to revert this!`,
+			text: `Delete user "${row.email}"? You won't be able to revert this!`,
 			showCancelButton: true,
 			iconColor: buttonColor[0],
 			theme: darkModeStatus ? 'dark' : 'light',
@@ -218,9 +221,9 @@ const UserManagement: React.FC = () => {
 				title: 'Role',
 				field: 'role',
 				lookup: {
-					Superuser: 'Superuser',
-					Staff: 'Staff',
-					User: 'User',
+					Admin: 'Admin',
+					View: 'View',
+					Edit: 'Edit',
 				},
 			},
 			{
@@ -250,11 +253,9 @@ const UserManagement: React.FC = () => {
 		let ordering = '';
 		if (query.orderBy?.field) {
 			const apiField =
-				query.orderBy.field === 'role'
-					? 'is_superuser'
-					: query.orderBy.field === 'status'
-						? 'is_active'
-						: String(query.orderBy.field);
+				query.orderBy.field === 'status'
+					? 'is_active'
+					: String(query.orderBy.field);
 			ordering =
 				query.orderDirection === 'asc'
 					? `&ordering=${apiField}`
@@ -277,7 +278,6 @@ const UserManagement: React.FC = () => {
 						(r) =>
 							r.first_name.toLowerCase().includes(search) ||
 							r.last_name.toLowerCase().includes(search) ||
-							r.username.toLowerCase().includes(search) ||
 							r.email.toLowerCase().includes(search) ||
 							r.role.toLowerCase().includes(search),
 					);
@@ -327,14 +327,16 @@ const UserManagement: React.FC = () => {
 				{
 					icon: EditIcon,
 					tooltip: 'Edit User',
-					onClick: (_event: any, rowData: UserListRow) => {
+					onClick: (event: any, rowData: UserListRow) => {
+						event?.stopPropagation?.();
 						handleEdit(rowData);
 					},
 				},
 				{
 					icon: DeleteIcon,
 					tooltip: 'Delete User',
-					onClick: (_event: any, rowData: UserListRow) => {
+					onClick: (event: any, rowData: UserListRow) => {
+						event?.stopPropagation?.();
 						handleDelete(rowData);
 					},
 				},
@@ -381,6 +383,10 @@ const UserManagement: React.FC = () => {
 								columns={columns}
 								data={fetchUsers}
 								actions={tableActions}
+								onRowClick={(_event, rowData: UserListRow | UserListRow[]) => {
+									const row = Array.isArray(rowData) ? rowData[0] : rowData;
+									if (row?.id) navigate(`/users/${row.id}`);
+								}}
 								options={{
 									search: true,
 									filtering: filterEnabled,
@@ -392,7 +398,10 @@ const UserManagement: React.FC = () => {
 									showEmptyDataSourceMessage: true,
 									emptyRowsWhenPaging: false,
 									actionsColumnIndex: -1,
-									rowStyle: rowStyles(),
+									rowStyle: () => ({
+										...rowStyles(),
+										cursor: 'pointer',
+									}),
 									headerStyle: headerStyles(),
 									searchFieldStyle: searchFieldStyle(),
 								}}

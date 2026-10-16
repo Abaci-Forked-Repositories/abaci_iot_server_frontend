@@ -141,9 +141,10 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 				wifi_ip_address: formData.wifi_ip_address || null,
 				wifi_mask: formData.wifi_mask || null,
 				wifi_gateway: formData.wifi_gateway || null,
-				wifi_ssid: formData.wifi_ssid || null,
-				wifi_password: formData.wifi_password || null,
+				wifi_ssid: modalMode === 'edit' ? selectedDevice?.wifi_ssid ?? null : null,
+				wifi_password: modalMode === 'edit' ? selectedDevice?.wifi_password ?? null : null,
 				firmware_version: formData.firmware_version || null,
+				site: formData.site,
 			};
 
 			if (modalMode === 'add') {
@@ -318,14 +319,17 @@ const DeviceListTab: React.FC<DeviceListTabProps> = ({ canWrite }) => {
 		];
 		if (canWrite) {
 			actions.push(
-				{
+				(rowData: Device) => ({
 					icon: EditIcon,
 					tooltip: 'Edit Device',
-					onClick: (event: any, rowData: Device) => {
+					hidden:
+						rowData.access_type == null ||
+						rowData.access_type.toLowerCase() === 'view',
+					onClick: (event: any, row: Device) => {
 						event?.stopPropagation?.();
-						handleEdit(rowData);
+						handleEdit(row);
 					},
-				},
+				}),
 				{
 					icon: DeleteIcon,
 					tooltip: 'Delete Device',

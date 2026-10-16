@@ -11,14 +11,14 @@ import Modal, {
 import Button from '../../components/bootstrap/Button';
 import type { ApiUser } from '../../api/users/users';
 
+export type UserRole = 'admin' | 'view' | 'edit';
+
 export type UserFormData = {
-	username: string;
 	email: string;
 	first_name: string;
 	last_name: string;
 	password: string;
-	/** Superuser | Staff | User */
-	role: 'Superuser' | 'Staff' | 'User';
+	role: UserRole;
 	is_active: boolean;
 };
 
@@ -34,19 +34,18 @@ interface UserFormModalProps {
 }
 
 const emptyForm: UserFormData = {
-	username: '',
 	email: '',
 	first_name: '',
 	last_name: '',
 	password: '',
-	role: 'User',
+	role: 'view',
 	is_active: true,
 };
 
-const roleFromUser = (user: ApiUser): UserFormData['role'] => {
-	if (user.is_superuser) return 'Superuser';
-	if (user.is_staff) return 'Staff';
-	return 'User';
+const roleFromUser = (user: ApiUser): UserRole => {
+	const role = user.role?.toLowerCase();
+	if (role === 'admin' || role === 'view' || role === 'edit') return role;
+	return 'view';
 };
 
 const UserFormModal: React.FC<UserFormModalProps> = ({
@@ -76,7 +75,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 		setShowPassword(false);
 		if (isEdit && user) {
 			reset({
-				username: user.username || '',
 				email: user.email || '',
 				first_name: user.first_name || '',
 				last_name: user.last_name || '',
@@ -119,19 +117,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 						<div className='row g-4'>
 							<div className='col-12 col-md-6'>
 								<label className='form-label'>
-									Username <span className='text-danger'>*</span>
-								</label>
-								<input
-									className={`form-control ${errors.username ? 'is-invalid' : ''}`}
-									{...register('username', { required: 'Username is required' })}
-								/>
-								{errors.username && (
-									<div className='invalid-feedback'>{errors.username.message}</div>
-								)}
-							</div>
-
-							<div className='col-12 col-md-6'>
-								<label className='form-label'>
 									Email <span className='text-danger'>*</span>
 								</label>
 								<input
@@ -142,6 +127,15 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 								{errors.email && (
 									<div className='invalid-feedback'>{errors.email.message}</div>
 								)}
+							</div>
+
+							<div className='col-12 col-md-6'>
+								<label className='form-label'>Role</label>
+								<select className='form-select' {...register('role')}>
+									<option value='admin'>Admin</option>
+									<option value='view'>View</option>
+									<option value='edit'>Edit</option>
+								</select>
 							</div>
 
 							<div className='col-12 col-md-6'>
@@ -206,15 +200,6 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 										{errors.password.message}
 									</div>
 								)}
-							</div>
-
-							<div className='col-12 col-md-6'>
-								<label className='form-label'>Role</label>
-								<select className='form-select' {...register('role')}>
-									<option value='User'>User</option>
-									<option value='Staff'>Staff</option>
-									<option value='Superuser'>Superuser</option>
-								</select>
 							</div>
 
 							<div className='col-12'>

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import React, { useEffect, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import Select from 'react-select';
 import Modal, {
 	ModalBody,
 	ModalFooter,
@@ -10,6 +10,14 @@ import Modal, {
 } from '../../components/bootstrap/Modal';
 import Button from '../../components/bootstrap/Button';
 import type { Device } from '../../api/devices/devices';
+import { getSites, type Site } from '../../api/sites/sites';
+import useSelectStyles from '../../hooks/useSelectStyle';
+
+const SITE_PAGE_SIZE = 20;
+
+type SiteOption = { value: number | null; label: string };
+
+const NONE_SITE_OPTION: SiteOption = { value: null, label: 'None' };
 
 export interface DeviceFormData {
 	model: string;
@@ -19,10 +27,10 @@ export interface DeviceFormData {
 	wifi_ip_address: string;
 	wifi_mask: string;
 	wifi_gateway: string;
-	wifi_ssid: string;
-	wifi_password: string;
 	firmware_version: string;
+	site: number | null;
 }
+
 
 interface DeviceFormModalProps {
 	isOpen: boolean;
@@ -35,6 +43,8 @@ interface DeviceFormModalProps {
 	loading?: boolean;
 }
 
+
+
 const emptyForm: DeviceFormData = {
 	model: '',
 	identifier: '',
@@ -43,9 +53,8 @@ const emptyForm: DeviceFormData = {
 	wifi_ip_address: '',
 	wifi_mask: '',
 	wifi_gateway: '',
-	wifi_ssid: '',
-	wifi_password: '',
 	firmware_version: '',
+	site: null,
 };
 
 const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
@@ -59,20 +68,66 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 }) => {
 	const isEdit = mode === 'edit';
 	const busy = saving || loading;
-	const [showPassword, setShowPassword] = useState(false);
+	const sharedSelectStyles = useSelectStyles();
+	const selectStyles = {
+		...sharedSelectStyles,
+		menu: (base: Record<string, unknown>) => ({
+			...(sharedSelectStyles.menu ? sharedSelectStyles.menu(base) : base),
+			maxHeight: 220,
+		}),
+		menuList: (base: Record<string, unknown>) => ({
+			...base,
+			maxHeight: 180,
+		}),
+	};
 
 	const {
 		register,
 		handleSubmit,
 		reset,
+		control,
 		formState: { errors },
 	} = useForm<DeviceFormData>({
 		defaultValues: emptyForm,
 	});
 
+	const {
+		data: sitesPages,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: sitesLoading,
+	} = useInfiniteQuery({
+		queryKey: ['sites', 'device-form'],
+		queryFn: ({ pageParam }) => getSites({ page: pageParam, limit: SITE_PAGE_SIZE }),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage, allPages) => {
+			const loaded = allPages.reduce((sum, page) => sum + page.results.length, 0);
+			if (lastPage.results.length === 0 || loaded >= lastPage.count) return undefined;
+			return allPages.length + 1;
+		},
+		enabled: isOpen,
+	});
+
+	const siteOptions = useMemo(() => {
+		const byId = new Map<number, SiteOption>();
+		const current = device?.site;
+		if (current?.id) {
+			byId.set(current.id, {
+				value: current.id,
+				label: current.name || `Site #${current.id}`,
+			});
+		}
+		(sitesPages?.pages ?? []).forEach((page) => {
+			page.results.forEach((site: Site) => {
+				byId.set(site.id, { value: site.id, label: site.name });
+			});
+		});
+		return [NONE_SITE_OPTION, ...Array.from(byId.values())];
+	}, [sitesPages, device]);
+
 	useEffect(() => {
 		if (!isOpen) return;
-		setShowPassword(false);
 		if (isEdit && device) {
 			reset({
 				model: device.model || '',
@@ -82,9 +137,8 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 				wifi_ip_address: device.wifi_ip_address || '',
 				wifi_mask: device.wifi_mask || '',
 				wifi_gateway: device.wifi_gateway || '',
-				wifi_ssid: device.wifi_ssid || '',
-				wifi_password: device.wifi_password || '',
 				firmware_version: device.firmware_version || '',
+				site: device.site?.id ?? null,
 			});
 		} else if (!isEdit) {
 			reset(emptyForm);
@@ -113,6 +167,38 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 				)}
 				<form id='device-form' onSubmit={handleSubmit(onSubmit)}>
 					<div className='row g-4'>
+						<div className='col-12 col-md-6'>
+							<label className='form-label'>Site</label>
+							<Controller
+								name='site'
+								control={control}
+								render={({ field }) => (
+									<Select<SiteOption, false>
+										inputId='device-site'
+										classNamePrefix='react-select'
+										placeholder='Select site'
+										isClearable
+										isDisabled={busy}
+										isLoading={sitesLoading || isFetchingNextPage}
+										options={siteOptions}
+										styles={selectStyles}
+										menuPortalTarget={document.body}
+										menuPosition='fixed'
+										value={
+											siteOptions.find((option) => option.value === field.value) ??
+											NONE_SITE_OPTION
+										}
+										onChange={(option) => field.onChange(option?.value ?? null)}
+										onMenuScrollToBottom={() => {
+											if (hasNextPage && !isFetchingNextPage) {
+												void fetchNextPage();
+											}
+										}}
+									/>
+								)}
+							/>
+						</div>
+
 						<div className='col-12 col-md-6'>
 							<label className='form-label'>Model</label>
 							<select
@@ -160,54 +246,6 @@ const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
 								disabled={busy}
 								{...register('description')}
 							/>
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>WiFi SSID</label>
-							<input className='form-control' disabled={busy} {...register('wifi_ssid')} />
-						</div>
-
-						<div className='col-12 col-md-6'>
-							<label className='form-label'>WiFi Password</label>
-							<div style={{ position: 'relative' }}>
-								<input
-									type={showPassword ? 'text' : 'password'}
-									className='form-control'
-									autoComplete='new-password'
-									disabled={busy}
-									style={{ paddingRight: '2.75rem' }}
-									{...register('wifi_password')}
-								/>
-								<span
-									role='button'
-									tabIndex={0}
-									aria-label={showPassword ? 'Hide password' : 'Show password'}
-									onClick={() => !busy && setShowPassword((v) => !v)}
-									onKeyDown={(e) => {
-										if (busy) return;
-										if (e.key === 'Enter' || e.key === ' ') {
-											e.preventDefault();
-											setShowPassword((v) => !v);
-										}
-									}}
-									style={{
-										position: 'absolute',
-										top: '50%',
-										right: 12,
-										transform: 'translateY(-50%)',
-										cursor: busy ? 'default' : 'pointer',
-										lineHeight: 1,
-										color: '#6c757d',
-										zIndex: 2,
-										opacity: busy ? 0.5 : 1,
-									}}>
-									{showPassword ? (
-										<VisibilityOffIcon fontSize='small' />
-									) : (
-										<VisibilityIcon fontSize='small' />
-									)}
-								</span>
-							</div>
 						</div>
 
 						<div className='col-12 col-md-4'>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Query, QueryResult } from '@material-table/core';
 import FullHeightMaterialTable from '../../components/CustomComponent/FullHeightMaterialTable';
 import { ThemeProvider } from '@mui/material/styles';
@@ -37,6 +37,18 @@ import SubscriptionFormModal, {
 import ModernTableDateFilter from '../../components/CustomComponent/Filters/ModernTableDateFilter';
 import { asMaterialTableFilterProps } from '../../components/CustomComponent/Filters/materialTableFilterTypes';
 
+const TYPE_LABELS: Record<string, string> = {
+	admin: 'Admin',
+	view: 'View',
+	edit: 'Edit',
+};
+
+const TYPE_LOOKUP: Record<string, string> = {
+	admin: 'Admin',
+	view: 'View',
+	edit: 'Edit',
+};
+
 const formatDate = (value: string | null | undefined) => {
 	if (!value) return '—';
 	// Prefer plain YYYY-MM-DD display without time
@@ -71,6 +83,7 @@ const DATE_FILTER_FIELDS = new Set([
 const Subscriptions: React.FC = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
+	const navigate = useNavigate();
 	const tableRef = useRef<any>(null);
 	const { theme, headerStyles, rowStyles, searchFieldStyle } = useTablestyle();
 	const { darkModeStatus } = useDarkMode();
@@ -192,7 +205,9 @@ const Subscriptions: React.FC = () => {
 	};
 
 	const handleDelete = (row: Subscription) => {
-		const userLabel = userLabelById[row.user] || `User #${row.user}`;
+		const userLabel =
+			row.user_label ||
+			(row.user != null ? userLabelById[row.user] || `User #${row.user}` : `Subscription #${row.id}`);
 		swalFire({
 			title: 'Are you sure?',
 			icon: 'info',
@@ -227,7 +242,33 @@ const Subscriptions: React.FC = () => {
 				field: 'user',
 				lookup: userLookup,
 				render: (row: Subscription) =>
-					userLabelById[row.user] || (row.user != null ? `User #${row.user}` : '—'),
+					row.user_label ||
+					(row.user != null
+						? userLabelById[row.user] || `User #${row.user}`
+						: '—'),
+			},
+			{
+				title: 'Type',
+				field: 'type',
+				lookup: TYPE_LOOKUP,
+				render: (row: Subscription) =>
+					TYPE_LABELS[row.type] || row.type || '—',
+			},
+			{
+				title: 'Parent',
+				field: 'parent_subscription',
+				filtering: false,
+				sorting: true,
+				render: (row: Subscription) => {
+					if (row.parent_subscription == null) return '—';
+					return (
+						<Link
+							to={`/subscriptions/${row.parent_subscription}`}
+							onClick={(e) => e.stopPropagation()}>
+							{row.parent_label || `Subscription #${row.parent_subscription}`}
+						</Link>
+					);
+				},
 			},
 			{
 				title: 'Start Date',
@@ -298,11 +339,20 @@ const Subscriptions: React.FC = () => {
 				const search = (query.search || '').trim().toLowerCase();
 				if (search) {
 					rows = rows.filter((r) => {
-						const userLabel = (userLabelById[r.user] || '').toLowerCase();
+						const userLabel = (
+							r.user_label ||
+							(r.user != null ? userLabelById[r.user] : '') ||
+							''
+						).toLowerCase();
+						const typeLabel = (TYPE_LABELS[r.type] || r.type || '').toLowerCase();
+						const parentLabel = (r.parent_label || '').toLowerCase();
 						return (
 							userLabel.includes(search) ||
+							typeLabel.includes(search) ||
+							parentLabel.includes(search) ||
 							String(r.id).includes(search) ||
-							String(r.user).includes(search)
+							String(r.user ?? '').includes(search) ||
+							String(r.parent_subscription ?? '').includes(search)
 						);
 					});
 				}
@@ -414,6 +464,10 @@ const Subscriptions: React.FC = () => {
 								columns={columns}
 								data={fetchSubscriptions}
 								actions={tableActions}
+								onRowClick={(_event, rowData: Subscription | Subscription[]) => {
+									const row = Array.isArray(rowData) ? rowData[0] : rowData;
+									if (row?.id) navigate(`/subscriptions/${row.id}`);
+								}}
 								options={{
 									search: true,
 									filtering: filterEnabled,
@@ -425,7 +479,10 @@ const Subscriptions: React.FC = () => {
 									showEmptyDataSourceMessage: true,
 									emptyRowsWhenPaging: false,
 									actionsColumnIndex: -1,
-									rowStyle: rowStyles(),
+									rowStyle: () => ({
+										...rowStyles(),
+										cursor: 'pointer',
+									}),
 									headerStyle: headerStyles(),
 									searchFieldStyle: searchFieldStyle(),
 								}}
